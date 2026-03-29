@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from build123d import Align, Compound, Location, Sphere
+from build123d import Align, Box, Compound, Cylinder, Location, Sphere
 import yaml
 
 from utils.metadata import CompoundMetadata, PartMetadata
@@ -21,16 +21,37 @@ def _build_moved_object(moved: dict):
     start = moved.get("start_position", [0.0, 0.0, 0.0])
     radius_range = moved.get("static_randomization", {}).get("radius", [0.01, 0.01])
     radius = float(max(radius_range)) if radius_range else 0.01
+    shape = str(moved.get("shape", "sphere")).strip().lower()
     material_id = str(moved.get("material_id", "abs")).strip()
     if not material_id:
         raise ValueError("moved_object.material_id must be a non-empty string")
 
-    ball = Sphere(radius, align=(Align.CENTER, Align.CENTER, Align.CENTER)).move(
+    if shape == "sphere":
+        moved_part = Sphere(
+            radius, align=(Align.CENTER, Align.CENTER, Align.CENTER)
+        )
+    elif shape in {"cube", "box"}:
+        edge = radius * 2.0
+        moved_part = Box(
+            edge, edge, edge, align=(Align.CENTER, Align.CENTER, Align.CENTER)
+        )
+    elif shape == "cylinder":
+        moved_part = Cylinder(
+            radius=radius,
+            height=radius * 2.0,
+            align=(Align.CENTER, Align.CENTER, Align.CENTER),
+        )
+    else:
+        raise ValueError(
+            f"Unsupported moved_object.shape '{shape}'. Expected sphere, cube, box, or cylinder."
+        )
+
+    moved_part = moved_part.move(
         Location((float(start[0]), float(start[1]), float(start[2])))
     )
-    ball.label = label
-    ball.metadata = PartMetadata(material_id=material_id, fixed=False)
-    return ball
+    moved_part.label = label
+    moved_part.metadata = PartMetadata(material_id=material_id, fixed=False)
+    return moved_part
 
 
 _moved_object_contract = _load_moved_object()
