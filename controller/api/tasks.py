@@ -266,6 +266,34 @@ async def _copy_approved_benchmark_bundle(
         )
 
 
+async def _wait_for_approved_benchmark_bundle_visibility(
+    *,
+    destination_client: WorkerClient,
+    review_manifest: ReviewManifest,
+    timeout_s: float = 10.0,
+    interval_s: float = 0.25,
+) -> None:
+    """Wait for copied benchmark artifacts to become visible in the destination workspace."""
+    deadline = asyncio.get_running_loop().time() + timeout_s
+    expected_paths = _benchmark_artifact_paths(review_manifest)
+    missing = expected_paths
+
+    while asyncio.get_running_loop().time() < deadline:
+        missing = [
+            path
+            for path in expected_paths
+            if not await destination_client.exists(path, bypass_agent_permissions=True)
+        ]
+        if not missing:
+            return
+        await asyncio.sleep(interval_s)
+
+    raise RuntimeError(
+        "approved benchmark bundle did not become visible in the destination "
+        f"workspace within {timeout_s:g}s; missing: {missing}"
+    )
+
+
 async def _fail_episode_before_graph_start(
     *,
     db,
@@ -565,6 +593,10 @@ async def execute_agent_task(
                             destination_client=client,
                             review_manifest=approved_bundle.review_manifest,
                         )
+                        await _wait_for_approved_benchmark_bundle_visibility(
+                            destination_client=client,
+                            review_manifest=approved_bundle.review_manifest,
+                        )
 
                         (
                             destination_bundle,
@@ -662,6 +694,7 @@ async def execute_agent_task(
                     initial_input = {
                         "task": task,
                         "session_id": session_id,
+                        "worker_session_id": workspace_session_id,
                         "episode_id": str(episode_id),
                         "start_node": start_node.value if start_node else None,
                         "messages": [HumanMessage(content=task)],

@@ -634,7 +634,7 @@ def run_pytest_subprocess(
         "pytest",
         "-v",
         "-o",
-        "addopts=-n0",
+        "addopts=",
         "-s",
         "--color=yes",
     ]
