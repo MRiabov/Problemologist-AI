@@ -21,6 +21,7 @@ The filesystem rules are:
 ## Templates
 
 Reusable starter files are defined once in `shared/agent_templates/common/`.
+The shared starter set includes `.admin/clear_env.py`, which resets the current seeded workspace in place without changing the conversation context.
 
 Role-specific planner scaffolds remain in their existing template-repo locations and are copied into each workspace before node entry. `worker_light/agent_files/` mirrors the same starter content for runtime bootstrap and local inspection.
 

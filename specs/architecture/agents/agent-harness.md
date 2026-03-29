@@ -67,7 +67,8 @@ The workspace contract is:
 07. Reviewer workspaces include `scripts/submit_review.sh` from `shared/agent_templates/codex/`.
 08. Planner workspaces do not copy `result.py`, because that file is runtime-owned and not part of the seeded handoff surface.
 09. Seed-row artifacts are copied into the workspace before prompt generation.
-10. The materialized workspace remains local to the run and is not promoted into a canonical shared root.
+10. Shared starter templates also include `.admin/clear_env.py`, a local helper that wipes and re-materializes the same seeded row in place so the conversation can continue after a retry.
+11. The materialized workspace remains local to the run and is not promoted into a canonical shared root.
 
 The workspace materializer in `dataset/evals/materialize_seed_workspace.py` is the inspection helper for this same workspace contract.
 
@@ -85,8 +86,9 @@ The canonical prompt rules are:
 4. Planner prompts instruct `bash scripts/submit_plan.sh` as the submission command.
 5. Coder prompts instruct editing `script.py` and supporting `*.py` files, then either running `bash scripts/submit_for_review.sh` or using the Python submission utility from `utils.submission` in a supporting script. In that route, `validate` and `simulate` are intermediate checks before `submit_for_review`.
 6. Reviewer prompts instruct writing stage-specific review artifacts under `reviews/`, then running `bash scripts/submit_review.sh`.
-7. The prompt includes the task text, agent name, task ID, and seed dataset name when available.
-8. The prompt does not need to describe repository-level import paths or module layout.
+7. The prompt also advertises `python .admin/clear_env.py` as the in-workspace reset helper for clean retries.
+8. The prompt includes the task text, agent name, task ID, and seed dataset name when available.
+9. The prompt does not need to describe repository-level import paths or module layout.
 
 The prompt builder in `evals/logic/codex_workspace.py` is the canonical definition of that prompt text.
 
