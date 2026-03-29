@@ -84,8 +84,6 @@ _IMAGE_MEDIA_TYPES = {
 _VIDEO_MEDIA_TYPES = {
     ".mp4": "video/mp4",
 }
-_VIDEO_FRAME_SPLIT_MAX_FRAMES = 6
-_VIDEO_FRAME_JPEG_QUALITY = 85
 
 
 def _bundle_workflow_id(prefix: str, session_id: str, bundle: bytes) -> str:
@@ -237,7 +235,8 @@ class RemoteFilesystemMiddleware:
     def _extract_video_frame_data_urls(
         video_bytes: bytes,
         *,
-        max_frames: int = _VIDEO_FRAME_SPLIT_MAX_FRAMES,
+        frame_stride: int,
+        jpeg_quality: int,
     ) -> list[str]:
         try:
             import cv2
@@ -257,24 +256,9 @@ class RemoteFilesystemMiddleware:
 
             try:
                 frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
-                frame_indices: list[int] = []
-                if frame_count > 0:
-                    sample_count = min(max_frames, frame_count)
-                    if sample_count == 1:
-                        frame_indices = [0]
-                    else:
-                        frame_indices = list(
-                            dict.fromkeys(
-                                round(index * (frame_count - 1) / (sample_count - 1))
-                                for index in range(sample_count)
-                            )
-                        )
-                else:
-                    frame_indices = []
-
                 frame_data_urls: list[str] = []
-                if frame_indices:
-                    for frame_index in frame_indices:
+                if frame_count > 0:
+                    for frame_index in range(0, frame_count, frame_stride):
                         capture.set(cv2.CAP_PROP_POS_FRAMES, float(frame_index))
                         ok, frame = capture.read()
                         if not ok or frame is None:
@@ -282,7 +266,7 @@ class RemoteFilesystemMiddleware:
                         ok, encoded = cv2.imencode(
                             ".jpg",
                             frame,
-                            [int(cv2.IMWRITE_JPEG_QUALITY), _VIDEO_FRAME_JPEG_QUALITY],
+                            [int(cv2.IMWRITE_JPEG_QUALITY), jpeg_quality],
                         )
                         if not ok:
                             continue
@@ -291,39 +275,27 @@ class RemoteFilesystemMiddleware:
                             + base64.b64encode(encoded.tobytes()).decode("ascii")
                         )
                 else:
-                    for _ in range(max_frames):
+                    frame_index = 0
+                    while True:
                         ok, frame = capture.read()
                         if not ok or frame is None:
                             break
-                        ok, encoded = cv2.imencode(
-                            ".jpg",
-                            frame,
-                            [int(cv2.IMWRITE_JPEG_QUALITY), _VIDEO_FRAME_JPEG_QUALITY],
-                        )
-                        if not ok:
-                            continue
-                        frame_data_urls.append(
-                            "data:image/jpeg;base64,"
-                            + base64.b64encode(encoded.tobytes()).decode("ascii")
-                        )
+                        if frame_index % frame_stride == 0:
+                            ok, encoded = cv2.imencode(
+                                ".jpg",
+                                frame,
+                                [int(cv2.IMWRITE_JPEG_QUALITY), jpeg_quality],
+                            )
+                            if ok:
+                                frame_data_urls.append(
+                                    "data:image/jpeg;base64,"
+                                    + base64.b64encode(encoded.tobytes()).decode(
+                                        "ascii"
+                                    )
+                                )
+                        frame_index += 1
 
-                if frame_data_urls:
-                    return frame_data_urls
-
-                capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                ok, frame = capture.read()
-                if ok and frame is not None:
-                    ok, encoded = cv2.imencode(
-                        ".jpg",
-                        frame,
-                        [int(cv2.IMWRITE_JPEG_QUALITY), _VIDEO_FRAME_JPEG_QUALITY],
-                    )
-                    if ok:
-                        return [
-                            "data:image/jpeg;base64,"
-                            + base64.b64encode(encoded.tobytes()).decode("ascii")
-                        ]
-                return []
+                return frame_data_urls
             finally:
                 capture.release()
 
@@ -448,6 +420,10 @@ class RemoteFilesystemMiddleware:
         path_str = str(path)
         mime_type, media_kind = self._media_metadata_for_path(path_str)
         split_video_renders = self.policy.config.render.split_video_renders_to_images
+        video_frame_attachment_stride = (
+            self.policy.config.render.video_frame_attachment_stride
+        )
+        video_frame_jpeg_quality = self.policy.config.render.video_frame_jpeg_quality
         binary = None
         render_metadata = None
 
@@ -515,7 +491,11 @@ class RemoteFilesystemMiddleware:
             if render_metadata is not None:
                 note += " Render metadata is included in this observation."
         elif media_kind == "video" and split_video_renders:
-            data_urls = self._extract_video_frame_data_urls(binary)
+            data_urls = self._extract_video_frame_data_urls(
+                binary,
+                frame_stride=video_frame_attachment_stride,
+                jpeg_quality=video_frame_jpeg_quality,
+            )
             if data_urls:
                 data_url = data_urls[0]
                 attached_media_count = len(data_urls)

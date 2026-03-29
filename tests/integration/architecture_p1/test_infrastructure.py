@@ -13,6 +13,7 @@ from httpx import AsyncClient
 from controller.api.schemas import AgentRunResponse, EpisodeResponse
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from shared.agents.config import load_agents_config
 from shared.enums import AgentName, EpisodeStatus
 from shared.models.schemas import (
     BenchmarkDefinition,
@@ -137,7 +138,10 @@ def _sample_video_bytes() -> bytes:
         )
         assert writer.isOpened(), "Failed to initialize MP4 writer for test video"
 
-        for blue, green, red in ((255, 0, 0), (0, 255, 0), (0, 0, 255)):
+        for idx in range(12):
+            blue = (idx * 53) % 256
+            green = (idx * 97) % 256
+            red = (idx * 149) % 256
             frame = np.zeros((frame_size[1], frame_size[0], 3), dtype=np.uint8)
             frame[:, :] = (blue, green, red)
             writer.write(frame)
@@ -321,10 +325,11 @@ async def test_inspect_media_splits_mp4_into_frames_when_enabled():
             episode_id=episode_id,
         )
         result = await fs.inspect_media("renders/sample_video.mp4")
+        stride = load_agents_config().render.video_frame_attachment_stride
 
         assert result.media_kind == "video_frames"
         assert result.attached_to_model is True
-        assert result.attached_media_count >= 2
+        assert result.attached_media_count == len(range(0, 12, stride))
         assert len(result.data_urls) == result.attached_media_count
         assert all(
             url.startswith("data:image/jpeg;base64,") for url in result.data_urls
