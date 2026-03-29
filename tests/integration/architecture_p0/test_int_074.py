@@ -9,6 +9,7 @@ import pytest
 import yaml
 
 from controller.api.schemas import AgentRunRequest, AgentRunResponse, EpisodeResponse
+from controller.utils.integration import infer_integration_test_id
 from shared.enums import AgentName, EpisodeStatus, ReviewDecision
 from shared.workers.schema import PlanReviewManifest
 from tests.integration.agent.helpers import (
@@ -103,6 +104,71 @@ async def _wait_for_trace(
     ]
 
 
+async def _seed_benchmark_assembly_for_task(
+    client: httpx.AsyncClient,
+    *,
+    session_id: str,
+    task: str,
+    benchmark_max_unit_cost_usd: float,
+    benchmark_max_weight_g: float,
+    planner_target_max_unit_cost_usd: float,
+    planner_target_max_weight_g: float,
+) -> None:
+    workspace_session_id = infer_integration_test_id(session_id) or session_id
+    await seed_benchmark_assembly_definition(
+        client,
+        session_id,
+        benchmark_max_unit_cost_usd=benchmark_max_unit_cost_usd,
+        benchmark_max_weight_g=benchmark_max_weight_g,
+        planner_target_max_unit_cost_usd=planner_target_max_unit_cost_usd,
+        planner_target_max_weight_g=planner_target_max_weight_g,
+    )
+    if workspace_session_id != session_id:
+        await seed_benchmark_assembly_definition(
+            client,
+            workspace_session_id,
+            benchmark_max_unit_cost_usd=benchmark_max_unit_cost_usd,
+            benchmark_max_weight_g=benchmark_max_weight_g,
+            planner_target_max_unit_cost_usd=planner_target_max_unit_cost_usd,
+            planner_target_max_weight_g=planner_target_max_weight_g,
+        )
+
+
+async def _seed_current_revision_render_preview_for_task(
+    client: httpx.AsyncClient,
+    *,
+    session_id: str,
+    task: str,
+) -> None:
+    workspace_session_id = infer_integration_test_id(session_id) or session_id
+    await seed_current_revision_render_preview(client, session_id=session_id)
+    if workspace_session_id != session_id:
+        await seed_current_revision_render_preview(
+            client, session_id=workspace_session_id
+        )
+
+
+async def _seed_execution_reviewer_handover_for_task(
+    client: httpx.AsyncClient,
+    *,
+    session_id: str,
+    task: str,
+    int_id: str,
+) -> None:
+    workspace_session_id = infer_integration_test_id(session_id) or session_id
+    await seed_execution_reviewer_handover(
+        client,
+        session_id=session_id,
+        int_id=int_id,
+    )
+    if workspace_session_id != session_id:
+        await seed_execution_reviewer_handover(
+            client,
+            session_id=workspace_session_id,
+            int_id=int_id,
+        )
+
+
 async def _run_and_wait(
     client: httpx.AsyncClient,
     *,
@@ -113,9 +179,10 @@ async def _run_and_wait(
     seed_benchmark_assembly: bool = True,
 ) -> EpisodeResponse:
     if seed_benchmark_assembly:
-        await seed_benchmark_assembly_definition(
+        await _seed_benchmark_assembly_for_task(
             client,
-            session_id,
+            session_id=session_id,
+            task=task,
             benchmark_max_unit_cost_usd=250.0,
             benchmark_max_weight_g=2500.0,
             planner_target_max_unit_cost_usd=250.0,
@@ -150,8 +217,12 @@ async def _run_and_wait(
 
 
 async def _seed_plan_reviewer_handoff(
-    client: httpx.AsyncClient, session_id: str
+    client: httpx.AsyncClient,
+    session_id: str,
+    *,
+    int_id: str = "INT-074",
 ) -> None:
+    workspace_session_id = infer_integration_test_id(session_id) or session_id
     for relative_path in (
         "plan.md",
         "todo.md",
@@ -159,7 +230,7 @@ async def _seed_plan_reviewer_handoff(
         "benchmark_definition.yaml",
     ):
         content = Path(
-            "tests/integration/mock_responses/INT-074/engineer_planner/entry_01/"
+            f"tests/integration/mock_responses/{int_id}/engineer_planner/entry_01/"
             + {
                 "plan.md": "01__plan.md",
                 "todo.md": "02__todo.md",
@@ -176,12 +247,23 @@ async def _seed_plan_reviewer_handoff(
             },
             headers={"X-Session-ID": session_id},
         )
+        if workspace_session_id != session_id:
+            await client.post(
+                "http://127.0.0.1:18001/fs/write",
+                json={
+                    "path": relative_path,
+                    "content": content,
+                    "overwrite": True,
+                },
+                headers={"X-Session-ID": workspace_session_id},
+            )
 
 
 async def _seed_engineer_plan_review_manifest(
     client: httpx.AsyncClient,
     session_id: str,
     *,
+    task: str,
     artifact_hashes: dict[str, str],
 ) -> None:
     manifest = PlanReviewManifest(
@@ -202,6 +284,22 @@ async def _seed_engineer_plan_review_manifest(
         headers={"X-Session-ID": session_id, "X-System-FS-Bypass": "1"},
     )
     assert response.status_code == 200, response.text
+    workspace_session_id = infer_integration_test_id(task, session_id) or session_id
+    if workspace_session_id != session_id:
+        response = await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": ".manifests/engineering_plan_review_manifest.json",
+                "content": manifest.model_dump_json(indent=2),
+                "overwrite": True,
+                "bypass_agent_permissions": True,
+            },
+            headers={
+                "X-Session-ID": workspace_session_id,
+                "X-System-FS-Bypass": "1",
+            },
+        )
+        assert response.status_code == 200, response.text
 
 
 async def _read_session_file(
@@ -253,16 +351,21 @@ async def test_int_074_engineering_dof_minimization_review_gate():
     """
     async with httpx.AsyncClient(timeout=300.0) as client:
         plan_session = f"INT-074-{uuid.uuid4().hex[:8]}"
-        await seed_benchmark_assembly_definition(
+        await _seed_benchmark_assembly_for_task(
             client,
-            plan_session,
+            session_id=plan_session,
+            task="INT-074 plan reviewer DOF minimization gate",
             benchmark_max_unit_cost_usd=250.0,
             benchmark_max_weight_g=2500.0,
             planner_target_max_unit_cost_usd=250.0,
             planner_target_max_weight_g=2500.0,
         )
         await _seed_plan_reviewer_handoff(client, plan_session)
-        await seed_current_revision_render_preview(client, session_id=plan_session)
+        await _seed_current_revision_render_preview_for_task(
+            client,
+            session_id=plan_session,
+            task="INT-074 plan reviewer DOF minimization gate",
+        )
         planner_episode = await _run_and_wait(
             client,
             agent_name=AgentName.ENGINEER_PLANNER,
@@ -276,7 +379,48 @@ async def test_int_074_engineering_dof_minimization_review_gate():
             EpisodeStatus.PLANNED,
         }, planner_episode
 
-        await seed_current_revision_render_preview(client, session_id=plan_session)
+        await _seed_benchmark_assembly_for_task(
+            client,
+            session_id=plan_session,
+            task="INT-074 plan reviewer DOF minimization gate",
+            benchmark_max_unit_cost_usd=250.0,
+            benchmark_max_weight_g=2500.0,
+            planner_target_max_unit_cost_usd=250.0,
+            planner_target_max_weight_g=2500.0,
+        )
+        await _seed_plan_reviewer_handoff(client, plan_session)
+        plan_artifact_contents = {
+            "plan.md": Path(
+                "tests/integration/mock_responses/INT-074/engineer_planner/entry_01/01__plan.md"
+            ).read_text(encoding="utf-8"),
+            "todo.md": Path(
+                "tests/integration/mock_responses/INT-074/engineer_planner/entry_01/02__todo.md"
+            ).read_text(encoding="utf-8"),
+            "assembly_definition.yaml": Path(
+                "tests/integration/mock_responses/INT-074/engineer_planner/entry_01/03__assembly_definition.yaml"
+            ).read_text(encoding="utf-8"),
+            "benchmark_definition.yaml": Path(
+                "tests/integration/mock_responses/INT-074/engineer_planner/entry_01/04__benchmark_definition.yaml"
+            ).read_text(encoding="utf-8"),
+            "benchmark_assembly_definition.yaml": await _read_session_file(
+                client, plan_session, "benchmark_assembly_definition.yaml"
+            ),
+        }
+        await _seed_engineer_plan_review_manifest(
+            client,
+            plan_session,
+            task="INT-074 plan reviewer DOF minimization gate",
+            artifact_hashes={
+                path: hashlib.sha256(content.encode("utf-8")).hexdigest()
+                for path, content in plan_artifact_contents.items()
+            },
+        )
+
+        await _seed_current_revision_render_preview_for_task(
+            client,
+            session_id=plan_session,
+            task="INT-074 plan reviewer DOF minimization gate",
+        )
         plan_episode = await _run_and_wait(
             client,
             agent_name=AgentName.ENGINEER_PLAN_REVIEWER,
@@ -344,16 +488,57 @@ async def test_int_074_engineering_dof_minimization_review_gate():
         # Justified-motion path: the approved plan must persist the canonical
         # DOF checklist key.
         justified_session = f"INT-075-{uuid.uuid4().hex[:8]}"
-        await seed_execution_reviewer_handover(
+        await _seed_execution_reviewer_handover_for_task(
             client,
             session_id=justified_session,
+            task="INT-075 justified-motion acceptance gate",
             int_id="INT-181",
+        )
+        await _seed_benchmark_assembly_for_task(
+            client,
+            session_id=justified_session,
+            task="INT-075 justified-motion acceptance gate",
+            benchmark_max_unit_cost_usd=250.0,
+            benchmark_max_weight_g=2500.0,
+            planner_target_max_unit_cost_usd=250.0,
+            planner_target_max_weight_g=2500.0,
+        )
+        await _seed_plan_reviewer_handoff(
+            client,
+            justified_session,
+            int_id="INT-075",
+        )
+        justified_plan_artifact_contents = {
+            "plan.md": Path(
+                "tests/integration/mock_responses/INT-075/engineer_planner/entry_01/01__plan.md"
+            ).read_text(encoding="utf-8"),
+            "todo.md": Path(
+                "tests/integration/mock_responses/INT-075/engineer_planner/entry_01/02__todo.md"
+            ).read_text(encoding="utf-8"),
+            "assembly_definition.yaml": Path(
+                "tests/integration/mock_responses/INT-075/engineer_planner/entry_01/03__assembly_definition.yaml"
+            ).read_text(encoding="utf-8"),
+            "benchmark_definition.yaml": Path(
+                "tests/integration/mock_responses/INT-075/engineer_planner/entry_01/04__benchmark_definition.yaml"
+            ).read_text(encoding="utf-8"),
+            "benchmark_assembly_definition.yaml": await _read_session_file(
+                client, justified_session, "benchmark_assembly_definition.yaml"
+            ),
+        }
+        await _seed_engineer_plan_review_manifest(
+            client,
+            justified_session,
+            task="INT-075 justified-motion acceptance gate",
+            artifact_hashes={
+                path: hashlib.sha256(content.encode("utf-8")).hexdigest()
+                for path, content in justified_plan_artifact_contents.items()
+            },
         )
         justified_episode = await _run_and_wait(
             client,
             agent_name=AgentName.ENGINEER_CODER,
             session_id=justified_session,
-            task="INT-074 justified-motion acceptance gate",
+            task="INT-075 justified-motion acceptance gate",
         )
         justified_episode = await _wait_for_review_evidence(
             client,
@@ -411,16 +596,19 @@ async def test_int_074_engineering_dof_minimization_review_gate():
 
         # Regression: the justification marker must be explicit and standalone.
         strict_marker_session = f"INT-075-{uuid.uuid4().hex[:8]}"
-        await seed_benchmark_assembly_definition(
+        await _seed_benchmark_assembly_for_task(
             client,
-            strict_marker_session,
+            session_id=strict_marker_session,
+            task="INT-075 strict marker regression",
             benchmark_max_unit_cost_usd=250.0,
             benchmark_max_weight_g=2500.0,
             planner_target_max_unit_cost_usd=250.0,
             planner_target_max_weight_g=2500.0,
         )
-        await seed_current_revision_render_preview(
-            client, session_id=strict_marker_session
+        await _seed_current_revision_render_preview_for_task(
+            client,
+            session_id=strict_marker_session,
+            task="INT-075 strict marker regression",
         )
         benchmark_definition_content = Path(
             "tests/integration/mock_responses/INT-075/"
@@ -489,6 +677,7 @@ async def test_int_074_engineering_dof_minimization_review_gate():
         await _seed_engineer_plan_review_manifest(
             client,
             strict_marker_session,
+            task="INT-075 strict marker regression",
             artifact_hashes={
                 "plan.md": hashlib.sha256(
                     (
@@ -547,15 +736,20 @@ async def test_int_074_engineering_dof_minimization_review_gate():
         # Regression: malformed assembly YAML must fail closed instead of
         # falling through to the LLM path.
         malformed_session = f"INT-075-{uuid.uuid4().hex[:8]}"
-        await seed_benchmark_assembly_definition(
+        await _seed_benchmark_assembly_for_task(
             client,
-            malformed_session,
+            session_id=malformed_session,
+            task="INT-075 malformed assembly regression",
             benchmark_max_unit_cost_usd=250.0,
             benchmark_max_weight_g=2500.0,
             planner_target_max_unit_cost_usd=250.0,
             planner_target_max_weight_g=2500.0,
         )
-        await seed_current_revision_render_preview(client, session_id=malformed_session)
+        await _seed_current_revision_render_preview_for_task(
+            client,
+            session_id=malformed_session,
+            task="INT-075 malformed assembly regression",
+        )
         benchmark_definition_content = Path(
             "tests/integration/mock_responses/INT-075/"
             "engineer_planner/entry_01/04__benchmark_definition.yaml"
@@ -610,6 +804,7 @@ async def test_int_074_engineering_dof_minimization_review_gate():
         await _seed_engineer_plan_review_manifest(
             client,
             malformed_session,
+            task="INT-075 malformed assembly regression",
             artifact_hashes={
                 "plan.md": hashlib.sha256(plan_content.encode("utf-8")).hexdigest(),
                 "todo.md": hashlib.sha256(todo_content.encode("utf-8")).hexdigest(),

@@ -540,7 +540,12 @@ async def _wait_for_resource_state(
                     continue
                 if not isinstance(payload, dict):
                     continue
-                if payload.get("type") != "status_update":
+                # Benchmark sessions can publish asset visibility through
+                # file_update events without sending a fresh status_update
+                # after the websocket is established. Re-check on either event
+                # type so we do not miss a terminal state that is already
+                # observable over HTTP.
+                if payload.get("type") not in {"status_update", "file_update"}:
                     continue
                 resource = await fetch_resource()
                 if resource is None:

@@ -113,7 +113,10 @@ def _objective_validation_payload(
             "start_position": start_position,
             "runtime_jitter": runtime_jitter,
         },
-        "constraints": {"max_unit_cost": 50.0, "max_weight_g": 1200.0},
+        "constraints": {
+            "estimated_solution_cost_usd": 33.333333333333336,
+            "estimated_solution_weight_g": 800.0,
+        },
         "benchmark_parts": _default_benchmark_parts(),
         "randomization": {
             "static_variation_id": "v1.0",
@@ -219,7 +222,10 @@ def build():
             "start_position": [-4.0, 0.0, 0.5],
             "runtime_jitter": [0.1, 0.1, 0.1],
         },
-        "constraints": {"max_unit_cost": 50.0, "max_weight_g": 1200.0},
+        "constraints": {
+            "estimated_solution_cost_usd": 33.333333333333336,
+            "estimated_solution_weight_g": 800.0,
+        },
         "benchmark_parts": _default_benchmark_parts(),
         "randomization": {
             "static_variation_id": "v1.0",
@@ -635,7 +641,10 @@ def build():
             "start_position": [-4.0, 0.0, 0.5],
             "runtime_jitter": [0.1, 0.1, 0.1],
         },
-        "constraints": {"max_unit_cost": 50.0, "max_weight_g": 1200.0},
+        "constraints": {
+            "estimated_solution_cost_usd": 33.333333333333336,
+            "estimated_solution_weight_g": 800.0,
+        },
         "randomization": {
             "static_variation_id": "v1.0",
             "runtime_jitter_enabled": True,
@@ -743,7 +752,10 @@ def build():
             "start_position": [-4.0, 0.0, 0.5],
             "runtime_jitter": [0.1, 0.1, 0.1],
         },
-        "constraints": {"max_unit_cost": 50.0, "max_weight_g": 1200.0},
+        "constraints": {
+            "estimated_solution_cost_usd": 33.333333333333336,
+            "estimated_solution_weight_g": 800.0,
+        },
         "randomization": {
             "static_variation_id": "v1.0",
             "runtime_jitter_enabled": True,
@@ -842,7 +854,10 @@ def build():
             "start_position": [-4.0, 0.0, 0.5],
             "runtime_jitter": [0.1, 0.1, 0.1],
         },
-        "constraints": {"max_unit_cost": 50.0, "max_weight_g": 1200.0},
+        "constraints": {
+            "estimated_solution_cost_usd": 33.333333333333336,
+            "estimated_solution_weight_g": 800.0,
+        },
         "randomization": {
             "static_variation_id": "v1.0",
             "runtime_jitter_enabled": True,
@@ -998,7 +1013,10 @@ def build():
             "start_position": [-4.0, 0.0, 0.5],
             "runtime_jitter": [0.1, 0.1, 0.1],
         },
-        "constraints": {"max_unit_cost": 50.0, "max_weight_g": 1200.0},
+        "constraints": {
+            "estimated_solution_cost_usd": 33.333333333333336,
+            "estimated_solution_weight_g": 800.0,
+        },
         "randomization": {
             "static_variation_id": "v1.0",
             "runtime_jitter_enabled": True,
@@ -1197,7 +1215,10 @@ def build():
             "start_position": [-4.0, 0.0, 0.5],
             "runtime_jitter": [0.1, 0.1, 0.1],
         },
-        "constraints": {"max_unit_cost": 50.0, "max_weight_g": 1200.0},
+        "constraints": {
+            "estimated_solution_cost_usd": 33.333333333333336,
+            "estimated_solution_weight_g": 800.0,
+        },
         "randomization": {
             "static_variation_id": "v1.0",
             "runtime_jitter_enabled": True,
@@ -1336,7 +1357,10 @@ def build():
             "start_position": [0.0, 0.0, 1.0],
             "runtime_jitter": [0.5, 0.5, 0.5],
         },
-        "constraints": {"max_unit_cost": 50.0, "max_weight_g": 1200.0},
+        "constraints": {
+            "estimated_solution_cost_usd": 33.333333333333336,
+            "estimated_solution_weight_g": 800.0,
+        },
         "benchmark_parts": _default_benchmark_parts(),
         "randomization": {
             "static_variation_id": "v1.0",
@@ -1446,7 +1470,10 @@ def build():
             "start_position": [0.0, 0.0, 1.0],
             "runtime_jitter": [0.5, 0.5, 0.5],
         },
-        "constraints": {"max_unit_cost": 50.0, "max_weight_g": 1200.0},
+        "constraints": {
+            "estimated_solution_cost_usd": 33.333333333333336,
+            "estimated_solution_weight_g": 800.0,
+        },
         "benchmark_parts": _default_benchmark_parts(),
         "randomization": {
             "static_variation_id": "v1.0",
@@ -1560,7 +1587,10 @@ def _drillable_benchmark_definition(benchmark_parts: list[dict]) -> dict:
             "start_position": [-4.0, 0.0, 0.5],
             "runtime_jitter": [0.1, 0.1, 0.1],
         },
-        "constraints": {"max_unit_cost": 50.0, "max_weight_g": 1200.0},
+        "constraints": {
+            "estimated_solution_cost_usd": 33.333333333333336,
+            "estimated_solution_weight_g": 800.0,
+        },
         "randomization": {
             "static_variation_id": "v1.0",
             "runtime_jitter_enabled": True,
