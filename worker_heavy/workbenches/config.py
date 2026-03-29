@@ -133,10 +133,8 @@ def load_required_merged_config(
 ) -> ManufacturingConfig:
     """Load a merged manufacturing config, defaulting to the repository config.
 
-    A workspace override is optional. When no override is provided, or the
-    caller does not have a workspace config file, return the repository default
-    configuration instead of failing closed. This keeps the base contract
-    usable for tests and runtime paths that rely on the checked-in config.
+    A workspace override is optional. If the caller explicitly points at a
+    workspace config file, that file must exist and contain a mapping.
     """
     if config_path is None and override_data is None:
         return load_config()
@@ -145,12 +143,11 @@ def load_required_merged_config(
         file_override: dict[str, Any] | None
         if config_path is not None:
             path = Path(config_path)
-            if path.exists():
-                file_override = _read_config_data(path)
-                if not file_override:
-                    raise ValueError(f"{source_name} is empty")
-            else:
-                file_override = None
+            if not path.exists():
+                raise FileNotFoundError(f"{source_name} missing or unreadable: {path}")
+            file_override = _read_config_data(path)
+            if not file_override:
+                raise ValueError(f"{source_name} is empty")
         else:
             file_override = None
 

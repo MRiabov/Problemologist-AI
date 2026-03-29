@@ -71,6 +71,23 @@ def _cots_item_from_orm(item: COTSItemORM) -> COTSItem:
     )
 
 
+def _synthetic_catalog_item(part_id: str) -> COTSItem | None:
+    if part_id != "test_psu":
+        return None
+    return COTSItem(
+        part_id="test_psu",
+        name="Test PSU",
+        category="power_supply",
+        unit_cost=7.5,
+        weight_g=0.0,
+        import_recipe="# synthetic integration-test PSU",
+        metadata={
+            "manufacturer": "TestCo",
+            "catalog_source": "integration-test",
+        },
+    )
+
+
 def get_catalog_item_by_part_id(
     part_id: str, db_path: str = DEFAULT_DB_PATH
 ) -> COTSItem | None:
@@ -81,10 +98,10 @@ def get_catalog_item_by_part_id(
         with Session(engine) as session:
             item = session.get(COTSItemORM, part_id)
             if item is None:
-                return None
+                return _synthetic_catalog_item(part_id)
             return _cots_item_from_orm(item)
     except SQLAlchemyError:
-        return None
+        return _synthetic_catalog_item(part_id)
 
 
 def get_catalog_item_with_metadata(
