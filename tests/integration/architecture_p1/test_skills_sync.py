@@ -1,6 +1,7 @@
 import asyncio
 import os
 import uuid
+from pathlib import Path
 
 import httpx
 import pytest
@@ -13,12 +14,25 @@ from controller.api.schemas import (
     EpisodeResponse,
 )
 from shared.enums import AgentName, EpisodeStatus
+from shared.skills import build_skill_catalog_lines
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.schema import ListFilesRequest, ReadFileRequest, ReadFileResponse
 from tests.integration.agent.helpers import seed_benchmark_assembly_definition
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
+ROOT = Path(__file__).resolve().parents[3]
+
+
+def _catalog_paths(prompt_text: str) -> list[str]:
+    catalog_block = prompt_text.rsplit("Available skills you can read:", 1)[1]
+    paths: list[str] = []
+    for line in catalog_block.splitlines():
+        line = line.strip()
+        if not line.startswith("- `"):
+            continue
+        paths.append(line.split("`")[1])
+    return paths
 
 
 @pytest.mark.integration_p1
@@ -82,8 +96,15 @@ async def test_int_045_skills_sync_lifecycle():
 
         # 5. Verify the controller backend prompt builder exposes the skill catalog.
         prompt_manager = PromptManager()
+        expected_catalog_paths = sorted(
+            f"/skills/{skill_dir.name}/SKILL.md"
+            for skill_dir in (ROOT / "skills").iterdir()
+            if skill_dir.is_dir() and (skill_dir / "SKILL.md").is_file()
+        )
+        catalog_lines = build_skill_catalog_lines()
+        assert catalog_lines[0] == "Available skills you can read:"
+        assert _catalog_paths("\n".join(catalog_lines)) == expected_catalog_paths
         for agent_name in (AgentName.ENGINEER_CODER, AgentName.BENCHMARK_CODER):
             prompt_text = prompt_manager.render(agent_name)
             assert "Available skills you can read:" in prompt_text
-            assert "/skills/runtime-script-contract/SKILL.md" in prompt_text
-            assert "/skills/build123d_cad_drafting_skill/SKILL.md" in prompt_text
+            assert _catalog_paths(prompt_text) == expected_catalog_paths
