@@ -14,6 +14,10 @@ from shared.simulation.schemas import (
     SimulatorBackendType,
     get_default_simulator_backend,
 )
+from shared.simulation.smoke_mode import (
+    ensure_smoke_test_mode_allowed,
+    resolve_default_smoke_test_mode,
+)
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.schema import (
     BenchmarkToolResponse,
@@ -33,10 +37,7 @@ logger = structlog.get_logger(__name__)
 
 
 def _default_smoke_test_mode() -> bool:
-    env_smoke = os.getenv("SMOKE_TEST_MODE")
-    if env_smoke is not None:
-        return env_smoke.strip().lower() in {"1", "true", "yes", "on"}
-    return settings.is_integration_test
+    return resolve_default_smoke_test_mode(integration_enabled=settings.is_integration_test)
 
 
 class WorkerClient:
@@ -759,6 +760,9 @@ class WorkerClient:
     ) -> BenchmarkToolResponse:
         """Trigger physics simulation via worker."""
         resolved_backend = backend or get_default_simulator_backend()
+        ensure_smoke_test_mode_allowed(
+            smoke_test_mode, integration_enabled=settings.is_integration_test
+        )
         if self.controller_url:
             payload = {
                 "script_path": script_path,
@@ -870,6 +874,10 @@ class WorkerClient:
     ) -> BenchmarkToolResponse:
         """Trigger runtime-randomization verification via worker."""
         resolved_backend = backend or get_default_simulator_backend()
+        if smoke_test_mode is not None:
+            ensure_smoke_test_mode_allowed(
+                smoke_test_mode, integration_enabled=settings.is_integration_test
+            )
         payload: dict[str, Any] = {
             "script_path": script_path,
             "agent_role": self.agent_role,

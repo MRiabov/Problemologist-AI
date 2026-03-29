@@ -1,14 +1,13 @@
 import asyncio
 import base64
 import hashlib
-import os
 import time
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 
 import httpx
 from fastapi import APIRouter, Header, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from controller.clients.worker import WorkerClient
 from controller.config.settings import settings
@@ -19,6 +18,10 @@ from shared.logging import bind_log_context
 from shared.simulation.schemas import (
     SimulatorBackendType,
     get_default_simulator_backend,
+)
+from shared.simulation.smoke_mode import (
+    ensure_smoke_test_mode_allowed,
+    resolve_default_smoke_test_mode,
 )
 from shared.workers.schema import (
     BenchmarkToolResponse,
@@ -43,6 +46,11 @@ class ScriptToolRequest(BaseModel):
     duration: float | None = None
     seed: int | None = None
     episode_id: str | None = None
+
+    @field_validator("smoke_test_mode", mode="after")
+    @classmethod
+    def validate_smoke_test_mode(cls, value: bool | None) -> bool | None:
+        return ensure_smoke_test_mode_allowed(value)
 
 
 @asynccontextmanager
@@ -195,6 +203,10 @@ async def simulate_script(
     x_session_id: str = Header(...),
 ):
     with _script_log_context(payload, x_session_id):
+        ensure_smoke_test_mode_allowed(
+            payload.smoke_test_mode,
+            integration_enabled=settings.is_integration_test,
+        )
         async with _controller_script_middleware(
             x_session_id, payload.agent_role, request, payload.episode_id
         ) as middleware:
@@ -235,16 +247,14 @@ async def verify_script(
     with _script_log_context(payload, x_session_id):
         smoke_test_mode = payload.smoke_test_mode
         if smoke_test_mode is None:
-            env_smoke = os.getenv("SMOKE_TEST_MODE")
-            if env_smoke is not None:
-                smoke_test_mode = env_smoke.strip().lower() in {
-                    "1",
-                    "true",
-                    "yes",
-                    "on",
-                }
-            else:
-                smoke_test_mode = settings.is_integration_test
+            smoke_test_mode = resolve_default_smoke_test_mode(
+                integration_enabled=settings.is_integration_test
+            )
+        else:
+            ensure_smoke_test_mode_allowed(
+                smoke_test_mode,
+                integration_enabled=settings.is_integration_test,
+            )
         async with _controller_script_middleware(
             x_session_id, payload.agent_role, request, payload.episode_id
         ) as middleware:
