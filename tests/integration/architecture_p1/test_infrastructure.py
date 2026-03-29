@@ -20,6 +20,7 @@ from shared.models.schemas import (
     ObjectivesSection,
     PhysicsConfig,
 )
+from shared.models.simulation import RenderMode, SimulationResult
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
     BenchmarkToolRequest,
@@ -223,6 +224,26 @@ async def test_render_artifact_generation_int_039_simulation_video_shows_objecti
         assert simulate_resp.status_code == 200, simulate_resp.text
         simulate_data = BenchmarkToolResponse.model_validate(simulate_resp.json())
         assert simulate_data.artifacts is not None, simulate_data
+        assert simulate_data.artifacts.simulation_result_json is not None, (
+            simulate_data.artifacts
+        )
+        simulation_result = SimulationResult.model_validate_json(
+            simulate_data.artifacts.simulation_result_json
+        )
+        assert simulation_result.render_provenance is not None, simulation_result
+        assert simulation_result.render_provenance.backend_type == (
+            SimulatorBackendType.MUJOCO
+        )
+        assert (
+            simulation_result.render_provenance.artifact_mode
+            == RenderMode.SIMULATION_VIDEO
+        )
+        assert simulation_result.render_provenance.captured_frame_count > 0
+        assert simulation_result.render_provenance.renderer_capabilities is not None
+        assert (
+            simulation_result.render_provenance.renderer_capabilities.backend_name
+            == ("mujoco")
+        )
 
         video_path = next(
             (
