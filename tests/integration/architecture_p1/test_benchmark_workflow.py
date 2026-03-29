@@ -329,13 +329,12 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
         resp = await client.post("/benchmark/generate", json=request.model_dump())
         assert resp.status_code in [200, 202], resp.text
         benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())
-        session_id = str(benchmark_resp.session_id)
         episode_id = str(benchmark_resp.episode_id)
 
         latest_episode = EpisodeResponse.model_validate(
             await wait_for_benchmark_state(
                 client,
-                session_id,
+                episode_id,
                 timeout_s=120.0,
                 terminal_statuses=set(),
                 predicate=lambda candidate: (
@@ -425,7 +424,7 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
             f"benchmark_plan_review_manifest.json missing. Artifacts: {artifact_paths}"
         )
         manifest_resp = await client.get(
-            f"/episodes/{session_id}/assets/{plan_review_manifest_paths[0]}"
+            f"/episodes/{episode_id}/assets/{plan_review_manifest_paths[0]}"
         )
         assert manifest_resp.status_code == 200, manifest_resp.text
         manifest = PlanReviewManifest.model_validate_json(manifest_resp.text)
@@ -448,7 +447,7 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
             f"renders/render_manifest.json missing. Artifacts: {artifact_paths}"
         )
         render_manifest_resp = await client.get(
-            f"/episodes/{session_id}/assets/{render_manifest_paths[0]}"
+            f"/episodes/{episode_id}/assets/{render_manifest_paths[0]}"
         )
         assert render_manifest_resp.status_code == 200, render_manifest_resp.text
         render_manifest = RenderManifest.model_validate_json(render_manifest_resp.text)
@@ -478,7 +477,6 @@ async def test_int_200_benchmark_workflow_rejects_hidden_motion_handoff():
         resp = await client.post("/benchmark/generate", json=request.model_dump())
         assert resp.status_code in [200, 202], resp.text
         benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())
-        session_id = str(benchmark_resp.session_id)
         episode_id = str(benchmark_resp.episode_id)
 
         episode = EpisodeResponse.model_validate(
@@ -486,21 +484,22 @@ async def test_int_200_benchmark_workflow_rejects_hidden_motion_handoff():
                 client,
                 episode_id,
                 timeout_s=240.0,
+                terminal_statuses={
+                    EpisodeStatus.FAILED,
+                    EpisodeStatus.CANCELLED,
+                },
                 predicate=lambda candidate: any(
-                    asset.s3_path.endswith(
-                        "benchmark-plan-review-decision-round-1.yaml"
-                    )
-                    for asset in (candidate.assets or [])
+                    trace.name == "review_decision"
+                    and trace.metadata_vars is not None
+                    and trace.metadata_vars.decision == ReviewDecision.REJECT_PLAN
+                    and "AMBIGUOUS_TASK" in (trace.content or "")
+                    for trace in (candidate.traces or [])
                 ),
             )
         )
         metadata = episode.metadata_vars
         assert metadata is not None
-        assert episode.status in {
-            EpisodeStatus.RUNNING,
-            EpisodeStatus.PLANNED,
-            EpisodeStatus.FAILED,
-        }
+        assert episode.status == EpisodeStatus.FAILED
         traces = episode.traces or []
         submit_plan_traces = [
             trace
@@ -508,62 +507,31 @@ async def test_int_200_benchmark_workflow_rejects_hidden_motion_handoff():
             if trace.trace_type == TraceType.TOOL_START and trace.name == "submit_plan"
         ]
         assert len(submit_plan_traces) >= 1, (
-            "Benchmark workflow must submit the hidden-motion handoff before review."
+            "Benchmark workflow must still reach submit_plan before refusing."
+        )
+        rejection_traces = [
+            trace
+            for trace in traces
+            if trace.name == "review_decision"
+            and trace.metadata_vars is not None
+            and trace.metadata_vars.decision == ReviewDecision.REJECT_PLAN
+            and "AMBIGUOUS_TASK" in (trace.content or "")
+        ]
+        assert rejection_traces, "Expected planner-side hidden-motion rejection."
+        assert not any(trace.name == "benchmark_plan_reviewer" for trace in traces), (
+            "Benchmark plan reviewer should not start after planner-side rejection."
+        )
+        assert not any(trace.name == "benchmark_coder" for trace in traces), (
+            "Benchmark coder should not start after planner-side rejection."
         )
         artifact_paths = [asset.s3_path for asset in (episode.assets or [])]
-        decision_paths = [
-            path
+        assert not any(
+            path.endswith("benchmark-plan-review-decision-round-1.yaml")
+            or path.endswith("benchmark-plan-review-comments-round-1.yaml")
+            or path.endswith("benchmark_plan_review_manifest.json")
             for path in artifact_paths
-            if path.endswith("benchmark-plan-review-decision-round-1.yaml")
-        ]
-        comments_paths = [
-            path
-            for path in artifact_paths
-            if path.endswith("benchmark-plan-review-comments-round-1.yaml")
-        ]
-        manifest_paths = [
-            path
-            for path in artifact_paths
-            if path.endswith("benchmark_plan_review_manifest.json")
-        ]
-        assert decision_paths, f"Decision artifact missing. Artifacts: {artifact_paths}"
-        assert comments_paths, f"Comments artifact missing. Artifacts: {artifact_paths}"
-        assert manifest_paths, f"Manifest artifact missing. Artifacts: {artifact_paths}"
-
-        decision_resp = await client.get(
-            f"/episodes/{session_id}/assets/{decision_paths[0]}"
-        )
-        assert decision_resp.status_code == 200, decision_resp.text
-        decision = yaml.safe_load(decision_resp.text)
-        expected_reason = (
-            "AMBIGUOUS_TASK: benchmark_assembly_definition.yaml does not declare "
-            "the moving fixture motion contract explicitly enough for the reviewer "
-            "to accept it."
-        )
-        assert decision["decision"] == ReviewDecision.REJECT_PLAN.value, decision
-        assert decision["reason"] == expected_reason, decision
-
-        comments_resp = await client.get(
-            f"/episodes/{session_id}/assets/{comments_paths[0]}"
-        )
-        assert comments_resp.status_code == 200, comments_resp.text
-        comments = yaml.safe_load(comments_resp.text)
-        assert comments["checklist"]["hidden_motion_detected"] is True, comments
-        assert comments["checklist"]["motion_visible"] is False, comments
-        assert comments["required_fixes"] == [
-            "Describe the moving benchmark fixture contract in benchmark_assembly_definition.yaml, including part identity, motion kind/topology, controller facts when present, and reviewer-visible operating limits or free-body wording when applicable."
-        ], comments
-
-        manifest_resp = await client.get(
-            f"/episodes/{session_id}/assets/{manifest_paths[0]}"
-        )
-        assert manifest_resp.status_code == 200, manifest_resp.text
-        manifest = PlanReviewManifest.model_validate_json(manifest_resp.text)
-        assert manifest.status == "ready_for_review"
-        assert manifest.reviewer_stage == AgentName.BENCHMARK_PLAN_REVIEWER
-        assert manifest.planner_node_type == AgentName.BENCHMARK_PLANNER
-        assert not any(trace.name == "benchmark_coder" for trace in traces), (
-            "Benchmark coder should not start after plan-review rejection."
+        ), (
+            f"Unexpected reviewer artifacts after fail-closed rejection: {artifact_paths}"
         )
 
 

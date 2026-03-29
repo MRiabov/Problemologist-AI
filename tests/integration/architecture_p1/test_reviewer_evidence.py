@@ -14,9 +14,11 @@ from controller.api.schemas import (
     AgentRunResponse,
     BenchmarkGenerateRequest,
     BenchmarkGenerateResponse,
+    ConfirmRequest,
     EpisodeResponse,
 )
 from controller.clients.worker import WorkerClient
+from controller.utils.integration import infer_integration_test_id
 from shared.enums import AgentName, EpisodeStatus, ReviewDecision
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import PlanReviewManifest, RenderManifest, ReviewManifest
@@ -31,6 +33,38 @@ from tests.integration.agent.helpers import (
 )
 
 CONTROLLER_URL = "http://127.0.0.1:18000"
+
+
+def _workspace_session_ids(session_id: str) -> tuple[str, ...]:
+    canonical_session_id = infer_integration_test_id(session_id)
+    if canonical_session_id and canonical_session_id != session_id:
+        return (session_id, canonical_session_id)
+    return (session_id,)
+
+
+async def _write_workspace_file(
+    client: AsyncClient,
+    *,
+    session_id: str,
+    path: str,
+    content: str,
+    bypass_agent_permissions: bool = False,
+) -> None:
+    for target_session_id in _workspace_session_ids(session_id):
+        response = await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": path,
+                "content": content,
+                "overwrite": True,
+                "bypass_agent_permissions": bypass_agent_permissions,
+            },
+            headers={
+                "X-Session-ID": target_session_id,
+                **({"X-System-FS-Bypass": "1"} if bypass_agent_permissions else {}),
+            },
+        )
+        assert response.status_code == 200, response.text
 
 
 def _has_review_artifacts(
@@ -168,52 +202,39 @@ async def test_reviewer_evidence_completeness():
         session_id = str(benchmark_resp.session_id)
         episode_id = str(benchmark_resp.episode_id)
 
-        ep_data = EpisodeResponse.model_validate(
+        initial_episode = EpisodeResponse.model_validate(
             await wait_for_benchmark_state(
                 client,
                 session_id,
                 timeout_s=180.0,
-                terminal_statuses=set(),
-                predicate=lambda candidate: (
-                    any(
-                        p.endswith("manifest.json")
-                        for p in [asset.s3_path for asset in (candidate.assets or [])]
-                    )
-                    and any(
-                        "reviews/" in p
-                        and (
-                            "benchmark-plan-review-decision-round-" in p
-                            or "benchmark-plan-review-comments-round-" in p
-                            or "benchmark-execution-review-decision-round-" in p
-                            or "benchmark-execution-review-comments-round-" in p
-                            or "engineering-plan-review-decision-round-" in p
-                            or "engineering-plan-review-comments-round-" in p
-                            or "engineering-execution-review-decision-round-" in p
-                            or "engineering-execution-review-comments-round-" in p
-                            or "electronics-review-decision-round-" in p
-                            or "electronics-review-comments-round-" in p
-                        )
-                        for p in [asset.s3_path for asset in (candidate.assets or [])]
-                    )
-                    and any(
-                        _is_inspect_media_trace(trace)
-                        for trace in (candidate.traces or [])
-                    )
-                    and any(
-                        trace.name == "media_inspection"
-                        for trace in (candidate.traces or [])
-                    )
-                    and any(
-                        trace.name == "llm_media_attached"
-                        for trace in (candidate.traces or [])
-                    )
-                    and any(
-                        trace.name == "review_decision"
-                        for trace in (candidate.traces or [])
-                    )
-                ),
+                terminal_statuses={
+                    EpisodeStatus.PLANNED,
+                    EpisodeStatus.COMPLETED,
+                    EpisodeStatus.FAILED,
+                    EpisodeStatus.CANCELLED,
+                },
             )
         )
+        if initial_episode.status == EpisodeStatus.PLANNED:
+            confirm_resp = await client.post(
+                f"/benchmark/{session_id}/confirm",
+                json=ConfirmRequest(comment="Proceed").model_dump(),
+            )
+            assert confirm_resp.status_code in {200, 202}, confirm_resp.text
+            ep_data = EpisodeResponse.model_validate(
+                await wait_for_benchmark_state(
+                    client,
+                    session_id,
+                    timeout_s=180.0,
+                    terminal_statuses={
+                        EpisodeStatus.COMPLETED,
+                        EpisodeStatus.FAILED,
+                        EpisodeStatus.CANCELLED,
+                    },
+                )
+            )
+        else:
+            ep_data = initial_episode
 
         ep_resp = await client.get(f"/episodes/{episode_id}")
         assert ep_resp.status_code == 200
@@ -369,41 +390,29 @@ async def test_engineering_dof_review_evidence_uses_canonical_keys():
             "tests/integration/mock_responses/INT-075/"
             "engineer_coder/entry_01/01__assembly_definition.yaml"
         ).read_text(encoding="utf-8")
-        await client.post(
-            "http://127.0.0.1:18001/fs/write",
-            json={
-                "path": "benchmark_definition.yaml",
-                "content": over_actuated_benchmark_definition,
-                "overwrite": True,
-            },
-            headers={"X-Session-ID": session_id},
+        await _write_workspace_file(
+            client,
+            session_id=session_id,
+            path="benchmark_definition.yaml",
+            content=over_actuated_benchmark_definition,
         )
-        await client.post(
-            "http://127.0.0.1:18001/fs/write",
-            json={
-                "path": "plan.md",
-                "content": over_actuated_plan,
-                "overwrite": True,
-            },
-            headers={"X-Session-ID": session_id},
+        await _write_workspace_file(
+            client,
+            session_id=session_id,
+            path="plan.md",
+            content=over_actuated_plan,
         )
-        await client.post(
-            "http://127.0.0.1:18001/fs/write",
-            json={
-                "path": "todo.md",
-                "content": over_actuated_todo,
-                "overwrite": True,
-            },
-            headers={"X-Session-ID": session_id},
+        await _write_workspace_file(
+            client,
+            session_id=session_id,
+            path="todo.md",
+            content=over_actuated_todo,
         )
-        await client.post(
-            "http://127.0.0.1:18001/fs/write",
-            json={
-                "path": "assembly_definition.yaml",
-                "content": over_actuated_assembly,
-                "overwrite": True,
-            },
-            headers={"X-Session-ID": session_id},
+        await _write_workspace_file(
+            client,
+            session_id=session_id,
+            path="assembly_definition.yaml",
+            content=over_actuated_assembly,
         )
         request = AgentRunRequest(
             task="INT-074 canonical DOF review evidence gate",
@@ -563,27 +572,21 @@ async def test_engineer_execution_reviewer_rejects_over_actuated_dofs_after_rend
             "tests/integration/mock_responses/INT-075/"
             "engineer_planner/entry_01/04__benchmark_definition.yaml"
         ).read_text(encoding="utf-8")
-        await client.post(
-            "http://127.0.0.1:18001/fs/write",
-            json={
-                "path": "benchmark_definition.yaml",
-                "content": over_actuated_benchmark_definition,
-                "overwrite": True,
-            },
-            headers={"X-Session-ID": session_id},
+        await _write_workspace_file(
+            client,
+            session_id=session_id,
+            path="benchmark_definition.yaml",
+            content=over_actuated_benchmark_definition,
         )
         over_actuated_todo = Path(
             "tests/integration/mock_responses/INT-075/"
             "engineer_planner/entry_01/02__todo.md"
         ).read_text(encoding="utf-8")
-        await client.post(
-            "http://127.0.0.1:18001/fs/write",
-            json={
-                "path": "todo.md",
-                "content": over_actuated_todo,
-                "overwrite": True,
-            },
-            headers={"X-Session-ID": session_id},
+        await _write_workspace_file(
+            client,
+            session_id=session_id,
+            path="todo.md",
+            content=over_actuated_todo,
         )
         await seed_current_revision_render_preview(client, session_id=session_id)
 
@@ -591,34 +594,28 @@ async def test_engineer_execution_reviewer_rejects_over_actuated_dofs_after_rend
             "tests/integration/mock_responses/INT-075/"
             "engineer_coder/entry_01/01__assembly_definition.yaml"
         ).read_text(encoding="utf-8")
-        await client.post(
-            "http://127.0.0.1:18001/fs/write",
-            json={
-                "path": "assembly_definition.yaml",
-                "content": over_actuated_assembly,
-                "overwrite": True,
-            },
-            headers={"X-Session-ID": session_id},
+        await _write_workspace_file(
+            client,
+            session_id=session_id,
+            path="assembly_definition.yaml",
+            content=over_actuated_assembly,
         )
-        await client.post(
-            "http://127.0.0.1:18001/fs/write",
-            json={
-                "path": "plan.md",
-                "content": (
-                    "## 1. Solution Overview\n\n"
-                    "INT-074 execution reviewer over-actuation deviation scenario.\n\n"
-                    "## 2. Parts List\n\n"
-                    "- planner_link\n\n"
-                    "## 3. Assembly Strategy\n\n"
-                    "1. Baseline assembly.\n\n"
-                    "## 4. Cost & Weight Budget\n\n"
-                    "- Within planner caps.\n\n"
-                    "## 5. Risk Assessment\n\n"
-                    "- Over-actuation drift risk.\n"
-                ),
-                "overwrite": True,
-            },
-            headers={"X-Session-ID": session_id},
+        await _write_workspace_file(
+            client,
+            session_id=session_id,
+            path="plan.md",
+            content=(
+                "## 1. Solution Overview\n\n"
+                "INT-074 execution reviewer over-actuation deviation scenario.\n\n"
+                "## 2. Parts List\n\n"
+                "- planner_link\n\n"
+                "## 3. Assembly Strategy\n\n"
+                "1. Baseline assembly.\n\n"
+                "## 4. Cost & Weight Budget\n\n"
+                "- Within planner caps.\n\n"
+                "## 5. Risk Assessment\n\n"
+                "- Over-actuation drift risk.\n"
+            ),
         )
 
         request = AgentRunRequest(
@@ -809,16 +806,12 @@ async def test_engineer_execution_reviewer_handover_accepts_preview_evidence_pat
             ("renders/benchmark_definition.yaml", "benchmark: true\n"),
             ("renders/assembly_definition.yaml", "assembly: true\n"),
         ):
-            resp = await client.post(
-                "http://127.0.0.1:18001/fs/write",
-                json={
-                    "path": path,
-                    "content": content,
-                    "overwrite": True,
-                },
-                headers={"X-Session-ID": session_id},
+            await _write_workspace_file(
+                client,
+                session_id=session_id,
+                path=path,
+                content=content,
             )
-            assert resp.status_code == 200, resp.text
 
         review_manifest_json = ReviewManifest(
             status="ready_for_review",
@@ -843,16 +836,13 @@ async def test_engineer_execution_reviewer_handover_accepts_preview_evidence_pat
             benchmark_worker_session_id=session_id,
             benchmark_episode_id=session_id,
         ).model_dump_json(indent=2)
-        review_resp = await client.post(
-            "http://127.0.0.1:18001/fs/write",
-            json={
-                "path": ".manifests/engineering_execution_review_manifest.json",
-                "content": review_manifest_json,
-                "overwrite": True,
-            },
-            headers={"X-Session-ID": session_id, "X-System-FS-Bypass": "1"},
+        await _write_workspace_file(
+            client,
+            session_id=session_id,
+            path=".manifests/engineering_execution_review_manifest.json",
+            content=review_manifest_json,
+            bypass_agent_permissions=True,
         )
-        assert review_resp.status_code == 200, review_resp.text
         try:
             validation_error = await validate_reviewer_handover(
                 worker_client,
@@ -1155,16 +1145,12 @@ async def test_engineer_execution_reviewer_handover_accepts_png_preview_evidence
             ("renders/benchmark_definition.yaml", "benchmark: true\n"),
             ("renders/assembly_definition.yaml", "assembly: true\n"),
         ):
-            resp = await client.post(
-                "http://127.0.0.1:18001/fs/write",
-                json={
-                    "path": path,
-                    "content": content,
-                    "overwrite": True,
-                },
-                headers={"X-Session-ID": session_id},
+            await _write_workspace_file(
+                client,
+                session_id=session_id,
+                path=path,
+                content=content,
             )
-            assert resp.status_code == 200, resp.text
 
         review_manifest_json = ReviewManifest(
             status="ready_for_review",
@@ -1186,16 +1172,13 @@ async def test_engineer_execution_reviewer_handover_accepts_png_preview_evidence
             objectives_path="renders/benchmark_definition.yaml",
             assembly_definition_path="renders/assembly_definition.yaml",
         ).model_dump_json(indent=2)
-        review_resp = await client.post(
-            "http://127.0.0.1:18001/fs/write",
-            json={
-                "path": ".manifests/engineering_execution_review_manifest.json",
-                "content": review_manifest_json,
-                "overwrite": True,
-            },
-            headers={"X-Session-ID": session_id, "X-System-FS-Bypass": "1"},
+        await _write_workspace_file(
+            client,
+            session_id=session_id,
+            path=".manifests/engineering_execution_review_manifest.json",
+            content=review_manifest_json,
+            bypass_agent_permissions=True,
         )
-        assert review_resp.status_code == 200, review_resp.text
 
         try:
             validation_error = await validate_reviewer_handover(

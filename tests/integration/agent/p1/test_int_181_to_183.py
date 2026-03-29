@@ -9,6 +9,7 @@ from pathlib import Path
 import httpx
 import pytest
 
+from controller.utils.integration import infer_integration_test_id
 from shared.enums import AgentName
 from shared.workers.schema import ReadFileRequest, WriteFileRequest
 from tests.integration.agent.helpers import (
@@ -24,6 +25,29 @@ from tests.integration.agent.helpers import (
 )
 
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
+
+
+def _workspace_session_ids(session_id: str) -> tuple[str, ...]:
+    canonical_session_id = infer_integration_test_id(session_id)
+    if canonical_session_id and canonical_session_id != session_id:
+        return (session_id, canonical_session_id)
+    return (session_id,)
+
+
+async def _write_workspace_file(
+    client: httpx.AsyncClient,
+    *,
+    session_id: str,
+    path: str,
+    content: str,
+) -> None:
+    for target_session_id in _workspace_session_ids(session_id):
+        write_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(path=path, content=content).model_dump(),
+            headers={"X-Session-ID": target_session_id},
+        )
+        assert write_resp.status_code == 200, write_resp.text
 
 
 async def _wait_for_worker_light_health(timeout_s: float = 30.0) -> None:
@@ -175,19 +199,19 @@ async def test_int_182_concurrent_agent_run_isolation_files_traces_context():
     session_b = f"INT-182-{uuid.uuid4().hex[:8]}"
 
     async with httpx.AsyncClient(timeout=300.0) as client:
-        write_a = await client.post(
-            f"{WORKER_LIGHT_URL}/fs/write",
-            json=WriteFileRequest(path="secret_a.txt", content=token_a).model_dump(),
-            headers={"X-Session-ID": session_a},
+        await _write_workspace_file(
+            client,
+            session_id=session_a,
+            path="secret_a.txt",
+            content=token_a,
         )
-        assert write_a.status_code == 200, write_a.text
 
-        write_b = await client.post(
-            f"{WORKER_LIGHT_URL}/fs/write",
-            json=WriteFileRequest(path="secret_b.txt", content=token_b).model_dump(),
-            headers={"X-Session-ID": session_b},
+        await _write_workspace_file(
+            client,
+            session_id=session_b,
+            path="secret_b.txt",
+            content=token_b,
         )
-        assert write_b.status_code == 200, write_b.text
 
         await asyncio.gather(
             seed_benchmark_assembly_definition(client, session_a),

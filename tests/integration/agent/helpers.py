@@ -15,11 +15,13 @@ from websockets.asyncio.client import connect as websocket_connect
 
 from controller.agent.mock_scenarios import load_integration_mock_scenarios
 from controller.api.schemas import EpisodeResponse
+from controller.utils.integration import infer_integration_test_id
 from shared.enums import AgentName, EpisodeStatus
 from shared.git_utils import repo_revision
 from shared.models.schemas import AssemblyConstraints, AssemblyDefinition, CostTotals
 from shared.models.simulation import MultiRunResult, SimulationMetrics, SimulationResult
 from shared.workers.schema import (
+    PlanReviewManifest,
     RenderArtifactMetadata,
     RenderManifest,
     ReviewManifest,
@@ -173,20 +175,61 @@ async def _seed_workspace_file(
     content: str,
     bypass_agent_permissions: bool = False,
 ) -> None:
-    resp = await client.post(
-        f"{WORKER_LIGHT_URL}/fs/write",
-        json=WriteFileRequest(
-            path=path,
-            content=content,
-            overwrite=True,
-            bypass_agent_permissions=bypass_agent_permissions,
-        ).model_dump(),
-        headers={
-            "X-Session-ID": session_id,
-            **({"X-System-FS-Bypass": "1"} if bypass_agent_permissions else {}),
-        },
-    )
-    assert resp.status_code == 200, resp.text
+    for target_session_id in _workspace_session_ids(session_id):
+        resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path=path,
+                content=content,
+                overwrite=True,
+                bypass_agent_permissions=bypass_agent_permissions,
+            ).model_dump(),
+            headers={
+                "X-Session-ID": target_session_id,
+                **({"X-System-FS-Bypass": "1"} if bypass_agent_permissions else {}),
+            },
+        )
+        assert resp.status_code == 200, resp.text
+
+
+def _workspace_session_ids(session_id: str) -> tuple[str, ...]:
+    canonical_session_id = infer_integration_test_id(session_id)
+    if canonical_session_id and canonical_session_id != session_id:
+        return (session_id, canonical_session_id)
+    return (session_id,)
+
+
+async def _upload_workspace_file(
+    client: httpx.AsyncClient,
+    *,
+    session_id: str,
+    path: str,
+    content: bytes,
+    content_type: str,
+    bypass_agent_permissions: bool = False,
+) -> None:
+    for target_session_id in _workspace_session_ids(session_id):
+        resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/upload_file",
+            data={
+                "path": path,
+                "bypass_agent_permissions": "true"
+                if bypass_agent_permissions
+                else "false",
+            },
+            files={
+                "file": (
+                    Path(path).name,
+                    content,
+                    content_type,
+                )
+            },
+            headers={
+                "X-Session-ID": target_session_id,
+                **({"X-System-FS-Bypass": "1"} if bypass_agent_permissions else {}),
+            },
+        )
+        assert resp.status_code == 200, resp.text
 
 
 def repo_git_revision() -> str:
@@ -227,6 +270,113 @@ async def seed_benchmark_assembly_definition(
         session_id=session_id,
         path="manufacturing_config.yaml",
         content=REPO_MANUFACTURING_CONFIG,
+    )
+
+
+def _fixture_text_for_int(
+    int_id: str,
+    relative_path: str,
+    *,
+    fallback_int_id: str = "INT-182",
+) -> str:
+    base = Path("tests/integration/mock_responses") / int_id / relative_path
+    if base.exists():
+        return base.read_text(encoding="utf-8")
+    fallback = (
+        Path("tests/integration/mock_responses") / fallback_int_id / relative_path
+    )
+    return fallback.read_text(encoding="utf-8")
+
+
+async def seed_engineering_plan_reviewer_handover(
+    client: httpx.AsyncClient,
+    *,
+    session_id: str,
+    int_id: str,
+) -> None:
+    plan_content = _fixture_text_for_int(
+        int_id, "engineer_planner/entry_01/01__plan.md"
+    )
+    todo_content = _fixture_text_for_int(
+        int_id, "engineer_planner/entry_01/02__todo.md"
+    )
+    assembly_definition_content = _fixture_text_for_int(
+        int_id, "engineer_planner/entry_01/03__assembly_definition.yaml"
+    )
+    benchmark_definition_content = _fixture_text_for_int(
+        int_id, "engineer_planner/entry_01/04__benchmark_definition.yaml"
+    )
+    benchmark_assembly_definition_content = _benchmark_assembly_definition_content()
+
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="plan.md",
+        content=plan_content,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="todo.md",
+        content=todo_content,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="assembly_definition.yaml",
+        content=assembly_definition_content,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="benchmark_definition.yaml",
+        content=benchmark_definition_content,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="benchmark_assembly_definition.yaml",
+        content=benchmark_assembly_definition_content,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="manufacturing_config.yaml",
+        content=REPO_MANUFACTURING_CONFIG,
+    )
+
+    manifest = PlanReviewManifest(
+        status="ready_for_review",
+        reviewer_stage="engineer_plan_reviewer",
+        session_id=session_id,
+        planner_node_type=AgentName.ENGINEER_PLANNER,
+        episode_id=session_id,
+        worker_session_id=session_id,
+        benchmark_revision=repo_git_revision(),
+        environment_version="1.0",
+        artifact_hashes={
+            "plan.md": hashlib.sha256(plan_content.encode("utf-8")).hexdigest(),
+            "todo.md": hashlib.sha256(todo_content.encode("utf-8")).hexdigest(),
+            "assembly_definition.yaml": hashlib.sha256(
+                assembly_definition_content.encode("utf-8")
+            ).hexdigest(),
+            "benchmark_definition.yaml": hashlib.sha256(
+                benchmark_definition_content.encode("utf-8")
+            ).hexdigest(),
+            "benchmark_assembly_definition.yaml": hashlib.sha256(
+                benchmark_assembly_definition_content.encode("utf-8")
+            ).hexdigest(),
+            "manufacturing_config.yaml": hashlib.sha256(
+                REPO_MANUFACTURING_CONFIG.encode("utf-8")
+            ).hexdigest(),
+        },
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path=".manifests/engineering_plan_review_manifest.json",
+        content=manifest.model_dump_json(indent=2),
+        bypass_agent_permissions=True,
     )
 
 
@@ -408,6 +558,24 @@ PY
     )
     assert resp.status_code == 200, resp.text
 
+    preview_image_bytes = Path(
+        "tests/integration/mock_responses/INT-039/engineer_coder/entry_01/02__renders_preview.png"
+    ).read_bytes()
+    await _upload_workspace_file(
+        client,
+        session_id=session_id,
+        path=render_path,
+        content=preview_image_bytes,
+        content_type="image/png",
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="renders/render_manifest.json",
+        content=manifest.model_dump_json(indent=2),
+        bypass_agent_permissions=True,
+    )
+
 
 async def run_agent_episode(
     client: httpx.AsyncClient,
@@ -420,6 +588,11 @@ async def run_agent_episode(
 
     if int_id in {"INT-181", "INT-182", "INT-183", "INT-185", "INT-186"}:
         await seed_benchmark_assembly_definition(client, session_id)
+        await seed_engineering_plan_reviewer_handover(
+            client,
+            session_id=session_id,
+            int_id=int_id,
+        )
     if int_id in {"INT-181", "INT-182", "INT-183", "INT-185", "INT-186"}:
         await seed_execution_reviewer_handover(
             client,
