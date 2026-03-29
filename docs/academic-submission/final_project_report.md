@@ -11,7 +11,6 @@ Keywords: Mechanical Engineering AI, Physical AI, Physics-informed AI, Vision-La
 Mechanical engineering is, in nature, very predictable. A part that is manufactured once will behave exactly like others. However, unlike many other engineering and scientific fields, where public benchmarks are readily available in software engineering [17], physical reasoning [18], materials and chemistry [19], and general machine learning benchmark suites [20], evaluation is exponentially more expensive, and datasets are highly proprietary. Unlike text generation, video, or even robotics, online dataset collection is infeasible due to some of the strictest secrecy and intellectual property restrictions imposed by engineering and manufacturing companies. Furthermore, even if the datasets existed, no open- or known closed-source reinforcement learning environment that allows high-signal (quality) training of models exists. The previous research focused on “narrow” environments to a specific feature, for example: Finite Element Analysis [27] environments, CAD correctness evaluation and completeness benchmarks [21], narrow robotics environments [2], domain-specific optimization frameworks for airfoils [22] and topology optimization [11], standalone visual benchmarks, none of which allows training a LLM to solve a concrete mechanical or electromechanical task. For example, to create a small machine moving an object from one place to another. Additionally, even if such smaller environments do exist, to our knowledge, no major open-source ML models are post-trained on them, primarily due to lower signal quality of such environments, or because they are too domain specific. As such, to advance the results obtained by models in this field, we need a framework that allows us to:
 
 1. Robustly validate solutions, first for their theoretical soundness - i.e. hard-and-fast rules used for 3D model CAD correctness, then manufacturing evaluation as well as cost, weight, and other constraints as desired by an engineer (other constraints, e.g., not to use actuators to solve a given problem)
-
 2. Validate solutions as they will work in the real world - e.g., to move an object from one position to another - we need to simulate that the object will in fact land in the environment using the mechanism as constructed by a LLM. We set out to create a solution that does this and train a system that would solve this set of problems. We also aim to create an architecture that would be highly maintainable and extensible, such that other researchers can extend it to other multiphysics environments and labs can train their models on it.
 
 More specifically, to maximize our contribution to science, our goals are as follows:
@@ -37,6 +36,15 @@ The closest prior work to Problemologist-AI falls into two overlapping groups: C
 *Automated evaluation environment generation*: EnvScaler [29] and EnvGen [30] show that LLMs can generate scenarios or tasks in software and game-like environments, but they do not focus on hardware design or physics-based validation of a resulting mechanism. EmboCoach-Bench [28] and similar works synthesize tasks for robots to solve, but they do not make robot geometries.
 
 Problemologist-AI differs from these lines of work by combining adversarial benchmark generation, parametric CAD assembly in `build123d`, and simulation-based validation in Genesis/MuJoCo under explicit cost, material, and multi-physics constraints. This makes the system a closed-loop benchmark-and-solution environment, able to self-improve and drive training of models rather than a single-task generator or evaluator.
+
+### Related work which was explored, but not reproduced
+
+<!--More of a draft for my own self-->
+
+Structured mesh generation using diffusion priors exists and is not new. A work by ("PartCrafter") reinforced that structural mesh generation - notably generation of sets of parts from a diffusion prior - which essentially can be used to represent CAD, can be explored.
+But how do we generate latent priors? Recently research has shown reasoning in diffusion (https://huggingface.co/papers/2603.16870), though on simple task. Which highlights that we likely can generate CAD using reinforcement learning techniques with diffusion.
+Additionally, as stated below, the models are fine-tuned (cadrille), or in some cases even trained from scratch to perform CAD and related work (https://huggingface.co/papers/2603.16790). https://huggingface.co/papers/2603.16790 shows that a text-to-cad CAD work performed with a small model reached performance of Opus 4.6. With high certainty, exploring the avenue of smaller but specialized models could yield data scaling benefits.
+However, it is unlikely that CAD generation models - inherently 3d models - will stop at LLMs only. With designs in mechanical and electronics engineering being consistently improved and optimized by ML-based Topology Optimization (cite any topology optimization paper) for weight and cost, while maintaining manufacturability, it is likely that native 3d-generating models will be performant; this is despite noting their strong downside regarding editability.
 
 ## Methodology
 
@@ -310,3 +318,11 @@ The future work should focus on attempting to fine-tune a range of models on sol
 [39] M. Kolodiazhnyi et al., “cadrille: Multi-modal CAD Reconstruction with Reinforcement Learning,” arXiv preprint arXiv:2505.22914, 2025.
 
 [40] L. Zhang, B. Le, N. Akhtar, S.-K. Lam, and D. Ngo, “Large language models for computer-aided design: A survey,” *ACM Comput. Surv.*, vol. 58, no. 9, 2026, doi:10.1145/3787499.
+
+@misc{lin2025partcrafter,
+title={PartCrafter: Structured 3D Mesh Generation via Compositional Latent Diffusion Transformers},
+author={Yuchen Lin and Chenguo Lin and Panwang Pan and Honglei Yan and Yiqiang Feng and Yadong Mu and Katerina Fragkiadaki},
+year={2025},
+eprint={2506.05573},
+url={https://arxiv.org/abs/2506.05573}
+}
