@@ -11,6 +11,7 @@ import structlog
 from build123d import Compound, Part
 from PIL import Image
 
+from shared.agents.config import load_agents_config
 from shared.models.schemas import BenchmarkDefinition
 from worker_heavy.utils.build123d_rendering import (
     Build123dRendererBackend,
@@ -43,11 +44,14 @@ def preview_design(
     Returns:
         Path to the saved preview image
     """
+    render_policy = load_agents_config().render
     with TemporaryDirectory() as temp_build_dir:
         build_dir = Path(temp_build_dir)
         backend = Build123dRendererBackend(
             workspace_root=build_dir,
             objectives=objectives,
+            rgb_axes=render_policy.rgb.axes,
+            rgb_edges=render_policy.rgb.edges,
         )
         try:
             backend.load_scene(component)

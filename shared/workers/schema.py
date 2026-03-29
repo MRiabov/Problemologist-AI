@@ -690,12 +690,14 @@ class MediaInspectionResult(BaseModel):
 
     path: StrictStr
     mime_type: StrictStr
-    media_kind: Literal["image", "video", "unsupported"]
+    media_kind: Literal["image", "video", "video_frames", "unsupported"]
     attached_to_model: bool = False
+    attached_media_count: StrictInt = Field(default=0, ge=0)
     size_bytes: StrictInt = Field(ge=0)
     note: StrictStr
     render_metadata: RenderArtifactMetadata | None = None
     data_url: StrictStr | None = Field(default=None, exclude=True, repr=False)
+    data_urls: list[StrictStr] = Field(default_factory=list, exclude=True, repr=False)
 
 
 class PlanRefusal(BaseModel):

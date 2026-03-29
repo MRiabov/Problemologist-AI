@@ -1,3 +1,4 @@
+import base64
 import contextlib
 import gc
 import json
@@ -172,8 +173,17 @@ def _prerender_24_views_isolated(
     session_id: str | None,
     smoke_test_mode: bool,
     particle_budget: int | None,
+    script_path: Path | str | None = None,
+    script_content: str | None = None,
+    objectives: BenchmarkDefinition | None = None,
 ) -> list[str]:
-    """Render previews in a fresh subprocess to avoid GL state contamination."""
+    """Render previews in a fresh subprocess to avoid GL state contamination.
+
+    The child process must render the exact source snapshot already loaded by
+    the parent. That keeps validation previews aligned with inline
+    `script_content` and non-default `script_path` entrypoints instead of
+    rediscovering `working_dir/script.py` from disk.
+    """
 
     repo_root = Path(__file__).resolve().parents[2]
     child_env = os.environ.copy()
@@ -192,15 +202,29 @@ def _prerender_24_views_isolated(
     render_paths_file = Path(render_paths_name)
 
     backend_value = backend_type.value if backend_type is not None else ""
+    script_source_path = (
+        Path(script_path) if script_path is not None else (working_dir / "script.py")
+    )
+    script_content_b64 = (
+        base64.b64encode(script_content.encode("utf-8")).decode("ascii")
+        if script_content is not None
+        else ""
+    )
+    objectives_b64 = (
+        base64.b64encode(objectives.model_dump_json(indent=2).encode("utf-8")).decode(
+            "ascii"
+        )
+        if objectives is not None
+        else ""
+    )
     child_code = textwrap.dedent(
         """
         from __future__ import annotations
 
+        import base64
         import json
         import sys
         from pathlib import Path
-
-        import yaml
 
         from shared.models.schemas import BenchmarkDefinition
         from shared.simulation.schemas import SimulatorBackendType
@@ -214,16 +238,27 @@ def _prerender_24_views_isolated(
         smoke_test_mode = sys.argv[5] == "1"
         session_id = sys.argv[6] or None
         particle_budget = int(sys.argv[7]) if sys.argv[7] else None
+        script_content_b64 = sys.argv[8] if len(sys.argv) > 8 else ""
+        objectives_b64 = sys.argv[9] if len(sys.argv) > 9 else ""
 
-        component = load_component_from_script(script_path)
-        objectives = None
-        benchmark_definition_path = script_path.parent / "benchmark_definition.yaml"
-        if benchmark_definition_path.exists():
-            content = benchmark_definition_path.read_text(encoding="utf-8")
-            if "[TEMPLATE]" not in content:
-                objectives = BenchmarkDefinition.model_validate(
-                    yaml.safe_load(content) or {}
-                )
+        script_content = (
+            base64.b64decode(script_content_b64).decode("utf-8")
+            if script_content_b64
+            else None
+        )
+        objectives = (
+            BenchmarkDefinition.model_validate_json(
+                base64.b64decode(objectives_b64).decode("utf-8")
+            )
+            if objectives_b64
+            else None
+        )
+
+        component = load_component_from_script(
+            script_path=script_path,
+            session_root=output_dir.parent,
+            script_content=script_content,
+        )
 
         backend_type = (
             SimulatorBackendType(backend_value) if backend_value else None
@@ -250,13 +285,15 @@ def _prerender_24_views_isolated(
                 sys.executable,
                 "-c",
                 child_code,
-                str(working_dir / "script.py"),
+                str(script_source_path),
                 str(output_dir),
                 str(render_paths_file),
                 backend_value,
                 "1" if smoke_test_mode else "0",
                 session_id or "",
                 str(particle_budget) if particle_budget is not None else "",
+                script_content_b64,
+                objectives_b64,
             ],
             cwd=working_dir,
             env=child_env,
@@ -1130,6 +1167,8 @@ def simulate_subprocess(
         backend=backend,
         session_id=session_id,
         particle_budget=particle_budget,
+        script_path=script_path,
+        script_content=script_content,
     )
 
 
@@ -1186,6 +1225,8 @@ def simulate(
     smoke_test_mode: bool | None = None,
     backend: SimulatorBackendType | None = None,
     session_id: str | None = None,
+    script_path: str | Path | None = None,
+    script_content: str | None = None,
 ) -> SimulationResult:
     """Provide a physics-backed stability and objective check."""
     from worker_heavy.config import settings
@@ -1526,6 +1567,9 @@ def simulate(
                     session_id=session_id,
                     smoke_test_mode=smoke_test_mode,
                     particle_budget=particle_budget,
+                    script_path=script_path,
+                    script_content=script_content,
+                    objectives=objectives,
                 )
             else:
                 render_paths = prerender_24_views(

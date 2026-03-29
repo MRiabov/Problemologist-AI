@@ -173,7 +173,8 @@ class BaseNode:
         if (
             tool_name == "inspect_media"
             and isinstance(result, MediaInspectionResult)
-            and result.media_kind == "image"
+            and result.attached_to_model
+            and result.media_kind in {"image", "video_frames"}
         ):
             self._inspected_media_paths.append(
                 self._normalize_inspected_media_path(result.path)
@@ -1604,7 +1605,13 @@ class BaseNode:
             result, MediaInspectionResult
         ):
             return []
-        if not result.attached_to_model or not result.data_url:
+        if not result.attached_to_model:
+            return []
+
+        attachment_urls = list(result.data_urls or [])
+        if not attachment_urls and result.data_url:
+            attachment_urls = [result.data_url]
+        if not attachment_urls:
             return []
 
         with suppress(Exception):
@@ -1617,6 +1624,7 @@ class BaseNode:
                             mime_type=result.mime_type,
                             media_kind=result.media_kind,
                             node_name=node_type,
+                            attached_media_count=len(attachment_urls),
                         )
                     ],
                 ),
@@ -1632,13 +1640,17 @@ class BaseNode:
                         "type": "text",
                         "text": (
                             f"Visual evidence from {tool_name}('{result.path}'). "
-                            "Inspect this media directly before your next decision."
+                            "Inspect the attached media directly before your "
+                            "next decision."
                         ),
                     },
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": result.data_url},
-                    },
+                    *[
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": media_url},
+                        }
+                        for media_url in attachment_urls
+                    ],
                 ],
             }
         ]

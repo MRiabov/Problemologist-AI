@@ -1,16 +1,23 @@
-version: "1.0"
-
+version: '1.0'
 llm:
-  max_reasoning_tokens: 16384 # per turn, I assume.
+  max_reasoning_tokens: 16384
   context_compaction_threshold_tokens: 225000
   requests_per_minute: 40
   multimodal_model: null
-
 render:
-  rgb: true
-  depth: true
-  segmentation: true
-
+  split_video_renders_to_images: true
+  rgb:
+    enabled: true
+    axes: true
+    edges: true
+  depth:
+    enabled: true
+    axes: true
+    edges: true
+  segmentation:
+    enabled: true
+    axes: true
+    edges: true
 execution:
   defaults:
     timeout_seconds: 300
@@ -72,604 +79,577 @@ execution:
       timeout_seconds: 120
       max_turns: 150
       max_total_tokens: 400000
-
 defaults:
   filesystem_permissions:
     read:
-      allow: ["**", "/", "."]
-      deny: [".git/**", ".env", "**/secrets/**", ".manifests/**"]
+      allow:
+      - '**'
+      - /
+      - .
+      deny:
+      - .git/**
+      - .env
+      - '**/secrets/**'
+      - .manifests/**
     write:
       allow: []
-      deny: ["**"]
-
+      deny:
+      - '**'
 agents:
   engineer_planner:
     filesystem_permissions:
       read:
         allow:
-          [
-            "/",
-            ".",
-            "config/**",
-            "skills/**",
-            "utils/**",
-            "manufacturing_config.yaml",
-            "benchmark_definition.yaml",
-            "benchmark_assembly_definition.yaml",
-            "assembly_definition.yaml",
-            "plan.md",
-            "todo.md",
-            "journal.md",
-            "renders/**",
-          ]
-        deny: [".manifests/**"]
+        - /
+        - .
+        - config/**
+        - skills/**
+        - utils/**
+        - manufacturing_config.yaml
+        - benchmark_definition.yaml
+        - benchmark_assembly_definition.yaml
+        - assembly_definition.yaml
+        - plan.md
+        - todo.md
+        - journal.md
+        - renders/**
+        deny:
+        - .manifests/**
       write:
         allow:
-          [
-            "plan.md",
-            "todo.md",
-            "journal.md",
-            "assembly_definition.yaml",
-            "benchmark_definition.yaml",
-          ]
+        - plan.md
+        - todo.md
+        - journal.md
+        - assembly_definition.yaml
+        - benchmark_definition.yaml
         deny:
-          [
-            "skills/**",
-            "utils/**",
-            "reviews/**",
-            "script.py",
-            "**/*.py",
-            ".manifests/**",
-          ]
+        - skills/**
+        - utils/**
+        - reviews/**
+        - script.py
+        - '**/*.py'
+        - .manifests/**
     tools:
-      [
-        "list_files",
-        "read_file",
-        "inspect_media",
-        "write_file",
-        "edit_file",
-        "invoke_cots_search_subagent",
-        "validate_costing_and_price",
-        "submit_plan",
-      ]
+    - list_files
+    - read_file
+    - inspect_media
+    - write_file
+    - edit_file
+    - invoke_cots_search_subagent
+    - validate_costing_and_price
+    - submit_plan
     allowed_during_unit_eval:
-      [engineer_planner, engineer_plan_reviewer]
+    - engineer_planner
+    - engineer_plan_reviewer
     visual_inspection:
       required: true
       min_images: 1
       reminder_interval: 2
-
   engineer_coder:
     filesystem_permissions:
       read:
         allow:
-          [
-            "/",
-            ".",
-            "config/**",
-            "skills/**",
-            "utils/**",
-            "plan.md",
-            "todo.md",
-            "journal.md",
-            "benchmark_definition.yaml",
-            "benchmark_assembly_definition.yaml",
-            "assembly_definition.yaml",
-            "script.py",
-            "**/*.py",
-            "reviews/**",
-            "renders/**",
-          ]
-        deny: [".manifests/**"]
+        - /
+        - .
+        - config/**
+        - skills/**
+        - utils/**
+        - plan.md
+        - todo.md
+        - journal.md
+        - benchmark_definition.yaml
+        - benchmark_assembly_definition.yaml
+        - assembly_definition.yaml
+        - script.py
+        - '**/*.py'
+        - reviews/**
+        - renders/**
+        deny:
+        - .manifests/**
       write:
         allow:
-          [
-            "script.py",
-            "**/*.py",
-            "todo.md",
-            "journal.md",
-            "renders/**",
-            "plan_refusal.md",
-            "plan.md",
-            "assembly_definition.yaml",
-          ]
-        deny: ["skills/**", "utils/**", "reviews/**/*.py", ".manifests/**"]
+        - script.py
+        - '**/*.py'
+        - todo.md
+        - journal.md
+        - renders/**
+        - plan_refusal.md
+        - plan.md
+        - assembly_definition.yaml
+        deny:
+        - skills/**
+        - utils/**
+        - reviews/**/*.py
+        - .manifests/**
     tools:
-      [
-        "list_files",
-        "read_file",
-        "inspect_media",
-        "write_file",
-        "edit_file",
-        "grep",
-        "execute_command",
-        "inspect_topology",
-        "invoke_cots_search_subagent",
-      ]
+    - list_files
+    - read_file
+    - inspect_media
+    - write_file
+    - edit_file
+    - grep
+    - execute_command
+    - inspect_topology
+    - invoke_cots_search_subagent
     allowed_during_unit_eval:
-      [engineer_coder, engineer_execution_reviewer]
-
+    - engineer_coder
+    - engineer_execution_reviewer
   benchmark_coder:
     filesystem_permissions:
       read:
         allow:
-          [
-            "/",
-            ".",
-            "skills/**",
-            "utils/**",
-            "plan.md",
-            "todo.md",
-            "journal.md",
-            "benchmark_definition.yaml",
-            "benchmark_assembly_definition.yaml",
-            "script.py",
-            "**/*.py",
-            "plan_refusal.md",
-            "reviews/**",
-            "renders/**",
-            "validation_results.json",
-            "simulation_result.json",
-            "scene.json",
-            "assets/**",
-          ]
-        deny: [".manifests/**"]
+        - /
+        - .
+        - skills/**
+        - utils/**
+        - plan.md
+        - todo.md
+        - journal.md
+        - benchmark_definition.yaml
+        - benchmark_assembly_definition.yaml
+        - script.py
+        - '**/*.py'
+        - plan_refusal.md
+        - reviews/**
+        - renders/**
+        - validation_results.json
+        - simulation_result.json
+        - scene.json
+        - assets/**
+        deny:
+        - .manifests/**
       write:
         allow:
-          [
-            "script.py",
-            "**/*.py",
-            "todo.md",
-            "journal.md",
-            "renders/**",
-            "plan_refusal.md",
-          ]
+        - script.py
+        - '**/*.py'
+        - todo.md
+        - journal.md
+        - renders/**
+        - plan_refusal.md
         deny:
-          [
-            "benchmark_definition.yaml",
-            "benchmark_assembly_definition.yaml",
-            "plan.md",
-            "skills/**",
-            "utils/**",
-            "reviews/**",
-            ".manifests/**",
-          ]
+        - benchmark_definition.yaml
+        - benchmark_assembly_definition.yaml
+        - plan.md
+        - skills/**
+        - utils/**
+        - reviews/**
+        - .manifests/**
     tools:
-      [
-        "list_files",
-        "read_file",
-        "inspect_media",
-        "write_file",
-        "edit_file",
-        "grep",
-        "execute_command",
-        "inspect_topology",
-        "invoke_cots_search_subagent",
-      ]
+    - list_files
+    - read_file
+    - inspect_media
+    - write_file
+    - edit_file
+    - grep
+    - execute_command
+    - inspect_topology
+    - invoke_cots_search_subagent
     allowed_during_unit_eval:
-      [benchmark_coder, benchmark_reviewer]
+    - benchmark_coder
+    - benchmark_reviewer
     visual_inspection:
       required: false
       min_images: 1
       reminder_interval: 2
-
   engineer_plan_reviewer:
     filesystem_permissions:
       read:
         allow:
-          [
-            "/",
-            ".",
-            "config/**",
-            "skills/**",
-            "utils/**",
-            "plan.md",
-            "todo.md",
-            "benchmark_definition.yaml",
-            "benchmark_assembly_definition.yaml",
-            "assembly_definition.yaml",
-            "plan_refusal.md",
-            "script.py",
-            "**/*.py",
-            "simulation_result.json",
-            "validation_results.json",
-            "workbench_report.md",
-            "renders/**",
-            "journal.md",
-          ]
-        deny: [".manifests/**"]
+        - /
+        - .
+        - config/**
+        - skills/**
+        - utils/**
+        - plan.md
+        - todo.md
+        - benchmark_definition.yaml
+        - benchmark_assembly_definition.yaml
+        - assembly_definition.yaml
+        - plan_refusal.md
+        - script.py
+        - '**/*.py'
+        - simulation_result.json
+        - validation_results.json
+        - workbench_report.md
+        - renders/**
+        - journal.md
+        deny:
+        - .manifests/**
       write:
         allow:
-          [
-            "reviews/engineering-plan-review-decision-round-*.yaml",
-            "reviews/engineering-plan-review-comments-round-*.yaml",
-          ]
-        deny: [".manifests/**"]
+        - reviews/engineering-plan-review-decision-round-*.yaml
+        - reviews/engineering-plan-review-comments-round-*.yaml
+        deny:
+        - .manifests/**
     tools:
-      [
-        "list_files",
-        "read_file",
-        "inspect_media",
-        "write_file",
-        "grep",
-        "execute_command",
-        "inspect_topology",
-        "verify",
-        "invoke_cots_search_subagent",
-      ]
+    - list_files
+    - read_file
+    - inspect_media
+    - write_file
+    - grep
+    - execute_command
+    - inspect_topology
+    - verify
+    - invoke_cots_search_subagent
     allowed_during_unit_eval:
-      [engineer_coder, engineer_plan_reviewer]
+    - engineer_coder
+    - engineer_plan_reviewer
     visual_inspection:
       required: true
       min_images: 1
       reminder_interval: 2
-
   engineer_execution_reviewer:
     filesystem_permissions:
       read:
         allow:
-          [
-            "/",
-            ".",
-            "config/**",
-            "skills/**",
-            "utils/**",
-            "plan.md",
-            "todo.md",
-            "benchmark_definition.yaml",
-            "benchmark_assembly_definition.yaml",
-            "assembly_definition.yaml",
-            "plan_refusal.md",
-            "script.py",
-            "**/*.py",
-            "simulation_result.json",
-            "validation_results.json",
-            "workbench_report.md",
-            "renders/**",
-            "journal.md",
-          ]
-        deny: [".manifests/**"]
+        - /
+        - .
+        - config/**
+        - skills/**
+        - utils/**
+        - plan.md
+        - todo.md
+        - benchmark_definition.yaml
+        - benchmark_assembly_definition.yaml
+        - assembly_definition.yaml
+        - plan_refusal.md
+        - script.py
+        - '**/*.py'
+        - simulation_result.json
+        - validation_results.json
+        - workbench_report.md
+        - renders/**
+        - journal.md
+        deny:
+        - .manifests/**
       write:
         allow:
-          [
-            "reviews/engineering-execution-review-decision-round-*.yaml",
-            "reviews/engineering-execution-review-comments-round-*.yaml",
-          ]
-        deny: [".manifests/**"]
+        - reviews/engineering-execution-review-decision-round-*.yaml
+        - reviews/engineering-execution-review-comments-round-*.yaml
+        deny:
+        - .manifests/**
     tools:
-      [
-        "list_files",
-        "read_file",
-        "inspect_media",
-        "write_file",
-        "grep",
-        "execute_command",
-        "inspect_topology",
-        "invoke_cots_search_subagent",
-      ]
+    - list_files
+    - read_file
+    - inspect_media
+    - write_file
+    - grep
+    - execute_command
+    - inspect_topology
+    - invoke_cots_search_subagent
     allowed_during_unit_eval:
-      [engineer_coder, engineer_execution_reviewer]
+    - engineer_coder
+    - engineer_execution_reviewer
     visual_inspection:
       required: true
       min_images: 1
       reminder_interval: 2
-
   benchmark_planner:
     filesystem_permissions:
       read:
         allow:
-          [
-            "/",
-            ".",
-            "config/**",
-            "skills/**",
-            "utils/**",
-            "manufacturing_config.yaml",
-            "benchmark_definition.yaml",
-            "benchmark_assembly_definition.yaml",
-            "plan.md",
-            "todo.md",
-            "journal.md",
-            "assets/**",
-            "renders/**",
-            "reviews/**",
-          ]
-        deny: [".manifests/**"]
+        - /
+        - .
+        - config/**
+        - skills/**
+        - utils/**
+        - manufacturing_config.yaml
+        - benchmark_definition.yaml
+        - benchmark_assembly_definition.yaml
+        - plan.md
+        - todo.md
+        - journal.md
+        - assets/**
+        - renders/**
+        - reviews/**
+        deny:
+        - .manifests/**
       write:
         allow:
-          [
-            "plan.md",
-            "todo.md",
-            "journal.md",
-            "benchmark_definition.yaml",
-            "benchmark_assembly_definition.yaml",
-            "renders/**",
-          ]
+        - plan.md
+        - todo.md
+        - journal.md
+        - benchmark_definition.yaml
+        - benchmark_assembly_definition.yaml
+        - renders/**
         deny:
-          [
-            "skills/**",
-            "utils/**",
-            "reviews/**",
-            "script.py",
-            "**/*.py",
-            ".manifests/**",
-          ]
+        - skills/**
+        - utils/**
+        - reviews/**
+        - script.py
+        - '**/*.py'
+        - .manifests/**
     tools:
-      [
-        "list_files",
-        "read_file",
-        "inspect_media",
-        "write_file",
-        "edit_file",
-        "grep",
-        "execute_command",
-        "invoke_cots_search_subagent",
-        "submit_plan",
-      ]
+    - list_files
+    - read_file
+    - inspect_media
+    - write_file
+    - edit_file
+    - grep
+    - execute_command
+    - invoke_cots_search_subagent
+    - submit_plan
     allowed_during_unit_eval:
-      [benchmark_planner, benchmark_plan_reviewer]
-
+    - benchmark_planner
+    - benchmark_plan_reviewer
   benchmark_plan_reviewer:
     filesystem_permissions:
       read:
         allow:
-          [
-            "/",
-            ".",
-            "config/**",
-            "skills/**",
-            "utils/**",
-            "plan.md",
-            "todo.md",
-            "benchmark_definition.yaml",
-            "benchmark_assembly_definition.yaml",
-            "renders/**",
-            "journal.md",
-          ]
-        deny: [".manifests/**"]
+        - /
+        - .
+        - config/**
+        - skills/**
+        - utils/**
+        - plan.md
+        - todo.md
+        - benchmark_definition.yaml
+        - benchmark_assembly_definition.yaml
+        - renders/**
+        - journal.md
+        deny:
+        - .manifests/**
       write:
         allow:
-          [
-            "reviews/benchmark-plan-review-decision-round-*.yaml",
-            "reviews/benchmark-plan-review-comments-round-*.yaml",
-          ]
-        deny: [".manifests/**"]
+        - reviews/benchmark-plan-review-decision-round-*.yaml
+        - reviews/benchmark-plan-review-comments-round-*.yaml
+        deny:
+        - .manifests/**
     tools:
-      [
-        "list_files",
-        "read_file",
-        "inspect_media",
-        "write_file",
-        "grep",
-        "execute_command",
-        "inspect_topology",
-        "invoke_cots_search_subagent",
-      ]
+    - list_files
+    - read_file
+    - inspect_media
+    - write_file
+    - grep
+    - execute_command
+    - inspect_topology
+    - invoke_cots_search_subagent
     allowed_during_unit_eval:
-      [benchmark_planner, benchmark_plan_reviewer]
+    - benchmark_planner
+    - benchmark_plan_reviewer
     visual_inspection:
       required: true
       min_images: 1
       reminder_interval: 2
-
   benchmark_reviewer:
     filesystem_permissions:
       read:
         allow:
-          [
-            "/",
-            ".",
-            "config/**",
-            "skills/**",
-            "utils/**",
-            "plan.md",
-            "todo.md",
-            "benchmark_definition.yaml",
-            "benchmark_assembly_definition.yaml",
-            "plan_refusal.md",
-            "script.py",
-            "**/*.py",
-            "simulation_result.json",
-            "validation_results.json",
-            "renders/**",
-            "journal.md",
-          ]
-        deny: [".manifests/**"]
+        - /
+        - .
+        - config/**
+        - skills/**
+        - utils/**
+        - plan.md
+        - todo.md
+        - benchmark_definition.yaml
+        - benchmark_assembly_definition.yaml
+        - plan_refusal.md
+        - script.py
+        - '**/*.py'
+        - simulation_result.json
+        - validation_results.json
+        - renders/**
+        - journal.md
+        deny:
+        - .manifests/**
       write:
         allow:
-          [
-            "reviews/benchmark-execution-review-decision-round-*.yaml",
-            "reviews/benchmark-execution-review-comments-round-*.yaml",
-          ]
-        deny: [".manifests/**"]
+        - reviews/benchmark-execution-review-decision-round-*.yaml
+        - reviews/benchmark-execution-review-comments-round-*.yaml
+        deny:
+        - .manifests/**
     tools:
-      [
-        "list_files",
-        "read_file",
-        "inspect_media",
-        "write_file",
-        "grep",
-        "execute_command",
-        "inspect_topology",
-        "invoke_cots_search_subagent",
-      ]
+    - list_files
+    - read_file
+    - inspect_media
+    - write_file
+    - grep
+    - execute_command
+    - inspect_topology
+    - invoke_cots_search_subagent
     allowed_during_unit_eval:
-      [benchmark_reviewer]
+    - benchmark_reviewer
     visual_inspection:
       required: true
       min_images: 1
       reminder_interval: 2
-
   electronics_planner:
     filesystem_permissions:
       read:
         allow:
-          [
-            "/",
-            ".",
-            "config/**",
-            "skills/**",
-            "utils/**",
-            "manufacturing_config.yaml",
-            "benchmark_definition.yaml",
-            "benchmark_assembly_definition.yaml",
-            "assembly_definition.yaml",
-            "plan.md",
-            "todo.md",
-            "journal.md",
-          ]
-        deny: [".manifests/**"]
+        - /
+        - .
+        - config/**
+        - skills/**
+        - utils/**
+        - manufacturing_config.yaml
+        - benchmark_definition.yaml
+        - benchmark_assembly_definition.yaml
+        - assembly_definition.yaml
+        - plan.md
+        - todo.md
+        - journal.md
+        deny:
+        - .manifests/**
       write:
         allow:
-          [
-            "plan.md",
-            "todo.md",
-            "journal.md",
-            "assembly_definition.yaml",
-            "benchmark_definition.yaml",
-          ]
+        - plan.md
+        - todo.md
+        - journal.md
+        - assembly_definition.yaml
+        - benchmark_definition.yaml
         deny:
-          [
-            "skills/**",
-            "utils/**",
-            "reviews/**",
-            "renders/**",
-            "script.py",
-            "**/*.py",
-            ".manifests/**",
-          ]
+        - skills/**
+        - utils/**
+        - reviews/**
+        - renders/**
+        - script.py
+        - '**/*.py'
+        - .manifests/**
     tools:
-      [
-        "list_files",
-        "read_file",
-        "write_file",
-        "edit_file",
-        "grep",
-        "execute_command",
-        "submit_plan",
-      ]
+    - list_files
+    - read_file
+    - write_file
+    - edit_file
+    - grep
+    - execute_command
+    - submit_plan
     allowed_during_unit_eval:
-      [engineer_planner, electronics_planner, engineer_plan_reviewer]
-
+    - engineer_planner
+    - electronics_planner
+    - engineer_plan_reviewer
   electronics_reviewer:
     filesystem_permissions:
       read:
         allow:
-          [
-            "/",
-            ".",
-            "config/**",
-            "skills/**",
-            "utils/**",
-            "plan.md",
-            "todo.md",
-            "benchmark_definition.yaml",
-            "benchmark_assembly_definition.yaml",
-            "assembly_definition.yaml",
-            "plan_refusal.md",
-            "script.py",
-            "**/*.py",
-            "simulation_result.json",
-            "validation_results.json",
-            "renders/**",
-            "journal.md",
-          ]
-        deny: [".manifests/**"]
+        - /
+        - .
+        - config/**
+        - skills/**
+        - utils/**
+        - plan.md
+        - todo.md
+        - benchmark_definition.yaml
+        - benchmark_assembly_definition.yaml
+        - assembly_definition.yaml
+        - plan_refusal.md
+        - script.py
+        - '**/*.py'
+        - simulation_result.json
+        - validation_results.json
+        - renders/**
+        - journal.md
+        deny:
+        - .manifests/**
       write:
         allow:
-          [
-            "reviews/electronics-review-decision-round-*.yaml",
-            "reviews/electronics-review-comments-round-*.yaml",
-          ]
-        deny: [".manifests/**"]
+        - reviews/electronics-review-decision-round-*.yaml
+        - reviews/electronics-review-comments-round-*.yaml
+        deny:
+        - .manifests/**
     tools:
-      [
-        "list_files",
-        "read_file",
-        "inspect_media",
-        "write_file",
-        "grep",
-        "execute_command",
-        "inspect_topology",
-        "invoke_cots_search_subagent",
-      ]
+    - list_files
+    - read_file
+    - inspect_media
+    - write_file
+    - grep
+    - execute_command
+    - inspect_topology
+    - invoke_cots_search_subagent
     allowed_during_unit_eval:
-      [engineer_coder, electronics_reviewer]
-
+    - engineer_coder
+    - electronics_reviewer
   cots_search:
     filesystem_permissions:
       read:
         allow:
-          [
-            "/",
-            ".",
-            "config/**",
-            "skills/**",
-            "utils/**",
-            "benchmark_definition.yaml",
-            "benchmark_assembly_definition.yaml",
-            "assembly_definition.yaml",
-            "plan.md",
-            "todo.md",
-            "journal.md",
-          ]
-        deny: [".manifests/**"]
+        - /
+        - .
+        - config/**
+        - skills/**
+        - utils/**
+        - benchmark_definition.yaml
+        - benchmark_assembly_definition.yaml
+        - assembly_definition.yaml
+        - plan.md
+        - todo.md
+        - journal.md
+        deny:
+        - .manifests/**
       write:
         allow: []
-        deny: ["**"]
-    tools: ["search_cots_catalog", "read_file"]
+        deny:
+        - '**'
+    tools:
+    - search_cots_catalog
+    - read_file
     allowed_during_unit_eval:
-      [cots_search]
-
+    - cots_search
   journalling_agent:
     filesystem_permissions:
       read:
-        allow: ["**"]
-        deny: [".git/**", ".env", "**/secrets/**", ".manifests/**"]
+        allow:
+        - '**'
+        deny:
+        - .git/**
+        - .env
+        - '**/secrets/**'
+        - .manifests/**
       write:
-        allow: ["journal.md"]
-        deny: ["**"]
+        allow:
+        - journal.md
+        deny:
+        - '**'
     tools:
-      [
-        "list_files",
-        "read_file",
-        "grep",
-        "write_file",
-        "edit_file",
-        "execute_command",
-      ]
-
+    - list_files
+    - read_file
+    - grep
+    - write_file
+    - edit_file
+    - execute_command
   skill_agent:
     filesystem_permissions:
       read:
-        allow: ["**"]
-        deny: [".git/**", ".env", "**/secrets/**", ".manifests/**"]
+        allow:
+        - '**'
+        deny:
+        - .git/**
+        - .env
+        - '**/secrets/**'
+        - .manifests/**
       write:
-        allow: ["suggested_skills/**", "journal.md"]
-        deny: [".manifests/**"]
+        allow:
+        - suggested_skills/**
+        - journal.md
+        deny:
+        - .manifests/**
     tools:
-      [
-        "list_files",
-        "read_file",
-        "write_file",
-        "edit_file",
-        "grep",
-        "execute_command",
-        "inspect_topology",
-        "invoke_cots_search_subagent",
-        "save_suggested_skill",
-    ]
+    - list_files
+    - read_file
+    - write_file
+    - edit_file
+    - grep
+    - execute_command
+    - inspect_topology
+    - invoke_cots_search_subagent
+    - save_suggested_skill
     allowed_during_unit_eval:
-      [skill_agent]
-
+    - skill_agent
   git_agent:
     filesystem_permissions:
       read:
-        allow: ["**"]
-        deny: [".git/**", ".env", "**/secrets/**", ".manifests/**"]
+        allow:
+        - '**'
+        deny:
+        - .git/**
+        - .env
+        - '**/secrets/**'
+        - .manifests/**
       write:
         allow: []
-        deny: ["**"]
+        deny:
+        - '**'
     tools: []
     allowed_during_unit_eval:
-      [git_agent]
+    - git_agent

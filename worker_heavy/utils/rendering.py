@@ -218,13 +218,25 @@ def prerender_24_views(
         scene_path=str(scene_path) if scene_path else None,
         smoke_test_mode=smoke_test_mode,
         particle_budget=particle_budget,
-        rgb_enabled=render_policy.rgb,
-        depth_enabled=render_policy.depth,
-        segmentation_enabled=render_policy.segmentation,
+        rgb_enabled=render_policy.rgb.enabled,
+        depth_enabled=render_policy.depth.enabled,
+        segmentation_enabled=render_policy.segmentation.enabled,
+        rgb_axes_enabled=render_policy.rgb.axes,
+        rgb_edges_enabled=render_policy.rgb.edges,
+        depth_axes_enabled=render_policy.depth.axes,
+        depth_edges_enabled=render_policy.depth.edges,
+        segmentation_axes_enabled=render_policy.segmentation.axes,
+        segmentation_edges_enabled=render_policy.segmentation.edges,
     )
     output_path.mkdir(parents=True, exist_ok=True)
 
-    if not any((render_policy.rgb, render_policy.depth, render_policy.segmentation)):
+    if not any(
+        (
+            render_policy.rgb.enabled,
+            render_policy.depth.enabled,
+            render_policy.segmentation.enabled,
+        )
+    ):
         logger.info(
             "prerender_skipped_all_modalities_disabled",
             session_id=session_id,
@@ -253,9 +265,15 @@ def prerender_24_views(
             objectives=objectives,
             smoke_test_mode=smoke_test_mode,
             workspace_root=workspace_root,
-            include_rgb=render_policy.rgb,
-            include_depth=render_policy.depth,
-            include_segmentation=render_policy.segmentation,
+            rgb_axes=render_policy.rgb.axes,
+            rgb_edges=render_policy.rgb.edges,
+            depth_axes=render_policy.depth.axes,
+            depth_edges=render_policy.depth.edges,
+            segmentation_axes=render_policy.segmentation.axes,
+            segmentation_edges=render_policy.segmentation.edges,
+            include_rgb=render_policy.rgb.enabled,
+            include_depth=render_policy.depth.enabled,
+            include_segmentation=render_policy.segmentation.enabled,
         )
         manifest_artifacts, render_paths = _build_preview_artifacts(
             saved_paths,

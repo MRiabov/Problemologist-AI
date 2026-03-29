@@ -14,8 +14,10 @@ from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field
 from vtk.util.numpy_support import vtk_to_numpy
 from vtkmodules.vtkCommonTransforms import vtkTransform
+from vtkmodules.vtkFiltersCore import vtkFeatureEdges
 from vtkmodules.vtkFiltersSources import vtkCubeSource
 from vtkmodules.vtkIOGeometry import vtkOBJReader
+from vtkmodules.vtkRenderingAnnotation import vtkCubeAxesActor2D
 from vtkmodules.vtkRenderingCore import (
     vtkPolyDataMapper,
     vtkRenderer,
@@ -139,6 +141,92 @@ def _hex_from_rgb(color_rgb: tuple[int, int, int]) -> str:
     return "#" + "".join(f"{channel:02x}" for channel in color_rgb)
 
 
+_RGB_EDGE_COLOR = (0.08, 0.08, 0.08)
+_OVERLAY_EDGE_COLOR = (0.95, 0.68, 0.18)
+_RGB_AXES_COLOR = (0.12, 0.12, 0.12)
+_OVERLAY_AXES_COLOR = (0.94, 0.94, 0.94)
+
+
+def _clamp(value: int, minimum: int, maximum: int) -> int:
+    return max(minimum, min(maximum, value))
+
+
+def _scene_axis_tick_count(scene: PreviewScene) -> int:
+    spans = [scene.bounds_max[i] - scene.bounds_min[i] for i in range(3)]
+    longest_span = max(max(spans), 1e-6)
+    # Aim for roughly 20 mm spacing, then clamp to the requested 7-13 range.
+    label_count = int(round(longest_span / 20.0)) + 1
+    return _clamp(label_count, 7, 13)
+
+
+def _scene_axis_label_format(scene: PreviewScene, label_count: int) -> str:
+    spans = [scene.bounds_max[i] - scene.bounds_min[i] for i in range(3)]
+    longest_span = max(max(spans), 1e-6)
+    spacing = longest_span / max(label_count - 1, 1)
+    if spacing >= 10.0:
+        return "%.0f"
+    if spacing >= 1.0:
+        return "%.1f"
+    if spacing >= 0.1:
+        return "%.2f"
+    return "%.3f"
+
+
+def _depth_buffer_to_uint8(depth_buffer: np.ndarray) -> np.ndarray:
+    finite_mask = np.isfinite(depth_buffer)
+    depth_render = np.zeros(depth_buffer.shape, dtype=np.uint8)
+    if not finite_mask.any():
+        return depth_render
+
+    depth_min = float(depth_buffer[finite_mask].min())
+    depth_max = float(depth_buffer[finite_mask].max())
+    if np.isclose(depth_min, depth_max):
+        normalized = np.ones(depth_buffer.shape, dtype=np.float32)
+    else:
+        normalized = (depth_buffer - depth_min) / (depth_max - depth_min)
+        normalized = 1.0 - np.clip(normalized, 0.0, 1.0)
+    depth_render[finite_mask] = (normalized[finite_mask] * 255.0).astype(np.uint8)
+    return depth_render
+
+
+def _composite_non_black(
+    base_image: np.ndarray, overlay_image: np.ndarray
+) -> np.ndarray:
+    if base_image.ndim == 2:
+        base_rgb = np.repeat(base_image[:, :, np.newaxis], 3, axis=2)
+    else:
+        base_rgb = np.array(base_image, copy=True)
+
+    if overlay_image.ndim == 2:
+        overlay_rgb = np.repeat(overlay_image[:, :, np.newaxis], 3, axis=2)
+    else:
+        overlay_rgb = overlay_image
+
+    mask = np.any(overlay_rgb > 0, axis=2)
+    if mask.any():
+        base_rgb[mask] = overlay_rgb[mask]
+    return base_rgb
+
+
+def _build_feature_edges_mapper(
+    source: vtkCubeSource | vtkOBJReader,
+) -> vtkPolyDataMapper:
+    feature_edges = vtkFeatureEdges()
+    feature_edges.SetInputConnection(source.GetOutputPort())
+    feature_edges.BoundaryEdgesOn()
+    feature_edges.FeatureEdgesOn()
+    feature_edges.ManifoldEdgesOff()
+    feature_edges.NonManifoldEdgesOff()
+    feature_edges.SetFeatureAngle(45.0)
+    feature_edges.ColoringOff()
+    feature_edges.Update()
+
+    mapper = vtkPolyDataMapper()
+    mapper.SetInputConnection(feature_edges.GetOutputPort())
+    mapper.ScalarVisibilityOff()
+    return mapper
+
+
 def _combined_bounds(
     component: Compound, objectives: BenchmarkDefinition | None
 ) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
@@ -175,13 +263,13 @@ def _build_box_actor(
     return source, mapper
 
 
-def _build_mesh_actor(mesh_path: Path) -> vtkPolyDataMapper:
+def _build_mesh_actor(mesh_path: Path) -> tuple[vtkOBJReader, vtkPolyDataMapper]:
     reader = vtkOBJReader()
     reader.SetFileName(str(mesh_path))
     reader.Update()
     mapper = vtkPolyDataMapper()
     mapper.SetInputConnection(reader.GetOutputPort())
-    return mapper
+    return reader, mapper
 
 
 def _make_transform(
@@ -194,6 +282,62 @@ def _make_transform(
     transform.RotateY(float(euler[1]))
     transform.RotateZ(float(euler[2]))
     return transform
+
+
+def _style_preview_edge_actor(
+    actor: vtk.vtkActor, color: tuple[float, float, float]
+) -> None:
+    prop = actor.GetProperty()
+    prop.SetColor(*color)
+    prop.SetOpacity(0.68)
+    prop.SetLineWidth(1.2)
+    prop.LightingOff()
+
+
+def _build_preview_edge_actor(
+    source: vtkCubeSource | vtkOBJReader,
+    *,
+    transform: vtkTransform,
+    color: tuple[float, float, float] = _RGB_EDGE_COLOR,
+) -> vtk.vtkActor:
+    mapper = _build_feature_edges_mapper(source)
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
+    actor.SetUserTransform(transform)
+    _style_preview_edge_actor(actor, color)
+    return actor
+
+
+def _build_axes_actor(
+    scene: PreviewScene,
+    renderer: vtkRenderer,
+    *,
+    color: tuple[float, float, float] = _RGB_AXES_COLOR,
+) -> vtkCubeAxesActor2D:
+    tick_count = _scene_axis_tick_count(scene)
+    axes_actor = vtkCubeAxesActor2D()
+    axes_actor.SetCamera(renderer.GetActiveCamera())
+    axes_actor.SetBounds(
+        scene.bounds_min[0],
+        scene.bounds_max[0],
+        scene.bounds_min[1],
+        scene.bounds_max[1],
+        scene.bounds_min[2],
+        scene.bounds_max[2],
+    )
+    axes_actor.SetFlyModeToOuterEdges()
+    axes_actor.SetNumberOfLabels(tick_count)
+    axes_actor.SetLabelFormat(_scene_axis_label_format(scene, tick_count))
+    axes_actor.SetXLabel("X")
+    axes_actor.SetYLabel("Y")
+    axes_actor.SetZLabel("Z")
+    axes_actor.GetAxisLabelTextProperty().SetColor(*color)
+    axes_actor.GetAxisLabelTextProperty().SetFontSize(12)
+    axes_actor.GetAxisTitleTextProperty().SetColor(*color)
+    axes_actor.GetAxisTitleTextProperty().SetFontSize(13)
+    axes_actor.GetAxisLabelTextProperty().ShadowOff()
+    axes_actor.GetAxisTitleTextProperty().ShadowOff()
+    return axes_actor
 
 
 def _load_manufacturing_config(workspace_root: Path):
@@ -386,6 +530,9 @@ def _add_entity_actors(
     entity: PreviewEntity,
     *,
     segmentation: bool,
+    include_fill: bool,
+    include_edges: bool,
+    edge_color: tuple[float, float, float],
 ) -> None:
     if entity.kind if hasattr(entity, "kind") else False:  # pragma: no cover
         raise RuntimeError("legacy entity format is unsupported")
@@ -394,24 +541,45 @@ def _add_entity_actors(
         return
 
     if entity.box_size is not None:
-        _, mapper = _build_box_actor(entity.box_size)
-        actor = vtk.vtkActor()
-        actor.SetMapper(mapper)
-        actor.SetUserTransform(_make_transform(entity.pos, entity.euler))
+        source, mapper = _build_box_actor(entity.box_size)
+        actor = None
+        if include_fill:
+            actor = vtk.vtkActor()
+            actor.SetMapper(mapper)
+            actor.SetUserTransform(_make_transform(entity.pos, entity.euler))
     else:
         if not entity.mesh_paths:
             return
         for mesh_path in entity.mesh_paths:
-            mapper = _build_mesh_actor(Path(mesh_path))
-            actor = vtk.vtkActor()
-            actor.SetMapper(mapper)
-            actor.SetUserTransform(_make_transform(entity.pos, entity.euler))
-            renderer.AddActor(actor)
-            _apply_actor_style(actor, entity, segmentation=segmentation)
+            source, mapper = _build_mesh_actor(Path(mesh_path))
+            actor = None
+            if include_fill:
+                actor = vtk.vtkActor()
+                actor.SetMapper(mapper)
+                actor.SetUserTransform(_make_transform(entity.pos, entity.euler))
+                renderer.AddActor(actor)
+                _apply_actor_style(actor, entity, segmentation=segmentation)
+            if include_edges:
+                renderer.AddActor(
+                    _build_preview_edge_actor(
+                        source,
+                        transform=_make_transform(entity.pos, entity.euler),
+                        color=edge_color,
+                    )
+                )
         return
 
-    renderer.AddActor(actor)
-    _apply_actor_style(actor, entity, segmentation=segmentation)
+    if actor is not None:
+        renderer.AddActor(actor)
+        _apply_actor_style(actor, entity, segmentation=segmentation)
+    if include_edges:
+        renderer.AddActor(
+            _build_preview_edge_actor(
+                source,
+                transform=_make_transform(entity.pos, entity.euler),
+                color=edge_color,
+            )
+        )
 
 
 def _apply_actor_style(
@@ -445,15 +613,30 @@ def _build_renderer(
     width: int,
     height: int,
     segmentation: bool,
+    include_axes: bool,
+    include_edges: bool,
+    include_fill: bool,
+    axes_color: tuple[float, float, float],
+    edge_color: tuple[float, float, float],
+    background: tuple[float, float, float],
 ) -> _RendererBundle:
     ensure_headless_vtk_display()
     renderer = vtkRenderer()
-    renderer.SetBackground(
-        0.98, 0.98, 0.99
-    ) if not segmentation else renderer.SetBackground(0.0, 0.0, 0.0)
+    renderer.SetBackground(*background)
 
     for entity in scene.entities:
-        _add_entity_actors(renderer, entity, segmentation=segmentation)
+        _add_entity_actors(
+            renderer,
+            entity,
+            segmentation=segmentation,
+            include_fill=include_fill,
+            include_edges=include_edges,
+            edge_color=edge_color,
+        )
+
+    if include_axes:
+        axes_actor = _build_axes_actor(scene, renderer, color=axes_color)
+        renderer.AddActor2D(axes_actor)
 
     render_window = vtkRenderWindow()
     render_window.AddRenderer(renderer)
@@ -562,10 +745,30 @@ class Build123dRendererBackend(RendererBackend):
         workspace_root: Path,
         objectives: BenchmarkDefinition | None = None,
         smoke_test_mode: bool = False,
+        include_axes: bool | None = None,
+        include_edges: bool | None = None,
+        rgb_axes: bool | None = None,
+        rgb_edges: bool | None = None,
+        depth_axes: bool | None = None,
+        depth_edges: bool | None = None,
+        segmentation_axes: bool | None = None,
+        segmentation_edges: bool | None = None,
     ) -> None:
         self.workspace_root = workspace_root
         self.objectives = objectives
         self.smoke_test_mode = smoke_test_mode
+        default_axes = True if include_axes is None else include_axes
+        default_edges = True if include_edges is None else include_edges
+        self.rgb_axes = default_axes if rgb_axes is None else rgb_axes
+        self.rgb_edges = default_edges if rgb_edges is None else rgb_edges
+        self.depth_axes = self.rgb_axes if depth_axes is None else depth_axes
+        self.depth_edges = self.rgb_edges if depth_edges is None else depth_edges
+        self.segmentation_axes = (
+            self.rgb_axes if segmentation_axes is None else segmentation_axes
+        )
+        self.segmentation_edges = (
+            self.rgb_edges if segmentation_edges is None else segmentation_edges
+        )
         self.scene: PreviewScene | None = None
         self._camera_states: dict[str, _CameraState] = {}
         self._mesh_temp_dir: tempfile.TemporaryDirectory | None = None
@@ -603,7 +806,16 @@ class Build123dRendererBackend(RendererBackend):
 
         camera_position, lookat, up = self._resolve_camera(camera_name)
         bundle = _build_renderer(
-            self.scene, width=width, height=height, segmentation=False
+            self.scene,
+            width=width,
+            height=height,
+            segmentation=False,
+            include_axes=self.rgb_axes,
+            include_edges=self.rgb_edges,
+            include_fill=True,
+            axes_color=_RGB_AXES_COLOR,
+            edge_color=_RGB_EDGE_COLOR,
+            background=(0.98, 0.98, 0.99),
         )
         rgb_image, _ = _render_view(
             bundle,
@@ -631,27 +843,130 @@ class Build123dRendererBackend(RendererBackend):
             raise RuntimeError("Scene not loaded")
 
         camera_position, lookat, up = self._resolve_camera(camera_name)
-        rgb_bundle = _build_renderer(
-            self.scene, width=width, height=height, segmentation=False
-        )
-        seg_bundle = _build_renderer(
-            self.scene, width=width, height=height, segmentation=True
-        )
+        rgb_bundle: _RendererBundle | None = None
+        if include_rgb:
+            rgb_bundle = _build_renderer(
+                self.scene,
+                width=width,
+                height=height,
+                segmentation=False,
+                include_axes=self.rgb_axes,
+                include_edges=self.rgb_edges,
+                include_fill=True,
+                axes_color=_RGB_AXES_COLOR,
+                edge_color=_RGB_EDGE_COLOR,
+                background=(0.98, 0.98, 0.99),
+            )
 
-        rgb_image, depth_image = _render_view(
-            rgb_bundle,
-            camera_position=camera_position,
-            lookat=lookat,
-            up=up,
-            capture_depth=include_depth,
-        )
-        seg_image, _ = _render_view(
-            seg_bundle,
-            camera_position=camera_position,
-            lookat=lookat,
-            up=up,
-            capture_depth=False,
-        )
+        depth_base_bundle: _RendererBundle | None = None
+        depth_overlay_bundle: _RendererBundle | None = None
+        if include_depth:
+            depth_base_bundle = _build_renderer(
+                self.scene,
+                width=width,
+                height=height,
+                segmentation=False,
+                include_axes=False,
+                include_edges=False,
+                include_fill=True,
+                axes_color=_OVERLAY_AXES_COLOR,
+                edge_color=_OVERLAY_EDGE_COLOR,
+                background=(0.98, 0.98, 0.99),
+            )
+            if self.depth_axes or self.depth_edges:
+                depth_overlay_bundle = _build_renderer(
+                    self.scene,
+                    width=width,
+                    height=height,
+                    segmentation=False,
+                    include_axes=self.depth_axes,
+                    include_edges=self.depth_edges,
+                    include_fill=False,
+                    axes_color=_OVERLAY_AXES_COLOR,
+                    edge_color=_OVERLAY_EDGE_COLOR,
+                    background=(0.0, 0.0, 0.0),
+                )
+
+        seg_base_bundle: _RendererBundle | None = None
+        seg_overlay_bundle: _RendererBundle | None = None
+        if include_segmentation:
+            seg_base_bundle = _build_renderer(
+                self.scene,
+                width=width,
+                height=height,
+                segmentation=True,
+                include_axes=False,
+                include_edges=False,
+                include_fill=True,
+                axes_color=_OVERLAY_AXES_COLOR,
+                edge_color=_OVERLAY_EDGE_COLOR,
+                background=(0.0, 0.0, 0.0),
+            )
+            if self.segmentation_axes or self.segmentation_edges:
+                seg_overlay_bundle = _build_renderer(
+                    self.scene,
+                    width=width,
+                    height=height,
+                    segmentation=False,
+                    include_axes=self.segmentation_axes,
+                    include_edges=self.segmentation_edges,
+                    include_fill=False,
+                    axes_color=_OVERLAY_AXES_COLOR,
+                    edge_color=_OVERLAY_EDGE_COLOR,
+                    background=(0.0, 0.0, 0.0),
+                )
+
+        rgb_image: np.ndarray | None = None
+        depth_image: np.ndarray | None = None
+        seg_image: np.ndarray | None = None
+
+        if rgb_bundle is not None:
+            rgb_image, _ = _render_view(
+                rgb_bundle,
+                camera_position=camera_position,
+                lookat=lookat,
+                up=up,
+                capture_depth=False,
+            )
+        if depth_base_bundle is not None:
+            _, depth_buffer = _render_view(
+                depth_base_bundle,
+                camera_position=camera_position,
+                lookat=lookat,
+                up=up,
+                capture_depth=True,
+            )
+            if depth_buffer is None:
+                raise RuntimeError("depth rendering was disabled for render")
+            depth_render = _depth_buffer_to_uint8(depth_buffer)
+            if depth_overlay_bundle is not None:
+                depth_overlay, _ = _render_view(
+                    depth_overlay_bundle,
+                    camera_position=camera_position,
+                    lookat=lookat,
+                    up=up,
+                    capture_depth=False,
+                )
+                depth_image = _composite_non_black(depth_render, depth_overlay)
+            else:
+                depth_image = depth_render
+        if seg_base_bundle is not None:
+            seg_image, _ = _render_view(
+                seg_base_bundle,
+                camera_position=camera_position,
+                lookat=lookat,
+                up=up,
+                capture_depth=False,
+            )
+            if seg_overlay_bundle is not None:
+                seg_overlay, _ = _render_view(
+                    seg_overlay_bundle,
+                    camera_position=camera_position,
+                    lookat=lookat,
+                    up=up,
+                    capture_depth=False,
+                )
+                seg_image = _composite_non_black(seg_image, seg_overlay)
         return (
             rgb_image if include_rgb else None,
             depth_image if include_depth else None,
@@ -756,6 +1071,8 @@ def render_preview_view(
     objectives: BenchmarkDefinition | None = None,
     smoke_test_mode: bool = False,
     workspace_root: Path,
+    include_axes: bool = True,
+    include_edges: bool = True,
     width: int = 640,
     height: int = 480,
 ) -> Path:
@@ -765,6 +1082,8 @@ def render_preview_view(
         workspace_root=workspace_root,
         objectives=objectives,
         smoke_test_mode=smoke_test_mode,
+        include_axes=include_axes,
+        include_edges=include_edges,
     )
     try:
         backend.load_scene(component)
@@ -795,6 +1114,12 @@ def render_preview_bundle(
     objectives: BenchmarkDefinition | None = None,
     smoke_test_mode: bool = False,
     workspace_root: Path,
+    rgb_axes: bool = True,
+    rgb_edges: bool = True,
+    depth_axes: bool = True,
+    depth_edges: bool = True,
+    segmentation_axes: bool = True,
+    segmentation_edges: bool = True,
     include_rgb: bool = True,
     include_depth: bool = True,
     include_segmentation: bool = True,
@@ -811,6 +1136,12 @@ def render_preview_bundle(
         workspace_root=workspace_root,
         objectives=objectives,
         smoke_test_mode=smoke_test_mode,
+        rgb_axes=rgb_axes,
+        rgb_edges=rgb_edges,
+        depth_axes=depth_axes,
+        depth_edges=depth_edges,
+        segmentation_axes=segmentation_axes,
+        segmentation_edges=segmentation_edges,
     )
     try:
         backend.load_scene(component)
@@ -863,26 +1194,10 @@ def render_preview_bundle(
                     saved_paths.append(str(rgb_path))
 
                 if depth_image is not None:
-                    finite_mask = np.isfinite(depth_image)
-                    if finite_mask.any():
-                        depth_min = float(depth_image[finite_mask].min())
-                        depth_max = float(depth_image[finite_mask].max())
+                    if depth_image.ndim == 2:
+                        Image.fromarray(depth_image, mode="L").save(depth_path, "PNG")
                     else:
-                        depth_min = None
-                        depth_max = None
-                    depth_render = np.zeros(depth_image.shape, dtype=np.uint8)
-                    if finite_mask.any():
-                        if np.isclose(depth_min, depth_max):
-                            normalized = np.ones(depth_image.shape, dtype=np.float32)
-                        else:
-                            normalized = (depth_image - depth_min) / (
-                                depth_max - depth_min
-                            )
-                            normalized = 1.0 - np.clip(normalized, 0.0, 1.0)
-                        depth_render[finite_mask] = (
-                            normalized[finite_mask] * 255.0
-                        ).astype(np.uint8)
-                    Image.fromarray(depth_render, mode="L").save(depth_path, "PNG")
+                        Image.fromarray(depth_image, mode="RGB").save(depth_path, "PNG")
                     saved_paths.append(str(depth_path))
 
                 if seg_image is not None:

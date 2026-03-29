@@ -93,6 +93,33 @@ def _probe_vtk_display(display: str, xauthority: str | None = None) -> bool:
     return completed.returncode == 0
 
 
+def _reuse_cached_ambient_display(
+    existing_display: str | None, existing_xauthority: str | None
+) -> bool | None:
+    """Re-probe a cached ambient display and drop it if it went stale.
+
+    Returns:
+        True if the cached ambient display is still valid.
+        False if the cached ambient display became stale and should be ignored.
+        None if there was no matching cached ambient display to check.
+    """
+
+    global _DISPLAY_STATE
+
+    state = _DISPLAY_STATE
+    if (
+        state is not None
+        and state.process is None
+        and existing_display == state.display
+        and existing_xauthority == state.xauthority
+    ):
+        if _probe_vtk_display(existing_display, existing_xauthority):
+            return True
+        _DISPLAY_STATE = None
+        return False
+    return None
+
+
 def _start_private_vtk_display() -> _DisplayState:
     xvfb_path = shutil.which("Xvfb")
     if xvfb_path is None:
@@ -185,17 +212,19 @@ def ensure_headless_vtk_display() -> str:
 
     existing_display = os.environ.get("DISPLAY")
     existing_xauthority = os.environ.get("XAUTHORITY")
-
     state = _DISPLAY_STATE
-    if (
-        state is not None
-        and state.process is None
-        and existing_display == state.display
-        and existing_xauthority == state.xauthority
-    ):
-        return state.display
 
-    if existing_display and _probe_vtk_display(existing_display, existing_xauthority):
+    cached_ambient_display = _reuse_cached_ambient_display(
+        existing_display, existing_xauthority
+    )
+    if cached_ambient_display is True:
+        return existing_display
+
+    if (
+        cached_ambient_display is None
+        and existing_display
+        and _probe_vtk_display(existing_display, existing_xauthority)
+    ):
         state = _DisplayState(
             process=None,
             display=existing_display,
@@ -225,13 +254,23 @@ def ensure_headless_vtk_display() -> str:
 
     with _DISPLAY_LOCK:
         state = _DISPLAY_STATE
+        cached_ambient_display = _reuse_cached_ambient_display(
+            existing_display, existing_xauthority
+        )
+        if cached_ambient_display is True:
+            return existing_display
         if (
-            state is not None
-            and state.process is None
-            and existing_display == state.display
-            and existing_xauthority == state.xauthority
+            cached_ambient_display is None
+            and existing_display
+            and _probe_vtk_display(existing_display, existing_xauthority)
         ):
-            return state.display
+            state = _DisplayState(
+                process=None,
+                display=existing_display,
+                xauthority=existing_xauthority,
+            )
+            _DISPLAY_STATE = state
+            return existing_display
         if (
             state is not None
             and state.process is not None

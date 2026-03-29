@@ -107,10 +107,58 @@ class LLMPolicyConfig(BaseModel):
     multimodal_model: str | None = None
 
 
+class RenderModalityConfig(BaseModel):
+    enabled: bool = True
+    axes: bool = True
+    edges: bool = True
+
+
 class RenderPolicyConfig(BaseModel):
-    rgb: bool = True
-    depth: bool = True
-    segmentation: bool = True
+    split_video_renders_to_images: bool = False
+    rgb: RenderModalityConfig = Field(default_factory=RenderModalityConfig)
+    depth: RenderModalityConfig = Field(default_factory=RenderModalityConfig)
+    segmentation: RenderModalityConfig = Field(default_factory=RenderModalityConfig)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_legacy_render_policy(
+        cls, value: object
+    ) -> dict[str, object] | object:
+        if not isinstance(value, dict):
+            return value
+
+        normalized = dict(value)
+
+        def _ensure_modality_config(modality: str) -> dict[str, object]:
+            raw_modality = normalized.get(modality)
+            if isinstance(raw_modality, dict):
+                return dict(raw_modality)
+            if isinstance(raw_modality, bool):
+                return {"enabled": raw_modality}
+            if raw_modality is None:
+                return {}
+            return dict(raw_modality)
+
+        for legacy_key, (modality_key, field_name) in (
+            ("rgb_axes", ("rgb", "axes")),
+            ("rgb_edges", ("rgb", "edges")),
+            ("depth_axes", ("depth", "axes")),
+            ("depth_edges", ("depth", "edges")),
+            ("segmentation_axes", ("segmentation", "axes")),
+            ("segmentation_edges", ("segmentation", "edges")),
+        ):
+            if legacy_key not in normalized:
+                continue
+            modality_cfg = _ensure_modality_config(modality_key)
+            modality_cfg[field_name] = normalized.pop(legacy_key)
+            normalized[modality_key] = modality_cfg
+
+        for modality_key in ("rgb", "depth", "segmentation"):
+            raw_modality = normalized.get(modality_key)
+            if isinstance(raw_modality, bool):
+                normalized[modality_key] = {"enabled": raw_modality}
+
+        return normalized
 
 
 class AgentExecutionPolicy(BaseModel):

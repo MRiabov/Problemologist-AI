@@ -280,6 +280,7 @@ class InspectMediaToolEvent(BaseEvent):
     mime_type: str
     media_kind: str
     attached_to_model: bool = False
+    attached_media_count: int = 0
 
 
 class WriteFileToolEvent(BaseEvent):
@@ -550,6 +551,7 @@ class MediaInspectionEvent(BaseEvent):
     mime_type: str
     media_kind: str
     attached_to_model: bool = False
+    attached_media_count: int = 0
     review_stage: str | None = None
 
 
@@ -560,3 +562,4 @@ class LlmMediaAttachedEvent(BaseEvent):
     media_kind: str
     node_name: AgentName
     tool_name: str = "inspect_media"
+    attached_media_count: int = 0

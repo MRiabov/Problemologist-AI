@@ -84,6 +84,8 @@ _IMAGE_MEDIA_TYPES = {
 _VIDEO_MEDIA_TYPES = {
     ".mp4": "video/mp4",
 }
+_VIDEO_FRAME_SPLIT_MAX_FRAMES = 6
+_VIDEO_FRAME_JPEG_QUALITY = 85
 
 
 def _bundle_workflow_id(prefix: str, session_id: str, bundle: bytes) -> str:
@@ -231,6 +233,100 @@ class RemoteFilesystemMiddleware:
         _mime_type, media_kind = cls._media_metadata_for_path(path)
         return media_kind in {"image", "video"}
 
+    @staticmethod
+    def _extract_video_frame_data_urls(
+        video_bytes: bytes,
+        *,
+        max_frames: int = _VIDEO_FRAME_SPLIT_MAX_FRAMES,
+    ) -> list[str]:
+        try:
+            import cv2
+        except Exception:
+            return []
+
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=True) as tmp:
+            tmp.write(video_bytes)
+            tmp.flush()
+
+            capture = cv2.VideoCapture(tmp.name)
+            if not capture.isOpened():
+                capture.release()
+                return []
+
+            try:
+                frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+                frame_indices: list[int] = []
+                if frame_count > 0:
+                    sample_count = min(max_frames, frame_count)
+                    if sample_count == 1:
+                        frame_indices = [0]
+                    else:
+                        frame_indices = list(
+                            dict.fromkeys(
+                                round(index * (frame_count - 1) / (sample_count - 1))
+                                for index in range(sample_count)
+                            )
+                        )
+                else:
+                    frame_indices = []
+
+                frame_data_urls: list[str] = []
+                if frame_indices:
+                    for frame_index in frame_indices:
+                        capture.set(cv2.CAP_PROP_POS_FRAMES, float(frame_index))
+                        ok, frame = capture.read()
+                        if not ok or frame is None:
+                            continue
+                        ok, encoded = cv2.imencode(
+                            ".jpg",
+                            frame,
+                            [int(cv2.IMWRITE_JPEG_QUALITY), _VIDEO_FRAME_JPEG_QUALITY],
+                        )
+                        if not ok:
+                            continue
+                        frame_data_urls.append(
+                            "data:image/jpeg;base64,"
+                            + base64.b64encode(encoded.tobytes()).decode("ascii")
+                        )
+                else:
+                    for _ in range(max_frames):
+                        ok, frame = capture.read()
+                        if not ok or frame is None:
+                            break
+                        ok, encoded = cv2.imencode(
+                            ".jpg",
+                            frame,
+                            [int(cv2.IMWRITE_JPEG_QUALITY), _VIDEO_FRAME_JPEG_QUALITY],
+                        )
+                        if not ok:
+                            continue
+                        frame_data_urls.append(
+                            "data:image/jpeg;base64,"
+                            + base64.b64encode(encoded.tobytes()).decode("ascii")
+                        )
+
+                if frame_data_urls:
+                    return frame_data_urls
+
+                capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                ok, frame = capture.read()
+                if ok and frame is not None:
+                    ok, encoded = cv2.imencode(
+                        ".jpg",
+                        frame,
+                        [int(cv2.IMWRITE_JPEG_QUALITY), _VIDEO_FRAME_JPEG_QUALITY],
+                    )
+                    if ok:
+                        return [
+                            "data:image/jpeg;base64,"
+                            + base64.b64encode(encoded.tobytes()).decode("ascii")
+                        ]
+                return []
+            finally:
+                capture.release()
+
     async def list_files(self, path: str | Path = "/") -> list[FileInfo]:
         """List files via the Worker client."""
         self._check_perm("read", path)
@@ -351,6 +447,7 @@ class RemoteFilesystemMiddleware:
         self._check_perm("read", path)
         path_str = str(path)
         mime_type, media_kind = self._media_metadata_for_path(path_str)
+        split_video_renders = self.policy.config.render.split_video_renders_to_images
         binary = None
         render_metadata = None
 
@@ -399,57 +496,70 @@ class RemoteFilesystemMiddleware:
                         )
                         render_metadata = None
 
-            if binary is None:
-                assert last_error is not None
-                raise last_error
+        if binary is None:
+            assert last_error is not None
+            raise last_error
+
+        attached_media_count = 0
+        data_url: str | None = None
+        data_urls: list[str] = []
+        note = ""
 
         if media_kind == "image":
             data_url = (
                 f"data:{mime_type};base64,{base64.b64encode(binary).decode('ascii')}"
             )
-            result = MediaInspectionResult(
-                path=path_str.lstrip("/").removeprefix("workspace/"),
-                mime_type=mime_type,
-                media_kind=media_kind,
-                attached_to_model=True,
-                size_bytes=len(binary),
-                note=(
-                    "Image attached for multimodal review."
-                    + (
-                        " Render metadata is included in this observation."
-                        if render_metadata is not None
-                        else ""
-                    )
-                ),
-                render_metadata=render_metadata,
-                data_url=data_url,
-            )
+            data_urls = [data_url]
+            attached_media_count = 1
+            note = "Image attached for multimodal review."
+            if render_metadata is not None:
+                note += " Render metadata is included in this observation."
+        elif media_kind == "video" and split_video_renders:
+            data_urls = self._extract_video_frame_data_urls(binary)
+            if data_urls:
+                data_url = data_urls[0]
+                attached_media_count = len(data_urls)
+                media_kind = "video_frames"
+                note = (
+                    f"Video split into {attached_media_count} frame(s) for "
+                    "multimodal review."
+                )
+                if render_metadata is not None:
+                    note += " Render metadata is included in this observation."
+            else:
+                note = (
+                    "Video inspection could not be split into frames. "
+                    "The mp4 artifact remains available, but no model attachment "
+                    "was produced."
+                )
+                if render_metadata is not None:
+                    note += " Render metadata is included in this observation."
         elif media_kind == "video":
-            result = MediaInspectionResult(
-                path=path_str.lstrip("/").removeprefix("workspace/"),
-                mime_type=mime_type,
-                media_kind=media_kind,
-                attached_to_model=False,
-                size_bytes=len(binary),
-                note=(
-                    "Video inspection is not yet attached to the model. "
-                    "Inspect still recorded for observability."
-                ),
-                render_metadata=render_metadata,
+            note = (
+                "Video inspection is not attached to the model. "
+                "Enable render.split_video_renders_to_images to attach "
+                "sampled frames."
             )
+            if render_metadata is not None:
+                note += " Render metadata is included in this observation."
         else:
-            result = MediaInspectionResult(
-                path=path_str.lstrip("/"),
-                mime_type=mime_type,
-                media_kind=media_kind,
-                attached_to_model=False,
-                size_bytes=len(binary),
-                note=(
-                    "Unsupported media type for inspect_media(). "
-                    "Supported types: .png, .jpg, .jpeg, .mp4."
-                ),
-                render_metadata=render_metadata,
+            note = (
+                "Unsupported media type for inspect_media(). "
+                "Supported types: .png, .jpg, .jpeg, .mp4."
             )
+
+        result = MediaInspectionResult(
+            path=path_str.lstrip("/").removeprefix("workspace/"),
+            mime_type=mime_type,
+            media_kind=media_kind,
+            attached_to_model=attached_media_count > 0,
+            attached_media_count=attached_media_count,
+            size_bytes=len(binary),
+            note=note,
+            render_metadata=render_metadata,
+            data_url=data_url,
+            data_urls=data_urls,
+        )
 
         await record_events(
             episode_id=self.episode_id,
@@ -459,12 +569,14 @@ class RemoteFilesystemMiddleware:
                     mime_type=result.mime_type,
                     media_kind=result.media_kind,
                     attached_to_model=result.attached_to_model,
+                    attached_media_count=result.attached_media_count,
                 ),
                 MediaInspectionEvent(
                     path=result.path,
                     mime_type=result.mime_type,
                     media_kind=result.media_kind,
                     attached_to_model=result.attached_to_model,
+                    attached_media_count=result.attached_media_count,
                     review_stage=str(self.agent_role.value),
                 ),
             ],
