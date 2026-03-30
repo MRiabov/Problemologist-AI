@@ -82,3 +82,9 @@ logs/
 Problemologist-AI-tracked.zip
 docs/academic-submission/IEEEtranBST2/
 docs/academic-submission/IEEEtranBST2.zip
+
+# BMad-generated skills and assets
+.agent/skills/
+_bmad/
+**/bmad-*/
+**/bmad-*
