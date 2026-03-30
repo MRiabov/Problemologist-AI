@@ -243,6 +243,7 @@ async def seed_execution_reviewer_handover(
     int_id: str,
     script_content: str | None = None,
     render_path: str = "renders/render_e45_a45.png",
+    seed_render_preview: bool = True,
 ) -> None:
     """Seed deterministic reviewer handoff artifacts for execution-reviewer runs."""
     script_content = script_content or _fixture_script_content(int_id)
@@ -370,11 +371,12 @@ async def seed_execution_reviewer_handover(
         content=assembly_definition_seed,
         bypass_agent_permissions=True,
     )
-    await seed_current_revision_render_preview(
-        client,
-        session_id=session_id,
-        render_path=render_path,
-    )
+    if seed_render_preview:
+        await seed_current_revision_render_preview(
+            client,
+            session_id=session_id,
+            render_path=render_path,
+        )
 
 
 async def seed_current_revision_render_preview(
@@ -586,7 +588,20 @@ async def _wait_for_resource_state(
                 remaining = deadline - asyncio.get_running_loop().time()
                 if remaining <= 0:
                     break
-                raw_message = await asyncio.wait_for(ws.recv(), timeout=remaining)
+                recv_timeout = min(remaining, max(1.0, poll_s))
+                try:
+                    raw_message = await asyncio.wait_for(
+                        ws.recv(), timeout=recv_timeout
+                    )
+                except asyncio.TimeoutError:
+                    resource = await fetch_resource()
+                    if resource is None:
+                        continue
+                    if predicate is not None and predicate(resource):
+                        return resource.model_dump(mode="json")
+                    if resource.status.value in terminal:
+                        return resource.model_dump(mode="json")
+                    continue
                 try:
                     payload = (
                         json.loads(raw_message)

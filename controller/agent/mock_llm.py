@@ -81,7 +81,7 @@ class MockDSPyLM(dspy.LM):
         logger.info("mock_dspy_full_text", text=full_text)
 
         # 1. Resolve scenario from session_id only (no prompt heuristics).
-        scenario_id = self._get_scenario_id()
+        scenario_id = self._get_scenario_id(full_text)
         # Final check if session_id is a direct match but was missed by _get_scenario_id
         if scenario_id not in self.scenarios and self.session_id in self.scenarios:
             scenario_id = self.session_id
@@ -566,8 +566,15 @@ class MockDSPyLM(dspy.LM):
         preview = candidates[0] if candidates else str(actual).strip()
         return False, preview
 
-    def _get_scenario_id(self) -> str:
-        """Extract scenario ID from session_id, handling UUIDs and test prefixes."""
+    def _get_scenario_id(self, full_text: str | None = None) -> str:
+        """Extract scenario ID from session_id, test markers, and UUID fallbacks."""
+        if full_text:
+            explicit_match = re.search(r"\bINT-\d{3}\b", full_text)
+            if explicit_match:
+                explicit_id = explicit_match.group(0)
+                if explicit_id in self.scenarios:
+                    return explicit_id
+
         # Check for UUID (roughly xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
         uuid_regex = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         if re.match(uuid_regex, self.session_id.lower()):

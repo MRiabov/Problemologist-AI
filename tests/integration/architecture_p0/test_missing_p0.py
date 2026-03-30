@@ -18,7 +18,10 @@ from shared.workers.schema import (
     ReadFileResponse,
     WriteFileRequest,
 )
-from tests.integration.agent.helpers import seed_benchmark_assembly_definition
+from tests.integration.agent.helpers import (
+    seed_benchmark_assembly_definition,
+    seed_execution_reviewer_handover,
+)
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
@@ -131,6 +134,12 @@ async def test_int_014_cots_propagation():
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"INT-014-{uuid.uuid4().hex[:8]}"
         await seed_benchmark_assembly_definition(client, session_id)
+        await seed_execution_reviewer_handover(
+            client,
+            session_id=session_id,
+            int_id="INT-014",
+            seed_render_preview=False,
+        )
         run_req = AgentRunRequest(
             task="Design a mechanism with a servo motor",
             session_id=session_id,

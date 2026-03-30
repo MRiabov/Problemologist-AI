@@ -20,22 +20,6 @@ SERVICES = [
     "http://127.0.0.1:18002",  # Worker Heavy
 ]
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
-INTEGRATION_XDIST_SERIAL_GROUP = "integration_shared_serial"
-
-# Keep the heavy/Temporal-backed integration modules in one xdist lane so the
-# runner can still fan out the cheaper HTTP-only coverage.
-INTEGRATION_SERIAL_SOURCE_PATTERNS = (
-    "WORKER_HEAVY_URL",
-    "/benchmark/",
-    "wait_for_episode",
-    "wait_for_benchmark_state",
-    "wait_for_episode_terminal",
-    "seed_benchmark_assembly_definition",
-    "seed_execution_reviewer_handover",
-    "seed_current_revision_render_preview",
-    "BenchmarkToolRequest",
-    "Temporal",
-)
 
 # Temporary baseline allowlist for known frontend noise.
 # Goal: keep strict mode actionable while we iteratively eliminate existing issues.
@@ -77,22 +61,6 @@ def _is_integration_item(item: pytest.Item) -> bool:
         any(m.name.startswith("integration") for m in item.iter_markers())
         or "integration" in item.nodeid
     )
-
-
-def _module_source_matches_serial_pattern(path: Path) -> bool:
-    try:
-        source = path.read_text(encoding="utf-8", errors="ignore")
-    except OSError:
-        return False
-    return any(pattern in source for pattern in INTEGRATION_SERIAL_SOURCE_PATTERNS)
-
-
-def _item_should_share_xdist_group(item: pytest.Item) -> bool:
-    if any(marker.name == "xdist_group" for marker in item.iter_markers()):
-        return False
-
-    path = Path(str(getattr(item, "path", item.fspath)))
-    return _module_source_matches_serial_pattern(path)
 
 
 def _extract_test_int_id(nodeid: str) -> str | None:
@@ -432,25 +400,6 @@ def pytest_runtest_makereport(item, call):
     outcome = yield
     rep = outcome.get_result()
     setattr(item, f"rep_{rep.when}", rep)
-
-
-def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]):
-    """Keep heavy Temporal/worker-heavy modules in one xdist lane.
-
-    The runner can then default to `-n4` without letting long-lived heavy jobs
-    trip over each other in the same worker process.
-    """
-    del config
-    if os.getenv("IS_INTEGRATION_TEST", "").lower() != "true":
-        return
-
-    for item in items:
-        if not _is_integration_item(item):
-            continue
-        if _item_should_share_xdist_group(item):
-            item.add_marker(
-                pytest.mark.xdist_group(name=INTEGRATION_XDIST_SERIAL_GROUP)
-            )
 
 
 @pytest.fixture(autouse=True)

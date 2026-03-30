@@ -101,6 +101,8 @@ The default values are documented in `.env.example`.
 
 - Use `pytest.mark.integration_frontend` for browser tests that require the
   frontend stack.
+- Use `pytest.mark.xdist_group(...)` only for tests that truly cannot run
+  concurrently; do not infer serial lanes from module contents or helper names.
 - Prefer shared helpers and page objects over inline polling loops.
 - Keep assertions on observable UI state and backend responses.
 - Avoid arbitrary sleeps. Poll for a concrete DOM or API condition instead.

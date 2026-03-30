@@ -1,7 +1,7 @@
 [
   {
     "id": "ec-001",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the motorized sideways-transfer mechanism in `script.py`. Keep planner-owned files semantically consistent, preserve the single-motor and wiring-corridor assumptions from the reviewed package, and update `todo.md` and `journal.md` as you work unless you need to refuse the plan with evidence.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the motorized sideways-transfer mechanism in `script.py`. Keep planner-owned files semantically consistent, preserve the single-motor and wiring-corridor assumptions from the reviewed package, and update `todo.md` and `journal.md` as you work unless you need to refuse the plan with evidence. Start by reading `ec001_run_hints.md` in the workspace for the last useful `ec-001` run notes before you make geometry changes.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-001-sideways-transfer",
     "expected_criteria": "Engineer coder starts from a reviewed planner package, implements a manufacturable single-motor sideways-transfer solution in `script.py`, and preserves planner consistency while updating execution progress.",
     "complexity_level": 0
