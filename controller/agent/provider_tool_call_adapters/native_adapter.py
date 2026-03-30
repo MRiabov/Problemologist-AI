@@ -1,6 +1,12 @@
+from contextlib import suppress
 from typing import Any
 
 from .base import ParsedToolCalls
+from controller.agent.runtime_models import (
+    NativeProviderMessage,
+    NativeToolCall,
+    NativeToolCallFunction,
+)
 
 
 class NativeToolCallAdapter:
@@ -21,44 +27,35 @@ class NativeToolCallAdapter:
         assistant_text: str,
         model_name: str | None,
     ) -> ParsedToolCalls:
+        message_model = None
+        with suppress(Exception):
+            message_model = NativeProviderMessage.model_validate(message)
+        if message_model is None:
+            return ParsedToolCalls(assistant_text=assistant_text, tool_calls=[])
+
         tool_calls: list[dict[str, Any]] = []
-        for idx, tool_call in enumerate(getattr(message, "tool_calls", []) or []):
-            if isinstance(tool_call, dict):
-                function = tool_call.get("function") or {}
-                tool_name = (
-                    function.get("name")
-                    or tool_call.get("name")
-                    or tool_call.get("tool_name")
-                    or ""
-                ).strip()
-                raw_arguments = (
-                    function.get("arguments")
-                    or tool_call.get("arguments")
-                    or tool_call.get("tool_input")
-                    or "{}"
-                )
-                tool_call_id = tool_call.get("id", f"tool_call_{idx}")
-                tool_call_type = tool_call.get("type", "function")
-                provider_specific_fields = tool_call.get("provider_specific_fields")
-            else:
-                function = getattr(tool_call, "function", None)
-                tool_name = (
-                    getattr(function, "name", None)
-                    or getattr(tool_call, "name", None)
-                    or getattr(tool_call, "tool_name", None)
-                    or ""
-                ).strip()
-                raw_arguments = (
-                    getattr(function, "arguments", None)
-                    or getattr(tool_call, "arguments", None)
-                    or getattr(tool_call, "tool_input", None)
-                    or "{}"
-                )
-                tool_call_id = getattr(tool_call, "id", f"tool_call_{idx}")
-                tool_call_type = getattr(tool_call, "type", "function")
-                provider_specific_fields = getattr(
-                    tool_call, "provider_specific_fields", None
-                )
+        for idx, tool_call in enumerate(message_model.tool_calls):
+            tool_call_model = None
+            with suppress(Exception):
+                tool_call_model = NativeToolCall.model_validate(tool_call)
+            if tool_call_model is None:
+                continue
+            function = tool_call_model.function or NativeToolCallFunction()
+            tool_name = (
+                function.name
+                or tool_call_model.name
+                or tool_call_model.tool_name
+                or ""
+            ).strip()
+            raw_arguments = (
+                function.arguments
+                or tool_call_model.arguments
+                or tool_call_model.tool_input
+                or "{}"
+            )
+            tool_call_id = tool_call_model.id or f"tool_call_{idx}"
+            tool_call_type = tool_call_model.type or "function"
+            provider_specific_fields = tool_call_model.provider_specific_fields
 
             payload = {
                 "id": tool_call_id,

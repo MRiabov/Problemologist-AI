@@ -28,6 +28,7 @@ from controller.workflows.heavy import (
     HeavyValidationWorkflow,
     HeavyVerifyWorkflow,
 )
+from controller.agent.runtime_models import FileListEntry
 from shared.agents.config import resolve_agents_config_path
 from shared.enums import AgentName, ManufacturingMethod
 from shared.observability.schemas import (
@@ -176,11 +177,12 @@ class RemoteFilesystemMiddleware:
     @staticmethod
     def _entry_path(entry: object) -> str | None:
         """Extract path from list_files entry payloads (dict or model-like)."""
-        if isinstance(entry, dict):
-            value = entry.get("path")
-            return str(value) if value is not None else None
-        value = getattr(entry, "path", None)
-        return str(value) if value is not None else None
+        entry_model = None
+        with suppress(Exception):
+            entry_model = FileListEntry.model_validate(entry)
+        if entry_model is None or entry_model.path is None:
+            return None
+        return str(entry_model.path)
 
     def _can_read(self, path: str | Path) -> bool:
         """Boolean read check helper to avoid raising during result filtering."""

@@ -8,7 +8,6 @@ from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 import dspy
@@ -29,6 +28,12 @@ from controller.agent.execution_limits import (
     accumulate_episode_credit_usage,
     evaluate_agent_hard_fail,
     mark_episode_execution_window_start,
+)
+from controller.agent.runtime_models import (
+    FileListEntry,
+    MessageContentBlock,
+    NativeProviderMessage,
+    ProviderResponseEnvelope,
 )
 from controller.agent.prompt_manager import PromptManager
 from controller.agent.provider_tool_call_adapters import extract_tool_calls
@@ -378,7 +383,7 @@ class BaseNode:
                     for fix in review.required_fixes
                     if isinstance(fix, str) and fix.strip()
                 ],
-                "checklist": dict(getattr(review, "checklist", {}) or {}),
+                "checklist": dict(review.checklist or {}),
             },
             sort_keys=False,
             allow_unicode=False,
@@ -513,10 +518,13 @@ class BaseNode:
                 visited_dirs.add(current_dir)
                 entries = await self.ctx.worker_client.list_files(current_dir)
                 for entry in entries:
-                    path = getattr(entry, "path", "") or ""
+                    entry_model = None
+                    with suppress(Exception):
+                        entry_model = FileListEntry.model_validate(entry)
+                    path = (entry_model.path if entry_model else None) or ""
                     if not path:
                         continue
-                    if getattr(entry, "is_dir", False):
+                    if entry_model is not None and entry_model.is_dir:
                         pending_dirs.append(path.rstrip("/"))
                         continue
                     if self._is_image_media_path(path):
@@ -620,7 +628,7 @@ class BaseNode:
     ) -> type[dspy.Signature]:
         output_fields = ", ".join(signature_cls.output_fields.keys())
         completion_tool_name = self._completion_tool_name(node_type)
-        instructions = getattr(signature_cls, "instructions", "") or ""
+        instructions = signature_cls.instructions or ""
         native_instructions = (
             "Use provider-native tool calls.\n"
             "Call the provided tools to inspect and modify the workspace.\n"
@@ -864,13 +872,19 @@ class BaseNode:
                     if isinstance(nested_text, str) and nested_text.strip():
                         text_chunks.append(nested_text.strip())
                         continue
-                text_value = getattr(block, "text", None)
-                if isinstance(text_value, str) and text_value.strip():
-                    text_chunks.append(text_value.strip())
+                block_model = None
+                with suppress(Exception):
+                    block_model = MessageContentBlock.model_validate(block)
+                if block_model is None:
                     continue
-                nested_text = getattr(block, "content", None)
-                if isinstance(nested_text, str) and nested_text.strip():
-                    text_chunks.append(nested_text.strip())
+                if isinstance(block_model.text, str) and block_model.text.strip():
+                    text_chunks.append(block_model.text.strip())
+                    continue
+                if (
+                    isinstance(block_model.content, str)
+                    and block_model.content.strip()
+                ):
+                    text_chunks.append(block_model.content.strip())
             if text_chunks:
                 return "\n".join(text_chunks)
         if content is None:
@@ -880,7 +894,12 @@ class BaseNode:
     def _extract_native_tool_calls(
         self, message: Any, *, model_name: str | None = None
     ) -> tuple[str, list[dict[str, Any]]]:
-        assistant_text = self._coerce_message_text(getattr(message, "content", None))
+        message_model = None
+        with suppress(Exception):
+            message_model = NativeProviderMessage.model_validate(message)
+        assistant_text = self._coerce_message_text(
+            message_model.content if message_model is not None else None
+        )
         parsed = extract_tool_calls(
             message,
             assistant_text=assistant_text,
@@ -913,12 +932,12 @@ class BaseNode:
             "content": assistant_text,
             "tool_calls": tool_calls_payload,
         }
-        if isinstance(message, dict):
-            provider_specific_fields = message.get("provider_specific_fields")
-        else:
-            provider_specific_fields = getattr(
-                message, "provider_specific_fields", None
-            )
+        message_model = None
+        with suppress(Exception):
+            message_model = NativeProviderMessage.model_validate(message)
+        provider_specific_fields = (
+            message_model.provider_specific_fields if message_model is not None else None
+        )
         if isinstance(provider_specific_fields, dict) and provider_specific_fields:
             assistant_message["provider_specific_fields"] = provider_specific_fields
         return assistant_message
@@ -995,7 +1014,7 @@ class BaseNode:
         render_media_paths: list[str],
         db_callback: DatabaseCallbackHandler | None = None,
     ) -> dspy.Prediction:
-        instructions = getattr(signature_cls, "instructions", "") or ""
+        instructions = signature_cls.instructions or ""
         requires_submit_plan = self._requires_submit_plan(node_type)
         completion_tool_name = self._completion_tool_name(node_type)
         runtime_instructions = (
@@ -1115,21 +1134,24 @@ class BaseNode:
                     tool_choice="auto",
                 )
                 if isinstance(response, list):
-                    first_response = response[0] if response else {}
-                    if isinstance(first_response, dict):
-                        message = SimpleNamespace(
-                            content=first_response.get("content")
-                            or first_response.get("text")
-                            or "",
-                            tool_calls=first_response.get("tool_calls") or [],
-                            provider_specific_fields=first_response.get(
-                                "provider_specific_fields"
-                            ),
-                        )
-                    else:
-                        message = first_response
+                    first_response = response[0] if response else None
+                    message = None
+                    with suppress(Exception):
+                        message = NativeProviderMessage.model_validate(first_response)
                 else:
-                    message = response.choices[0].message
+                    response_model = None
+                    with suppress(Exception):
+                        response_model = ProviderResponseEnvelope.model_validate(
+                            response
+                        )
+                    message = None
+                    if response_model and response_model.choices:
+                        message = response_model.choices[0].message
+                    if message is None:
+                        with suppress(Exception):
+                            message = NativeProviderMessage.model_validate(response)
+                if message is None:
+                    message = NativeProviderMessage()
             assistant_text, tool_calls = self._extract_native_tool_calls(
                 message,
                 model_name=request_config.model,
@@ -1776,11 +1798,17 @@ class BaseNode:
         if response is None:
             return None
 
-        response_ms = getattr(response, "response_ms", None)
+        response_model = None
+        with suppress(Exception):
+            response_model = ProviderResponseEnvelope.model_validate(response)
+        if response_model is None:
+            return None
+
+        response_ms = response_model.response_ms
         if isinstance(response_ms, (int, float)):
             return float(response_ms)
 
-        hidden_params = getattr(response, "_hidden_params", None)
+        hidden_params = response_model.hidden_params
         if isinstance(hidden_params, dict):
             hidden_response_ms = hidden_params.get("response_ms")
             if isinstance(hidden_response_ms, (int, float)):
@@ -1803,39 +1831,28 @@ class BaseNode:
         if response is None:
             return chunks
 
-        response_dict: dict[str, Any] | None = None
-        if hasattr(response, "model_dump"):
-            with suppress(Exception):
-                response_dict = response.model_dump(mode="json")
-        elif isinstance(response, dict):
-            response_dict = response
-
-        # Typed/object path first (common for litellm responses).
-        choices_obj = getattr(response, "choices", None)
-        if isinstance(choices_obj, list):
-            for choice in choices_obj:
-                message = getattr(choice, "message", None)
-                if message is None and isinstance(choice, dict):
-                    message = choice.get("message")
-                value = getattr(message, "reasoning_content", None)
-                if value is None and isinstance(message, dict):
-                    value = message.get("reasoning_content")
+        response_model = None
+        with suppress(Exception):
+            response_model = ProviderResponseEnvelope.model_validate(response)
+        if response_model and response_model.choices:
+            for choice in response_model.choices:
+                message_model = None
+                with suppress(Exception):
+                    message_model = NativeProviderMessage.model_validate(choice.message)
+                if message_model is None:
+                    continue
+                value = message_model.reasoning_content
                 if isinstance(value, str) and value.strip():
                     chunks.append(value.strip())
+            return chunks
 
-        # Dict path fallback.
-        if isinstance(response_dict, dict):
-            choices = response_dict.get("choices")
-            if isinstance(choices, list):
-                for choice in choices:
-                    if not isinstance(choice, dict):
-                        continue
-                    message = choice.get("message")
-                    if not isinstance(message, dict):
-                        continue
-                    value = message.get("reasoning_content")
-                    if isinstance(value, str) and value.strip():
-                        chunks.append(value.strip())
+        message_model = None
+        with suppress(Exception):
+            message_model = NativeProviderMessage.model_validate(response)
+        if message_model is not None:
+            value = message_model.reasoning_content
+            if isinstance(value, str) and value.strip():
+                chunks.append(value.strip())
 
         return chunks
 
@@ -2028,7 +2045,7 @@ class BaseNode:
 
         from shared.models.schemas import PlannerSubmissionResult
 
-        episode_id = getattr(self.ctx, "episode_id", None)
+        episode_id = self.ctx.episode_id
         if not episode_id:
             return None, "missing episode_id for submission trace lookup"
 
@@ -2097,7 +2114,7 @@ class BaseNode:
         """
         from sqlalchemy import select
 
-        episode_id = getattr(self.ctx, "episode_id", None)
+        episode_id = self.ctx.episode_id
         if not episode_id:
             return None, "missing episode_id for tool trace lookup"
 
@@ -2275,7 +2292,7 @@ class BaseNode:
         # Template names are now standardized to match node_type or explicit mappings
         instructions = self.ctx.pm.render(node_type)
         if instructions:
-            current_instr = getattr(signature_cls, "instructions", "")
+            current_instr = signature_cls.instructions
             if current_instr:
                 signature_cls = signature_cls.with_instructions(
                     f"{instructions}\n\n{current_instr}"
