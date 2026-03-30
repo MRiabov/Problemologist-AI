@@ -93,7 +93,7 @@ def test_run_evals_help_exposes_codex_backend():
 
 
 @pytest.mark.integration_p0
-def test_eval_entrypoints_fail_closed_when_controller_reports_integration_mode(
+def test_eval_entrypoints_ignore_outer_integration_env_under_eval_profile(
     tmp_path,
 ):
     run_evals = subprocess.run(
@@ -109,17 +109,29 @@ def test_eval_entrypoints_fail_closed_when_controller_reports_integration_mode(
         cwd=ROOT,
         capture_output=True,
         text=True,
-        env=os.environ.copy(),
+        env={
+            **os.environ,
+            "IS_INTEGRATION_TEST": "true",
+            "CONTROLLER_URL": "http://127.0.0.1:9",
+        },
         check=False,
     )
     run_evals_output = "\n".join(
         part for part in (run_evals.stdout, run_evals.stderr) if part
     )
-    assert run_evals.returncode != 0, run_evals_output
-    assert "integration-test setup via controller" in run_evals_output, run_evals_output
+    assert run_evals.returncode == 0, run_evals_output
+    assert "Agent evals started" in run_evals_output, run_evals_output
+    assert "Agent evals finished" in run_evals_output, run_evals_output
+    assert "integration-test setup via controller" not in run_evals_output
+    assert (ROOT / "logs" / "evals" / "current" / "run_evals.log").exists()
 
-    materialize_workspace = tmp_path / "materialized"
-    materialize = subprocess.run(
+
+@pytest.mark.integration_p0
+def test_materialize_seed_workspace_overrides_integration_test_env(
+    tmp_path: Path,
+):
+    workspace_dir = tmp_path / "workspace"
+    completed = subprocess.run(
         [
             sys.executable,
             "dataset/evals/materialize_seed_workspace.py",
@@ -128,21 +140,26 @@ def test_eval_entrypoints_fail_closed_when_controller_reports_integration_mode(
             "--task-id",
             "ec-001",
             "--output-dir",
-            str(materialize_workspace),
+            str(workspace_dir),
         ],
         cwd=ROOT,
         capture_output=True,
         text=True,
-        env=os.environ.copy(),
+        env={
+            **os.environ,
+            "CONTROLLER_URL": "http://127.0.0.1:9",
+            "IS_INTEGRATION_TEST": "true",
+        },
         check=False,
     )
-    materialize_output = "\n".join(
-        part for part in (materialize.stdout, materialize.stderr) if part
+    combined_output = "\n".join(
+        part for part in (completed.stdout, completed.stderr) if part
     )
-    assert materialize.returncode != 0, materialize_output
-    assert "integration-test setup via controller" in materialize_output, (
-        materialize_output
-    )
+
+    assert completed.returncode == 0, combined_output
+    assert workspace_dir.exists(), combined_output
+    assert "workspace:" in combined_output
+    assert "integration-test setup via IS_INTEGRATION_TEST=true" not in combined_output
 
 
 @pytest.mark.integration_p0
