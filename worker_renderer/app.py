@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 import structlog
@@ -12,6 +13,7 @@ from worker_renderer.api.routes import (
     renderer_router,
 )
 
+os.environ.setdefault("WORKER_RENDERER_LOCAL_RENDER", "1")
 configure_logging("worker-renderer")
 
 logger = structlog.get_logger(__name__)

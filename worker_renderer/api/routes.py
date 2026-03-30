@@ -11,6 +11,7 @@ from typing import Any
 import structlog
 from fastapi import APIRouter, Header, HTTPException
 
+from shared.agents.config import load_agents_config
 from shared.models.schemas import BenchmarkDefinition
 from shared.workers.bundling import extract_bundle_base64
 from shared.workers.loader import load_component_from_script
@@ -378,6 +379,18 @@ async def api_static_preview(
     """Render the multi-view validation preview bundle in a dedicated process."""
     try:
         async with render_operation_admission("static-preview", x_session_id):
+            render_policy = load_agents_config().render
+            if not any(
+                (
+                    render_policy.rgb.enabled,
+                    render_policy.depth.enabled,
+                    render_policy.segmentation.enabled,
+                )
+            ):
+                raise ValueError(
+                    "validation preview requires at least one enabled render "
+                    "modality (rgb, depth, or segmentation)"
+                )
             with _bundle_context(request.bundle_base64) as root:
                 with _event_file_context(root):
                     objectives = _load_workspace_benchmark_definition(
@@ -393,6 +406,15 @@ async def api_static_preview(
                             scene,
                             output_dir=renders_dir,
                             smoke_test_mode=bool(request.smoke_test_mode),
+                            include_rgb=render_policy.rgb.enabled,
+                            include_depth=render_policy.depth.enabled,
+                            include_segmentation=render_policy.segmentation.enabled,
+                            rgb_axes=render_policy.rgb.axes,
+                            rgb_edges=render_policy.rgb.edges,
+                            depth_axes=render_policy.depth.axes,
+                            depth_edges=render_policy.depth.edges,
+                            segmentation_axes=render_policy.segmentation.axes,
+                            segmentation_edges=render_policy.segmentation.edges,
                         )
                         _build_preview_manifest(
                             root=root,

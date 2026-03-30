@@ -1598,7 +1598,15 @@ def simulate(
                 error=str(exc),
                 session_id=session_id,
             )
-            return False, f"Validation preview render failed: {exc}"
+            return SimulationResult(
+                success=False,
+                summary=f"Validation preview render failed: {exc}",
+                failure=SimulationFailure(
+                    reason=FailureReason.VALIDATION_FAILED,
+                    detail=str(exc),
+                ),
+                confidence="high",
+            )
         if final_video_path and final_video_path.exists():
             render_paths.append(str(final_video_path))
         render_paths = _workspace_relative_render_paths(render_paths, working_dir)

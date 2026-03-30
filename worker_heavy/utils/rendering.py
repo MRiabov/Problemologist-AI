@@ -15,7 +15,11 @@ from shared.agents.config import load_agents_config
 from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition
 from shared.observability.events import emit_event
-from shared.rendering import render_simulation_video_bytes
+from shared.rendering import (
+    materialize_render_artifacts,
+    render_simulation_video_bytes,
+    render_static_preview,
+)
 from shared.simulation.backends import StressField
 from shared.simulation.schemas import (
     SimulatorBackendType,
@@ -28,6 +32,7 @@ from shared.workers.schema import (
 )
 from worker_heavy.utils.build123d_rendering import (
     PREVIEW_BACKEND_NAME,
+    export_preview_scene_bundle,
     render_preview_bundle,
 )
 
@@ -208,8 +213,9 @@ def prerender_24_views(
     if output_dir is None:
         output_dir = os.getenv("RENDERS_DIR", "./renders")
 
-    render_policy = load_agents_config().render
     output_path = Path(output_dir)
+    local_renderer = os.getenv("WORKER_RENDERER_LOCAL_RENDER") == "1"
+    render_policy = load_agents_config().render
     logger.info(
         "prerender_24_views_start",
         output_dir=str(output_path),
@@ -267,41 +273,73 @@ def prerender_24_views(
         )
 
         preview_start = time.time()
-        saved_paths, legend_by_path = render_preview_bundle(
-            component,
-            output_dir=output_path,
-            objectives=objectives,
-            smoke_test_mode=smoke_test_mode,
-            workspace_root=workspace_root,
-            rgb_axes=render_policy.rgb.axes,
-            rgb_edges=render_policy.rgb.edges,
-            depth_axes=render_policy.depth.axes,
-            depth_edges=render_policy.depth.edges,
-            segmentation_axes=render_policy.segmentation.axes,
-            segmentation_edges=render_policy.segmentation.edges,
-            include_rgb=render_policy.rgb.enabled,
-            include_depth=render_policy.depth.enabled,
-            include_segmentation=render_policy.segmentation.enabled,
-        )
-        manifest_artifacts, render_paths = _build_preview_artifacts(
-            saved_paths,
-            legend_by_path,
-            workspace_root=workspace_root,
-        )
-        manifest = build_render_manifest(
-            manifest_artifacts,
-            workspace_root=workspace_root,
-            episode_id=session_id,
-            worker_session_id=session_id,
-            revision=revision,
-            environment_version=environment_version,
-        )
+        if local_renderer:
+            saved_paths, legend_by_path = render_preview_bundle(
+                component,
+                output_dir=output_path,
+                objectives=objectives,
+                smoke_test_mode=smoke_test_mode,
+                workspace_root=workspace_root,
+                rgb_axes=render_policy.rgb.axes,
+                rgb_edges=render_policy.rgb.edges,
+                depth_axes=render_policy.depth.axes,
+                depth_edges=render_policy.depth.edges,
+                segmentation_axes=render_policy.segmentation.axes,
+                segmentation_edges=render_policy.segmentation.edges,
+                include_rgb=render_policy.rgb.enabled,
+                include_depth=render_policy.depth.enabled,
+                include_segmentation=render_policy.segmentation.enabled,
+            )
+            manifest_artifacts, render_paths = _build_preview_artifacts(
+                saved_paths,
+                legend_by_path,
+                workspace_root=workspace_root,
+            )
+            manifest = build_render_manifest(
+                manifest_artifacts,
+                workspace_root=workspace_root,
+                episode_id=session_id,
+                worker_session_id=session_id,
+                revision=revision,
+                environment_version=environment_version,
+            )
 
-        manifest_path = output_path / "render_manifest.json"
-        manifest_path.write_text(
-            manifest.model_dump_json(indent=2),
-            encoding="utf-8",
-        )
+            manifest_path = output_path / "render_manifest.json"
+            manifest_path.write_text(
+                manifest.model_dump_json(indent=2),
+                encoding="utf-8",
+            )
+        else:
+            bundle_base64 = export_preview_scene_bundle(
+                component,
+                objectives=objectives,
+                workspace_root=workspace_root,
+                smoke_test_mode=smoke_test_mode,
+            )
+            response = render_static_preview(
+                bundle_base64=bundle_base64,
+                script_path="preview_scene.json",
+                session_id=session_id or "renderer",
+                smoke_test_mode=smoke_test_mode,
+                particle_budget=particle_budget,
+            )
+            if not response.success:
+                raise RuntimeError(response.message or "renderer returned failure")
+            if response.artifacts is None:
+                raise RuntimeError("renderer returned no artifacts")
+
+            render_paths = materialize_render_artifacts(
+                response.artifacts, workspace_root
+            )
+            render_paths = [
+                path
+                for path in render_paths
+                if Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
+            ]
+            if not render_paths:
+                raise RuntimeError("renderer returned no preview image artifacts")
+            saved_files = list(render_paths)
+            manifest = None
 
         emit_event(
             {
@@ -314,7 +352,8 @@ def prerender_24_views(
             }
         )
 
-        saved_files = list(render_paths)
+        if not saved_files:
+            saved_files = list(render_paths)
 
         logger.info(
             "prerender_complete",

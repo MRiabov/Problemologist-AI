@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import base64
 import colorsys
 import math
+import os
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,6 +29,7 @@ from vtkmodules.vtkRenderingCore import (
 
 from shared.models.schemas import BenchmarkDefinition
 from shared.models.simulation import RendererCapabilities, RenderMode
+from shared.rendering import render_preview
 from shared.simulation.backends import RendererBackend
 from shared.workers.bundling import bundle_directory_base64
 from shared.workers.schema import SegmentationLegendEntry
@@ -1445,35 +1448,30 @@ def render_preview_view(
     width: int = 640,
     height: int = 480,
 ) -> Path:
-    """Render a single build123d/VTK preview image."""
+    """Render a single build123d preview image via the dedicated renderer."""
 
-    backend = Build123dRendererBackend(
-        workspace_root=workspace_root,
+    bundle_base64 = export_preview_scene_bundle(
+        component,
         objectives=objectives,
+        workspace_root=workspace_root,
         smoke_test_mode=smoke_test_mode,
-        include_axes=include_axes,
-        include_edges=include_edges,
     )
-    try:
-        backend.load_scene(component)
-        scene = backend.scene
-        if scene is None:
-            raise RuntimeError("build123d preview scene failed to materialize")
+    response = render_preview(
+        bundle_base64=bundle_base64,
+        script_path="preview_scene.json",
+        pitch=pitch,
+        yaw=yaw,
+        session_id=os.getenv("SESSION_ID"),
+    )
+    if not response.success:
+        raise RuntimeError(response.message or "build123d preview render failed")
 
-        distance = max(scene.diagonal * 1.5, 0.5)
-        camera_position = camera_position_from_orbit(scene.center, distance, pitch, yaw)
-        backend.set_camera(
-            "preview",
-            pos=camera_position,
-            lookat=scene.center,
-            up=(0.0, 0.0, 1.0),
-        )
-        rgb_image = backend.render_camera("preview", width, height)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        Image.fromarray(rgb_image).save(output_path, "PNG")
-        return output_path
-    finally:
-        backend.close()
+    if not response.image_bytes_base64:
+        raise RuntimeError("renderer returned no preview image bytes")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(base64.b64decode(response.image_bytes_base64))
+    return output_path
 
 
 def render_preview_bundle(
