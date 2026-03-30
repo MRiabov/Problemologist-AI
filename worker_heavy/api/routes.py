@@ -43,9 +43,8 @@ from worker_heavy.runtime.simulation_runner import (
     run_validation_in_isolated_process,
 )
 from worker_heavy.simulation.factory import close_all_session_backends
-from worker_heavy.utils import submit_for_review
+from worker_heavy.utils import renderer_client, submit_for_review
 from worker_heavy.utils.file_validation import validate_benchmark_definition_yaml
-from worker_heavy.utils.preview import preview_design
 from worker_heavy.utils.rendering import build_render_manifest
 from worker_heavy.utils.topology import analyze_component
 from worker_heavy.utils.verification import run_verification_job
@@ -512,7 +511,11 @@ async def api_analyze(
         )
 
 
-@heavy_router.post("/benchmark/preview", response_model=PreviewDesignResponse)
+@heavy_router.post(
+    "/benchmark/preview",
+    response_model=PreviewDesignResponse,
+    response_model_exclude_none=True,
+)
 async def api_preview(
     request: PreviewDesignRequest,
     x_session_id: str = Header(...),
@@ -521,35 +524,34 @@ async def api_preview(
     """Render a preview of the CAD design from specified camera angles."""
     try:
         async with heavy_operation_admission("preview", x_session_id):
-            with bundle_context(
-                request.bundle_base64, fs_router.local_backend.root
-            ) as root:
-                component = load_component_from_script(
-                    script_path=root / request.script_path
-                    if request.bundle_base64
-                    else fs_router.local_backend._resolve(request.script_path),
-                    session_root=root,
-                    script_content=request.script_content,
+            workspace_root = fs_router.local_backend.root
+            with bundle_context(request.bundle_base64, workspace_root) as root:
+                bundle_base64 = (
+                    request.bundle_base64
+                    or renderer_client.bundle_workspace_base64(workspace_root)
                 )
-                objectives = _load_workspace_benchmark_definition(
-                    root, session_id=x_session_id
-                )
-
-                image_path = await asyncio.to_thread(
-                    preview_design,
-                    component,
+                response = await asyncio.to_thread(
+                    renderer_client.render_preview,
+                    bundle_base64=bundle_base64,
+                    script_path=request.script_path,
                     pitch=request.pitch,
                     yaw=request.yaw,
-                    output_dir=root / "renders",
-                    objectives=objectives,
+                    session_id=x_session_id,
+                    script_content=request.script_content,
                 )
-                events = _collect_events(fs_router, root=root, session_id=x_session_id)
+                if not response.success:
+                    raise RuntimeError(response.message)
+                image_path = renderer_client.materialize_preview_response(
+                    response, root / "renders"
+                )
+                if image_path is None:
+                    raise RuntimeError("renderer returned no preview image")
 
                 return PreviewDesignResponse(
-                    success=True,
-                    message="Preview generated successfully",
+                    success=response.success,
+                    message=response.message,
                     image_path=str(image_path.relative_to(root)),
-                    events=events,
+                    events=response.events,
                 )
 
     except HTTPException:

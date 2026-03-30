@@ -1,0 +1,1 @@
+"""Dedicated headless renderer service."""

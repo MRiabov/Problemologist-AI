@@ -851,7 +851,7 @@ class RemoteFilesystemMiddleware:
             message="Preview generated via Temporal"
             if res.success
             else "Preview failed",
-            image_path=res.filename,
+            image_path=res.image_path or res.filename,
         )
 
     async def validate(

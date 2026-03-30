@@ -28,6 +28,7 @@ from vtkmodules.vtkRenderingCore import (
 from shared.models.schemas import BenchmarkDefinition
 from shared.models.simulation import RendererCapabilities, RenderMode
 from shared.simulation.backends import RendererBackend
+from shared.workers.bundling import bundle_directory_base64
 from shared.workers.schema import SegmentationLegendEntry
 from worker_heavy.simulation.builder import CommonAssemblyTraverser, MeshProcessor
 from worker_heavy.utils.vtk_display import ensure_headless_vtk_display
@@ -646,6 +647,313 @@ def _build_renderer(
     return _RendererBundle(renderer=renderer, window=render_window)
 
 
+def _preview_segmentation_legend(scene: PreviewScene) -> list[SegmentationLegendEntry]:
+    legend: list[SegmentationLegendEntry] = []
+    for entity in scene.entities:
+        if not entity.include_in_segmentation:
+            continue
+        color = entity.segmentation_color_rgb or (255, 255, 255)
+        legend.append(
+            SegmentationLegendEntry(
+                instance_id=entity.instance_id,
+                instance_name=entity.instance_name,
+                semantic_label=entity.semantic_label,
+                object_type=entity.object_type,
+                object_id=entity.object_id,
+                body_name=entity.body_name,
+                geom_name=entity.geom_name,
+                color_rgb=color,
+                color_hex=_hex_from_rgb(color),
+            )
+        )
+    return legend
+
+
+def _preview_scene_with_relative_mesh_paths(
+    scene: PreviewScene, *, bundle_root: Path
+) -> PreviewScene:
+    normalized = scene.model_copy(deep=True)
+    bundle_root = bundle_root.resolve()
+    for entity in normalized.entities:
+        if not entity.mesh_paths:
+            continue
+        entity.mesh_paths = [
+            str(Path(path).resolve().relative_to(bundle_root))
+            if Path(path).is_absolute()
+            else str(Path(path))
+            for path in entity.mesh_paths
+        ]
+    return normalized
+
+
+def export_preview_scene_bundle(
+    component: Compound,
+    *,
+    objectives: BenchmarkDefinition | None,
+    workspace_root: Path,
+    smoke_test_mode: bool = False,
+) -> str:
+    """Materialize a mesh-backed preview bundle for renderer-worker handoff."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        bundle_root = Path(tmpdir)
+        mesh_root = bundle_root / "meshes"
+        mesh_root.mkdir(parents=True, exist_ok=True)
+        scene = collect_preview_scene(
+            component,
+            objectives=objectives,
+            workspace_root=workspace_root,
+            smoke_test_mode=smoke_test_mode,
+            mesh_root=mesh_root,
+        )
+        normalized_scene = _preview_scene_with_relative_mesh_paths(
+            scene, bundle_root=bundle_root
+        )
+        (bundle_root / "preview_scene.json").write_text(
+            normalized_scene.model_dump_json(indent=2),
+            encoding="utf-8",
+        )
+        logger.info(
+            "preview_scene_bundle_exported",
+            bundle_root=str(bundle_root),
+            entity_count=len(normalized_scene.entities),
+        )
+        return bundle_directory_base64(bundle_root)
+
+
+def render_preview_scene(
+    scene: PreviewScene,
+    *,
+    pitch: float = -35.0,
+    yaw: float = 45.0,
+    output_dir: Path | None = None,
+    width: int = 640,
+    height: int = 480,
+    include_axes: bool = True,
+    include_edges: bool = True,
+) -> Path:
+    """Render a single preview image from a pre-built scene bundle."""
+    center = scene.center
+    distance = max(scene.diagonal * 1.5, 0.5)
+    camera_position = camera_position_from_orbit(center, distance, pitch, yaw)
+    bundle = _build_renderer(
+        scene,
+        width=width,
+        height=height,
+        segmentation=False,
+        include_axes=include_axes,
+        include_edges=include_edges,
+        include_fill=True,
+        axes_color=_RGB_AXES_COLOR,
+        edge_color=_RGB_EDGE_COLOR,
+        background=(0.98, 0.98, 0.99),
+    )
+    try:
+        frame, _ = _render_view(
+            bundle,
+            camera_position=camera_position,
+            lookat=center,
+            up=(0.0, 0.0, 1.0),
+            capture_depth=False,
+        )
+    finally:
+        # VTK objects are owned by the bundle; let them fall out of scope.
+        del bundle
+
+    if output_dir is None:
+        output_dir = Path("/tmp")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    image_path = output_dir / f"preview_pitch{int(pitch)}_yaw{int(yaw)}.jpg"
+    Image.fromarray(frame).save(image_path, "JPEG")
+    return image_path
+
+
+def render_preview_scene_bundle(
+    scene: PreviewScene,
+    *,
+    output_dir: Path,
+    smoke_test_mode: bool = False,
+    width: int = 640,
+    height: int = 480,
+    include_rgb: bool = True,
+    include_depth: bool = True,
+    include_segmentation: bool = True,
+    rgb_axes: bool = True,
+    rgb_edges: bool = True,
+    depth_axes: bool = True,
+    depth_edges: bool = True,
+    segmentation_axes: bool = True,
+    segmentation_edges: bool = True,
+) -> tuple[list[str], dict[str, list[SegmentationLegendEntry]]]:
+    """Render the standard preview bundle from a pre-built mesh scene."""
+    saved_paths: list[str] = []
+    legend_entries = _preview_segmentation_legend(scene)
+    legend_by_path: dict[str, list[SegmentationLegendEntry]] = {}
+
+    center = scene.center
+    distance = max(scene.diagonal * 1.5, 0.5)
+    angles = [0, 45, 90, 135, 180, 225, 270, 315]
+    elevations = [-15, -45, -75]
+    if smoke_test_mode:
+        logger.info("smoke_test_mode_reducing_render_views")
+        angles = [45]
+        elevations = [-45]
+
+    for elevation in elevations:
+        for angle in angles:
+            camera_position = camera_position_from_orbit(
+                center, distance, elevation, angle
+            )
+            group_key = f"render_e{abs(elevation)}_a{angle}"
+            rgb_path = output_dir / f"{group_key}.png"
+            depth_path = output_dir / f"{group_key}_depth.png"
+            segmentation_path = output_dir / f"{group_key}_segmentation.png"
+
+            rgb_bundle: _RendererBundle | None = None
+            if include_rgb:
+                rgb_bundle = _build_renderer(
+                    scene,
+                    width=width,
+                    height=height,
+                    segmentation=False,
+                    include_axes=rgb_axes,
+                    include_edges=rgb_edges,
+                    include_fill=True,
+                    axes_color=_RGB_AXES_COLOR,
+                    edge_color=_RGB_EDGE_COLOR,
+                    background=(0.98, 0.98, 0.99),
+                )
+
+            depth_base_bundle: _RendererBundle | None = None
+            depth_overlay_bundle: _RendererBundle | None = None
+            if include_depth:
+                depth_base_bundle = _build_renderer(
+                    scene,
+                    width=width,
+                    height=height,
+                    segmentation=False,
+                    include_axes=False,
+                    include_edges=False,
+                    include_fill=True,
+                    axes_color=_OVERLAY_AXES_COLOR,
+                    edge_color=_OVERLAY_EDGE_COLOR,
+                    background=(0.98, 0.98, 0.99),
+                )
+                if depth_axes or depth_edges:
+                    depth_overlay_bundle = _build_renderer(
+                        scene,
+                        width=width,
+                        height=height,
+                        segmentation=False,
+                        include_axes=depth_axes,
+                        include_edges=depth_edges,
+                        include_fill=False,
+                        axes_color=_OVERLAY_AXES_COLOR,
+                        edge_color=_OVERLAY_EDGE_COLOR,
+                        background=(0.0, 0.0, 0.0),
+                    )
+
+            seg_base_bundle: _RendererBundle | None = None
+            seg_overlay_bundle: _RendererBundle | None = None
+            if include_segmentation:
+                seg_base_bundle = _build_renderer(
+                    scene,
+                    width=width,
+                    height=height,
+                    segmentation=True,
+                    include_axes=False,
+                    include_edges=False,
+                    include_fill=True,
+                    axes_color=_OVERLAY_AXES_COLOR,
+                    edge_color=_OVERLAY_EDGE_COLOR,
+                    background=(0.0, 0.0, 0.0),
+                )
+                if segmentation_axes or segmentation_edges:
+                    seg_overlay_bundle = _build_renderer(
+                        scene,
+                        width=width,
+                        height=height,
+                        segmentation=False,
+                        include_axes=segmentation_axes,
+                        include_edges=segmentation_edges,
+                        include_fill=False,
+                        axes_color=_OVERLAY_AXES_COLOR,
+                        edge_color=_OVERLAY_EDGE_COLOR,
+                        background=(0.0, 0.0, 0.0),
+                    )
+
+            rgb_image: np.ndarray | None = None
+            depth_image: np.ndarray | None = None
+            seg_image: np.ndarray | None = None
+
+            if rgb_bundle is not None:
+                rgb_image, _ = _render_view(
+                    rgb_bundle,
+                    camera_position=camera_position,
+                    lookat=center,
+                    up=(0.0, 0.0, 1.0),
+                    capture_depth=False,
+                )
+            if depth_base_bundle is not None:
+                _, depth_buffer = _render_view(
+                    depth_base_bundle,
+                    camera_position=camera_position,
+                    lookat=center,
+                    up=(0.0, 0.0, 1.0),
+                    capture_depth=True,
+                )
+                if depth_buffer is None:
+                    raise RuntimeError("depth rendering was disabled for render")
+                depth_render = _depth_buffer_to_uint8(depth_buffer)
+                if depth_overlay_bundle is not None:
+                    depth_overlay, _ = _render_view(
+                        depth_overlay_bundle,
+                        camera_position=camera_position,
+                        lookat=center,
+                        up=(0.0, 0.0, 1.0),
+                        capture_depth=False,
+                    )
+                    depth_render = _composite_non_black(depth_render, depth_overlay)
+                depth_image = depth_render
+            if seg_base_bundle is not None:
+                seg_image, _ = _render_view(
+                    seg_base_bundle,
+                    camera_position=camera_position,
+                    lookat=center,
+                    up=(0.0, 0.0, 1.0),
+                    capture_depth=False,
+                )
+                if seg_overlay_bundle is not None:
+                    seg_overlay, _ = _render_view(
+                        seg_overlay_bundle,
+                        camera_position=camera_position,
+                        lookat=center,
+                        up=(0.0, 0.0, 1.0),
+                        capture_depth=False,
+                    )
+                    seg_image = _composite_non_black(seg_image, seg_overlay)
+
+            if rgb_image is not None:
+                Image.fromarray(rgb_image).save(rgb_path, "PNG")
+                saved_paths.append(str(rgb_path.relative_to(output_dir.parent)))
+
+            if depth_image is not None:
+                if depth_image.ndim == 2:
+                    Image.fromarray(depth_image, mode="L").save(depth_path, "PNG")
+                else:
+                    Image.fromarray(depth_image, mode="RGB").save(depth_path, "PNG")
+                saved_paths.append(str(depth_path.relative_to(output_dir.parent)))
+
+            if seg_image is not None:
+                Image.fromarray(seg_image, mode="RGB").save(segmentation_path, "PNG")
+                rel_segmentation_path = str(
+                    segmentation_path.relative_to(output_dir.parent)
+                )
+                saved_paths.append(rel_segmentation_path)
+                legend_by_path[rel_segmentation_path] = legend_entries
+
+    return saved_paths, legend_by_path
+
+
 def _configure_camera(
     renderer: vtkRenderer,
     *,
@@ -1192,7 +1500,6 @@ def render_preview_bundle(
 
     Returns the saved render paths and the per-entity segmentation legend.
     """
-
     backend = Build123dRendererBackend(
         workspace_root=workspace_root,
         objectives=objectives,
@@ -1209,66 +1516,22 @@ def render_preview_bundle(
         scene = backend.scene
         if scene is None:
             raise RuntimeError("build123d preview scene failed to load")
-
-        saved_paths: list[str] = []
-        legend_entries = backend.describe_segmentation(
-            np.zeros((1, 1, 3), dtype=np.uint8)
+        return render_preview_scene_bundle(
+            scene,
+            output_dir=output_dir,
+            smoke_test_mode=smoke_test_mode,
+            width=width,
+            height=height,
+            include_rgb=include_rgb,
+            include_depth=include_depth,
+            include_segmentation=include_segmentation,
+            rgb_axes=rgb_axes,
+            rgb_edges=rgb_edges,
+            depth_axes=depth_axes,
+            depth_edges=depth_edges,
+            segmentation_axes=segmentation_axes,
+            segmentation_edges=segmentation_edges,
         )
-        legend_by_path: dict[str, list[SegmentationLegendEntry]] = {}
-
-        center = scene.center
-        distance = max(scene.diagonal * 1.5, 0.5)
-        angles = [0, 45, 90, 135, 180, 225, 270, 315]
-        elevations = [-15, -45, -75]
-        if smoke_test_mode:
-            logger.info("smoke_test_mode_reducing_render_views")
-            angles = [45]
-            elevations = [-45]
-
-        for elevation in elevations:
-            for angle in angles:
-                camera_position = camera_position_from_orbit(
-                    center, distance, elevation, angle
-                )
-                group_key = f"render_e{abs(elevation)}_a{angle}"
-                rgb_path = output_dir / f"{group_key}.png"
-                depth_path = output_dir / f"{group_key}_depth.png"
-                segmentation_path = output_dir / f"{group_key}_segmentation.png"
-
-                backend.set_camera(
-                    group_key,
-                    pos=camera_position,
-                    lookat=center,
-                    up=(0.0, 0.0, 1.0),
-                )
-                rgb_image, depth_image, seg_image = backend.render_camera_modalities(
-                    group_key,
-                    width,
-                    height,
-                    include_rgb=include_rgb,
-                    include_depth=include_depth,
-                    include_segmentation=include_segmentation,
-                )
-
-                if rgb_image is not None:
-                    Image.fromarray(rgb_image).save(rgb_path, "PNG")
-                    saved_paths.append(str(rgb_path))
-
-                if depth_image is not None:
-                    if depth_image.ndim == 2:
-                        Image.fromarray(depth_image, mode="L").save(depth_path, "PNG")
-                    else:
-                        Image.fromarray(depth_image, mode="RGB").save(depth_path, "PNG")
-                    saved_paths.append(str(depth_path))
-
-                if seg_image is not None:
-                    Image.fromarray(seg_image, mode="RGB").save(
-                        segmentation_path, "PNG"
-                    )
-                    saved_paths.append(str(segmentation_path))
-                    legend_by_path[str(segmentation_path)] = legend_entries
-
-        return saved_paths, legend_by_path
     finally:
         backend.close()
 

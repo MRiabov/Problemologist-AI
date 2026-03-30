@@ -149,6 +149,14 @@ WORKER_LIGHT_PID=$!
 echo $WORKER_LIGHT_PID > "$STACK_PID_DIR/worker_light.pid"
 echo "Worker Light started (PID: $WORKER_LIGHT_PID)"
 
+# Start Worker Renderer (port 18003)
+export WORKER_TYPE=renderer
+export EXTRA_DEBUG_LOG="$LOG_DIR/worker_renderer_debug.log"
+nohup .venv/bin/python -m uvicorn worker_renderer.app:app --host 0.0.0.0 --port "$WORKER_RENDERER_HOST_PORT" > "$LOG_DIR/worker_renderer.log" 2>&1 &
+WORKER_RENDERER_PID=$!
+echo $WORKER_RENDERER_PID > "$STACK_PID_DIR/worker_renderer.pid"
+echo "Worker Renderer started (PID: $WORKER_RENDERER_PID)"
+
 # Start Worker Heavy (port 18002)
 export WORKER_TYPE=heavy
 export EXTRA_DEBUG_LOG="$LOG_DIR/worker_heavy_debug.log"
@@ -212,6 +220,8 @@ if [ "$STACK_CREATE_ROOT_LOG_SYMLINKS" = "1" ] && [ "${LOG_DIR#logs/}" != "$LOG_
   ln -sf "$REL_LOG_DIR/controller_debug.log" logs/controller_debug.log
   ln -sf "$REL_LOG_DIR/worker_light.log" logs/worker_light.log
   ln -sf "$REL_LOG_DIR/worker_light_debug.log" logs/worker_light_debug.log
+  ln -sf "$REL_LOG_DIR/worker_renderer.log" logs/worker_renderer.log
+  ln -sf "$REL_LOG_DIR/worker_renderer_debug.log" logs/worker_renderer_debug.log
   ln -sf "$REL_LOG_DIR/worker_heavy.log" logs/worker_heavy.log
   ln -sf "$REL_LOG_DIR/worker_heavy_debug.log" logs/worker_heavy_debug.log
   ln -sf "$REL_LOG_DIR/worker_heavy_temporal.log" logs/worker_heavy_temporal.log
@@ -232,7 +242,7 @@ wait_for_health() {
   local i=0
 
   while [ "$i" -lt "$retries" ]; do
-    if curl -s "$url" | grep -q "healthy"; then
+  if curl -s "$url" | grep -q "healthy"; then
       echo "$name is healthy!"
       return 0
     fi
@@ -257,12 +267,14 @@ check_pid_alive() {
 FAIL=0
 
 check_pid_alive "Worker Light" "$WORKER_LIGHT_PID" || FAIL=1
+check_pid_alive "Worker Renderer" "$WORKER_RENDERER_PID" || FAIL=1
 check_pid_alive "Worker Heavy" "$WORKER_HEAVY_PID" || FAIL=1
 check_pid_alive "Controller" "$CONTROLLER_PID" || FAIL=1
 check_pid_alive "Temporal Worker" "$TEMP_WORKER_PID" || FAIL=1
 check_pid_alive "Heavy Temporal Worker" "$HEAVY_TEMP_WORKER_PID" || FAIL=1
 
 wait_for_health "Worker Light" "http://127.0.0.1:${WORKER_LIGHT_HOST_PORT}/health" || FAIL=1
+wait_for_health "Worker Renderer" "http://127.0.0.1:${WORKER_RENDERER_HOST_PORT}/health" || FAIL=1
 wait_for_health "Worker Heavy" "http://127.0.0.1:${WORKER_HEAVY_HOST_PORT}/health" || FAIL=1
 wait_for_health "Controller" "http://127.0.0.1:${CONTROLLER_HOST_PORT}/health" || FAIL=1
 

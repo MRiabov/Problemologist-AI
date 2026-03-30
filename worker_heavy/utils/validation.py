@@ -49,7 +49,12 @@ from worker_heavy.simulation.factory import (
     get_simulation_builder,
 )
 from worker_heavy.simulation.naming import MOVED_OBJECT_SCENE_PREFIX
-from worker_heavy.utils.build123d_rendering import PREVIEW_BACKEND_NAME
+from worker_heavy.utils import renderer_client
+from worker_heavy.utils.build123d_rendering import (
+    PREVIEW_BACKEND_NAME,
+    export_preview_scene_bundle,
+)
+from worker_heavy.utils.rendering import prerender_24_views
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
 from .dfm import (
@@ -59,7 +64,6 @@ from .dfm import (
     validate_and_price,
     validate_and_price_assembly,
 )
-from .rendering import prerender_24_views
 
 logger = structlog.get_logger(__name__)
 
@@ -1208,6 +1212,8 @@ def validate_subprocess(
         session_id=session_id,
         smoke_test_mode=smoke_test_mode,
         particle_budget=particle_budget,
+        script_path=script_path,
+        script_content=script_content,
     )
     fem_valid, fem_message = validate_fem_manufacturability(
         component,
@@ -1674,6 +1680,8 @@ def validate(
     session_id: str | None = None,
     smoke_test_mode: bool | None = None,
     particle_budget: int | None = None,
+    script_path: str | Path | None = None,
+    script_content: str | None = None,
 ) -> tuple[bool, str | None]:
     """Verify geometric validity."""
     from worker_heavy.config import settings
@@ -1856,28 +1864,45 @@ def validate(
                 )
 
     try:
-        renders_dir = str(output_dir / "renders") if output_dir else None
+        working_root = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
+        renders_dir = working_root / "renders"
+        renders_dir.mkdir(parents=True, exist_ok=True)
 
-        backend_type = SimulatorBackendType.MUJOCO
         emit_event(
             {
                 "event_type": "render_request_benchmark",
                 "num_views": 24,
                 "backend": PREVIEW_BACKEND_NAME,
-                "requested_physics_backend": backend_type.value,
+                "requested_physics_backend": SimulatorBackendType.MUJOCO.value,
                 "purpose": "validation_static_preview",
             }
         )
 
-        prerender_24_views(
-            component,
-            output_dir=renders_dir,
-            objectives=objectives_model,
-            backend_type=backend_type,
-            session_id=session_id,
+        response = renderer_client.render_static_preview(
+            bundle_base64=export_preview_scene_bundle(
+                component,
+                objectives=objectives_model,
+                workspace_root=working_root,
+                smoke_test_mode=bool(smoke_test_mode),
+            ),
+            script_path="preview_scene.json",
+            session_id=session_id or "renderer",
             smoke_test_mode=smoke_test_mode,
             particle_budget=particle_budget,
         )
+        if not response.success:
+            raise RuntimeError(response.message)
+        if response.artifacts is None:
+            raise RuntimeError("renderer returned no artifacts")
+        render_paths = renderer_client.materialize_render_artifacts(
+            response.artifacts, working_root
+        )
+        if render_paths:
+            logger.info(
+                "validation_renderer_materialized",
+                session_id=session_id,
+                render_paths=render_paths,
+            )
     except Exception as e:
         logger.warning(
             "validate_render_capture_failed", error=str(e), session_id=session_id

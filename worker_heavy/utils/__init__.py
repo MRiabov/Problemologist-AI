@@ -1,6 +1,6 @@
 from shared.workers.workbench_models import ManufacturingConfig, ManufacturingMethod
 
-from . import cad, controllers, electronics
+from . import cad, controllers, electronics, renderer_client
 from .cad import HoleType, fastener_hole
 from .dfm import validate_and_price
 from .electronics import (
@@ -33,6 +33,7 @@ __all__ = [
     "fastener_hole",
     "get_stress_report",
     "preview_stress",
+    "renderer_client",
     "route_wire",
     "set_soft_mesh",
     "simulate",

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import tempfile
 import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
@@ -9,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from xml.dom import minidom
 
+import structlog
 import trimesh
 from build123d import Align, Box, Compound, Cylinder, Solid, Sphere, export_stl
 
@@ -244,7 +244,7 @@ class CommonAssemblyTraverser:
         return False
 
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class MeshProcessor:
@@ -377,7 +377,11 @@ class MeshProcessor:
                         geom_name=f"face_{i}_geom",
                     )
                 except Exception as e:
-                    logger.warning(f"failed_to_export_face_{i}", error=str(e))
+                    logger.warning(
+                        "failed_to_export_face",
+                        face_index=i,
+                        error=str(e),
+                    )
 
         # Export the scene to GLB
         scene.export(filepath, file_type="glb")
@@ -409,8 +413,8 @@ class MeshProcessor:
         # This is safe for convex shapes (like the sphere in the repro)
         # For non-convex shapes, this simplifies geometry, but it ensures simulation runs.
         logger.warning(
-            f"Mesh '{name}' is not watertight after repair. "
-            "Falling back to convex hull."
+            "mesh_not_watertight_falling_back_to_convex_hull",
+            mesh_name=name,
         )
         try:
             hull = mesh.convex_hull
@@ -634,9 +638,9 @@ class SceneCompiler:
             else:
                 # Default to free joint
                 logger.warning(
-                    f"Adding free joint to body '{name}'. "
-                    "This part will fall if not supported. "
-                    "Use 'fixed=True' or 'constraint' attribute to secure it."
+                    "Adding free joint to body '%s'. This part will fall if not supported. "
+                    "Use 'fixed=True' or 'constraint' attribute to secure it.",
+                    name,
                 )
                 ET.SubElement(body, "joint", type="free")
 

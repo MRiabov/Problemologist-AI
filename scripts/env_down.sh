@@ -48,6 +48,7 @@ stop_pid_file() {
 }
 
 stop_pid_file "Worker Light" "$STACK_PID_DIR/worker_light.pid"
+stop_pid_file "Worker Renderer" "$STACK_PID_DIR/worker_renderer.pid"
 stop_pid_file "Worker Heavy" "$STACK_PID_DIR/worker_heavy.pid"
 stop_pid_file "Controller" "$STACK_PID_DIR/controller.pid"
 stop_pid_file "Temporal Worker" "$STACK_PID_DIR/temporal_worker.pid"
@@ -60,6 +61,8 @@ if [ "$STACK_CREATE_ROOT_LOG_SYMLINKS" = "1" ]; then
     logs/controller_debug.log \
     logs/worker_light.log \
     logs/worker_light_debug.log \
+    logs/worker_renderer.log \
+    logs/worker_renderer_debug.log \
     logs/worker_heavy.log \
     logs/worker_heavy_debug.log \
     logs/worker_heavy_temporal.log \

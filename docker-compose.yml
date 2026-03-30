@@ -36,13 +36,27 @@ services:
       - WORKER_URL=http://worker-light:8001
       - WORKER_LIGHT_TRANSPORT=ws
       - WORKER_HEAVY_URL=http://worker-heavy:8002
+      - WORKER_RENDERER_URL=http://worker-renderer:8003
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/postgres
       - ASSET_S3_BUCKET=problemologist
       - BACKUP_S3_BUCKET=problemologist-backup
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     networks:
       - default
-    command: ["uvicorn", "controller.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "controller", "--reload-dir", "shared"]
+    command:
+      [
+        "uvicorn",
+        "controller.api.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload",
+        "--reload-dir",
+        "controller",
+        "--reload-dir",
+        "shared",
+      ]
     env_file:
       - .env
     depends_on:
@@ -62,7 +76,7 @@ services:
 
     # note to coding agents: bloody STOP putting hot reload servers into this config. They burn my CPU and crash the IDE with OOM.
     # use `docker compose up --build` instead - it's 3 seconds.
-    
+
   migrations:
     image: problemologist-ai-controller:latest
     command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
@@ -71,8 +85,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-  
-  controller-worker:
+
+  controller-worker: #fixme: why is it called controller-worker? it should be temporal worker!
     image: problemologist-ai-controller:latest
     command: ["python", "controller/temporal_worker.py"]
     environment:
@@ -88,6 +102,7 @@ services:
       - WORKER_URL=http://worker-light:8001
       - WORKER_LIGHT_TRANSPORT=ws
       - WORKER_HEAVY_URL=http://worker-heavy:8002
+      - WORKER_RENDERER_URL=http://worker-renderer:8003
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     env_file:
       - .env
@@ -101,7 +116,7 @@ services:
 
     # note to coding agents: bloody STOP putting hot reload servers into this config. They burn my CPU and crash the IDE with OOM.
     # use docker compose up --build instead - it's 3 seconds.
-    
+
     # develop:
     #   watch:
     #     - action: sync+restart
@@ -129,7 +144,8 @@ services:
       - WORKER_TYPE=light
     networks:
       - default
-    command: ["uvicorn", "worker_light.app:app", "--host", "0.0.0.0", "--port", "8001"]
+    command:
+      ["uvicorn", "worker_light.app:app", "--host", "0.0.0.0", "--port", "8001"]
     env_file:
       - .env
     depends_on:
@@ -157,9 +173,20 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - WORKER_TYPE=heavy
       - TEMPORAL_URL=temporal:7233
+      - WORKER_RENDERER_URL=http://worker-renderer:8003
     networks:
       - default
-    command: ["xvfb-run", "-a", "uvicorn", "worker_heavy.app:app", "--host", "0.0.0.0", "--port", "8002"]
+    command:
+      [
+        "xvfb-run",
+        "-a",
+        "uvicorn",
+        "worker_heavy.app:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8002",
+      ]
     env_file:
       - .env
     depends_on:
@@ -167,16 +194,59 @@ services:
         condition: service_healthy
       temporal:
         condition: service_started
+      worker-renderer:
+        condition: service_healthy
     volumes:
       - ./worker_heavy:/app/worker_heavy
       - ./worker_light:/app/worker_light
       - ./shared:/app/shared
+
+  worker-renderer:
+    build:
+      context: .
+      dockerfile: worker_renderer/Dockerfile
+    image: problemologist-ai-worker-renderer:latest
+    ports:
+      - "${WORKER_RENDERER_HOST_PORT:-18003}:8003"
+    environment:
+      - S3_ENDPOINT=http://minio:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - MUJOCO_GL=osmesa
+      - PYOPENGL_PLATFORM=osmesa
+      - PYVISTA_OFF_SCREEN=true
+      - VTK_DEFAULT_OPENGL_RENDERER=OSMesa
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    networks:
+      - default
+    command:
+      [
+        "xvfb-run",
+        "-a",
+        "uvicorn",
+        "worker_renderer.app:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8003",
+      ]
+    env_file:
+      - .env
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./worker_renderer:/app/worker_renderer
+      - ./worker_heavy:/app/worker_heavy
+      - ./shared:/app/shared
+      - ./config:/app/config
 
   worker-heavy-temporal:
     image: problemologist-ai-worker-heavy:latest
     environment:
       - TEMPORAL_URL=temporal:7233
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - WORKER_RENDERER_URL=http://worker-renderer:8003
     networks:
       - default
     command: ["python", "-m", "worker_heavy.temporal_worker"]
@@ -187,6 +257,8 @@ services:
         condition: service_started
       worker-heavy:
         condition: service_started
+      worker-renderer:
+        condition: service_healthy
     volumes:
       - ./worker_heavy:/app/worker_heavy
       - ./worker_light:/app/worker_light
@@ -233,7 +305,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
 
     # ulimits:
     #   nofile:

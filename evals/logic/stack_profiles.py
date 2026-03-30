@@ -19,6 +19,7 @@ class StackProfile:
     controller_host_port: int
     worker_light_host_port: int
     worker_heavy_host_port: int
+    worker_renderer_host_port: int
     postgres_host_port: int
     minio_host_port: int
     minio_console_host_port: int
@@ -35,6 +36,7 @@ class StackProfile:
         controller_url = f"http://127.0.0.1:{self.controller_host_port}"
         worker_light_url = f"http://127.0.0.1:{self.worker_light_host_port}"
         worker_heavy_url = f"http://127.0.0.1:{self.worker_heavy_host_port}"
+        worker_renderer_url = f"http://127.0.0.1:{self.worker_renderer_host_port}"
         frontend_url = f"http://127.0.0.1:{self.frontend_host_port}"
         temporal_url = f"127.0.0.1:{self.temporal_host_port}"
         s3_endpoint = f"http://127.0.0.1:{self.minio_host_port}"
@@ -44,6 +46,7 @@ class StackProfile:
             "WORKER_URL": worker_light_url,
             "WORKER_LIGHT_URL": worker_light_url,
             "WORKER_HEAVY_URL": worker_heavy_url,
+            "WORKER_RENDERER_URL": worker_renderer_url,
             "FRONTEND_URL": frontend_url,
             "TEMPORAL_URL": temporal_url,
             "S3_ENDPOINT": s3_endpoint,
@@ -57,6 +60,7 @@ class StackProfile:
             "CONTROLLER_HOST_PORT": str(self.controller_host_port),
             "WORKER_LIGHT_HOST_PORT": str(self.worker_light_host_port),
             "WORKER_HEAVY_HOST_PORT": str(self.worker_heavy_host_port),
+            "WORKER_RENDERER_HOST_PORT": str(self.worker_renderer_host_port),
             "POSTGRES_HOST_PORT": str(self.postgres_host_port),
             "MINIO_HOST_PORT": str(self.minio_host_port),
             "MINIO_CONSOLE_HOST_PORT": str(self.minio_console_host_port),
@@ -108,6 +112,7 @@ STACK_PROFILES: dict[str, StackProfile] = {
         controller_host_port=18000,
         worker_light_host_port=18001,
         worker_heavy_host_port=18002,
+        worker_renderer_host_port=18003,
         postgres_host_port=15432,
         minio_host_port=19000,
         minio_console_host_port=19001,
@@ -126,6 +131,7 @@ STACK_PROFILES: dict[str, StackProfile] = {
         controller_host_port=28000,
         worker_light_host_port=28001,
         worker_heavy_host_port=28002,
+        worker_renderer_host_port=28003,
         postgres_host_port=25432,
         minio_host_port=29000,
         minio_console_host_port=29001,

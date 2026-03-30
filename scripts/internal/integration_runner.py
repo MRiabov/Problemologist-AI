@@ -1719,6 +1719,13 @@ def _link_current_logs(run_playwright: bool) -> None:
         (f"{current_prefix}/worker_light_debug.log", "worker_light_debug.log"),
         (f"{current_prefix}/worker_light_errors.log", "worker_light_errors.log"),
         (f"{current_prefix}/json/worker_light_errors.json", "worker_light_errors.json"),
+        (f"{current_prefix}/worker_renderer.log", "worker_renderer.log"),
+        (f"{current_prefix}/worker_renderer_debug.log", "worker_renderer_debug.log"),
+        (f"{current_prefix}/worker_renderer_errors.log", "worker_renderer_errors.log"),
+        (
+            f"{current_prefix}/json/worker_renderer_errors.json",
+            "worker_renderer_errors.json",
+        ),
         (f"{current_prefix}/worker_heavy.log", "worker_heavy.log"),
         (f"{current_prefix}/worker_heavy_debug.log", "worker_heavy_debug.log"),
         (f"{current_prefix}/worker_heavy_errors.log", "worker_heavy_errors.log"),
@@ -1771,6 +1778,9 @@ def _link_current_logs(run_playwright: bool) -> None:
         "worker_light.log",
         "worker_light_debug.log",
         "worker_light_errors.log",
+        "worker_renderer.log",
+        "worker_renderer_debug.log",
+        "worker_renderer_errors.log",
         "worker_heavy.log",
         "worker_heavy_debug.log",
         "worker_heavy_errors.log",
@@ -1894,6 +1904,7 @@ def _run_integration_command(
     os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
     os.environ["WORKER_URL"] = "http://127.0.0.1:18001"
     os.environ["WORKER_HEAVY_URL"] = "http://127.0.0.1:18002"
+    os.environ["WORKER_RENDERER_URL"] = "http://127.0.0.1:18003"
     os.environ["ASSET_S3_BUCKET"] = "problemologist"
     os.environ["BACKUP_S3_BUCKET"] = "problemologist-backup"
     os.environ["BENCHMARK_SOURCE_BUCKET"] = "benchmarks-source"
@@ -1951,7 +1962,7 @@ def _run_integration_command(
         else None
     )
 
-    _kill_port_occupants([15173, 18000, 18001, 18002, 15432, 17233, 19000])
+    _kill_port_occupants([15173, 18000, 18001, 18002, 18003, 15432, 17233, 19000])
 
     _run(["bash", "scripts/ensure_docker_vfs.sh"])
     print(
@@ -2037,6 +2048,34 @@ def _run_integration_command(
                         pid_file=repo_root / "logs" / "worker_light.pid",
                     ),
                     ProcessSpec(
+                        name="Worker Renderer",
+                        cmd=[
+                            "uv",
+                            "run",
+                            "uvicorn",
+                            "worker_renderer.app:app",
+                            "--host",
+                            "0.0.0.0",
+                            "--port",
+                            "18003",
+                        ],
+                        log_file=log_dir / "worker_renderer.log",
+                        env_updates={
+                            "WORKER_TYPE": "renderer",
+                            "EXTRA_DEBUG_LOG": str(
+                                log_dir / "worker_renderer_debug.log"
+                            ),
+                            "EXTRA_ERROR_LOG": str(
+                                log_dir / "worker_renderer_errors.log"
+                            ),
+                            "EXTRA_ERROR_JSON_LOG": str(
+                                json_log_dir / "worker_renderer_errors.json"
+                            ),
+                            "SESSION_LOG_ROOT": str(session_log_root),
+                        },
+                        pid_file=repo_root / "logs" / "worker_renderer.pid",
+                    ),
+                    ProcessSpec(
                         name="Worker Heavy",
                         cmd=[
                             "uv",
@@ -2072,6 +2111,7 @@ def _run_integration_command(
                         log_file=log_dir / "worker_heavy_temporal.log",
                         env_updates={
                             "PYTHONPATH": combined_pythonpath,
+                            "WORKER_RENDERER_URL": "http://127.0.0.1:18003",
                             "EXTRA_DEBUG_LOG": str(
                                 log_dir / "worker_heavy_temporal_debug.log"
                             ),
@@ -2169,6 +2209,12 @@ def _run_integration_command(
                 contains="healthy",
             ),
             HealthCheck(
+                name="worker-renderer",
+                kind="http",
+                target="http://127.0.0.1:18003/health",
+                contains="healthy",
+            ),
+            HealthCheck(
                 name="worker-heavy",
                 kind="http",
                 target="http://127.0.0.1:18002/health",
@@ -2230,6 +2276,7 @@ def _run_integration_command(
             early_stop_error_logs=[
                 json_log_dir / "controller_errors.json",
                 json_log_dir / "worker_light_errors.json",
+                json_log_dir / "worker_renderer_errors.json",
                 json_log_dir / "worker_heavy_errors.json",
                 json_log_dir / "worker_heavy_temporal_errors.json",
                 json_log_dir / "temporal_worker_errors.json",

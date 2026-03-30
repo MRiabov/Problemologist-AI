@@ -15,6 +15,7 @@ from shared.agents.config import load_agents_config
 from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition
 from shared.observability.events import emit_event
+from shared.rendering import render_simulation_video_bytes
 from shared.simulation.backends import StressField
 from shared.simulation.schemas import (
     SimulatorBackendType,
@@ -412,31 +413,23 @@ class VideoRenderer:
         self.frames.append(frame)
 
     def save(self):
-        """Saves the frames as an MP4 video."""
+        """Delegates MP4 encoding to the dedicated renderer worker."""
         if not self.frames:
             logger.warning("video_render_no_frames", session_id=self.session_id)
             raise ValueError(
                 "deprecated functionality removed: video rendering without captured frames"
             )
 
-        import cv2
-
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        out = cv2.VideoWriter(
-            str(self.output_path), fourcc, self.fps, (self.width, self.height)
+        video_bytes = render_simulation_video_bytes(
+            self.frames,
+            output_name=self.output_path.name,
+            fps=self.fps,
+            session_id=self.session_id or "simulation",
+            width=self.width,
+            height=self.height,
         )
-
-        for frame in self.frames:
-            # Multi-tenant / Dynamic Resolution Safeguard:
-            # Ensure frame matches the expected VideoWriter resolution (width, height)
-            h, w = frame.shape[:2]
-            if w != self.width or h != self.height:
-                frame = cv2.resize(frame, (self.width, self.height))
-
-            # Convert RGB to BGR for OpenCV
-            bgr_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            out.write(bgr_frame)
-        out.release()
+        self.output_path.parent.mkdir(parents=True, exist_ok=True)
+        self.output_path.write_bytes(video_bytes)
         logger.info(
             "video_render_complete",
             path=str(self.output_path),

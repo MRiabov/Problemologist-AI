@@ -22,8 +22,8 @@ from shared.workers.schema import (
     SimulationArtifacts,
 )
 from worker_heavy.runtime.simulation_runner import run_simulation_in_isolated_process
+from worker_heavy.utils import renderer_client
 from worker_heavy.utils.handover import submit_for_review
-from worker_heavy.utils.preview import preview_design
 from worker_heavy.utils.rendering import build_render_manifest
 from worker_heavy.utils.validation import validate
 from worker_heavy.utils.verification import run_verification_job
@@ -268,41 +268,30 @@ async def verify_design_activity(
 @activity.defn(name="worker_preview_design")
 async def preview_design_activity(params: HeavyPreviewParams) -> HeavyPreviewResponse:
     """Render design preview from a session bundle."""
-    bundle_bytes = _decode_bundle(params.bundle_base64)
-    script_path = params.script_path
     pitch = params.pitch
     yaw = params.yaw
+    response = await asyncio.to_thread(
+        renderer_client.render_preview,
+        bundle_base64=params.bundle_base64,
+        script_path=params.script_path,
+        pitch=pitch,
+        yaw=yaw,
+    )
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        root = Path(tmpdir)
-        _extract_bundle(bundle_bytes, root)
+    image_bytes = (
+        base64.b64decode(response.image_bytes_base64)
+        if response.image_bytes_base64
+        else None
+    )
+    image_path = response.image_path
+    filename = Path(response.image_path).name if response.image_path else None
 
-        component = load_component_from_script(
-            script_path=root / script_path,
-            session_root=root,
-        )
-
-        renders_dir = root / "renders"
-        renders_dir.mkdir(exist_ok=True)
-
-        image_path = await asyncio.to_thread(
-            preview_design,
-            component,
-            pitch=pitch,
-            yaw=yaw,
-            output_dir=renders_dir,
-        )
-
-        # Since it's a temp dir, we might want to return the image bytes or upload to S3
-        # For now, let's assume we return the bytes or the caller handles it.
-        # Spec says "Stateless Simulation Payloads".
-        # Usually we want the heavy worker to upload results to S3.
-
-        return HeavyPreviewResponse(
-            success=True,
-            image_bytes=image_path.read_bytes() if image_path.exists() else None,
-            filename=image_path.name if image_path.exists() else None,
-        )
+    return HeavyPreviewResponse(
+        success=response.success,
+        image_bytes=image_bytes,
+        image_path=image_path,
+        filename=filename,
+    )
 
 
 @activity.defn(name="worker_submit_for_review")

@@ -1,6 +1,8 @@
 import os
+import tempfile
 import uuid
 from contextlib import suppress
+from pathlib import Path
 
 import structlog
 from temporalio import activity
@@ -10,6 +12,10 @@ from controller.config.settings import settings
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode
 from shared.observability.storage import S3Client, S3Config
+from shared.rendering import (
+    render_simulation_video_bytes,
+    synthesize_placeholder_frames,
+)
 from shared.type_checking import type_check
 from shared.workers.schema import FailureSimulationConfig, UpdateTraceParams
 
@@ -55,15 +61,29 @@ async def render_video_activity(
     sim_results: str,
     simulate_failures: FailureSimulationConfig = FailureSimulationConfig(),
 ) -> str:
-    """Mock activity to render simulation video."""
+    """Render a simulation video by delegating encoding to worker-renderer."""
     if simulate_failures.render_video:
         raise RuntimeError("Simulated render video failure")
-    import tempfile
 
-    # Create a dummy video file
-    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
-        tmp.write(b"dummy video content")
-        return tmp.name
+    frame_count = 3
+    frames = synthesize_placeholder_frames(
+        sim_results,
+        frame_count=frame_count,
+        width=64,
+        height=48,
+    )
+    video_bytes = render_simulation_video_bytes(
+        frames,
+        output_name="simulation.mp4",
+        fps=10,
+        session_id="simulation",
+        width=64,
+        height=48,
+    )
+    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tf:
+        tf.write(video_bytes)
+        tf.flush()
+        return tf.name
 
 
 @type_check
@@ -74,7 +94,6 @@ async def upload_to_s3_activity(
 ) -> str:
     """Upload video to S3 using S3Client."""
     import asyncio
-    from pathlib import Path
 
     if simulate_failures.s3_upload:
         # Keep workflow in RUNNING state briefly so retry-path observability tests
