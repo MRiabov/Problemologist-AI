@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import atexit
+import fcntl
 import os
 import shutil
 import socket
@@ -55,6 +56,7 @@ _DISPLAY_STATE: _DisplayState | None = None
 
 _MAX_ERROR_LINES = 12
 _X11_SOCKET_DIR = Path("/tmp/.X11-unix")
+_DISPLAY_STARTUP_LOCK_PATH = Path("/tmp/problemologist-vtk-display.lock")
 
 
 def _tail_text(text: str | None, *, max_lines: int = _MAX_ERROR_LINES) -> str | None:
@@ -77,6 +79,34 @@ def _format_error_message(base: str, details: Sequence[str | None]) -> str:
     if not rendered_details:
         return base
     return base + ": " + " | ".join(rendered_details)
+
+
+class _StartupLock:
+    """Cross-process lock that serializes private VTK display startup."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self._handle = None
+
+    def __enter__(self) -> "_StartupLock":
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._handle = self.path.open("w", encoding="utf-8")
+        fcntl.flock(self._handle.fileno(), fcntl.LOCK_EX)
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        if self._handle is None:
+            return None
+        with suppress(Exception):
+            fcntl.flock(self._handle.fileno(), fcntl.LOCK_UN)
+        with suppress(Exception):
+            self._handle.close()
+        self._handle = None
+        return None
+
+
+def _acquire_startup_lock() -> _StartupLock:
+    return _StartupLock(_DISPLAY_STARTUP_LOCK_PATH)
 
 
 def _display_paths(display: str) -> tuple[Path, Path]:
@@ -254,7 +284,7 @@ def _start_private_vtk_display_via_displayfd() -> _DisplayState | None:
             pass_fds=(displayfd_file.fileno(),),
         )
 
-        for _probe_attempt in range(25):
+        for _probe_attempt in range(50):
             if process.poll() is not None:
                 stderr_tail = None
                 if process.stderr is not None:
@@ -302,66 +332,69 @@ def _start_private_vtk_display_via_displayfd() -> _DisplayState | None:
 
 
 def _start_private_vtk_display() -> _DisplayState:
-    displayfd_state = _start_private_vtk_display_via_displayfd()
-    if displayfd_state is not None:
-        return displayfd_state
+    with _acquire_startup_lock():
+        for attempt in range(3):
+            displayfd_state = _start_private_vtk_display_via_displayfd()
+            if displayfd_state is not None:
+                return displayfd_state
+            time.sleep(0.25 * (attempt + 1))
 
-    xvfb_path = shutil.which("Xvfb")
-    if xvfb_path is None:
-        raise RuntimeError(
-            "headless VTK rendering requires Xvfb, but Xvfb is not available"
-        )
-
-    last_error: str | None = None
-    for display in _private_display_candidates():
-        if not _prepare_private_display_slot(display):
-            continue
-
-        process = subprocess.Popen(
-            [
-                xvfb_path,
-                display,
-                "-ac",
-                "-nolisten",
-                "tcp",
-                "-screen",
-                "0",
-                "1280x1024x24",
-            ],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-            close_fds=True,
-        )
-
-        for _probe_attempt in range(5):
-            if process.poll() is not None:
-                stderr_tail = None
-                if process.stderr is not None:
-                    with suppress(Exception):
-                        stderr_tail = _tail_bytes(process.stderr.read())
-                last_error = _format_error_message(
-                    f"Xvfb exited while starting display {display}",
-                    [stderr_tail],
-                )
-                break
-            probe_ok, probe_error = _probe_vtk_display(display)
-            if probe_ok:
-                os.environ["DISPLAY"] = display
-                os.environ.pop("XAUTHORITY", None)
-                return _DisplayState(process=process, display=display)
-            last_error = _format_error_message(
-                f"VTK could not connect to private Xvfb display {display}",
-                [probe_error],
+        xvfb_path = shutil.which("Xvfb")
+        if xvfb_path is None:
+            raise RuntimeError(
+                "headless VTK rendering requires Xvfb, but Xvfb is not available"
             )
-            time.sleep(0.2)
 
-        _stop_display_process(process)
+        last_error: str | None = None
+        for display in _private_display_candidates():
+            if not _prepare_private_display_slot(display):
+                continue
 
-    raise RuntimeError(
-        "failed to start a private Xvfb display for VTK"
-        + (f": {last_error}" if last_error else "")
-    )
+            process = subprocess.Popen(
+                [
+                    xvfb_path,
+                    display,
+                    "-ac",
+                    "-nolisten",
+                    "tcp",
+                    "-screen",
+                    "0",
+                    "1280x1024x24",
+                ],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                close_fds=True,
+            )
+
+            for _probe_attempt in range(10):
+                if process.poll() is not None:
+                    stderr_tail = None
+                    if process.stderr is not None:
+                        with suppress(Exception):
+                            stderr_tail = _tail_bytes(process.stderr.read())
+                    last_error = _format_error_message(
+                        f"Xvfb exited while starting display {display}",
+                        [stderr_tail],
+                    )
+                    break
+                probe_ok, probe_error = _probe_vtk_display(display)
+                if probe_ok:
+                    os.environ["DISPLAY"] = display
+                    os.environ.pop("XAUTHORITY", None)
+                    return _DisplayState(process=process, display=display)
+                last_error = _format_error_message(
+                    f"VTK could not connect to private Xvfb display {display}",
+                    [probe_error],
+                )
+                time.sleep(0.2)
+
+            _stop_display_process(process)
+
+        raise RuntimeError(
+            "failed to start a private Xvfb display for VTK"
+            + (f": {last_error}" if last_error else "")
+        )
 
 
 def _stop_display_process(process: subprocess.Popen[bytes]) -> None:
