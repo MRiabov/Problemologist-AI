@@ -155,7 +155,7 @@ def _build_entry_rejection_feedback(
 
 
 async def _state_requires_electronics(state: AgentState) -> bool:
-    session_id = (state.session_id or "").strip()
+    session_id = (state.worker_session_id or state.session_id or "").strip()
     if not session_id:
         return True
 

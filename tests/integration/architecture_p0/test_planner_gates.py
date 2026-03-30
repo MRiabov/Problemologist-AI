@@ -45,6 +45,7 @@ from shared.workers.schema import (
     WriteFileRequest,
 )
 from tests.integration.agent.helpers import wait_for_benchmark_state
+from tests.integration.backend_utils import selected_backend
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
@@ -976,7 +977,38 @@ async def test_int_008_objectives_validation(
         assert "benchmark_definition.yaml invalid" in data.message
         assert "label must be a non-empty string" in data.message
 
-        # 4. Unknown extra fields must fail closed (top-level and nested)
+        # 4. Authored labels must not occupy the moved-object namespace.
+        reserved_label_script = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    p = Box(10, 10, 10)
+    p.label = "benchmark_moved_object__oops"
+    p.metadata = PartMetadata(material_id="aluminum-6061")
+    return p
+"""
+        await setup_workspace(
+            client,
+            base_headers,
+            {
+                **base_files,
+                "benchmark_definition.yaml": valid_objectives,
+                "solution.py": reserved_label_script,
+            },
+        )
+        resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=BenchmarkToolRequest(
+                script_path="solution.py",
+                backend=selected_backend(),
+            ).model_dump(mode="json"),
+            headers=base_headers,
+        )
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert "Top-level part labels may not start with" in data.message
+        assert "benchmark_moved_object__" in data.message
+
+        # 5. Unknown extra fields must fail closed (top-level and nested)
         extra_obj = valid_objectives.model_dump(mode="json")
         extra_obj["unknown_top_level"] = "forbidden"
         extra_obj["objectives"]["goal_zone"]["unexpected_key"] = 123

@@ -44,6 +44,7 @@ from shared.simulation.schemas import (
 )
 from shared.wire_utils import calculate_path_length, check_wire_clearance
 from shared.workers.workbench_models import ManufacturingConfig
+from worker_heavy.simulation.naming import MOVED_OBJECT_SCENE_PREFIX
 from worker_heavy.simulation.factory import (
     close_all_session_backends,
     get_simulation_builder,
@@ -583,7 +584,7 @@ def _validate_unique_top_level_labels(component: Compound) -> str | None:
     children = getattr(component, "children", None) or [component]
     label_counts: dict[str, int] = {}
     label_order: list[str] = []
-    reserved_prefix = "zone_"
+    reserved_prefixes = ("zone_", MOVED_OBJECT_SCENE_PREFIX)
     reserved_exact_labels = {"environment"}
 
     for child in children:
@@ -623,10 +624,15 @@ def _validate_unique_top_level_labels(component: Compound) -> str | None:
                 "name is reserved for the benchmark scene/root environment. "
                 f"Offending label: {normalized}"
             )
-        if normalized.startswith(reserved_prefix):
+        if any(normalized.startswith(prefix) for prefix in reserved_prefixes):
+            if normalized.startswith("zone_"):
+                reserved_namespace = "`zone_`"
+            else:
+                reserved_namespace = f"`{MOVED_OBJECT_SCENE_PREFIX}`"
             return (
-                "Top-level part labels may not start with `zone_` because that "
-                "namespace is reserved for simulator-generated objective bodies. "
+                "Top-level part labels may not start with "
+                f"{reserved_namespace} because that namespace is reserved for "
+                "simulator-generated scene bodies. "
                 f"Offending label: {normalized}"
             )
         if normalized not in label_counts:

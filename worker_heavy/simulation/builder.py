@@ -12,6 +12,8 @@ from xml.dom import minidom
 import trimesh
 from build123d import Align, Box, Compound, Cylinder, Solid, Sphere, export_stl
 
+from worker_heavy.simulation.naming import moved_object_scene_name
+
 # YACV removed in favor of custom trimesh-based export capable of preserving topology
 # try:
 #     from yacv.exporter import export_all
@@ -868,9 +870,11 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
         if objectives and getattr(objectives, "moved_object", None):
             moved = objectives.moved_object
             moved_part = _build_moved_object_geometry(moved)
-            moved_part.label = moved.label
+            moved_label = str(moved.label).strip()
+            moved_body_name = moved_object_scene_name(moved_label)
+            moved_part.label = moved_label
 
-            mesh_path_base = self.assets_dir / moved.label
+            mesh_path_base = self.assets_dir / moved_body_name
             tolerance = 1.0 if smoke_test_mode else 0.1
             saved_paths = self.processor.process_geometry(
                 moved_part,
@@ -882,19 +886,24 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
             obj_paths = [p for p in saved_paths if p.suffix == ".obj"]
             mesh_names = []
             for j, path in enumerate(obj_paths):
-                mesh_name = f"{moved.label}_{j}" if len(obj_paths) > 1 else moved.label
+                mesh_name = (
+                    f"{moved_body_name}_{j}" if len(obj_paths) > 1 else moved_body_name
+                )
                 self.compiler.add_mesh_asset(name=mesh_name, file_name=path.name)
                 mesh_names.append(mesh_name)
 
             self.compiler.add_body(
-                name=moved.label,
+                name=moved_body_name,
                 mesh_names=mesh_names,
                 pos=[float(v) for v in moved.start_position],
                 euler=[0.0, 0.0, 0.0],
                 is_fixed=False,
                 geom_rgba=self._resolve_geom_rgba(moved.material_id, mfg_config),
             )
-            body_locations[moved.label] = (list(moved.start_position), [0.0, 0.0, 0.0])
+            body_locations[moved_body_name] = (
+                list(moved.start_position),
+                [0.0, 0.0, 0.0],
+            )
 
         # Apply collected constraints
 
