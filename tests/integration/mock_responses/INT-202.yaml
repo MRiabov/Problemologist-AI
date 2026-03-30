@@ -29,7 +29,7 @@ transcript:
   - tool_name: submit_plan
     expected_observation: rejected
   - finished: true
-    summary: INT-202 benchmark planner was rejected because the motion token is unsupported in the rigid-body gravity family.
+    summary: INT-202 benchmark planner was rejected because the motion is marked as unsupported benchmark motion.
     plan:
       theme: bridge_trim_unsupported
       target_object_properties:
@@ -69,7 +69,7 @@ transcript:
   - tool_name: submit_plan
     expected_observation: rejected
   - finished: true
-    summary: INT-202 benchmark planner repeated the unsupported motion token and will fail closed in the rigid-body gravity family.
+    summary: INT-202 benchmark planner repeated the unsupported benchmark motion and will fail closed in the rigid-body gravity family.
     plan:
       theme: bridge_trim_unsupported
       target_object_properties:

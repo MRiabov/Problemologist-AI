@@ -463,14 +463,15 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
     regexes=[
         r"planner_handoff_validation_failed",
         r"benchmark_refusal",
-        r"AMBIGUOUS_TASK",
+        r"CONTRADICTORY_CONSTRAINTS",
     ]
 )
 @pytest.mark.asyncio
 async def test_int_200_benchmark_workflow_rejects_hidden_motion_handoff():
     """
-    INT-200: A benchmark workflow seeded with hidden benchmark-side motion
-    must fail closed before the plan reviewer or benchmark coder can start.
+    INT-200: A benchmark workflow seeded with hidden benchmark-side motion must
+    fail closed as contradictory planner constraints before the plan reviewer or
+    benchmark coder can start.
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         req = AgentRunRequest(
@@ -490,23 +491,26 @@ async def test_int_200_benchmark_workflow_rejects_hidden_motion_handoff():
         assert metadata.terminal_reason == TerminalReason.HANDOFF_INVARIANT_VIOLATION
         assert metadata.failure_class == "AGENT_SEMANTIC_FAILURE"
         assert any(
-            "AMBIGUOUS_TASK" in log for log in (metadata.validation_logs or [])
+            "CONTRADICTORY_CONSTRAINTS" in log
+            and "bridge_reference_table" in log
+            and "slide_y" in log
+            for log in (metadata.validation_logs or [])
         ), metadata.validation_logs
         assert any(
             "bridge_reference_table" in log and "slide_y" in log
             for log in (metadata.validation_logs or [])
         ), metadata.validation_logs
         assert any(
-            "reviewer-visible motion bounds or limits" in log.lower()
+            "planner_execution: missing structured planner output" in log
             for log in (metadata.validation_logs or [])
         ), metadata.validation_logs
         assert any(
-            "controller mode 'ON_OFF'" in log
+            "control=mode=<MotorControlMode.ON_OFF: 'ON_OFF'>" in log
             for log in (metadata.validation_logs or [])
         ), metadata.validation_logs
-        assert any(
-            "controller speed '0.15'" in log for log in (metadata.validation_logs or [])
-        ), metadata.validation_logs
+        assert any("speed=0.15" in log for log in (metadata.validation_logs or [])), (
+            metadata.validation_logs
+        )
 
         traces = episode.traces or []
         submit_plan_traces = [
@@ -564,7 +568,11 @@ async def test_int_202_benchmark_workflow_rejects_unsupported_motion_handoff():
             "UNSOLVABLE_SCENARIO" in log for log in (metadata.validation_logs or [])
         ), metadata.validation_logs
         assert any(
-            "unsupported benchmark motion token" in log.lower()
+            "unsupported benchmark motion" in log.lower()
+            for log in (metadata.validation_logs or [])
+        ), metadata.validation_logs
+        assert any(
+            "bridge_trim_unsupported_v1" in log
             for log in (metadata.validation_logs or [])
         ), metadata.validation_logs
 

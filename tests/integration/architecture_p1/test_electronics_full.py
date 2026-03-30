@@ -362,6 +362,22 @@ async def test_int_140_wire_and_electrical_component_costing():
         base_objectives = _base_benchmark_definition_yaml()
         base_script = _base_script()
 
+        cots_part: CotsSearchItem | None = None
+        for query in ("power", "relay", "connector", "wire"):
+            resp = await client.get(
+                f"{CONTROLLER_URL}/api/cots/search", params={"q": query}
+            )
+            assert resp.status_code == 200, resp.text
+            results = [CotsSearchItem.model_validate(item) for item in resp.json()]
+            if results:
+                cots_part = sorted(results, key=lambda item: item.part_id)[0]
+                break
+
+        if cots_part is None:
+            pytest.skip("COTS catalog returned no electrical search results.")
+
+        assert cots_part.price > 0
+
         async def run_with_wire_length(length_mm: float) -> BenchmarkToolResponse:
             session_id = f"INT-140-{uuid.uuid4().hex[:8]}"
             await _write_file(
@@ -369,39 +385,73 @@ async def test_int_140_wire_and_electrical_component_costing():
             )
             await _write_file(client, session_id, "script.py", base_script)
 
-            assembly_yaml = f"""
-version: "1.0"
-constraints:
-  benchmark_max_unit_cost_usd: 1000
-  benchmark_max_weight_g: 5000
-  planner_target_max_unit_cost_usd: 950
-  planner_target_max_weight_g: 4500
-cots_parts:
-  - part_id: "test_psu"
-    manufacturer: "TestCo"
-    unit_cost_usd: 7.5
-    quantity: 1
-    source: "catalog"
-electronics:
-  power_supply: {{voltage_dc: 12.0, max_current_a: 10.0}}
-  components:
-    - {{component_id: "motor_1", type: "MOTOR", stall_current_a: 1.0}}
-  wiring:
-    - wire_id: "w_pos"
-      from: {{component: "supply", terminal: "v+"}}
-      to: {{component: "motor_1", terminal: "+"}}
-      gauge_awg: 18
-      length_mm: {length_mm}
-    - wire_id: "w_neg"
-      from: {{component: "motor_1", terminal: "-"}}
-      to: {{component: "supply", terminal: "0"}}
-      gauge_awg: 18
-      length_mm: {length_mm}
-totals:
-  estimated_unit_cost_usd: 150.0
-  estimated_weight_g: 800.0
-  estimate_confidence: "high"
-"""
+            assembly_yaml = yaml.safe_dump(
+                {
+                    "version": "1.0",
+                    "constraints": {
+                        "benchmark_max_unit_cost_usd": 1000,
+                        "benchmark_max_weight_g": 5000,
+                        "planner_target_max_unit_cost_usd": 950,
+                        "planner_target_max_weight_g": 4500,
+                    },
+                    "cots_parts": [
+                        {
+                            "part_id": cots_part.part_id,
+                            "manufacturer": cots_part.manufacturer,
+                            "unit_cost_usd": cots_part.price,
+                            "quantity": 1,
+                            "source": cots_part.source,
+                        }
+                    ],
+                    "electronics": {
+                        "power_supply": {
+                            "voltage_dc": 12.0,
+                            "max_current_a": 10.0,
+                        },
+                        "components": [
+                            {
+                                "component_id": "motor_1",
+                                "type": "MOTOR",
+                                "stall_current_a": 1.0,
+                            }
+                        ],
+                        "wiring": [
+                            {
+                                "wire_id": "w_pos",
+                                "from": {
+                                    "component": "supply",
+                                    "terminal": "v+",
+                                },
+                                "to": {
+                                    "component": "motor_1",
+                                    "terminal": "+",
+                                },
+                                "gauge_awg": 18,
+                                "length_mm": length_mm,
+                            },
+                            {
+                                "wire_id": "w_neg",
+                                "from": {
+                                    "component": "motor_1",
+                                    "terminal": "-",
+                                },
+                                "to": {
+                                    "component": "supply",
+                                    "terminal": "0",
+                                },
+                                "gauge_awg": 18,
+                                "length_mm": length_mm,
+                            },
+                        ],
+                    },
+                    "totals": {
+                        "estimated_unit_cost_usd": 150.0,
+                        "estimated_weight_g": 800.0,
+                        "estimate_confidence": "high",
+                    },
+                },
+                sort_keys=False,
+            )
             await _write_file(
                 client, session_id, "assembly_definition.yaml", assembly_yaml
             )
@@ -427,7 +477,7 @@ totals:
         # Long wire path should increase computed total due to per-meter wire costing.
         assert long_wire.artifacts.total_cost > short_wire.artifacts.total_cost
         # COTS component cost should contribute regardless of length.
-        assert short_wire.artifacts.total_cost >= 7.5
+        assert short_wire.artifacts.total_cost >= cots_part.price
 
 
 @pytest.mark.integration_p1

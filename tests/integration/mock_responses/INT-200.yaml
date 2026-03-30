@@ -29,7 +29,7 @@ transcript:
   - tool_name: submit_plan
     expected_observation: rejected
   - finished: true
-    summary: INT-200 benchmark planner rejected the hidden-motion handoff and will retry.
+    summary: INT-200 benchmark planner rejected the hidden-motion handoff as contradictory constraints and will retry.
     plan:
       theme: hidden_motion_bridge
       target_object_properties:
