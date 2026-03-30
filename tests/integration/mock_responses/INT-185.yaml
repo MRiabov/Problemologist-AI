@@ -29,7 +29,7 @@ transcript:
   - thought: Inspect the seeded current-revision render before submitting.
     tool_name: inspect_media
     tool_args:
-      path: renders/dof_review_preview.png
+      path: renders/render_e45_a45.png
     expected_observation: attached_to_model
   - tool_name: submit_plan
     expected_observation: submitted
@@ -53,7 +53,7 @@ transcript:
   - thought: Inspect the seeded current-revision render before approving.
     tool_name: inspect_media
     tool_args:
-      path: renders/dof_review_preview.png
+      path: renders/render_e45_a45.png
     expected_observation: attached_to_model
   - finished: true
     review:
@@ -82,7 +82,7 @@ transcript:
   - thought: Inspect the seeded current-revision render before approving execution.
     tool_name: inspect_media
     tool_args:
-      path: renders/dof_review_preview.png
+      path: renders/render_e45_a45.png
     expected_observation: attached_to_model
   - finished: true
     review:

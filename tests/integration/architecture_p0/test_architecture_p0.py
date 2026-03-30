@@ -40,6 +40,8 @@ from tests.integration.agent.helpers import (
 from tests.integration.backend_utils import selected_backend
 from tests.integration.contracts import HealthResponse
 
+pytestmark = pytest.mark.xdist_group(name="physics_sims")
+
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")

@@ -31,7 +31,7 @@ transcript:
   - thought: Inspect the seeded render preview before finishing.
     tool_name: inspect_media
     tool_args:
-      path: renders/dof_review_preview.png
+      path: renders/render_e45_a45.png
     expected_observation: success
   - finished: true
     summary: Plan for 10x10x10mm box generated.
@@ -47,7 +47,7 @@ transcript:
   - thought: Inspect the seeded render preview before approving the plan.
     tool_name: inspect_media
     tool_args:
-      path: renders/dof_review_preview.png
+      path: renders/render_e45_a45.png
     expected_observation: success
   - finished: true
     review:
