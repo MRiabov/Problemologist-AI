@@ -1,0 +1,45 @@
+---
+name: mechanical-engineering
+description: Mechanical mechanism design and simulation guidance for Problemologist. Use this when solving or reviewing passive-transfer mechanisms, realistic constraints/DOFs, stress or fluid tasks, or when a benchmark/solution needs concrete mechanical design patterns instead of prompt-specific hints.
+---
+
+# Mechanical Engineering
+
+Use this skill as a router. Keep the main prompt lean and load only the reference that matches the current problem.
+
+## When To Read Which Reference
+
+- `references/mechanism_patterns.md`
+  Use for mechanism synthesis, passive/gravity transfer, realistic motion paths, and minimal-DOF decisions.
+- `references/fea_principles.md`
+  Use for stress-driven design, FEM interpretation, and structural failure avoidance.
+- `references/fluid_dynamics.md`
+  Use for fluid-containment or flow-rate benchmarks.
+- `references/optimization.md`
+  Use when a design already works and you are refining cost, weight, or safety factor.
+
+## Core Rules
+
+1. Make the transport mechanism explicit.
+   If the object must move laterally, roll, slide, funnel, deflect, or stay captured, model the actual surfaces or components that do that work. Spawn pedestals and containment walls are not enough.
+2. Prefer the simplest physically credible mechanism family.
+   Start with passive gravity transfer before adding motors, joints, or extra DOFs. Add motion only when the task truly requires it.
+3. Every non-static DOF must map to a real mechanism.
+   Bearings, sliders, motors, fasteners, or another allowed physical constraint must justify the motion. Convenience DOFs are review failures.
+4. Use the current runtime helpers for stress/fluid work.
+   `get_stress_report(...)`, `preview_stress(...)`, and `define_fluid(...)` are the current repo-level hooks; do not invent alternate analysis paths in prompts.
+5. Keep manufacturing and physics aligned.
+   Benchmark-owned fixtures are not priced as manufactured parts, but engineer-authored parts still need realistic geometry, materials, and attachment logic.
+
+## Workflow
+
+1. Identify the required mechanism family.
+2. Read the matching reference file.
+3. Build the simplest geometry that makes the required motion physically inevitable.
+4. Validate or simulate.
+5. Refine only after the base mechanism exists and is physically coherent.
+
+## Notes
+
+- Do not move long mechanism heuristics back into `config/prompts.yaml`; keep them here or in references.
+- Keep benchmark-specific solution tricks in reference files so they can be updated independently of the prompt contract.

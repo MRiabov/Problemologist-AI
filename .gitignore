@@ -70,8 +70,8 @@ events.jsonl
 *.png
 
 
-# Local skills and suggestions
-skills/
+# Local agent skills and suggestions
+.agents/skills/
 suggested_skills/
 
 gha-creds-*.json
