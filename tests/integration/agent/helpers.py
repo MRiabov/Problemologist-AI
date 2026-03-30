@@ -15,6 +15,7 @@ from websockets.asyncio.client import connect as websocket_connect
 
 from controller.agent.mock_scenarios import load_integration_mock_scenarios
 from controller.api.schemas import EpisodeResponse
+from controller.utils.integration import infer_integration_test_id
 from shared.enums import AgentName, EpisodeStatus
 from shared.git_utils import repo_revision
 from shared.models.schemas import AssemblyConstraints, AssemblyDefinition, CostTotals
@@ -193,6 +194,11 @@ def repo_git_revision() -> str:
     revision = repo_revision(Path(__file__).resolve().parents[3])
     assert revision, "repository git revision could not be determined."
     return revision
+
+
+def integration_workspace_session_id(task: str, session_id: str) -> str:
+    """Return the worker workspace session id used by integration runs."""
+    return infer_integration_test_id(task, session_id) or session_id
 
 
 async def seed_benchmark_assembly_definition(
@@ -417,13 +423,14 @@ async def run_agent_episode(
     agent_name: AgentName = AgentName.ENGINEER_CODER,
 ) -> tuple[str, str]:
     session_id = f"{int_id}-{uuid.uuid4().hex[:8]}"
+    workspace_session_id = integration_workspace_session_id(task, session_id)
 
     if int_id in {"INT-181", "INT-182", "INT-183", "INT-185", "INT-186"}:
-        await seed_benchmark_assembly_definition(client, session_id)
+        await seed_benchmark_assembly_definition(client, workspace_session_id)
     if int_id in {"INT-181", "INT-182", "INT-183", "INT-185", "INT-186"}:
         await seed_execution_reviewer_handover(
             client,
-            session_id=session_id,
+            session_id=workspace_session_id,
             int_id=int_id,
         )
 

@@ -17,6 +17,7 @@ import yaml
 from build123d import Box, BuildPart
 
 from evals.logic import runner
+from evals.logic.codex_session_trace import CodexSessionTraceArtifact
 from evals.logic.codex_workspace import (
     build_codex_env,
     materialize_seed_workspace,
@@ -262,6 +263,48 @@ async def test_run_evals_codex_judge_does_not_launch_reviewers_without_flag(
     assert reviewer_called is False
     assert stats[AgentName.BENCHMARK_CODER]["total"] == 1
     assert stats[AgentName.BENCHMARK_CODER]["success"] == 1
+
+
+@pytest.mark.integration_p0
+def test_run_evals_codex_readable_logs_mirror_imported_transcript(tmp_path, monkeypatch):
+    readable_log = tmp_path / "readable_agent_logs.log"
+    session_root = tmp_path / "sessions"
+    transcript_path = tmp_path / "transcript.log"
+    transcript_path.write_text(
+        "\n".join(
+            [
+                "SESSION_META id=codex-123 cwd=/workspace model=gpt-5.4-mini originator=codex",
+                "MESSAGE role=user phase=prompt text=Workspace: current directory",
+                'TOOL_CALL python args={"code":"print(1)"}',
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(runner, "READABLE_AGENT_LOG_FILE", readable_log)
+    monkeypatch.setattr(runner, "SESSION_LOG_ROOT", session_root)
+
+    artifact = CodexSessionTraceArtifact(
+        session_id="codex-123",
+        transcript_path=transcript_path,
+    )
+
+    runner._mirror_codex_session_trace_to_readable_logs(  # type: ignore[attr-defined]
+        artifact,
+        eval_log_key="ec-001",
+    )
+
+    readable_text = readable_log.read_text(encoding="utf-8")
+    session_text = (session_root / "ec-001" / "readable_agent_logs.log").read_text(
+        encoding="utf-8"
+    )
+
+    assert "CODEX_SESSION_TRACE_IMPORTED session_id=codex-123" in readable_text
+    assert "SESSION_META id=codex-123 cwd=/workspace" in readable_text
+    assert "MESSAGE role=user phase=prompt text=Workspace: current directory" in readable_text
+    assert 'TOOL_CALL python args={"code":"print(1)"}' in readable_text
+    assert readable_text == session_text
 
 
 @pytest.mark.integration_p0

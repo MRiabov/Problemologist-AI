@@ -19,6 +19,7 @@ from tests.integration.agent.helpers import (
     seed_benchmark_assembly_definition,
     seed_execution_reviewer_handover,
     strip_ansi,
+    integration_workspace_session_id,
     wait_for_episode_terminal,
     wait_for_queue_empty,
 )
@@ -173,6 +174,14 @@ async def test_int_182_concurrent_agent_run_isolation_files_traces_context():
     token_b = f"INT182-B-{uuid.uuid4().hex}"
     session_a = f"INT-182-{uuid.uuid4().hex[:8]}"
     session_b = f"INT-182-{uuid.uuid4().hex[:8]}"
+    workspace_session_a = integration_workspace_session_id(
+        f"INT-182 concurrent run A token: {token_a}",
+        session_a,
+    )
+    workspace_session_b = integration_workspace_session_id(
+        f"INT-182 concurrent run B token: {token_b}",
+        session_b,
+    )
 
     async with httpx.AsyncClient(timeout=300.0) as client:
         write_a = await client.post(
@@ -190,8 +199,8 @@ async def test_int_182_concurrent_agent_run_isolation_files_traces_context():
         assert write_b.status_code == 200, write_b.text
 
         await asyncio.gather(
-            seed_benchmark_assembly_definition(client, session_a),
-            seed_benchmark_assembly_definition(client, session_b),
+            seed_benchmark_assembly_definition(client, workspace_session_a),
+            seed_benchmark_assembly_definition(client, workspace_session_b),
             seed_execution_reviewer_handover(
                 client,
                 session_id=session_a,
