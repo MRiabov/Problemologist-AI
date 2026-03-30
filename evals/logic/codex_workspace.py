@@ -590,11 +590,8 @@ def build_codex_env(
     """Prepare a generic Codex subprocess environment for a local workspace run."""
 
     env = dict(os.environ)
-    # Codex eval workspaces run headless. Keep display-related state out of the
-    # launched agent process so preview rendering uses the repo's explicit
-    # fallback logic instead of inheriting a possibly stale host session.
-    env.pop("DISPLAY", None)
-    env.pop("XAUTHORITY", None)
+    # Preserve the host display/auth state as-is. Rendering must use the
+    # ambient X session directly; we no longer synthesize a fallback display.
     env["LIBGL_ALWAYS_SOFTWARE"] = "1"
     # MuJoCo's current headless path is EGL-backed. OSMesa currently breaks
     # import-time OpenGL setup in this workspace, so keep the codex launch env

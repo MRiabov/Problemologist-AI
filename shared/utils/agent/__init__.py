@@ -59,6 +59,35 @@ def _script_agent_role() -> str:
     return os.getenv(AGENT_NAME_ENV, AgentName.ENGINEER_CODER.value)
 
 
+def _default_reviewer_stage() -> str:
+    """Infer the correct reviewer stage for the current workspace.
+
+    The fallback no-render helper is used by both benchmark and engineer Codex
+    workspaces. Routing everything to the benchmark reviewer silently produces
+    the wrong manifest for engineer/electronics coder workspaces, so we infer
+    the stage from the current agent role and workspace handoff files first.
+    """
+
+    role_value = _script_agent_role()
+    role_to_stage: dict[str, str] = {
+        AgentName.BENCHMARK_CODER.value: AgentName.BENCHMARK_REVIEWER.value,
+        AgentName.BENCHMARK_REVIEWER.value: AgentName.BENCHMARK_REVIEWER.value,
+        AgentName.ENGINEER_CODER.value: AgentName.ENGINEER_EXECUTION_REVIEWER.value,
+        AgentName.ENGINEER_EXECUTION_REVIEWER.value: AgentName.ENGINEER_EXECUTION_REVIEWER.value,
+        AgentName.ELECTRONICS_ENGINEER.value: AgentName.ELECTRONICS_REVIEWER.value,
+        AgentName.ELECTRONICS_REVIEWER.value: AgentName.ELECTRONICS_REVIEWER.value,
+    }
+    if role_value in role_to_stage:
+        return role_to_stage[role_value]
+
+    workspace = Path.cwd()
+    if (workspace / "assembly_definition.yaml").exists():
+        return AgentName.ENGINEER_EXECUTION_REVIEWER.value
+    if (workspace / "benchmark_assembly_definition.yaml").exists():
+        return AgentName.BENCHMARK_REVIEWER.value
+    return AgentName.BENCHMARK_REVIEWER.value
+
+
 def _call_controller_script_tool(action: str, payload: dict[str, Any]) -> dict | None:
     controller_url = _controller_base_url()
     if not controller_url:
@@ -190,6 +219,7 @@ def submit_for_review(compound: Compound) -> bool:
     """Proxy for benchmark submission to the benchmark reviewer stage."""
     if _is_script_import_mode():
         return True
+    reviewer_stage = _default_reviewer_stage()
     episode_id = os.getenv("EPISODE_ID") or None
     if not Path("validation_results.json").exists():
         logger.info(
@@ -208,14 +238,14 @@ def submit_for_review(compound: Compound) -> bool:
 
         return real_submit(
             compound,
-            reviewer_stage=AgentName.BENCHMARK_REVIEWER,
+            reviewer_stage=reviewer_stage,
             episode_id=episode_id,
         )
 
     controller_payload = {
         "script_path": "script.py",
         "agent_role": _script_agent_role(),
-        "reviewer_stage": AgentName.BENCHMARK_REVIEWER.value,
+        "reviewer_stage": reviewer_stage,
         "episode_id": episode_id,
     }
     controller_res = _call_controller_script_tool(
@@ -228,7 +258,7 @@ def submit_for_review(compound: Compound) -> bool:
 
     payload = {
         "script_path": "script.py",
-        "reviewer_stage": AgentName.BENCHMARK_REVIEWER,
+        "reviewer_stage": reviewer_stage,
         "episode_id": episode_id,
     }
     res = _call_heavy_worker("/benchmark/submit", payload)

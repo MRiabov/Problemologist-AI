@@ -24,26 +24,15 @@ if [ -n "$PROBLEMOLOGIST_REPO_ROOT" ]; then
   fi
 fi
 
-if [ -z "${XDG_CACHE_HOME:-}" ]; then
-  export XDG_CACHE_HOME="$PWD/.codex-cache"
+export XDG_CACHE_HOME="$PWD/.codex-cache"
+export XDG_CONFIG_HOME="$PWD/.codex-config"
+export TMPDIR="$PWD/.codex-tmp"
+export TEMP="$TMPDIR"
+export TMP="$TMPDIR"
+export MPLCONFIGDIR="$XDG_CACHE_HOME/matplotlib"
+if [ -z "${DISPLAY:-}" ]; then
+  export DISPLAY=":0"
 fi
-if [ -z "${XDG_CONFIG_HOME:-}" ]; then
-  export XDG_CONFIG_HOME="$PWD/.codex-config"
-fi
-if [ -z "${TMPDIR:-}" ]; then
-  export TMPDIR="$PWD/.codex-tmp"
-fi
-if [ -z "${TEMP:-}" ]; then
-  export TEMP="$TMPDIR"
-fi
-if [ -z "${TMP:-}" ]; then
-  export TMP="$TMPDIR"
-fi
-if [ -z "${MPLCONFIGDIR:-}" ]; then
-  export MPLCONFIGDIR="$XDG_CACHE_HOME/matplotlib"
-fi
-unset DISPLAY
-unset XAUTHORITY
 export LIBGL_ALWAYS_SOFTWARE=1
 export MUJOCO_GL=egl
 export PYOPENGL_PLATFORM=egl
