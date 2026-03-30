@@ -1,3 +1,4 @@
+import asyncio
 import os
 import uuid
 
@@ -47,6 +48,41 @@ async def _require_worker_services(client: httpx.AsyncClient):
             resp.raise_for_status()
         except Exception:
             pytest.skip(f"{name} is not reachable at {url}")
+
+
+async def _post_with_busy_retry(
+    client: httpx.AsyncClient,
+    *,
+    url: str,
+    json_payload: dict,
+    headers: dict[str, str],
+    timeout: float,
+    max_attempts: int = 120,
+) -> httpx.Response:
+    """Retry transient heavy-worker busy responses during integration contention."""
+
+    response: httpx.Response | None = None
+    for _ in range(max_attempts):
+        response = await client.post(
+            url,
+            json=json_payload,
+            headers=headers,
+            timeout=timeout,
+        )
+        if response.status_code != 503:
+            return response
+
+        try:
+            ready_resp = await client.get(f"{WORKER_HEAVY_URL}/ready", timeout=5.0)
+            if ready_resp.status_code == 200:
+                continue
+        except Exception:
+            pass
+
+        await asyncio.sleep(1.0)
+
+    assert response is not None
+    return response
 
 
 @pytest.mark.integration_p0
@@ -118,6 +154,7 @@ async def test_int_120_circuit_validation_gate():
 from build123d import *
 def build():
     p = Box(1, 1, 1)
+    p.label = "test_box"
     from shared.models.schemas import PartMetadata
     p.metadata = PartMetadata(material_id='aluminum_6061')
     return p
@@ -133,9 +170,10 @@ def build():
 
         # 4. Trigger simulation on worker_heavy
         sim_req = BenchmarkToolRequest(script_path="script.py")
-        sim_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json=sim_req.model_dump(mode="json"),
+        sim_resp = await _post_with_busy_retry(
+            client,
+            url=f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json_payload=sim_req.model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
             timeout=300.0,
         )
@@ -384,6 +422,7 @@ async def test_int_125_valid_circuit_totals():
 from build123d import *
 def build():
     p = Box(1, 1, 1)
+    p.label = "test_box"
     from shared.models.schemas import PartMetadata
     p.metadata = PartMetadata(material_id='aluminum_6061')
     return p
@@ -398,9 +437,10 @@ def build():
 
         # 3. Simulate
         sim_req = BenchmarkToolRequest(script_path="script.py", smoke_test_mode=True)
-        resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json=sim_req.model_dump(mode="json"),
+        resp = await _post_with_busy_retry(
+            client,
+            url=f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json_payload=sim_req.model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
             timeout=300.0,
         )

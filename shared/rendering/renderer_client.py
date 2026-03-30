@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +36,49 @@ def _session_headers(session_id: str | None) -> dict[str, str]:
     return headers
 
 
+def _post_json_with_busy_retry(
+    *,
+    url: str,
+    payload: dict[str, Any],
+    session_id: str | None,
+    timeout: float,
+    attempts: int = 8,
+    initial_delay_s: float = 0.5,
+) -> dict[str, Any]:
+    """POST JSON to the renderer, retrying transient worker-busy responses."""
+
+    delay_s = initial_delay_s
+    last_error: Exception | None = None
+
+    for attempt in range(1, attempts + 1):
+        with httpx.Client(
+            timeout=timeout, headers=_session_headers(session_id)
+        ) as client:
+            response = client.post(url, json=payload)
+            try:
+                response.raise_for_status()
+                return response.json()
+            except httpx.HTTPStatusError as exc:
+                last_error = exc
+                if response.status_code != 503 or attempt >= attempts:
+                    raise
+
+                logger.warning(
+                    "renderer_busy_retry",
+                    url=url,
+                    attempt=attempt,
+                    attempts=attempts,
+                    delay_s=delay_s,
+                    session_id=session_id,
+                )
+                time.sleep(delay_s)
+                delay_s = min(delay_s * 1.5, 3.0)
+
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("renderer request failed without a response")
+
+
 def render_preview(
     *,
     bundle_base64: str | None,
@@ -52,10 +96,12 @@ def render_preview(
         script_content=script_content,
     ).model_dump(mode="json")
     url = f"{renderer_base_url()}/benchmark/preview"
-    with httpx.Client(timeout=60.0, headers=_session_headers(session_id)) as client:
-        response = client.post(url, json=payload)
-        response.raise_for_status()
-        data = response.json()
+    data = _post_json_with_busy_retry(
+        url=url,
+        payload=payload,
+        session_id=session_id,
+        timeout=60.0,
+    )
     return PreviewDesignResponse.model_validate(data)
 
 
@@ -77,10 +123,12 @@ def render_static_preview(
     ).model_dump(mode="json")
     payload["session_id"] = session_id
     url = f"{renderer_base_url()}/benchmark/static-preview"
-    with httpx.Client(timeout=120.0, headers=_session_headers(session_id)) as client:
-        response = client.post(url, json=payload)
-        response.raise_for_status()
-        data = response.json()
+    data = _post_json_with_busy_retry(
+        url=url,
+        payload=payload,
+        session_id=session_id,
+        timeout=120.0,
+    )
     return BenchmarkToolResponse.model_validate(data)
 
 
@@ -100,10 +148,12 @@ def render_simulation_video(
         session_id=session_id,
     ).model_dump(mode="json")
     url = f"{renderer_base_url()}/benchmark/simulation-video"
-    with httpx.Client(timeout=120.0, headers=_session_headers(session_id)) as client:
-        response = client.post(url, json=payload)
-        response.raise_for_status()
-        data = response.json()
+    data = _post_json_with_busy_retry(
+        url=url,
+        payload=payload,
+        session_id=session_id,
+        timeout=120.0,
+    )
     return BenchmarkToolResponse.model_validate(data)
 
 

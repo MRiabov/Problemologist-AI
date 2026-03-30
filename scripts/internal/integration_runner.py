@@ -7,6 +7,7 @@ import argparse
 import ast
 import asyncio
 import concurrent.futures
+import copy
 import fcntl
 import json
 import os
@@ -25,6 +26,7 @@ import urllib.request
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Literal, TextIO
+from xml.etree import ElementTree as ET
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -1129,6 +1131,137 @@ def _normalize_pytest_args(pytest_args: list[str]) -> tuple[list[str], bool, boo
         normalized.extend(["tests/integration", "tests/e2e"])
 
     return normalized, has_marker, has_file
+
+
+def _has_explicit_pytest_selection(pytest_args: list[str]) -> bool:
+    """Detect whether the caller requested a custom pytest subset."""
+    for arg in pytest_args:
+        if arg in {"-m", "-k", "--last-failed", "--failed-first", "--lf", "--ff"}:
+            return True
+        if arg.startswith("-m") or arg.startswith("-k"):
+            return True
+        if arg.startswith("tests/") or "/tests/" in arg or "::" in arg:
+            return True
+    return False
+
+
+def _ordered_integration_marker_slices() -> list[tuple[str, str]]:
+    """Return the default integration slice order used by the runner."""
+    return [
+        ("integration_p0", "integration_p0"),
+        (
+            "integration_p1",
+            "integration_p1 and not integration_p0 and not integration_agent and not integration_frontend",
+        ),
+        (
+            "integration_agent",
+            "integration_agent and not integration_p0",
+        ),
+        (
+            "integration_frontend",
+            "integration_frontend and not integration_p0 and not integration_agent",
+        ),
+        (
+            "integration_p2",
+            "integration_p2 and not integration_p0 and not integration_p1 and not integration_agent and not integration_frontend",
+        ),
+    ]
+
+
+def _merge_junit_xml_files(source_paths: list[Path], output_path: Path) -> None:
+    """Combine multiple pytest junitxml files into one synthetic testsuite."""
+    tests = failures = errors = skipped = 0
+    duration = 0.0
+    combined_cases: list[ET.Element] = []
+
+    for source_path in source_paths:
+        if not source_path.exists():
+            continue
+        try:
+            tree = ET.parse(source_path)
+        except ET.ParseError:
+            continue
+
+        root = tree.getroot()
+        suites = [root] if root.tag == "testsuite" else list(root.findall("testsuite"))
+        for suite in suites:
+            try:
+                tests += int(suite.get("tests", "0") or 0)
+                failures += int(suite.get("failures", "0") or 0)
+                errors += int(suite.get("errors", "0") or 0)
+                skipped += int(suite.get("skipped", "0") or 0)
+                duration += float(suite.get("time", "0") or 0.0)
+            except ValueError:
+                pass
+            combined_cases.extend(
+                copy.deepcopy(case) for case in suite.findall("testcase")
+            )
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    testsuite = ET.Element(
+        "testsuite",
+        attrib={
+            "name": "integration",
+            "tests": str(tests),
+            "failures": str(failures),
+            "errors": str(errors),
+            "skipped": str(skipped),
+            "time": f"{duration:.6f}",
+        },
+    )
+    for case in combined_cases:
+        testsuite.append(case)
+
+    testsuites = ET.Element("testsuites")
+    testsuites.append(testsuite)
+    ET.ElementTree(testsuites).write(
+        output_path, encoding="utf-8", xml_declaration=True
+    )
+
+
+def _run_ordered_integration_pytest_slices(
+    pytest_args: list[str],
+    *,
+    reverse: bool,
+    junit_xml: str,
+    early_stop_error_logs: list[Path] | None = None,
+) -> int:
+    """Run the default integration suite in deterministic marker buckets."""
+    repo_root = _repo_root()
+    junit_dir = repo_root / "test_output" / "junit_slices"
+    junit_dir.mkdir(parents=True, exist_ok=True)
+
+    slice_specs = _ordered_integration_marker_slices()
+    if reverse:
+        slice_specs = list(reversed(slice_specs))
+
+    slice_reports: list[Path] = []
+    for slice_name, marker_expr in slice_specs:
+        slice_junit = junit_dir / f"{slice_name}.xml"
+        slice_pytest_args = [
+            *pytest_args,
+            "-m",
+            marker_expr,
+            "tests/integration",
+            "tests/e2e",
+        ]
+        print(f"Running integration slice {slice_name}: -m {marker_expr}")
+        exit_code = run_pytest_subprocess(
+            pytest_args=slice_pytest_args,
+            reverse=reverse,
+            junit_xml=str(slice_junit),
+            early_stop_error_logs=early_stop_error_logs,
+        )
+        if exit_code == 5:
+            print(f"Integration slice {slice_name} collected no tests; skipping.")
+            continue
+        slice_reports.append(slice_junit)
+        if exit_code != 0:
+            _merge_junit_xml_files(slice_reports, repo_root / junit_xml)
+            return exit_code
+
+    _merge_junit_xml_files(slice_reports, repo_root / junit_xml)
+    return 0
 
 
 def _should_run_playwright(pytest_args: list[str]) -> bool:
@@ -2269,19 +2402,39 @@ def _run_integration_command(
                 return 1
 
         (repo_root / "test_output").mkdir(parents=True, exist_ok=True)
-        pytest_exit = run_pytest_subprocess(
-            pytest_args=pytest_args,
-            reverse=args.reverse,
-            junit_xml="test_output/junit.xml",
-            early_stop_error_logs=[
-                json_log_dir / "controller_errors.json",
-                json_log_dir / "worker_light_errors.json",
-                json_log_dir / "worker_renderer_errors.json",
-                json_log_dir / "worker_heavy_errors.json",
-                json_log_dir / "worker_heavy_temporal_errors.json",
-                json_log_dir / "temporal_worker_errors.json",
-            ],
+        ordered_marker_splits_enabled = (
+            os.environ.get("INTEGRATION_ORDERED_MARKER_SPLITS", "0").strip() == "1"
         )
+        if ordered_marker_splits_enabled and not _has_explicit_pytest_selection(
+            passthrough_pytest_args
+        ):
+            pytest_exit = _run_ordered_integration_pytest_slices(
+                pytest_args=passthrough_pytest_args,
+                reverse=args.reverse,
+                junit_xml="test_output/junit.xml",
+                early_stop_error_logs=[
+                    json_log_dir / "controller_errors.json",
+                    json_log_dir / "worker_light_errors.json",
+                    json_log_dir / "worker_renderer_errors.json",
+                    json_log_dir / "worker_heavy_errors.json",
+                    json_log_dir / "worker_heavy_temporal_errors.json",
+                    json_log_dir / "temporal_worker_errors.json",
+                ],
+            )
+        else:
+            pytest_exit = run_pytest_subprocess(
+                pytest_args=pytest_args,
+                reverse=args.reverse,
+                junit_xml="test_output/junit.xml",
+                early_stop_error_logs=[
+                    json_log_dir / "controller_errors.json",
+                    json_log_dir / "worker_light_errors.json",
+                    json_log_dir / "worker_renderer_errors.json",
+                    json_log_dir / "worker_heavy_errors.json",
+                    json_log_dir / "worker_heavy_temporal_errors.json",
+                    json_log_dir / "temporal_worker_errors.json",
+                ],
+            )
 
         _run(["uv", "run", "python", "scripts/persist_test_results.py"], check=False)
 

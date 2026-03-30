@@ -15,7 +15,6 @@ from websockets.asyncio.client import connect as websocket_connect
 
 from controller.agent.mock_scenarios import load_integration_mock_scenarios
 from controller.api.schemas import EpisodeResponse
-from controller.utils.integration import infer_integration_test_id
 from shared.enums import AgentName, EpisodeStatus
 from shared.git_utils import repo_revision
 from shared.models.schemas import AssemblyConstraints, AssemblyDefinition, CostTotals
@@ -23,6 +22,7 @@ from shared.models.simulation import MultiRunResult, SimulationMetrics, Simulati
 from shared.workers.schema import (
     RenderArtifactMetadata,
     RenderManifest,
+    RenderSiblingPaths,
     ReviewManifest,
     ValidationResultRecord,
     WriteFileRequest,
@@ -198,7 +198,7 @@ def repo_git_revision() -> str:
 
 def integration_workspace_session_id(task: str, session_id: str) -> str:
     """Return the worker workspace session id used by integration runs."""
-    return infer_integration_test_id(task, session_id) or session_id
+    return session_id
 
 
 async def seed_benchmark_assembly_definition(
@@ -242,13 +242,17 @@ async def seed_execution_reviewer_handover(
     session_id: str,
     int_id: str,
     script_content: str | None = None,
-    render_path: str = "renders/dof_review_preview.png",
+    render_path: str = "renders/render_e45_a45.png",
 ) -> None:
     """Seed deterministic reviewer handoff artifacts for execution-reviewer runs."""
     script_content = script_content or _fixture_script_content(int_id)
     script_sha256 = hashlib.sha256(script_content.encode("utf-8")).hexdigest()
     seed_ts = time.time()
     revision = repo_git_revision()
+    render_base = Path(render_path).with_suffix("")
+    render_rgb_path = render_path
+    render_depth_path = f"{render_base}_depth.png"
+    render_segmentation_path = f"{render_base}_segmentation.png"
     benchmark_definition_seed = (
         "version: 1.0\n"
         "constraints:\n"
@@ -299,7 +303,11 @@ async def seed_execution_reviewer_handover(
         simulation_timestamp=seed_ts,
         goal_reached=True,
         revision=revision,
-        renders=[render_path],
+        renders=[
+            render_rgb_path,
+            render_depth_path,
+            render_segmentation_path,
+        ],
         mjcf_path="renders/scene.xml",
         cad_path="renders/model.step",
         objectives_path="renders/benchmark_definition.yaml",
@@ -373,21 +381,59 @@ async def seed_current_revision_render_preview(
     client: httpx.AsyncClient,
     *,
     session_id: str,
-    render_path: str = "renders/dof_review_preview.png",
+    render_path: str = "renders/render_e45_a45.png",
 ) -> None:
     """Seed a current-revision render preview image and manifest for reviewer tests."""
 
     revision = repo_git_revision()
+    render_base = Path(render_path).with_suffix("")
     image_name = Path(render_path).name
+    depth_name = f"{render_base.name}_depth.png"
+    segmentation_name = f"{render_base.name}_segmentation.png"
+    group_key = Path(render_path).stem
     manifest = RenderManifest(
         version="1.0",
         episode_id=session_id,
         worker_session_id=session_id,
         revision=revision,
         environment_version="integration-test",
-        preview_evidence_paths=[render_path],
+        preview_evidence_paths=[
+            render_path,
+            f"{render_base}_depth.png",
+            f"{render_base}_segmentation.png",
+        ],
         artifacts={
-            render_path: RenderArtifactMetadata(modality="rgb", group_key="dof"),
+            render_path: RenderArtifactMetadata(
+                modality="rgb",
+                group_key=group_key,
+                siblings=RenderSiblingPaths(
+                    rgb=render_path,
+                    depth=f"{render_base}_depth.png",
+                    segmentation=f"{render_base}_segmentation.png",
+                ),
+            ),
+            f"{render_base}_depth.png": RenderArtifactMetadata(
+                modality="depth",
+                group_key=group_key,
+                siblings=RenderSiblingPaths(
+                    rgb=render_path,
+                    depth=f"{render_base}_depth.png",
+                    segmentation=f"{render_base}_segmentation.png",
+                ),
+                depth_interpretation=(
+                    "Brighter pixels are nearer. Values are normalized per image "
+                    "from the build123d/VTK preview renderer."
+                ),
+            ),
+            f"{render_base}_segmentation.png": RenderArtifactMetadata(
+                modality="segmentation",
+                group_key=group_key,
+                siblings=RenderSiblingPaths(
+                    rgb=render_path,
+                    depth=f"{render_base}_depth.png",
+                    segmentation=f"{render_base}_segmentation.png",
+                ),
+            ),
         },
     )
     code = f"""
@@ -399,7 +445,11 @@ from PIL import Image
 root = Path("renders")
 root.mkdir(parents=True, exist_ok=True)
 image_path = root / {image_name!r}
+depth_path = root / {depth_name!r}
+segmentation_path = root / {segmentation_name!r}
 Image.new("RGB", (1, 1), (255, 0, 0)).save(image_path)
+Image.new("RGB", (1, 1), (0, 255, 0)).save(depth_path)
+Image.new("RGB", (1, 1), (0, 0, 255)).save(segmentation_path)
 (root / "render_manifest.json").write_text({manifest.model_dump_json(indent=2)!r}, encoding="utf-8")
 PY
 """
