@@ -30,13 +30,13 @@ transcript:
     tool_args:
       path: renders/cad_preview.png
       overwrite: true
-      content_file: INT-040/engineer_coder/entry_01/02__renders_preview.png
+      content_file: INT-203/benchmark_planner/entry_01/05__cad_preview.png
     expected_observation: success
   - tool_name: write_file
     tool_args:
       path: renders/simulation_preview.png
       overwrite: true
-      content_file: INT-040/engineer_coder/entry_01/02__renders_preview.png
+      content_file: INT-203/benchmark_planner/entry_01/06__simulation_preview.png
     expected_observation: success
   - tool_name: submit_plan
     expected_observation: submitted

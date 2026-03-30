@@ -65,8 +65,12 @@ I have already started editing an exiting int-033 to make it much closer to the 
 
 <!--Agent: write the progress on the task below-->
 
-1. ...
+1. [x] Repaired `INT-186` so the forced worker-light outage waits for the coder invoke boundary instead of firing during the planner's validation submission.
 
-2. ...
+2. [x] Verified the live `integration_p1` run now passes through `test_int_186_system_failed_tool_retry_cap_and_terminal_metadata` after the timing fix.
 
-3. `integration_p2` test suite wasn't even run in a month.
+3. [x] Fixed `DatasetRowLineage` so dataset export accepts `benchmark_family` and the benchmark row round trip completes again.
+
+4. [x] Verified `test_dataset_export_benchmark_row_round_trip` passes on a fresh integration run after the schema fix.
+
+5. `integration_p2` test suite wasn't even run in a month.

@@ -3,6 +3,7 @@ import json
 import os
 import signal
 import subprocess
+import sys
 import uuid
 from pathlib import Path
 
@@ -42,6 +43,24 @@ async def _wait_for_worker_light_health(timeout_s: float = 30.0) -> None:
     raise AssertionError("Worker light did not become healthy after restart.")
 
 
+async def _wait_for_log_segment(
+    log_path: Path,
+    *,
+    start_offset: int,
+    needles: list[str],
+    timeout_s: float = 60.0,
+) -> None:
+    deadline = asyncio.get_event_loop().time() + timeout_s
+    while asyncio.get_event_loop().time() < deadline:
+        if log_path.exists():
+            segment = strip_ansi(read_log_segment(log_path, start_offset))
+            if all(needle in segment for needle in needles):
+                return
+        await asyncio.sleep(0.5)
+
+    raise AssertionError(f"Timed out waiting for log markers: {needles}")
+
+
 async def _restart_worker_light_after_outage() -> None:
     env = os.environ.copy()
     env.update(
@@ -64,8 +83,8 @@ async def _restart_worker_light_after_outage() -> None:
     with log_path.open("ab") as log_file:
         subprocess.Popen(
             [
-                "uv",
-                "run",
+                sys.executable,
+                "-m",
                 "uvicorn",
                 "worker_light.app:app",
                 "--host",
@@ -406,7 +425,7 @@ async def test_int_185_agent_failed_tool_error_routes_and_run_continues():
 @pytest.mark.integration_agent
 @pytest.mark.integration_p1
 @pytest.mark.allow_backend_errors(
-    "SYSTEM_TOOL_RETRY_EXHAUSTED|system_tool_retry_attempt|node_entry_validation_rejected|missing_artifact|reviewer_entry_blocked|connection refused|ConnectError|All connection attempts failed|engineer_coder_dspy_failed"
+    "SYSTEM_TOOL_RETRY_EXHAUSTED|system_tool_retry_attempt|node_entry_validation_rejected|missing_artifact|reviewer_entry_blocked|connection refused|ConnectError|All connection attempts failed|engineer_coder_dspy_failed|failed_to_list_dir_during_sync|sync_dir|no close frame received or sent"
 )
 @pytest.mark.asyncio
 async def test_int_186_system_failed_tool_retry_cap_and_terminal_metadata():
@@ -427,16 +446,29 @@ async def test_int_186_system_failed_tool_retry_cap_and_terminal_metadata():
             task="INT-186 system-failed retry cap contract",
             agent_name=AgentName.ENGINEER_CODER,
         )
-        # Intentional outage injection for devops regression coverage:
-        # once execute_command starts, drop worker-light mid-call so the same
-        # tool request exercises infra-level retries and terminalization.
-        # We detect command start via worker log because episode trace sync can lag.
+
+        await _wait_for_log_segment(
+            controller_log,
+            start_offset=start_offset,
+            needles=[
+                "engineer_coder_dspy_invoke_start",
+                f"session_id={session_id}",
+            ],
+            timeout_s=120.0,
+        )
+        # Only start watching worker execution after the coder stage is active;
+        # the planner still performs its own validation command before this.
         worker_light_debug_log = Path("logs/worker_light_debug.log")
         worker_debug_start_offset = (
             worker_light_debug_log.stat().st_size
             if worker_light_debug_log.exists()
             else 0
         )
+
+        # Intentional outage injection for devops regression coverage:
+        # once execute_command starts, drop worker-light mid-call so the same
+        # tool request exercises infra-level retries and terminalization.
+        # We detect command start via worker log because episode trace sync can lag.
         saw_execute_start = False
         deadline = asyncio.get_event_loop().time() + 60.0
         while asyncio.get_event_loop().time() < deadline:

@@ -733,6 +733,7 @@ class DatasetRowLineage(StrictContractModel):
 
     episode_id: str
     benchmark_id: str
+    benchmark_family: str | None = None
     user_session_id: str | None = None
     worker_session_id: str | None = None
     episode_type: EpisodeType
