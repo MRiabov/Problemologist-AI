@@ -266,7 +266,9 @@ async def test_run_evals_codex_judge_does_not_launch_reviewers_without_flag(
 
 
 @pytest.mark.integration_p0
-def test_run_evals_codex_readable_logs_mirror_imported_transcript(tmp_path, monkeypatch):
+def test_run_evals_codex_readable_logs_mirror_imported_transcript(
+    tmp_path, monkeypatch
+):
     readable_log = tmp_path / "readable_agent_logs.log"
     session_root = tmp_path / "sessions"
     transcript_path = tmp_path / "transcript.log"
@@ -302,7 +304,10 @@ def test_run_evals_codex_readable_logs_mirror_imported_transcript(tmp_path, monk
 
     assert "CODEX_SESSION_TRACE_IMPORTED session_id=codex-123" in readable_text
     assert "SESSION_META id=codex-123 cwd=/workspace" in readable_text
-    assert "MESSAGE role=user phase=prompt text=Workspace: current directory" in readable_text
+    assert (
+        "MESSAGE role=user phase=prompt text=Workspace: current directory"
+        in readable_text
+    )
     assert 'TOOL_CALL python args={"code":"print(1)"}' in readable_text
     assert readable_text == session_text
 

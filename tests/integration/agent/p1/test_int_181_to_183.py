@@ -14,12 +14,12 @@ from shared.workers.schema import ReadFileRequest, WriteFileRequest
 from tests.integration.agent.helpers import (
     CONTROLLER_URL,
     get_controller_log_path,
+    integration_workspace_session_id,
     read_log_segment,
     run_agent_episode,
     seed_benchmark_assembly_definition,
     seed_execution_reviewer_handover,
     strip_ansi,
-    integration_workspace_session_id,
     wait_for_episode_terminal,
     wait_for_queue_empty,
 )

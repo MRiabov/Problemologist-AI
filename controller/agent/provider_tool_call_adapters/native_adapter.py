@@ -1,12 +1,13 @@
 from contextlib import suppress
 from typing import Any
 
-from .base import ParsedToolCalls
 from controller.agent.runtime_models import (
     NativeProviderMessage,
     NativeToolCall,
     NativeToolCallFunction,
 )
+
+from .base import ParsedToolCalls
 
 
 class NativeToolCallAdapter:
@@ -42,10 +43,7 @@ class NativeToolCallAdapter:
                 continue
             function = tool_call_model.function or NativeToolCallFunction()
             tool_name = (
-                function.name
-                or tool_call_model.name
-                or tool_call_model.tool_name
-                or ""
+                function.name or tool_call_model.name or tool_call_model.tool_name or ""
             ).strip()
             raw_arguments = (
                 function.arguments

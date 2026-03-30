@@ -2,6 +2,8 @@ import contextlib
 import threading
 from typing import Any
 
+import structlog
+
 from worker_heavy.simulation._mujoco_env import ensure_headless_mujoco
 
 ensure_headless_mujoco()
@@ -10,6 +12,9 @@ import mujoco
 import numpy as np
 
 from shared.enums import FailureReason
+
+# ... (rest of imports)
+logger = structlog.get_logger(__name__)
 from shared.models.simulation import (
     FluidMetricResult,
     RendererCapabilities,
@@ -303,7 +308,9 @@ class MuJoCoBackend(PhysicsRendererBackend):
                 include_segmentation=include_segmentation,
                 session_id=self.session_id,
                 rgb_shape=tuple(frame.shape) if frame is not None else None,
-                depth_shape=tuple(depth_frame.shape) if depth_frame is not None else None,
+                depth_shape=tuple(depth_frame.shape)
+                if depth_frame is not None
+                else None,
                 segmentation_shape=(
                     tuple(segmentation_frame.shape)
                     if segmentation_frame is not None

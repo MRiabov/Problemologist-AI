@@ -12,6 +12,7 @@ from temporalio.client import Client
 from temporalio.common import WorkflowIDConflictPolicy
 from temporalio.exceptions import WorkflowAlreadyStartedError
 
+from controller.agent.runtime_models import FileListEntry
 from controller.clients.worker import WorkerClient
 from controller.observability.middleware_helper import (
     broadcast_file_update,
@@ -28,7 +29,6 @@ from controller.workflows.heavy import (
     HeavyValidationWorkflow,
     HeavyVerifyWorkflow,
 )
-from controller.agent.runtime_models import FileListEntry
 from shared.agents.config import resolve_agents_config_path
 from shared.enums import AgentName, ManufacturingMethod
 from shared.observability.schemas import (

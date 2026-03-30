@@ -55,7 +55,9 @@ class ProviderChoice(BaseModel):
 
 
 class ProviderResponseEnvelope(BaseModel):
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
+    model_config = ConfigDict(
+        from_attributes=True, populate_by_name=True, extra="ignore"
+    )
 
     response_ms: float | int | None = None
     hidden_params: dict[str, Any] | None = Field(default=None, alias="_hidden_params")

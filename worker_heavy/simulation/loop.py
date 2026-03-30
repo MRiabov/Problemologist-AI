@@ -29,8 +29,8 @@ from worker_heavy.simulation.evaluator import SuccessEvaluator
 from worker_heavy.simulation.factory import get_physics_backend
 from worker_heavy.simulation.media import MediaRecorder
 from worker_heavy.simulation.metrics import MetricCollector
-from worker_heavy.simulation.objectives import ObjectiveEvaluator
 from worker_heavy.simulation.naming import moved_object_scene_name
+from worker_heavy.simulation.objectives import ObjectiveEvaluator
 from worker_heavy.utils.dfm import (
     resolve_requested_quantity,
     validate_and_price_assembly,

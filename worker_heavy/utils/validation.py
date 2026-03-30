@@ -44,11 +44,11 @@ from shared.simulation.schemas import (
 )
 from shared.wire_utils import calculate_path_length, check_wire_clearance
 from shared.workers.workbench_models import ManufacturingConfig
-from worker_heavy.simulation.naming import MOVED_OBJECT_SCENE_PREFIX
 from worker_heavy.simulation.factory import (
     close_all_session_backends,
     get_simulation_builder,
 )
+from worker_heavy.simulation.naming import MOVED_OBJECT_SCENE_PREFIX
 from worker_heavy.utils.build123d_rendering import PREVIEW_BACKEND_NAME
 from worker_heavy.workbenches.config import load_config, load_merged_config
 

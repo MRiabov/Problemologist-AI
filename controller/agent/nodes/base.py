@@ -29,14 +29,14 @@ from controller.agent.execution_limits import (
     evaluate_agent_hard_fail,
     mark_episode_execution_window_start,
 )
+from controller.agent.prompt_manager import PromptManager
+from controller.agent.provider_tool_call_adapters import extract_tool_calls
 from controller.agent.runtime_models import (
     FileListEntry,
     MessageContentBlock,
     NativeProviderMessage,
     ProviderResponseEnvelope,
 )
-from controller.agent.prompt_manager import PromptManager
-from controller.agent.provider_tool_call_adapters import extract_tool_calls
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
@@ -880,10 +880,7 @@ class BaseNode:
                 if isinstance(block_model.text, str) and block_model.text.strip():
                     text_chunks.append(block_model.text.strip())
                     continue
-                if (
-                    isinstance(block_model.content, str)
-                    and block_model.content.strip()
-                ):
+                if isinstance(block_model.content, str) and block_model.content.strip():
                     text_chunks.append(block_model.content.strip())
             if text_chunks:
                 return "\n".join(text_chunks)
@@ -936,7 +933,9 @@ class BaseNode:
         with suppress(Exception):
             message_model = NativeProviderMessage.model_validate(message)
         provider_specific_fields = (
-            message_model.provider_specific_fields if message_model is not None else None
+            message_model.provider_specific_fields
+            if message_model is not None
+            else None
         )
         if isinstance(provider_specific_fields, dict) and provider_specific_fields:
             assistant_message["provider_specific_fields"] = provider_specific_fields

@@ -472,9 +472,9 @@ async def engineer_benchmark_handover_custom_check(
     contract: NodeEntryContract,  # noqa: ARG001
     state: BaseModel | Mapping[str, Any],
 ) -> list[NodeEntryValidationError]:
-    worker_session_id = _get_state_value(state, "worker_session_id") or _get_state_value(
-        state, "session_id"
-    )
+    worker_session_id = _get_state_value(
+        state, "worker_session_id"
+    ) or _get_state_value(state, "session_id")
     episode_id = _get_state_value(state, "episode_id")
     if not worker_session_id:
         return [
