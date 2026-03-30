@@ -590,8 +590,11 @@ def build_codex_env(
     """Prepare a generic Codex subprocess environment for a local workspace run."""
 
     env = dict(os.environ)
-    # Preserve the host display/auth state as-is. Rendering must use the
-    # ambient X session directly; we no longer synthesize a fallback display.
+    # Codex runs are headless by contract. Strip ambient display state so the
+    # submission helpers and validation paths cannot depend on host X11/Wayland.
+    env.pop("DISPLAY", None)
+    env.pop("XAUTHORITY", None)
+    env.pop("WAYLAND_DISPLAY", None)
     env["LIBGL_ALWAYS_SOFTWARE"] = "1"
     # MuJoCo's current headless path is EGL-backed. OSMesa currently breaks
     # import-time OpenGL setup in this workspace, so keep the codex launch env

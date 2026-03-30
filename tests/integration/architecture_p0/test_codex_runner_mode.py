@@ -449,7 +449,9 @@ def test_run_evals_codex_env_supports_repo_root_imports(tmp_path):
 
 
 @pytest.mark.integration_p0
-def test_run_evals_codex_vtk_preview_overrides_bad_display(tmp_path, monkeypatch):
+def test_run_evals_codex_vtk_preview_runs_headless_with_bad_display(
+    tmp_path, monkeypatch
+):
     monkeypatch.setenv("DISPLAY", ":109")
 
     with BuildPart() as builder:
@@ -473,8 +475,7 @@ def test_run_evals_codex_vtk_preview_overrides_bad_display(tmp_path, monkeypatch
 
     assert rendered_path == output_path
     assert output_path.exists(), output_path
-    assert os.environ["DISPLAY"] != ":109"
-    assert os.environ["DISPLAY"].startswith(":")
+    assert os.environ["DISPLAY"] == ":109"
     assert output_path.stat().st_size > 0
 
 
@@ -603,13 +604,12 @@ def test_run_evals_codex_submit_helper_forces_headless_rendering_env(tmp_path):
 
 @pytest.mark.integration_p0
 @pytest.mark.int_id("INT-207")
-def test_run_evals_codex_engineer_workspace_validate_falls_back_from_bad_display(
+def test_run_evals_codex_engineer_workspace_validate_runs_headless_when_display_is_bad(
     tmp_path: Path,
 ):
     """
-    INT-207: an engineer workspace validation preview must recover from an
-    invalid ambient DISPLAY by logging the fallback, rendering previews, and
-    persisting the validation record.
+    INT-207: an engineer workspace validation preview must ignore a bad ambient
+    DISPLAY, render previews headlessly, and persist the validation record.
     """
 
     item = _load_dataset_item(
@@ -759,10 +759,7 @@ result = build()
 
     assert validate_run.returncode == 0, combined_output
     assert "VALIDATE_OK=True" in combined_output, combined_output
-    assert (
-        "ambient_vtk_display_unusable_falling_back_to_private_xvfb" in combined_output
-    ), combined_output
-    assert "failed to start a private Xvfb display for VTK" not in combined_output
+    assert "private Xvfb" not in combined_output
     assert "Validation preview render failed" not in combined_output
 
     validation_record = ValidationResultRecord.model_validate_json(
