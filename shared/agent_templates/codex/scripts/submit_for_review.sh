@@ -30,8 +30,9 @@ export TMPDIR="$PWD/.codex-tmp"
 export TEMP="$TMPDIR"
 export TMP="$TMPDIR"
 export MPLCONFIGDIR="$XDG_CACHE_HOME/matplotlib"
-if [ -z "${DISPLAY:-}" ]; then
-  export DISPLAY=":0"
+if [ -z "${DISPLAY:-}" ] || [ -z "${XAUTHORITY:-}" ]; then
+  echo "Error: ambient DISPLAY and XAUTHORITY are required; private Xvfb fallback was removed" >&2
+  exit 1
 fi
 export LIBGL_ALWAYS_SOFTWARE=1
 export MUJOCO_GL=egl
