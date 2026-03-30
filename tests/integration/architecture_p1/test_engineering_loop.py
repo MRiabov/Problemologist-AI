@@ -1,6 +1,4 @@
-import asyncio
 import hashlib
-import time
 import uuid
 from pathlib import Path
 
@@ -11,283 +9,523 @@ from httpx import AsyncClient
 from controller.api.schemas import (
     AgentRunRequest,
     AgentRunResponse,
-    BenchmarkGenerateRequest,
-    BenchmarkGenerateResponse,
-    ConfirmRequest,
+    EpisodeCreateResponse,
     EpisodeResponse,
 )
-from controller.persistence.db import get_sessionmaker
-from controller.persistence.models import Episode
-from shared.enums import EpisodeStatus, FailureReason, ReviewDecision
-from shared.models.simulation import (
-    MultiRunResult,
-    SimulationFailure,
-    SimulationMetrics,
-    SimulationResult,
+from shared.enums import (
+    AgentName,
+    EpisodeStatus,
+    EpisodeType,
+    ReviewDecision,
+    TerminalReason,
+    TraceType,
 )
-from shared.simulation.schemas import SimulatorBackendType
+from shared.models.simulation import SimulationResult
 from shared.workers.schema import (
+    PlanReviewManifest,
+    RenderManifest,
+    ReviewManifest,
     ValidationResultRecord,
-    WriteFileRequest,
 )
-from tests.integration.agent.helpers import wait_for_episode_terminal
+from tests.integration.agent.helpers import (
+    repo_git_revision,
+    seed_approved_benchmark_bundle,
+    wait_for_episode_state,
+    wait_for_episode_terminal,
+)
 
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://127.0.0.1:18000"
 
 
+async def _read_episode_asset_text(
+    client: AsyncClient, episode_id: str, asset_path: str
+) -> str:
+    resp = await client.get(f"/episodes/{episode_id}/assets/{asset_path}")
+    assert resp.status_code == 200, resp.text
+    return resp.text
+
+
 @pytest.mark.integration_p1
+@pytest.mark.int_id("INT-033")
 @pytest.mark.asyncio
 async def test_engineering_full_loop():
     """
-    INT-033: Engineering execution reviewer stability review.
+    INT-033: Engineering full loop.
 
-    Seeds a reviewable engineer episode directly in the controller database,
-    then submits a stability review against the live review endpoint so the
-    persisted stability summary, review decision trail, and render evidence are
-    validated without depending on the slower planning/coding path.
+    Verifies the live engineer path from benchmark bootstrap through planner,
+    coder, validation, simulation, handoff, and final execution review.
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
-        episode_id = uuid.uuid4()
-        worker_session_id = f"INT-033-{uuid.uuid4().hex[:8]}"
-        task = f"Review peer solution stability: {worker_session_id}"
-
-        cad_preview_bytes = Path(
-            "tests/integration/mock_responses/INT-039/engineer_coder/entry_01/02__renders_preview.png"
-        ).read_bytes()
-        simulation_preview_bytes = cad_preview_bytes
-        render_probe_bytes = cad_preview_bytes
-        verification_result = MultiRunResult(
-            num_scenes=4,
-            success_count=3,
-            success_rate=0.75,
-            is_consistent=False,
-            individual_results=[
-                SimulationMetrics(success=True),
-                SimulationMetrics(success=True),
-                SimulationMetrics(success=True),
-                SimulationMetrics(
-                    success=False,
-                    fail_reason="Scene 4 lost balance under jitter",
-                    fail_mode=FailureReason.STABILITY_ISSUE,
-                    failure=SimulationFailure(
-                        reason=FailureReason.STABILITY_ISSUE,
-                        detail="Scene 4 drifted off the support plane.",
-                    ),
-                ),
-            ],
-            fail_reasons=["Scene 4 lost balance under jitter"],
-            scene_build_count=1,
-            backend_run_count=1,
-            batched_execution=True,
+        benchmark_session_id = f"INT-033-benchmark-{uuid.uuid4().hex[:8]}"
+        benchmark_request = AgentRunRequest(
+            task="INT-033 approved benchmark fixture for engineering full loop.",
+            session_id=benchmark_session_id,
         )
-        review_timestamp = time.time()
-        stability_summary = {
-            "batchWidth": verification_result.num_scenes,
-            "successCount": verification_result.success_count,
-            "successRate": verification_result.success_rate,
-            "isConsistent": verification_result.is_consistent,
-            "sceneBuildCount": verification_result.scene_build_count,
-            "backendRunCount": verification_result.backend_run_count,
-            "batchedExecution": verification_result.batched_execution,
-            "sceneSummaries": [
-                {
-                    "sceneIndex": idx + 1,
-                    "success": scene.success,
-                    "summary": (
-                        f"Scene {idx + 1}: pass"
-                        if scene.success
-                        else f"Scene {idx + 1}: {scene.fail_reason}"
-                    ),
-                    "failReason": scene.fail_reason,
-                    "failureMode": scene.fail_mode.value if scene.fail_mode else None,
-                }
-                for idx, scene in enumerate(verification_result.individual_results)
-            ],
+        benchmark_resp = await client.post(
+            "/api/test/episodes", json=benchmark_request.model_dump(mode="json")
+        )
+        assert benchmark_resp.status_code == 201, benchmark_resp.text
+        benchmark_episode_id = str(
+            EpisodeCreateResponse.model_validate(benchmark_resp.json()).episode_id
+        )
+        await seed_approved_benchmark_bundle(
+            client,
+            benchmark_session_id=benchmark_session_id,
+            benchmark_episode_id=benchmark_episode_id,
+        )
+        benchmark_episode_resp = await client.get(f"/episodes/{benchmark_episode_id}")
+        assert benchmark_episode_resp.status_code == 200, benchmark_episode_resp.text
+        benchmark_episode = EpisodeResponse.model_validate(
+            benchmark_episode_resp.json()
+        )
+        assert benchmark_episode.status == EpisodeStatus.COMPLETED, (
+            f"Benchmark bootstrap failed. Last status: {benchmark_episode.status}"
+        )
+        assert benchmark_episode.metadata_vars is not None
+        assert benchmark_episode.metadata_vars.episode_type == EpisodeType.BENCHMARK
+        assert (
+            benchmark_episode.metadata_vars.detailed_status
+            == EpisodeStatus.COMPLETED.value
+        )
+        assert (
+            benchmark_episode.metadata_vars.terminal_reason == TerminalReason.APPROVED
+        )
+        assert benchmark_episode.metadata_vars.worker_session_id == benchmark_session_id
+        benchmark_review_manifest = ReviewManifest.model_validate_json(
+            await _read_episode_asset_text(
+                client,
+                benchmark_episode_id,
+                ".manifests/benchmark_review_manifest.json",
+            )
+        )
+        assert benchmark_review_manifest.status == "ready_for_review"
+        assert benchmark_review_manifest.reviewer_stage == "benchmark_reviewer"
+        assert benchmark_review_manifest.episode_id == benchmark_episode_id
+        assert benchmark_review_manifest.worker_session_id == benchmark_session_id
+        assert benchmark_review_manifest.benchmark_episode_id == benchmark_episode_id
+        assert (
+            benchmark_review_manifest.benchmark_worker_session_id
+            == benchmark_session_id
+        )
+        assert benchmark_review_manifest.revision == repo_git_revision()
+
+        engineer_session_id = f"INT-033-{uuid.uuid4().hex[:8]}"
+        user_session_id = uuid.uuid4()
+
+        async def _launch_engineer_run(
+            *,
+            task_suffix: str,
+            agent_name: AgentName,
+            start_node: AgentName | None = None,
+        ) -> str:
+            engineer_request = AgentRunRequest(
+                task=(f"INT-033 {task_suffix} for benchmark {benchmark_episode_id}."),
+                session_id=engineer_session_id,
+                user_session_id=user_session_id,
+                agent_name=agent_name,
+                start_node=start_node,
+                metadata_vars={"benchmark_id": benchmark_episode_id},
+            )
+            engineer_resp = await client.post(
+                "/api/agent/run", json=engineer_request.model_dump(mode="json")
+            )
+            assert engineer_resp.status_code == 202, engineer_resp.text
+            return str(AgentRunResponse.model_validate(engineer_resp.json()).episode_id)
+
+        planner_episode_id = await _launch_engineer_run(
+            task_suffix="engineer planner stage",
+            agent_name=AgentName.ENGINEER_PLANNER,
+            start_node=AgentName.ENGINEER_PLANNER,
+        )
+        planner_episode = EpisodeResponse.model_validate(
+            await wait_for_episode_state(
+                client,
+                planner_episode_id,
+                timeout_s=240.0,
+                terminal_statuses={
+                    EpisodeStatus.PLANNED,
+                    EpisodeStatus.FAILED,
+                    EpisodeStatus.CANCELLED,
+                },
+            )
+        )
+        assert planner_episode.status == EpisodeStatus.PLANNED, (
+            f"Planner stage failed. Last status: {planner_episode.status}"
+        )
+        assert planner_episode.user_session_id == user_session_id
+        assert planner_episode.metadata_vars is not None
+        assert planner_episode.metadata_vars.episode_type == EpisodeType.ENGINEER
+        assert planner_episode.metadata_vars.benchmark_id == benchmark_episode_id
+
+        planner_artifact_paths = [
+            asset.s3_path for asset in (planner_episode.assets or [])
+        ]
+        planner_required_artifacts = (
+            "plan.md",
+            "todo.md",
+            "assembly_definition.yaml",
+            "benchmark_definition.yaml",
+            "benchmark_assembly_definition.yaml",
+            "manufacturing_config.yaml",
+            ".manifests/engineering_plan_review_manifest.json",
+            "renders/render_manifest.json",
+        )
+        for required_path in planner_required_artifacts:
+            assert any(
+                path.endswith(required_path) for path in planner_artifact_paths
+            ), (
+                f"{required_path} missing from planner stage artifacts. "
+                f"Artifacts: {planner_artifact_paths}"
+            )
+
+        planner_tool_traces = [
+            trace
+            for trace in planner_episode.traces
+            if trace.trace_type == TraceType.TOOL_START
+        ]
+        planner_tool_trace_names = [
+            trace.name for trace in planner_tool_traces if trace.name
+        ]
+        assert "submit_plan" in planner_tool_trace_names, (
+            f"Expected TOOL_START trace for submit_plan. Observed: {planner_tool_trace_names}"
+        )
+        assert any(
+            trace.name in {"inspect_media", "inspect_media_tool"}
+            for trace in planner_tool_traces
+        ), (
+            f"Expected inspect_media TOOL_START trace. Observed: {planner_tool_trace_names}"
+        )
+        assert any(
+            trace.name == "media_inspection" for trace in planner_episode.traces
+        ), "Expected media_inspection trace from planner stage render review."
+        assert any(
+            trace.name == "llm_media_attached" for trace in planner_episode.traces
+        ), "Expected llm_media_attached trace from planner stage render review."
+
+        plan_manifest_path = next(
+            path
+            for path in planner_artifact_paths
+            if path.endswith("engineering_plan_review_manifest.json")
+        )
+        plan_manifest = PlanReviewManifest.model_validate_json(
+            await _read_episode_asset_text(
+                client,
+                planner_episode_id,
+                plan_manifest_path,
+            )
+        )
+        assert plan_manifest.status == "ready_for_review"
+        assert plan_manifest.reviewer_stage == AgentName.ENGINEER_PLAN_REVIEWER
+        assert plan_manifest.planner_node_type == AgentName.ENGINEER_PLANNER
+        assert plan_manifest.session_id == engineer_session_id
+        assert plan_manifest.episode_id == planner_episode_id
+        assert plan_manifest.worker_session_id == engineer_session_id
+        assert plan_manifest.benchmark_revision == repo_git_revision()
+        expected_plan_hashes = {
+            "plan.md",
+            "todo.md",
+            "benchmark_definition.yaml",
+            "manufacturing_config.yaml",
         }
-        review_content = (
-            "---\n"
-            + yaml.safe_dump(
-                {
-                    "decision": "approved",
-                    "comments": [
-                        "Stable under runtime jitter.",
-                    ],
-                    "evidence": {
-                        "stability_summary": stability_summary,
-                        "stability_summary_source": "validation_results.json",
-                        "review_context": {
-                            "episode_id": str(episode_id),
-                            "worker_session_id": worker_session_id,
-                        },
-                    },
-                },
-                sort_keys=False,
-            ).strip()
-            + "\n---\n"
-            + "\n".join(
-                [
-                    "# Peer Review",
-                    "",
-                    "Stability summary:",
-                    "- Source artifact: validation_results.json",
-                    "- Batch width: 4",
-                    "- Success count: 3 / 4",
-                    "- Success rate: 75.0%",
-                    "- Consistency: inconsistent",
-                    "- Batched execution: yes",
-                ]
+        assert expected_plan_hashes <= set(plan_manifest.artifact_hashes), (
+            plan_manifest.artifact_hashes
+        )
+        for asset_path in expected_plan_hashes:
+            asset_text = await _read_episode_asset_text(
+                client, planner_episode_id, asset_path
             )
-            + "\n"
+            assert (
+                hashlib.sha256(asset_text.encode("utf-8")).hexdigest()
+                == plan_manifest.artifact_hashes[asset_path]
+            ), f"Hash mismatch for {asset_path}"
+
+        assembly_definition_text = await _read_episode_asset_text(
+            client, planner_episode_id, "assembly_definition.yaml"
+        )
+        assembly_definition_model = yaml.safe_load(assembly_definition_text)
+        assert assembly_definition_model is not None
+        assert (
+            assembly_definition_model["constraints"]["planner_target_max_unit_cost_usd"]
+            == 200
+        )
+        assert (
+            assembly_definition_model["constraints"]["planner_target_max_weight_g"]
+            == 600
         )
 
-        async def _write_workspace_file(path: str, content: str) -> None:
-            response = await client.post(
-                "http://127.0.0.1:18001/fs/write",
-                json=WriteFileRequest(
-                    path=path,
-                    content=content,
-                    overwrite=True,
-                    bypass_agent_permissions=True,
-                ).model_dump(),
-                headers={
-                    "X-Session-ID": worker_session_id,
-                    "X-System-FS-Bypass": "1",
+        plan_reviewer_episode_id = await _launch_engineer_run(
+            task_suffix="engineer plan reviewer stage",
+            agent_name=AgentName.ENGINEER_PLAN_REVIEWER,
+            start_node=AgentName.ENGINEER_PLAN_REVIEWER,
+        )
+        plan_reviewer_episode = EpisodeResponse.model_validate(
+            await wait_for_episode_terminal(
+                client,
+                plan_reviewer_episode_id,
+                timeout_s=240.0,
+                terminal_statuses={
+                    EpisodeStatus.COMPLETED,
+                    EpisodeStatus.FAILED,
+                    EpisodeStatus.CANCELLED,
                 },
             )
-            assert response.status_code == 200, response.text
+        )
+        assert plan_reviewer_episode.status == EpisodeStatus.COMPLETED, (
+            f"Plan reviewer stage failed. Last status: {plan_reviewer_episode.status}"
+        )
+        assert plan_reviewer_episode.user_session_id == user_session_id
+        assert plan_reviewer_episode.metadata_vars is not None
+        assert plan_reviewer_episode.metadata_vars.episode_type == EpisodeType.ENGINEER
+        assert plan_reviewer_episode.metadata_vars.benchmark_id == benchmark_episode_id
+        assert (
+            plan_reviewer_episode.metadata_vars.detailed_status
+            == EpisodeStatus.COMPLETED.value
+        )
+        assert plan_reviewer_episode.metadata_vars.terminal_reason == (
+            TerminalReason.APPROVED
+        )
 
-        async def _upload_workspace_file(
-            path: str, content: bytes, content_type: str
-        ) -> None:
-            response = await client.post(
-                "http://127.0.0.1:18001/fs/upload_file",
-                data={
-                    "path": path,
-                    "bypass_agent_permissions": "true",
-                },
-                files={
-                    "file": (
-                        Path(path).name,
-                        content,
-                        content_type,
-                    )
-                },
-                headers={
-                    "X-Session-ID": worker_session_id,
-                    "X-System-FS-Bypass": "1",
+        plan_reviewer_traces = [
+            trace
+            for trace in plan_reviewer_episode.traces
+            if trace.trace_type == TraceType.TOOL_START
+        ]
+        plan_reviewer_trace_names = [
+            trace.name for trace in plan_reviewer_traces if trace.name
+        ]
+        assert any(
+            trace.name in {"inspect_media", "inspect_media_tool"}
+            for trace in plan_reviewer_traces
+        ), (
+            f"Expected inspect_media TOOL_START trace during plan review. "
+            f"Observed: {plan_reviewer_trace_names}"
+        )
+        plan_review_traces = [
+            trace
+            for trace in plan_reviewer_episode.traces
+            if trace.name == "review_decision" and trace.metadata_vars is not None
+        ]
+        assert plan_review_traces, "Expected plan review_decision trace trail."
+        latest_plan_review_trace = max(plan_review_traces, key=lambda trace: trace.id)
+        assert (
+            latest_plan_review_trace.metadata_vars.decision == ReviewDecision.APPROVED
+        )
+        assert latest_plan_review_trace.metadata_vars.review_id is not None
+
+        plan_comments = yaml.safe_load(
+            await _read_episode_asset_text(
+                client,
+                plan_reviewer_episode_id,
+                "reviews/engineering-plan-review-comments-round-1.yaml",
+            )
+        )
+        assert plan_comments["summary"].startswith("APPROVED:"), plan_comments
+        assert isinstance(plan_comments.get("checklist"), dict), plan_comments
+
+        plan_decision = yaml.safe_load(
+            await _read_episode_asset_text(
+                client,
+                plan_reviewer_episode_id,
+                "reviews/engineering-plan-review-decision-round-1.yaml",
+            )
+        )
+        assert plan_decision["decision"] == ReviewDecision.APPROVED.value
+
+        engineer_episode_id = await _launch_engineer_run(
+            task_suffix="engineer coder stage",
+            agent_name=AgentName.ENGINEER_CODER,
+        )
+        engineer_episode = EpisodeResponse.model_validate(
+            await wait_for_episode_terminal(
+                client,
+                engineer_episode_id,
+                timeout_s=240.0,
+                terminal_statuses={
+                    EpisodeStatus.COMPLETED,
+                    EpisodeStatus.FAILED,
+                    EpisodeStatus.CANCELLED,
                 },
             )
-            assert response.status_code == 200, response.text
+        )
+        assert engineer_episode.status == EpisodeStatus.COMPLETED, (
+            f"Engineer loop failed. Last status: {engineer_episode.status}"
+        )
+        assert engineer_episode.user_session_id == user_session_id
+        assert engineer_episode.metadata_vars is not None
+        assert engineer_episode.metadata_vars.episode_type == EpisodeType.ENGINEER
+        assert engineer_episode.metadata_vars.benchmark_id == benchmark_episode_id
+        assert (
+            engineer_episode.metadata_vars.detailed_status
+            == EpisodeStatus.COMPLETED.value
+        )
+        assert engineer_episode.metadata_vars.terminal_reason == TerminalReason.APPROVED
 
-        await _write_workspace_file(
+        episode_resp = await client.get(f"/episodes/{engineer_episode_id}")
+        assert episode_resp.status_code == 200, episode_resp.text
+        episode_data = EpisodeResponse.model_validate(episode_resp.json())
+        artifact_paths = [asset.s3_path for asset in (episode_data.assets or [])]
+        traces = episode_data.traces or []
+
+        required_artifacts = (
+            "plan.md",
+            "todo.md",
+            "assembly_definition.yaml",
+            "benchmark_definition.yaml",
+            "benchmark_assembly_definition.yaml",
+            "manufacturing_config.yaml",
             "script.py",
-            "print('peer review stable')\n",
-        )
-        await _write_workspace_file(
             "validation_results.json",
-            ValidationResultRecord(
-                success=True,
-                message="Validation completed with batched jitter verification.",
-                timestamp=review_timestamp,
-                script_path="script.py",
-                script_sha256=hashlib.sha256(
-                    b"print('peer review stable')\n"
-                ).hexdigest(),
-                verification_result=verification_result,
-            ).model_dump_json(indent=2),
-        )
-        await _write_workspace_file(
             "simulation_result.json",
-            SimulationResult(
-                success=True,
-                summary="Goal achieved in green zone.",
-                render_paths=[
-                    "renders/render_e45_a45.png",
-                    "renders/cad_preview.png",
-                    "renders/simulation_preview.png",
-                ],
-                confidence="high",
-            ).model_dump_json(indent=2),
+            ".manifests/benchmark_plan_review_manifest.json",
+            ".manifests/benchmark_review_manifest.json",
+            ".manifests/engineering_plan_review_manifest.json",
+            ".manifests/engineering_execution_review_manifest.json",
+            "renders/render_manifest.json",
+            "reviews/engineering-plan-review-decision-round-1.yaml",
+            "reviews/engineering-plan-review-comments-round-1.yaml",
+            "reviews/engineering-execution-review-decision-round-1.yaml",
+            "reviews/engineering-execution-review-comments-round-1.yaml",
         )
-        await _upload_workspace_file(
-            "renders/render_e45_a45.png", render_probe_bytes, "image/png"
-        )
-        await _upload_workspace_file(
-            "renders/cad_preview.png", cad_preview_bytes, "image/png"
-        )
-        await _upload_workspace_file(
-            "renders/simulation_preview.png", simulation_preview_bytes, "image/png"
-        )
-
-        session_factory = get_sessionmaker()
-        async with session_factory() as db:
-            db.add(
-                Episode(
-                    id=episode_id,
-                    task=task,
-                    status=EpisodeStatus.RUNNING,
-                    metadata_vars={
-                        "worker_session_id": worker_session_id,
-                        "episode_type": "engineer",
-                    },
-                )
+        for required_path in required_artifacts:
+            assert any(path.endswith(required_path) for path in artifact_paths), (
+                f"{required_path} missing from engineer episode artifacts. "
+                f"Artifacts: {artifact_paths}"
             )
-            await db.commit()
+        assert any(
+            path.lstrip("/").startswith("renders/")
+            and Path(path).suffix in {".png", ".jpg", ".jpeg"}
+            for path in artifact_paths
+        ), f"Expected render images in engineer artifacts. Artifacts: {artifact_paths}"
 
-        review_resp = await client.post(
-            f"/episodes/{episode_id}/review",
-            json={"review_content": review_content},
+        tool_traces = [
+            trace for trace in traces if trace.trace_type == TraceType.TOOL_START
+        ]
+        tool_trace_names = [trace.name for trace in tool_traces if trace.name]
+        assert any(
+            trace.name in {"inspect_media", "inspect_media_tool"}
+            for trace in tool_traces
+        ), f"Expected inspect_media TOOL_START trace. Observed: {tool_trace_names}"
+        assert any(trace.name == "media_inspection" for trace in traces), (
+            "Expected media_inspection trace from latest-revision render review."
         )
-        assert review_resp.status_code == 200, review_resp.text
-
-        episode_assets_resp = await client.get(f"/episodes/{episode_id}")
-        assert episode_assets_resp.status_code == 200, (
-            f"Failed to fetch episode assets for {episode_id}: {episode_assets_resp.text}"
+        assert any(trace.name == "llm_media_attached" for trace in traces), (
+            "Expected llm_media_attached trace from latest-revision render review."
         )
-        episode_data = EpisodeResponse.model_validate(episode_assets_resp.json())
-        assert episode_data.status == EpisodeStatus.COMPLETED
-        assert episode_data.metadata_vars is not None
-        assert episode_data.metadata_vars.worker_session_id == worker_session_id
-        assert episode_data.metadata_vars.episode_type == "engineer"
-
-        async def _read_episode_asset_text(episode_ref: str, asset_path: str) -> str:
-            resp = await client.get(f"/episodes/{episode_ref}/assets/{asset_path}")
-            assert resp.status_code == 200, resp.text
-            return resp.text
-
-        validation_results_text = await _read_episode_asset_text(
-            str(episode_id), "validation_results.json"
-        )
-        validation_results = ValidationResultRecord.model_validate_json(
-            validation_results_text
-        )
-        assert validation_results.verification_result is not None
-        assert validation_results.verification_result.num_scenes == 4
-        assert validation_results.verification_result.success_count == 3
-        assert validation_results.verification_result.scene_build_count == 1
-        assert validation_results.verification_result.backend_run_count == 1
-        assert validation_results.verification_result.success_rate == 0.75
-        assert validation_results.verification_result.is_consistent is False
-
-        simulation_result_text = await _read_episode_asset_text(
-            str(episode_id), "simulation_result.json"
-        )
-        simulation_result = SimulationResult.model_validate_json(simulation_result_text)
-        assert "renders/render_e45_a45.png" in simulation_result.render_paths
-        assert "renders/cad_preview.png" in simulation_result.render_paths
-        assert "renders/simulation_preview.png" in simulation_result.render_paths
 
         review_traces = [
             trace
-            for trace in (episode_data.traces or [])
-            if trace.name == "review_decision"
+            for trace in traces
+            if trace.name == "review_decision" and trace.metadata_vars is not None
         ]
         assert review_traces, "Expected review_decision trace trail from live review."
         latest_review_trace = max(review_traces, key=lambda trace: trace.id)
-        assert latest_review_trace.metadata_vars is not None
         assert latest_review_trace.metadata_vars.decision == ReviewDecision.APPROVED
         assert latest_review_trace.metadata_vars.review_id is not None
+
+        validation_result_text = await _read_episode_asset_text(
+            client, engineer_episode_id, "validation_results.json"
+        )
+        validation_result = ValidationResultRecord.model_validate_json(
+            validation_result_text
+        )
+        assert validation_result.success is True
+        assert validation_result.script_path == "script.py"
+        assert validation_result.script_sha256 is not None
+        script_text = await _read_episode_asset_text(
+            client, engineer_episode_id, validation_result.script_path
+        )
+        assert hashlib.sha256(script_text.encode("utf-8")).hexdigest() == (
+            validation_result.script_sha256
+        )
+        assert validation_result.verification_result is not None
+        assert validation_result.verification_result.scene_build_count == 1
+        assert validation_result.verification_result.backend_run_count == 1
+        assert validation_result.verification_result.batched_execution is True
+        assert validation_result.verification_result.success_count == (
+            validation_result.verification_result.num_scenes
+        )
+        assert validation_result.verification_result.fail_reasons == []
+        assert validation_result.verification_result.is_consistent is True
+
+        simulation_result_text = await _read_episode_asset_text(
+            client, engineer_episode_id, "simulation_result.json"
+        )
+        simulation_result = SimulationResult.model_validate_json(simulation_result_text)
+        assert simulation_result.success is True
+        assert simulation_result.render_paths
+
+        render_manifest_path = next(
+            path
+            for path in artifact_paths
+            if path.endswith("renders/render_manifest.json")
+        )
+        render_manifest = RenderManifest.model_validate_json(
+            await _read_episode_asset_text(
+                client, engineer_episode_id, render_manifest_path
+            )
+        )
+        assert render_manifest.revision == repo_git_revision()
+        assert render_manifest.episode_id == engineer_episode_id
+        assert render_manifest.worker_session_id == engineer_session_id
+        assert render_manifest.preview_evidence_paths
+        assert set(render_manifest.preview_evidence_paths) == set(
+            simulation_result.render_paths
+        )
+
+        execution_manifest_path = next(
+            path
+            for path in artifact_paths
+            if path.endswith("engineering_execution_review_manifest.json")
+        )
+        execution_manifest = ReviewManifest.model_validate_json(
+            await _read_episode_asset_text(
+                client, engineer_episode_id, execution_manifest_path
+            )
+        )
+        assert execution_manifest.status == "ready_for_review"
+        assert execution_manifest.reviewer_stage == "engineering_execution_reviewer"
+        assert execution_manifest.session_id == engineer_session_id
+        assert execution_manifest.episode_id == engineer_episode_id
+        assert execution_manifest.worker_session_id == engineer_session_id
+        assert execution_manifest.benchmark_episode_id == benchmark_episode_id
+        assert execution_manifest.benchmark_worker_session_id == benchmark_session_id
+        assert execution_manifest.revision == repo_git_revision()
+        assert execution_manifest.benchmark_revision == repo_git_revision()
+        assert execution_manifest.solution_revision == repo_git_revision()
+        assert execution_manifest.script_path == "script.py"
+        assert execution_manifest.validation_success is True
+        assert execution_manifest.simulation_success is True
+        assert execution_manifest.goal_reached is True
+        assert execution_manifest.script_sha256 == validation_result.script_sha256
+        assert set(execution_manifest.preview_evidence_paths) == set(
+            execution_manifest.renders
+        )
+        assert set(execution_manifest.renders) == set(
+            render_manifest.preview_evidence_paths
+        )
+        assert execution_manifest.preview_evidence_paths == (
+            render_manifest.preview_evidence_paths
+        )
+
+        execution_comments = yaml.safe_load(
+            await _read_episode_asset_text(
+                client,
+                engineer_episode_id,
+                "reviews/engineering-execution-review-comments-round-1.yaml",
+            )
+        )
+        assert execution_comments["summary"].startswith("APPROVED:"), execution_comments
+        assert isinstance(execution_comments.get("checklist"), dict), execution_comments
+
+        execution_decision = yaml.safe_load(
+            await _read_episode_asset_text(
+                client,
+                engineer_episode_id,
+                "reviews/engineering-execution-review-decision-round-1.yaml",
+            )
+        )
+        assert execution_decision["decision"] == ReviewDecision.APPROVED.value
 
 
 async def _wait_for_episode_terminal(
@@ -311,14 +549,55 @@ async def _wait_for_episode_terminal(
 
 
 async def _reject_episode(client: AsyncClient, episode_id: str) -> EpisodeResponse:
-    review_content = """---
-decision: rejected
-comments: ["Retry lineage test rejection"]
-evidence:
-  files_checked: ["plan.md"]
----
-Rejecting the episode for deterministic retry coverage.
-"""
+    validation_results_text = await _read_episode_asset_text(
+        client, episode_id, "validation_results.json"
+    )
+    validation_results = ValidationResultRecord.model_validate_json(
+        validation_results_text
+    )
+    verification_result = validation_results.verification_result
+    assert verification_result is not None, "validation_results.json is missing"
+
+    review_content = "---\n"
+    review_content += yaml.safe_dump(
+        {
+            "decision": "rejected",
+            "comments": ["Retry lineage test rejection"],
+            "evidence": {
+                "files_checked": ["plan.md"],
+                "stability_summary": {
+                    "batchWidth": verification_result.num_scenes,
+                    "successCount": verification_result.success_count,
+                    "successRate": verification_result.success_rate,
+                    "isConsistent": verification_result.is_consistent,
+                    "sceneBuildCount": verification_result.scene_build_count,
+                    "backendRunCount": verification_result.backend_run_count,
+                    "batchedExecution": verification_result.batched_execution,
+                    "sceneSummaries": [
+                        {
+                            "sceneIndex": idx + 1,
+                            "success": scene.success,
+                            "summary": (
+                                f"Scene {idx + 1}: pass"
+                                if scene.success
+                                else f"Scene {idx + 1}: {scene.fail_reason}"
+                            ),
+                            "failReason": scene.fail_reason,
+                            "failureMode": (
+                                scene.fail_mode.value if scene.fail_mode else None
+                            ),
+                        }
+                        for idx, scene in enumerate(
+                            verification_result.individual_results
+                        )
+                    ],
+                },
+                "stability_summary_source": "validation_results.json",
+            },
+        },
+        sort_keys=False,
+    ).strip()
+    review_content += "\n---\nRejecting the episode for deterministic retry coverage.\n"
     response = await client.post(
         f"/episodes/{episode_id}/review",
         json={"review_content": review_content},
@@ -348,89 +627,79 @@ async def test_engineering_retry_reuses_same_benchmark_linkage():
     """
 
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
-        benchmark_request = BenchmarkGenerateRequest(
-            prompt="Create a simple benchmark setup for retry lineage testing.",
-            backend=SimulatorBackendType.GENESIS,
+        benchmark_session_id = f"INT-205-benchmark-{uuid.uuid4().hex[:8]}"
+        benchmark_request = AgentRunRequest(
+            task="INT-205 approved benchmark fixture for retry lineage testing.",
+            session_id=benchmark_session_id,
         )
         benchmark_resp = await client.post(
-            "/benchmark/generate", json=benchmark_request.model_dump()
+            "/api/test/episodes", json=benchmark_request.model_dump(mode="json")
         )
-        assert benchmark_resp.status_code in (200, 202), benchmark_resp.text
-        benchmark_session_id = BenchmarkGenerateResponse.model_validate(
-            benchmark_resp.json()
-        ).session_id
+        assert benchmark_resp.status_code == 201, benchmark_resp.text
+        benchmark_episode_id = str(
+            EpisodeCreateResponse.model_validate(benchmark_resp.json()).episode_id
+        )
+        await seed_approved_benchmark_bundle(
+            client,
+            benchmark_session_id=benchmark_session_id,
+            benchmark_episode_id=benchmark_episode_id,
+        )
+        benchmark_episode_resp = await client.get(f"/episodes/{benchmark_episode_id}")
+        assert benchmark_episode_resp.status_code == 200, benchmark_episode_resp.text
+        benchmark_episode = EpisodeResponse.model_validate(
+            benchmark_episode_resp.json()
+        )
+        assert benchmark_episode.status == EpisodeStatus.COMPLETED, (
+            f"Benchmark bootstrap failed. Last status: {benchmark_episode.status}"
+        )
+        assert benchmark_episode.metadata_vars is not None
+        assert benchmark_episode.metadata_vars.episode_type == EpisodeType.BENCHMARK
+        assert (
+            benchmark_episode.metadata_vars.terminal_reason == TerminalReason.APPROVED
+        )
+        assert benchmark_episode.metadata_vars.worker_session_id == benchmark_session_id
 
-        benchmark_confirmed = False
-        benchmark_episode = None
-        for _ in range(150):
-            status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
-            if status_resp.status_code == 404:
-                await asyncio.sleep(1.0)
-                continue
-            assert status_resp.status_code == 200, status_resp.text
-            benchmark_episode = EpisodeResponse.model_validate(status_resp.json())
-            if (
-                benchmark_episode.status == EpisodeStatus.PLANNED
-                and not benchmark_confirmed
-            ):
-                await client.post(
-                    f"/benchmark/{benchmark_session_id}/confirm",
-                    json=ConfirmRequest(comment="Proceed").model_dump(),
-                )
-                benchmark_confirmed = True
-            elif benchmark_episode.status == EpisodeStatus.COMPLETED:
-                break
-            elif benchmark_episode.status == EpisodeStatus.FAILED:
-                pytest.fail(
-                    "Benchmark generation failed during retry setup "
-                    f"(session_id={benchmark_session_id})."
-                )
-            await asyncio.sleep(2)
-        else:
-            pytest.fail("Benchmark generation failed or timed out during retry setup.")
+        async def _launch_engineer_run(
+            *, task: str, metadata_vars: dict[str, object]
+        ) -> str:
+            session_id = f"INT-205-{uuid.uuid4().hex[:8]}"
+            run = AgentRunRequest(
+                task=task,
+                session_id=session_id,
+                metadata_vars=metadata_vars,
+            )
+            resp = await client.post("/agent/run", json=run.model_dump())
+            assert resp.status_code in (200, 202), resp.text
+            return str(AgentRunResponse.model_validate(resp.json()).episode_id)
 
         original_task = "Create an engineer handoff for retry lineage testing."
-        first_session_id = f"INT-205-{uuid.uuid4().hex[:8]}"
-        first_run = AgentRunRequest(
+        first_episode_id = await _launch_engineer_run(
             task=original_task,
-            session_id=first_session_id,
-            metadata_vars={"benchmark_id": str(benchmark_session_id)},
-        )
-        first_resp = await client.post("/agent/run", json=first_run.model_dump())
-        assert first_resp.status_code in (200, 202), first_resp.text
-        first_episode_id = str(
-            AgentRunResponse.model_validate(first_resp.json()).episode_id
+            metadata_vars={"benchmark_id": benchmark_episode_id},
         )
 
         first_episode = await _wait_for_episode_terminal(client, first_episode_id)
         assert first_episode.metadata_vars is not None
-        assert first_episode.metadata_vars.benchmark_id == str(benchmark_session_id)
-        assert first_episode.metadata_vars.episode_type == "engineer"
+        assert first_episode.metadata_vars.benchmark_id == benchmark_episode_id
+        assert first_episode.metadata_vars.episode_type == EpisodeType.ENGINEER
         first_episode = await _reject_episode(client, first_episode_id)
 
         retry_metadata = {
-            "benchmark_id": str(benchmark_session_id),
+            "benchmark_id": benchmark_episode_id,
             "prior_episode_id": first_episode_id,
             "is_reused": True,
         }
-        second_session_id = f"INT-205-{uuid.uuid4().hex[:8]}"
-        second_run = AgentRunRequest(
+        second_episode_id = await _launch_engineer_run(
             task=original_task,
-            session_id=second_session_id,
             metadata_vars=retry_metadata,
-        )
-        second_resp = await client.post("/agent/run", json=second_run.model_dump())
-        assert second_resp.status_code in (200, 202), second_resp.text
-        second_episode_id = str(
-            AgentRunResponse.model_validate(second_resp.json()).episode_id
         )
 
         second_episode = await _wait_for_episode_terminal(client, second_episode_id)
         assert second_episode.metadata_vars is not None
-        assert second_episode.metadata_vars.benchmark_id == str(benchmark_session_id)
+        assert second_episode.metadata_vars.benchmark_id == benchmark_episode_id
         assert second_episode.metadata_vars.prior_episode_id == first_episode_id
         assert second_episode.metadata_vars.is_reused is True
-        assert second_episode.metadata_vars.episode_type == "engineer"
+        assert second_episode.metadata_vars.episode_type == EpisodeType.ENGINEER
         second_episode = await _reject_episode(client, second_episode_id)
 
         assert second_episode.id != first_episode.id
@@ -460,7 +729,6 @@ async def test_engineering_retry_reuses_same_benchmark_linkage():
         )
         assert second_benchmark_assembly == first_benchmark_assembly
 
-        assert benchmark_episode is not None
         assert benchmark_episode.metadata_vars is not None
-        assert benchmark_episode.metadata_vars.episode_type == "benchmark"
+        assert benchmark_episode.metadata_vars.episode_type == EpisodeType.BENCHMARK
         assert benchmark_episode.status == EpisodeStatus.COMPLETED

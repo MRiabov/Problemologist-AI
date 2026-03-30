@@ -87,8 +87,10 @@ def build_render_manifest(
     resolved_revision = revision
     if not resolved_revision and workspace_root is not None:
         resolved_revision = repo_revision(workspace_root)
-        if resolved_revision is None:
-            resolved_revision = repo_revision(Path(__file__).resolve().parents[2])
+    if not resolved_revision:
+        # Synthetic manifests can be built outside a checked-out workspace, so
+        # fall back to the repository that owns the runtime code.
+        resolved_revision = repo_revision(Path(__file__).resolve().parents[2])
 
     if environment_version is None:
         environment_version = _workspace_environment_version(workspace_root)

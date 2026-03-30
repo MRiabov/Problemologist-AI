@@ -15,11 +15,19 @@ from websockets.asyncio.client import connect as websocket_connect
 
 from controller.agent.mock_scenarios import load_integration_mock_scenarios
 from controller.api.schemas import EpisodeResponse
-from shared.enums import AgentName, EpisodeStatus
+from controller.persistence.db import get_sessionmaker
+from controller.persistence.models import Episode
+from shared.enums import AgentName, EpisodeStatus, EpisodeType, TerminalReason
 from shared.git_utils import repo_revision
-from shared.models.schemas import AssemblyConstraints, AssemblyDefinition, CostTotals
+from shared.models.schemas import (
+    AssemblyConstraints,
+    AssemblyDefinition,
+    CostTotals,
+    EpisodeMetadata,
+)
 from shared.models.simulation import MultiRunResult, SimulationMetrics, SimulationResult
 from shared.workers.schema import (
+    PlanReviewManifest,
     RenderArtifactMetadata,
     RenderManifest,
     RenderSiblingPaths,
@@ -377,6 +385,221 @@ async def seed_execution_reviewer_handover(
             session_id=session_id,
             render_path=render_path,
         )
+
+
+async def seed_approved_benchmark_bundle(
+    client: httpx.AsyncClient,
+    *,
+    benchmark_session_id: str,
+    benchmark_episode_id: str,
+    render_path: str = "renders/render_e45_a45.png",
+) -> None:
+    """Seed a benchmark workspace that already satisfies the approval gate."""
+
+    script_content = _fixture_script_content("INT-033")
+    benchmark_definition_content = Path(
+        "tests/integration/mock_responses/INT-033/engineer_planner/entry_01/04__benchmark_definition.yaml"
+    ).read_text(encoding="utf-8")
+    benchmark_assembly_definition_content = Path(
+        "tests/integration/mock_responses/INT-033/engineer_planner/entry_01/03__assembly_definition.yaml"
+    ).read_text(encoding="utf-8")
+    script_sha256 = hashlib.sha256(script_content.encode("utf-8")).hexdigest()
+    benchmark_definition_sha256 = hashlib.sha256(
+        benchmark_definition_content.encode("utf-8")
+    ).hexdigest()
+    benchmark_assembly_definition_sha256 = hashlib.sha256(
+        benchmark_assembly_definition_content.encode("utf-8")
+    ).hexdigest()
+    seed_ts = time.time()
+    revision = repo_git_revision()
+    render_base = Path(render_path).with_suffix("")
+    render_rgb_path = render_path
+    render_depth_path = f"{render_base}_depth.png"
+    render_segmentation_path = f"{render_base}_segmentation.png"
+
+    validation_record = ValidationResultRecord(
+        success=True,
+        message="Validation completed",
+        timestamp=seed_ts,
+        script_path="script.py",
+        script_sha256=script_sha256,
+        verification_result=MultiRunResult(
+            num_scenes=1,
+            success_count=1,
+            success_rate=1.0,
+            is_consistent=True,
+            individual_results=[SimulationMetrics(success=True)],
+            fail_reasons=[],
+            scene_build_count=1,
+            backend_run_count=1,
+            batched_execution=True,
+        ),
+    )
+    simulation_result = SimulationResult(
+        success=True,
+        summary="Goal achieved in green zone.",
+        render_paths=[render_rgb_path, render_depth_path, render_segmentation_path],
+        confidence="high",
+    )
+    benchmark_plan_review_manifest = PlanReviewManifest(
+        status="ready_for_review",
+        reviewer_stage=AgentName.BENCHMARK_PLAN_REVIEWER,
+        session_id=benchmark_session_id,
+        planner_node_type=AgentName.BENCHMARK_PLANNER,
+        episode_id=benchmark_episode_id,
+        worker_session_id=benchmark_session_id,
+        benchmark_revision=revision,
+        environment_version="integration-test",
+        artifact_hashes={
+            "benchmark_definition.yaml": benchmark_definition_sha256,
+            "benchmark_assembly_definition.yaml": benchmark_assembly_definition_sha256,
+        },
+    )
+    benchmark_review_manifest = ReviewManifest(
+        status="ready_for_review",
+        reviewer_stage="benchmark_reviewer",
+        session_id=benchmark_session_id,
+        revision=revision,
+        episode_id=benchmark_episode_id,
+        worker_session_id=benchmark_session_id,
+        benchmark_episode_id=benchmark_episode_id,
+        benchmark_worker_session_id=benchmark_session_id,
+        benchmark_revision=revision,
+        solution_revision=revision,
+        environment_version="integration-test",
+        preview_evidence_paths=[
+            render_rgb_path,
+            render_depth_path,
+            render_segmentation_path,
+        ],
+        script_path="script.py",
+        script_sha256=script_sha256,
+        validation_success=True,
+        validation_timestamp=seed_ts,
+        simulation_success=True,
+        simulation_summary="Goal achieved in green zone.",
+        simulation_timestamp=seed_ts,
+        goal_reached=True,
+        renders=[
+            render_rgb_path,
+            render_depth_path,
+            render_segmentation_path,
+        ],
+        mjcf_path="renders/scene.xml",
+        cad_path="renders/model.step",
+        objectives_path="renders/benchmark_definition.yaml",
+        assembly_definition_path="renders/assembly_definition.yaml",
+    )
+
+    await _seed_workspace_file(
+        client,
+        session_id=benchmark_session_id,
+        path="script.py",
+        content=script_content,
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=benchmark_session_id,
+        path="benchmark_definition.yaml",
+        content=benchmark_definition_content,
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=benchmark_session_id,
+        path="benchmark_assembly_definition.yaml",
+        content=benchmark_assembly_definition_content,
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=benchmark_session_id,
+        path="manufacturing_config.yaml",
+        content=REPO_MANUFACTURING_CONFIG,
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=benchmark_session_id,
+        path="validation_results.json",
+        content=validation_record.model_dump_json(indent=2),
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=benchmark_session_id,
+        path="simulation_result.json",
+        content=simulation_result.model_dump_json(indent=2),
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=benchmark_session_id,
+        path="renders/scene.xml",
+        content="<mujoco><worldbody /></mujoco>\n",
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=benchmark_session_id,
+        path="renders/model.step",
+        content="ISO-10303-21;\nEND-ISO-10303-21;\n",
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=benchmark_session_id,
+        path="renders/benchmark_definition.yaml",
+        content=benchmark_definition_content,
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=benchmark_session_id,
+        path="renders/assembly_definition.yaml",
+        content=benchmark_assembly_definition_content,
+        bypass_agent_permissions=True,
+    )
+
+    await seed_current_revision_render_preview(
+        client,
+        session_id=benchmark_session_id,
+        render_path=render_path,
+    )
+
+    await _seed_workspace_file(
+        client,
+        session_id=benchmark_session_id,
+        path=".manifests/benchmark_plan_review_manifest.json",
+        content=benchmark_plan_review_manifest.model_dump_json(indent=2),
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=benchmark_session_id,
+        path=".manifests/benchmark_review_manifest.json",
+        content=benchmark_review_manifest.model_dump_json(indent=2),
+        bypass_agent_permissions=True,
+    )
+
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        episode = await db.get(Episode, uuid.UUID(benchmark_episode_id))
+        assert episode is not None, (
+            f"Benchmark episode {benchmark_episode_id} was not created."
+        )
+        metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
+        metadata.worker_session_id = benchmark_session_id
+        metadata.episode_type = EpisodeType.BENCHMARK
+        metadata.detailed_status = EpisodeStatus.COMPLETED.value
+        metadata.terminal_reason = TerminalReason.APPROVED
+        metadata.validation_logs = [
+            "Seeded approved benchmark bundle for INT-033 engineer coverage."
+        ]
+        episode.status = EpisodeStatus.COMPLETED
+        episode.metadata_vars = metadata.model_dump(mode="json")
+        await db.commit()
 
 
 async def seed_current_revision_render_preview(
