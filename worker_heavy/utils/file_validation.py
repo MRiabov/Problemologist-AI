@@ -781,6 +781,15 @@ def validate_benchmark_assembly_motion_contract(
                     "motion",
                 )
             )
+        elif static_variation_id == "blocked_path_wall_v1":
+            errors.append(
+                _benchmark_refusal_error(
+                    BenchmarkRefusalReason.UNSOLVABLE_SCENARIO,
+                    "benchmark_definition.yaml randomization.static_variation_id="
+                    "'blocked_path_wall_v1' describes a fixed wall that blocks "
+                    "the only route to the goal",
+                )
+            )
 
     return errors
 

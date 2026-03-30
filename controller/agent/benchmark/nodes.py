@@ -48,6 +48,7 @@ from shared.workers.schema import SimulationArtifacts, ValidationResultRecord
 
 from ..benchmark_handover_validation import (
     BenchmarkPlanReviewerEvidence,
+    validate_benchmark_planner_handoff_payload,
 )
 from ..nodes.cots_search import COTSSearchNode
 from ..review_handover import (
@@ -1253,6 +1254,16 @@ class BenchmarkPlanReviewerNode(BaseNode):
                 or benchmark_assembly_definition_yaml
             )
 
+        local_handoff_errors = validate_benchmark_planner_handoff_payload(
+            artifacts={
+                "plan.md": plan_md,
+                "todo.md": todo_md,
+                "benchmark_definition.yaml": benchmark_definition_yaml,
+                "benchmark_assembly_definition.yaml": benchmark_assembly_definition_yaml,
+            },
+            session_id=str(state.episode_id),
+        )
+
         evidence, evidence_error = await collect_plan_reviewer_handover_evidence(
             self.ctx.worker_client,
             manifest_path=".manifests/benchmark_plan_review_manifest.json",
@@ -1370,6 +1381,35 @@ class BenchmarkPlanReviewerNode(BaseNode):
 
         try:
             review = ReviewResult.model_validate(prediction.review)
+            forced_reason = None
+            if solvability_evidence.refusal_reason is not None:
+                forced_reason = (
+                    f"{solvability_evidence.refusal_reason.value}: "
+                    f"{solvability_evidence.solvability_summary}"
+                )
+            elif solvability_evidence.deterministic_errors:
+                forced_reason = (
+                    "UNSOLVABLE_SCENARIO: deterministic benchmark validation "
+                    "rejected the handoff: "
+                    + "; ".join(solvability_evidence.deterministic_errors)
+                )
+            elif local_handoff_errors:
+                forced_reason = (
+                    "UNSOLVABLE_SCENARIO: deterministic benchmark validation "
+                    "rejected the handoff: " + "; ".join(local_handoff_errors)
+                )
+            if forced_reason:
+                review_updates: dict[str, Any] = {
+                    "reason": forced_reason,
+                    "required_fixes": review.required_fixes
+                    or [
+                        "Redesign the benchmark so the goal is reachable from "
+                        "the spawn side."
+                    ],
+                }
+                if review.decision != ReviewDecision.REJECT_PLAN:
+                    review_updates["decision"] = ReviewDecision.REJECT_PLAN
+                review = review.model_copy(update=review_updates)
             normalized_inspected_media_paths = {
                 self._normalize_inspected_media_path(path)
                 for path in self._inspected_media_paths
