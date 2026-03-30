@@ -15,8 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     dnsutils \
     xvfb \
-    xauth \
-    libngspice0 \
     libvulkan1 \
     vulkan-tools \
     libxcursor1 \
@@ -29,7 +27,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 ENV UV_COMPILE_BYTECODE=1
-ENV UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
 ENV UV_LINK_MODE=copy
 
 RUN useradd -m agent
@@ -40,7 +37,7 @@ USER agent
 RUN --mount=type=cache,target=/home/agent/.cache/uv,uid=1000 \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-install-project --no-dev
+    uv sync --frozen --no-install-project --no-dev --group rendering
 
 COPY --chown=agent:agent worker_renderer ./worker_renderer
 COPY --chown=agent:agent worker_heavy ./worker_heavy
@@ -49,9 +46,9 @@ COPY --chown=agent:agent config ./config
 COPY --chown=agent:agent pyproject.toml uv.lock ./
 
 RUN --mount=type=cache,target=/home/agent/.cache/uv,uid=1000 \
-    uv sync --frozen --no-dev
+    uv sync --frozen --no-dev --group rendering
 
 ENV PYTHONPATH=/app
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["xvfb-run", "-a", "uvicorn", "worker_renderer.app:app", "--host", "0.0.0.0", "--port", "8003"]
+CMD ["/bin/sh", "-lc", "Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp -ac >/tmp/xvfb.log 2>&1 & export DISPLAY=:99; exec /app/.venv/bin/uvicorn worker_renderer.app:app --host 0.0.0.0 --port 8003"]

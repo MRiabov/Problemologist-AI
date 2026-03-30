@@ -166,6 +166,9 @@ services:
       - S3_ENDPOINT=http://minio:9000
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_ACCESS_KEY=minioadmin
+      - EXTRA_DEBUG_LOG=/app/logs/worker_renderer_debug.log
+      - EXTRA_ERROR_LOG=/app/logs/worker_renderer_errors.log
+      - EXTRA_ERROR_JSON_LOG=/app/logs/json/worker_renderer_errors.json
       - MUJOCO_GL=osmesa
       - PYOPENGL_PLATFORM=osmesa
       - PYVISTA_OFF_SCREEN=true
@@ -212,24 +215,9 @@ services:
       - S3_ENDPOINT=http://minio:9000
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_ACCESS_KEY=minioadmin
-      - MUJOCO_GL=osmesa
-      - PYOPENGL_PLATFORM=osmesa
-      - PYVISTA_OFF_SCREEN=true
-      - VTK_DEFAULT_OPENGL_RENDERER=OSMesa
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     networks:
       - default
-    command:
-      [
-        "xvfb-run",
-        "-a",
-        "uvicorn",
-        "worker_renderer.app:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8003",
-      ]
     env_file:
       - .env
     depends_on:
@@ -240,6 +228,7 @@ services:
       - ./worker_heavy:/app/worker_heavy
       - ./shared:/app/shared
       - ./config:/app/config
+      - ${WORKER_RENDERER_LOG_DIR:-./logs}:/app/logs
 
   worker-heavy-temporal:
     image: problemologist-ai-worker-heavy:latest

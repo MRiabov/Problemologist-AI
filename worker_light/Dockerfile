@@ -13,9 +13,6 @@ WORKDIR /app
 # Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
 
-# Use CPU-only torch to save space (if needed, but light might not even need torch)
-ENV UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
-
 # Copy from the cache instead of linking since it's a separate volume
 ENV UV_LINK_MODE=copy
 
@@ -30,7 +27,7 @@ USER agent
 RUN --mount=type=cache,target=/home/agent/.cache/uv,uid=1000 \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-install-project --no-dev
+    uv sync --frozen --no-install-project --no-dev --group filesystem
 
 # Copy source code
 COPY --chown=agent:agent worker_light ./worker_light
@@ -40,7 +37,7 @@ COPY --chown=agent:agent pyproject.toml uv.lock ./
 
 # Install the project
 RUN --mount=type=cache,target=/home/agent/.cache/uv,uid=1000 \
-    uv sync --frozen --no-dev
+    uv sync --frozen --no-dev --group filesystem
 
 # Set Python path
 ENV PYTHONPATH=/app

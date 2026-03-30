@@ -5,54 +5,65 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = "~=3.12.0"
 dependencies = [
-    "alembic>=1.18.4",
-    "bd_warehouse",
     "build123d>=0.10.0",
     "fastapi[standard]>=0.129.0",
-    "langchain>=1.2.10",
-    "langchain-core>=1.2.12",
-    "langgraph>=1.0.8",
-    "openinference-instrumentation-dspy>=0.1.13",
-    "langgraph-checkpoint-sqlite>=3.0.3",
-    "langgraph-checkpoint-postgres>=3.0.4",
-    "psycopg[binary]>=3.3.2",
-    "langfuse>=3.14.1",
-    "mujoco>=3.5.0",
+    "gitpython>=3.1.46",
+    "httpx>=0.28.1",
     "numpy>=1.24,<2.2",
-    "pillow<12.0",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.12.0",
     "python-dotenv>=1.2.1",
     "pyyaml>=6.0.3",
-    "sqlalchemy>=2.0.46",
-    "trimesh[easy]>=4.11.2",
-    "typer>=0.23.1",
-    "uvicorn>=0.40.0",
-    "httpx>=0.28.1",
     "structlog>=25.5.0",
-    "dspy-ai>=2.5.43",
-    "nest-asyncio>=1.6.0",
-    "s3fs>=2026.2.0",
-    "temporalio>=1.22.0",
-    "asyncpg>=0.31.0",
-    "boto3>=1.42.49",
-    "ffmpeg-python>=0.2.0",
-    "scipy>=1.17.0",
     "beartype>=0.22.9",
-    "watchdog>=6.0.0",
-    "gitpython>=3.1.46",
     "python-multipart>=0.0.22",
-    "pyspice>=1.5",
-    "torch>=2.10.0",
-    "genesis-world>=0.3.14",
-    "gmsh>=4.15.0",
-    "numba>=0.61.0",
-    "pyopengl-accelerate>=3.1.10",
     "spec-kitty-cli==0.16.1",
-    "litellm>=1.82.1",
+    "watchdog>=6.0.0",
 ]
 
 [dependency-groups]
+rendering = [
+    "matplotlib>=3.10.8",
+    "opencv-python-headless>=4.13.0.92",
+    "pillow<12.0",
+    "trimesh[easy]>=4.11.2",
+]
+filesystem = [
+    "sqlalchemy>=2.0.46",
+]
+cad = [
+    "bd_warehouse",
+]
+temporal = [
+    "temporalio>=1.22.0",
+]
+simulation = [
+    "ffmpeg-python>=0.2.0",
+    "genesis-world>=0.3.14",
+    "gmsh>=4.15.0",
+    "mujoco>=3.5.0",
+    "numba>=0.61.0",
+    "pyopengl-accelerate>=3.1.10",
+    "pyspice>=1.5",
+    "scipy>=1.17.0",
+    "torch>=2.10.0",
+]
+controller = [
+    "alembic>=1.18.4",
+    "asyncpg>=0.31.0",
+    "boto3>=1.42.49",
+    "dspy-ai>=2.5.43",
+    "langchain>=1.2.10",
+    "langchain-core>=1.2.12",
+    "langfuse>=3.14.1",
+    "langgraph>=1.0.8",
+    "langgraph-checkpoint-postgres>=3.0.4",
+    "langgraph-checkpoint-sqlite>=3.0.3",
+    "litellm>=1.82.1",
+    "openinference-instrumentation-dspy>=0.1.13",
+    "psycopg[binary]>=3.3.2",
+    "s3fs>=2026.2.0",
+]
 dev = [
     "datamodel-code-generator>=0.54.0",
     "playwright>=1.58.0",

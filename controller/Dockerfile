@@ -14,7 +14,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libosmesa6 \
     libglib2.0-0 \
     libsm6 \
-    libngspice0 \
     libvulkan1 \
     libxcursor1 \
     libxinerama1 \
@@ -29,9 +28,6 @@ WORKDIR /app
 # Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
 
-# Use CPU-only torch to save space
-ENV UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
-
 # Copy from the cache instead of linking since it's a separate volume
 ENV UV_LINK_MODE=copy
 
@@ -39,7 +35,7 @@ ENV UV_LINK_MODE=copy
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-install-project --no-dev
+    uv sync --frozen --no-install-project --no-dev --group controller --group filesystem --group temporal
 
 # Copy source code
 COPY controller ./controller
@@ -50,7 +46,7 @@ COPY pyproject.toml uv.lock alembic.ini ./
 
 # Install the project
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+    uv sync --frozen --no-dev --group controller --group filesystem --group temporal
 
 # Set Python path
 ENV PYTHONPATH=/app
