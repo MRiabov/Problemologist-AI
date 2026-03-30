@@ -23,7 +23,8 @@ Additionally:
 
 ## Non-negotiable Integration Execution Contract (applies to every `INT-xxx` and `INT-NEG-###`)
 
-01. Test target is a running compose stack (`controller`, `worker`, `controller-worker`, infra services), not imported Python functions.
+01. Test target is a running compose stack (`controller`, `worker`, Temporal worker service `controller-worker`, infra services), not imported Python functions.
+    In this spec, `controller-worker` is the Temporal worker service label only; it is not the controller.
 02. Test traffic goes through HTTP APIs only.
 03. Files/artifacts are created by API/tool-call pathways, not by direct local writes to app internals.
 04. No `patch`, `monkeypatch`, or fake clients for controller/worker/temporal/s3 paths in integration tests.
@@ -177,8 +178,8 @@ This section is the smallest must-pass set. Keep it narrowly scoped, determinist
 
 | ID | Test | Required assertions |
 | -- | -- | -- |
-| INT-001 | Compose boot + health contract | `controller`, `worker`, `controller-worker`, `postgres`, `minio`, `temporal` become healthy/started; health endpoints return expected status payload. |
-| INT-002 | Controller-worker execution boundary | Agent-generated execution happens on worker only; controller never runs LLM-generated code. |
+| INT-001 | Compose boot + health contract | `controller`, `worker`, Temporal worker service `controller-worker`, `postgres`, `minio`, `temporal` become healthy/started; health endpoints return expected status payload. |
+| INT-002 | Controller execution boundary | Agent-generated execution happens on worker only; controller never runs LLM-generated code. |
 | INT-003 | Session filesystem isolation | Two concurrent sessions cannot read each other's files. |
 | INT-004 | Heavy-worker single-flight admission | Multiple agents may run, but each heavy-worker instance accepts only one active heavy job; while that job is active, `/ready` reports not-ready, and concurrent requests to the same instance receive deterministic busy responses (no in-worker buffering/scheduling). Multi-worker throughput/fan-out behavior is out of scope for this test. |
 | INT-187 | Heavy-worker crash containment boundary | Force deterministic simulation child-process failure and assert fail-closed request failure while `worker-heavy` API health stays up and subsequent heavy requests can still be served (no whole-service crash from one simulation failure). |
@@ -209,7 +210,7 @@ This section is the smallest must-pass set. Keep it narrowly scoped, determinist
 | INT-025 | Events collection end-to-end | Worker emits `events.jsonl`, controller ingests/bulk-persists, event loss does not occur in normal path. |
 | INT-026 | Mandatory event families emitted | Tool calls, simulation request/result, manufacturability checks, lint failures, plan submissions, and review decisions are emitted in real runs. |
 | INT-027 | Seed/variant observability | Static variant ID + runtime seed tracked for every simulation run. |
-| INT-028 | Strict API schema contract | OpenAPI is valid and runtime responses match schema for controller-worker critical endpoints. |
+| INT-028 | Strict API schema contract | OpenAPI is valid and runtime responses match schema for controller and Temporal-worker critical endpoints. |
 | INT-029 | API key enforcement | Protected endpoints reject missing/invalid key and accept valid key. |
 | INT-030 | Interrupt propagation | User interrupt on controller cancels active worker job(s) and leaves consistent episode state. |
 | INT-053 | Temporal workflow lifecycle logging | Starting an episode persists workflow identity and lifecycle transitions (`queued/running/completed/failed`) with timestamps; data is queryable through system persistence and events. |
@@ -509,7 +510,10 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-203 | Run benchmark generation over HTTP with schema-valid but unsolvable geometry, assert benchmark plan reviewer rejection includes explicit solvability reasoning, persist review artifacts, and prevent benchmark coder start. | Mocking reviewer output or asserting only terminal status without review artifacts and trace evidence. |
 | INT-204 | Run benchmark generation over HTTP and assert benchmark plan reviewer inspects the current revision render bundle via `inspect_media(...)` before approval, with persisted stage-specific decision/comments YAML tied to the latest revision. | Asserting only file presence or text summaries without media-inspection traces. |
 | INT-205 | Run a failed engineer episode over HTTP and in the browser, then click revise/retry and assert the follow-up episode reuses the same benchmark package, exposes revision lineage, and hides the retry control on benchmark or non-failed episodes. | Retrying by mutating the failed episode in place or checking only backend metadata without browser lineage visibility. |
-| INT-207 | Materialize a representative engineer-coder workspace, run `python script.py`, then execute the validation preview path with an invalid ambient `DISPLAY`; assert the private-Xvfb fallback log appears, `validation_results.json` records a successful validation, and `renders/render_manifest.json` is written for the workspace. | Exercising only a mocked renderer or skipping the preview render path that originally failed. |
+| INT-207 | Materialize a representative engineer-coder workspace, then execute the validation preview path against the staged workspace bundle or synthesized preview scene bundle; assert `validation_results.json` records a successful validation, `renders/render_manifest.json` is written for the workspace, and the preview work is routed through `worker-renderer` rather than any private-Xvfb fallback. | Exercising only a mocked renderer or skipping the preview render path that originally failed. |
+| INT-208 | Call the renderer worker directly over HTTP with a minimal authored build123d script and assert `/benchmark/preview` returns a valid preview image and workspace-relative render path. | Exercising only the heavy-worker proxy path or reusing a host display instead of the renderer service boundary. |
+| INT-210 | Run a MuJoCo simulation that captures video frames, assert `VideoRenderer.save()` delegates encoding to `worker-renderer`, and verify the final MP4 is materialized in the session workspace. | Keeping MP4 encoding in-process or asserting only a synthetic video stub. |
+| INT-211 | Run a Genesis-backed simulation that captures render frames and assert the same renderer-worker video path and storage contract are used for the final MP4. | Testing Genesis frame capture without verifying the render handoff or artifact persistence. |
 | INT-184 | Trigger deterministic node-entry rejection over HTTP (engineer + benchmark paths), assert terminal fail-fast, target-node non-execution, and persisted metadata schema (`node`, `disposition`, `reason_code`, `errors`, `reroute_target` when applicable); engineer planner/electronics planner runs must also fail closed when `benchmark_assembly_definition.yaml` is absent. | Calling `evaluate_node_entry_contract()` directly in-process or asserting only log strings without episode metadata/traces. |
 | INT-120 | Submit circuit via API; call `validate_circuit` endpoint; assert pass/fail controls whether simulate endpoint accepts the run. | Importing `validate_circuit()` and calling in-process. |
 | INT-121 | Submit circuit with near-zero-ohm path across supply via API; assert `FAILED_SHORT_CIRCUIT` and branch current in response. | Constructing PySpice result object manually. |
@@ -563,8 +567,8 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-181 | Execute a scripted multi-tool scenario through live APIs and assert persisted trace/event ordering and clean completion once tool list is exhausted (`submit_review` for reviewer native loops, `finish` for non-reviewer native loops). | Asserting mocked node transitions/tool arrays without runtime orchestration. |
 | INT-182 | Start parallel live agent runs with distinct sessions and assert no cross-session reads/writes/traces/context leakage. | Unit-testing session-keyed maps/locks without HTTP/system boundaries. |
 | INT-183 | Enqueue steering via live steerability endpoints during active run; assert single dequeue/consumption and downstream trace evidence in same episode. | Isolated queue unit test with mocked state transitions. |
-| INT-185 | Force a deterministic LM-caused invalid tool invocation over HTTP (for example invalid path/args policy violation), assert tool error observation reaches subsequent LM turn, and verify no Temporal retry loop is created for that request. | Calling runtime retry classifiers/helpers in-process without live controller-worker boundaries. |
-| INT-186 | Induce worker/API unavailability for a live tool request, assert exactly up-to-3 Temporal retries then fail-closed terminalization with `SYSTEM_TOOL_RETRY_EXHAUSTED` + `INFRA_DEVOPS_FAILURE`, and verify retries are infra-level (not LM-budget increments). | Unit tests that simulate retry counters without real Temporal/controller-worker execution traces. |
+| INT-185 | Force a deterministic LM-caused invalid tool invocation over HTTP (for example invalid path/args policy violation), assert tool error observation reaches subsequent LM turn, and verify no Temporal retry loop is created for that request. | Calling runtime retry classifiers/helpers in-process without live controller and Temporal-worker boundaries. |
+| INT-186 | Induce worker/API unavailability for a live tool request, assert exactly up-to-3 Temporal retries then fail-closed terminalization with `SYSTEM_TOOL_RETRY_EXHAUSTED` + `INFRA_DEVOPS_FAILURE`, and verify retries are infra-level (not LM-budget increments). | Unit tests that simulate retry counters without real Temporal orchestration execution traces. |
 
 ## Recommended suite organization
 
@@ -596,5 +600,5 @@ CI gates recommendation:
 ## Notes
 
 - This spec intentionally treats architecture statements as test requirements, including expected fail paths.
-- Existing unit tests for observability/workbench/COTS are useful, but they do not replace integration-level verification across controller-worker-db-storage boundaries.
+- Existing unit tests for observability/workbench/COTS are useful, but they do not replace integration-level verification across controller, Temporal worker, db, and storage boundaries.
 - If an implementation PR adds or changes integration tests, it should include the mapped `INT-xxx` or `INT-NEG-###` ID in the canonical `@pytest.mark.int_id(...)` marker.

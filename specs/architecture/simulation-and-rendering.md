@@ -8,7 +8,7 @@
 - Detailed fluids/deformables and electromechanical modality contracts live in [fluids-and-deformables.md](./fluids-and-deformables.md) and [electronics-and-electromechanics.md](./electronics-and-electromechanics.md).
 - Use this file for changes related to simulation semantics, constraints, or rendering logic.
 
-### Dedicated renderer worker
+## Dedicated renderer worker
 
 All render execution runs in a dedicated headless `worker-renderer` container, including:
 
@@ -19,6 +19,7 @@ All render execution runs in a dedicated headless `worker-renderer` container, i
 The physics backends do not own render process state. They supply scene state, camera policy, and render-capability metadata; the renderer worker owns the graphics stack and executes the render job inside its own container boundary.
 
 The render worker is containerized in every environment, including development, so the graphics stack stays isolated from simulation and from the controller process.
+The renderer worker is the only service that owns VTK, EGL, OpenGL, and related graphics backend dependencies.
 
 ## Genesis for simulation
 

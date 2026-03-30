@@ -9,12 +9,18 @@
 
 The controller remains the orchestration layer. The LLM/tool substrate under that controller can be either API-backed or Codex CLI-backed, but that is a backend choice, not a change to the controller's role.
 
+Terminology is strict:
+
+- The controller is not a worker. It owns orchestration, tool routing, and public API behavior.
+- `worker-light`, `worker-heavy`, and `worker-renderer` are worker services.
+- The Temporal worker is a separate background service that executes durable workflows and activities on behalf of the controller. The compose service may still be named `controller-worker`, but that name is an implementation label, not the controller role.
+
 There is a controller node which runs the LLM and tool calls, and a split worker plane:
 
 1. `worker-light` for filesystem + execution tooling,
 2. `worker-heavy` for simulation + validation coordination,
 3. `worker-renderer` for all static and dynamic rendering,
-4. `controller-worker` (Temporal worker) for durable orchestration.
+4. Temporal worker service (`controller-worker` in compose) for durable orchestration.
 
 For both safety and performance reasons, it is desirable that the LLM-generated scripts are never executed on the controller machine.
 
@@ -25,7 +31,7 @@ In the future we may well refactor to run on distributed nodes, perhaps even IPv
 ## Current service topology (main)
 
 - `controller` (FastAPI): public API, LLM/tool orchestration, business logic.
-- `controller-worker` (Temporal worker): durable execution for long-running workflows/retries and heavy-task queue consumption/dispatch.
+- Temporal worker service (`controller-worker` in compose): durable execution for long-running workflows/retries and heavy-task queue consumption/dispatch.
 - `worker-light` (FastAPI): session filesystem, git, linting, runtime execution, static asset serving.
 - `worker-heavy` (FastAPI single-flight executor): simulation, validation coordination, manufacturability analysis, review handover.
 - `worker-renderer` (FastAPI single-flight executor): headless rendering for static preview, selection snapshots, and simulation videos.
@@ -36,6 +42,7 @@ The split is intentional: keep fast, high-throughput operations on light infra w
 ## Local stack profiles
 
 Local bootstrap uses profile-scoped host-port namespaces and compose project names so integration tests and eval runs can coexist on the same workstation.
+As a convention, integration runs stay in the `10000-19999` band and eval runs stay in the `20000-29999` band, leaving the `0-10000` range for ordinary local services and reducing runner port clashes.
 
 1. The `integration` profile keeps the existing local integration ports (`18000/18001/18002`, `15432`, `17233`, `19000/19001`, `15173`) and remains the default profile for the integration runner.
 2. The `eval` profile uses a disjoint host-port namespace (`28000/28001/28002`, `25432`, `27233`, `29000/29001`) for the controller, workers, and infra so eval runs do not tear down or probe the integration stack.
@@ -109,7 +116,7 @@ Backend responsibility is split by operation purpose:
 4. `/benchmark/validate` does not add a separate Genesis load/render gate solely for parity checking; Genesis-specific runtime behavior is established by actual Genesis simulation runs where Genesis behavior is required.
 5. Both paths use the same renderer worker service; only the render job kind differs.
 
-Backend choice is orthogonal to the controller/worker split:
+Backend choice is orthogonal to the controller and worker-plane split:
 
 - API-backed runs execute through the controller's HTTP orchestration path.
 - Codex-backed runs execute through the local Codex workspace path.
@@ -161,9 +168,9 @@ Note: we want to offload work from `worker_heavy` as much as possible because:
 
 ### Worker filesystem and communication
 
-Upon requesting simulation or rendering, worker light prepares the session bundle and git state needed for heavy execution. The controller-worker Temporal path owns the actual heavy dispatch, render dispatch, retry, and completion tracking.
+Upon requesting simulation or rendering, worker light prepares the session bundle and git state needed for heavy execution. The Temporal orchestration path owns the actual heavy dispatch, render dispatch, retry, and completion tracking.
 
-Predominantly, worker light communicates with controller-worker orchestration for heavy dispatch through the WebSocket control plane; direct worker-heavy contact is reserved for integration tests that verify worker-level boundaries and for termination signals from the controller. There is a load balancer pinging `/ready` status in worker. Ideally, the worker-heavy and worker-renderer are hidden behind Temporal/controller-worker orchestration, which also acts as the admission and retry boundary.
+Predominantly, worker light communicates with Temporal orchestration for heavy dispatch through the WebSocket control plane; direct worker-heavy contact is reserved for integration tests that verify worker-level boundaries and for termination signals from the controller. There is a load balancer pinging `/ready` status in worker. Ideally, the worker-heavy and worker-renderer are hidden behind Temporal orchestration, which also acts as the admission and retry boundary.
 
 ### OpenAPI Artifacts
 
@@ -179,7 +186,7 @@ Heavy-worker concurrency is a single-flight contract:
 - The heavy worker app does not own internal multi-job management (no in-process queue/semaphore/scheduler for multiple external jobs).
 - If a request arrives while a job is active, the heavy worker returns a deterministic busy response (`503` + machine-readable reason such as `WORKER_BUSY`) instead of buffering jobs.
 - `/ready` and equivalent readiness signals must report `not ready` while a job is active, so load balancers route only to idle instances.
-- Any queueing, retries, and fan-out for concurrent demand are owned outside `worker-heavy` (Temporal/controller-worker orchestration and infrastructure load balancing), not by heavy-worker app internals.
+- Any queueing, retries, and fan-out for concurrent demand are owned outside `worker-heavy` (Temporal orchestration and infrastructure load balancing), not by heavy-worker app internals.
 - Cross-worker fan-out/scaling policy is intentionally out of scope for this phase; the enforced contract here is per-instance single-flight admission plus deterministic busy behavior.
 - Runtime randomization executes within one admitted heavy-worker job.
 - That admitted job corresponds to one backend simulation run over a batched set of parallel scenes/environments, not to N serialized full simulation replays.
@@ -196,7 +203,7 @@ Renderer-worker concurrency is also a single-flight contract:
 - A renderer worker instance can execute exactly one active render job at a time.
 - The renderer worker app does not own internal multi-job management (no in-process queue/semaphore/scheduler for multiple external render jobs).
 - If a render request arrives while a job is active, the renderer worker returns a deterministic busy response instead of buffering jobs.
-- Any queueing, retries, and fan-out for concurrent render demand are owned outside `worker-renderer` (Temporal/controller-worker orchestration and infrastructure load balancing), not by renderer-worker internals.
+- Any queueing, retries, and fan-out for concurrent render demand are owned outside `worker-renderer` (Temporal orchestration and infrastructure load balancing), not by renderer-worker internals.
 
 ## Persistent state and durable execution
 

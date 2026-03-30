@@ -28,7 +28,7 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 
 ### Runtime and infrastructure
 
-- [Distributed execution](./architecture/distributed-execution.md): controller/worker split, worker APIs, dedicated renderer worker, persistence, Temporal boundary, and backend-routing rules such as fast validation preview versus physics simulation.
+- [Distributed execution](./architecture/distributed-execution.md): controller plus split worker plane, worker APIs, dedicated renderer worker, persistence, Temporal boundary, and backend-routing rules such as fast validation preview versus physics simulation.
 - [CAD and other infrastructure](./architecture/CAD-and-other-infra.md): CAD metadata, rendering direction, dedicated renderer worker boundary, validation-preview rendering policy, schema contracts, and supporting infra assumptions.
 
 ### Evaluation and quality gates
