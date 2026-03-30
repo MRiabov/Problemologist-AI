@@ -98,6 +98,7 @@ The worker API is physically split into three specialized services to optimize r
 - Render jobs are dispatched to `worker-renderer`; the heavy worker does not own the graphics stack.
 - All non-Temporal worker calls are session-scoped with `X-Session-ID`.
 - The `WorkerClient` is the single boundary adapter; agents do not know about service split.
+- `validate()` is a high-frequency LLM touchpoint. Keep its agent-facing route stable through the controller script-tools proxy rather than exposing alternate direct worker paths, so the LLM/tool layer does not have to understand worker-specific transport for a near-instant check.
 - Heavy-worker and renderer-worker admission are fail-closed: busy workers return deterministic busy responses; they do not enqueue additional work internally.
 
 ### Heavy Execution Path Contract
