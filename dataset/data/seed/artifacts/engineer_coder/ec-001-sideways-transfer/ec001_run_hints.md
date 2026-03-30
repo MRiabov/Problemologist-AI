@@ -32,6 +32,7 @@ Quick reference from the most useful prior `ec-001` runs.
 
   - Geometry was revised again, but the blocker looked like a validation/render path issue rather than a brand-new layout idea.
   - Useful note: do not churn geometry if the submission helper is failing for environment reasons.
+  - The earlier failed session never produced `.manifests/engineering_execution_review_manifest.json`; make sure `bash scripts/submit_for_review.sh` runs all the way through the handoff step.
 
 ## Contract Reminders
 
