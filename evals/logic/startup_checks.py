@@ -51,6 +51,12 @@ def fail_closed_if_integration_test_setup(
 ) -> None:
     """Abort when the controller reports integration-test mode."""
 
+    if os.getenv("IS_INTEGRATION_TEST", "").strip().lower() == "true":
+        raise SystemExit(
+            f"deprecated functionality removed: {context} detected integration-test "
+            "setup via IS_INTEGRATION_TEST=true"
+        )
+
     is_integration_test = controller_reports_integration_test(
         controller_url, timeout_s=timeout_s
     )
@@ -58,13 +64,4 @@ def fail_closed_if_integration_test_setup(
         raise SystemExit(
             f"deprecated functionality removed: {context} detected integration-test "
             "setup via controller /api/test/is_integration_test"
-        )
-
-    if (
-        is_integration_test is None
-        and os.getenv("IS_INTEGRATION_STEP", "").lower() == "true"
-    ):
-        raise SystemExit(
-            f"deprecated functionality removed: {context} could not verify controller "
-            "integration mode while IS_INTEGRATION_STEP=true"
         )

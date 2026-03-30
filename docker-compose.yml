@@ -23,7 +23,7 @@ services:
       dockerfile: controller/Dockerfile
     image: problemologist-ai-controller:latest
     ports:
-      - "18000:8000"
+      - "${CONTROLLER_HOST_PORT:-18000}:8000"
     environment:
       - POSTGRES_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/postgres
       - S3_ENDPOINT=http://minio:9000
@@ -120,7 +120,7 @@ services:
       dockerfile: worker_light/Dockerfile
     image: problemologist-ai-worker-light:latest
     ports:
-      - "18001:8001"
+      - "${WORKER_LIGHT_HOST_PORT:-18001}:8001"
     environment:
       - S3_ENDPOINT=http://minio:9000
       - AWS_ACCESS_KEY_ID=minioadmin
@@ -145,7 +145,7 @@ services:
       dockerfile: worker_heavy/Dockerfile
     image: problemologist-ai-worker-heavy:latest
     ports:
-      - "18002:8002"
+      - "${WORKER_HEAVY_HOST_PORT:-18002}:8002"
     environment:
       - S3_ENDPOINT=http://minio:9000
       - AWS_ACCESS_KEY_ID=minioadmin
@@ -209,7 +209,7 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=postgres
     ports:
-      - "15432:5432"
+      - "${POSTGRES_HOST_PORT:-15432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -220,8 +220,8 @@ services:
   minio:
     image: minio/minio
     ports:
-      - "19000:9000"
-      - "19001:9001"
+      - "${MINIO_HOST_PORT:-19000}:9000"
+      - "${MINIO_CONSOLE_HOST_PORT:-19001}:9001"
     environment:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin
@@ -243,7 +243,7 @@ services:
   temporal:
     image: temporalio/auto-setup:1.22.0
     ports:
-      - "17233:7233"
+      - "${TEMPORAL_HOST_PORT:-17233}:7233"
     environment:
       - DB=postgresql
       - DB_PORT=5432
@@ -257,7 +257,7 @@ services:
   temporal-ui:
     image: temporalio/ui:2.21.3
     ports:
-      - "18081:8080"
+      - "${TEMPORAL_UI_HOST_PORT:-18081}:8080"
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
     depends_on:

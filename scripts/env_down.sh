@@ -2,86 +2,74 @@
 # scripts/env_down.sh
 # Stops the Problemologist-AI development environment.
 
+set -e
+
 # Ensure we are in project root
 cd "$(dirname "$0")/.."
 
+STACK_PROFILE="${PROBLEMOLOGIST_STACK_PROFILE:-integration}"
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --profile)
+      if [ "$#" -lt 2 ]; then
+        echo "Missing value for --profile"
+        exit 1
+      fi
+      STACK_PROFILE="$2"
+      shift 2
+      ;;
+    --profile=*)
+      STACK_PROFILE="${1#*=}"
+      shift
+      ;;
+    *)
+      echo "Unknown argument: $1"
+      exit 1
+      ;;
+  esac
+done
+export PROBLEMOLOGIST_STACK_PROFILE="$STACK_PROFILE"
+
+eval "$(python3 -m evals.logic.stack_profiles --profile "$STACK_PROFILE" --root "$(pwd)" --format shell)"
+
 echo "Stopping Application Servers..."
 
-if [ -f logs/worker_light.pid ]; then
-  PID=$(cat logs/worker_light.pid)
-  echo "Stopping Worker Light (PID: $PID)..."
-  kill $PID 2>/dev/null || true
-  rm logs/worker_light.pid
-fi
-
-if [ -f logs/worker_heavy.pid ]; then
-  PID=$(cat logs/worker_heavy.pid)
-  echo "Stopping Worker Heavy (PID: $PID)..."
-  kill $PID 2>/dev/null || true
-  rm logs/worker_heavy.pid
-fi
-
-if [ -f logs/controller.pid ]; then
-  PID=$(cat logs/controller.pid)
-  echo "Stopping Controller (PID: $PID)..."
-  kill $PID 2>/dev/null || true
-  rm logs/controller.pid
-fi
-
-if [ -f logs/temporal_worker.pid ]; then
-  PID=$(cat logs/temporal_worker.pid)
-  echo "Stopping Temporal Worker (PID: $PID)..."
-  kill $PID 2>/dev/null || true
-  rm logs/temporal_worker.pid
-fi
-
-if [ -f logs/worker_heavy_temporal.pid ]; then
-  PID=$(cat logs/worker_heavy_temporal.pid)
-  echo "Stopping Heavy Temporal Worker (PID: $PID)..."
-  kill $PID 2>/dev/null || true
-  rm logs/worker_heavy_temporal.pid
-fi
-
-if [ -f logs/frontend.pid ]; then
-  PID=$(cat logs/frontend.pid)
-  echo "Stopping Frontend dev server (PID: $PID)..."
-  kill $PID 2>/dev/null || true
-  rm logs/frontend.pid
-fi
-
-# Also kill any leftover FastAPI/Uvicorn processes just in case
-pkill -9 -f "uvicorn.*18000" || true
-pkill -9 -f "uvicorn.*18001" || true
-pkill -9 -f "uvicorn.*18002" || true
-pkill -9 -f "fastapi run" || true
-pkill -9 -f "controller.temporal_worker" || true
-pkill -9 -f "worker_heavy.temporal_worker" || true
-pkill -9 -f "uv run uvicorn" || true
-pkill -9 -f "uv run python -m controller.temporal_worker" || true
-pkill -9 -f "uv run python -m worker_heavy.temporal_worker" || true
-
-# Tear down any Xvfb instances started by the local dev/integration flows.
-# The integration runner uses :99, while the VTK fallback helper uses the
-# 10000-10100 range when it has to start a private display.
-pkill -9 -f "Xvfb :(99|10000|1000[1-9]|100[1-9][0-9]|10100)([[:space:]]|$)" || true
-pkill -9 -f "Xvfb -displayfd" || true
-
-# Remove stale X11 sockets/lockfiles for the private display range so the next
-# run does not rebind against a dead display slot.
-for display in 99 $(seq 10000 10100); do
-  lock_file="/tmp/.X${display}-lock"
-  socket_file="/tmp/.X11-unix/X${display}"
-  pid=""
-  if [ -f "$lock_file" ]; then
-    pid=$(tr -dc '0-9' < "$lock_file" 2>/dev/null || true)
+stop_pid_file() {
+  local label="$1"
+  local pid_file="$2"
+  if [ -f "$pid_file" ]; then
+    PID=$(cat "$pid_file")
+    if [ -n "$PID" ]; then
+      echo "Stopping ${label} (PID: $PID)..."
+      kill "$PID" 2>/dev/null || true
+    fi
+    rm -f "$pid_file"
   fi
-  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-    continue
-  fi
-  rm -f "$lock_file" "$socket_file" 2>/dev/null || true
-done
+}
+
+stop_pid_file "Worker Light" "$STACK_PID_DIR/worker_light.pid"
+stop_pid_file "Worker Heavy" "$STACK_PID_DIR/worker_heavy.pid"
+stop_pid_file "Controller" "$STACK_PID_DIR/controller.pid"
+stop_pid_file "Temporal Worker" "$STACK_PID_DIR/temporal_worker.pid"
+stop_pid_file "Heavy Temporal Worker" "$STACK_PID_DIR/worker_heavy_temporal.pid"
+stop_pid_file "Frontend dev server" "$STACK_PID_DIR/frontend.pid"
+
+if [ "$STACK_CREATE_ROOT_LOG_SYMLINKS" = "1" ]; then
+  rm -f \
+    logs/controller.log \
+    logs/controller_debug.log \
+    logs/worker_light.log \
+    logs/worker_light_debug.log \
+    logs/worker_heavy.log \
+    logs/worker_heavy_debug.log \
+    logs/worker_heavy_temporal.log \
+    logs/worker_heavy_temporal_debug.log \
+    logs/temporal_worker.log \
+    logs/temporal_worker_debug.log \
+    logs/frontend.log
+fi
 
 echo "Bringing down infrastructure containers..."
-docker compose -f docker-compose.test.yaml down -v --remove-orphans
+docker compose -p "$COMPOSE_PROJECT_NAME" -f docker-compose.test.yaml down -v --remove-orphans
 
 echo "Environment is DOWN."

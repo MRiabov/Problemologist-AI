@@ -1,6 +1,7 @@
 import argparse
 import ast
 import asyncio
+import atexit
 import contextlib
 import json
 import os
@@ -73,6 +74,7 @@ from evals.logic.models import (
     HardCheckFailurePointer,
     HardCheckRunLogPointer,
 )
+from evals.logic.notifications import start_periodic_audible_reminder
 from evals.logic.review_checks import (
     planner_artifacts_present as _planner_artifacts_present,
 )
@@ -93,6 +95,7 @@ from evals.logic.specs import (
     JUDGE_REVIEWER_CHAIN,
     PLANNER_REQUIRED_FILES,
 )
+from evals.logic.stack_profiles import apply_stack_profile_env
 from evals.logic.startup_checks import fail_closed_if_integration_test_setup
 from evals.logic.workspace import (
     preflight_seeded_entry_contract as _preflight_seeded_entry_contract,
@@ -3406,6 +3409,17 @@ async def main():
     except ValueError as exc:
         parser.error(str(exc))
 
+    stack_profile = apply_stack_profile_env("eval", env=os.environ, root=ROOT)
+    global CONTROLLER_URL
+    global WORKER_LIGHT_URL
+    CONTROLLER_URL = os.environ["CONTROLLER_URL"]
+    WORKER_LIGHT_URL = os.environ["WORKER_LIGHT_URL"]
+
+    eval_reminder = None
+    if runner_backend == EvalRunnerBackend.CONTROLLER:
+        eval_reminder = start_periodic_audible_reminder("eval setup running")
+        atexit.register(eval_reminder.stop)
+
     if args.run_reviewers_with_judge and not args.run_judge:
         parser.error("--run-reviewers-with-judge requires --run-judge")
 
@@ -3481,6 +3495,14 @@ async def main():
     READABLE_AGENT_LOG_FILE = readable_log_file
     SESSION_LOG_ROOT = session_log_root
     logger.info(
+        "eval_stack_profile_selected",
+        profile=stack_profile.name,
+        compose_project=stack_profile.compose_project_name,
+        controller_url=CONTROLLER_URL,
+        worker_light_url=WORKER_LIGHT_URL,
+        frontend_enabled=stack_profile.start_frontend,
+    )
+    logger.info(
         "eval_simulation_backend_selected",
         backend=os.environ.get("SIMULATION_DEFAULT_BACKEND", "MUJOCO"),
         full_sim=args.full_sim,
@@ -3511,7 +3533,7 @@ async def main():
             # Set LOG_DIR relative to ROOT for env_up.sh
             env_up_log_dir = log_dir.relative_to(ROOT)
             result = subprocess.run(
-                [str(env_up_path)],
+                [str(env_up_path), "--profile", "eval"],
                 check=True,
                 capture_output=True,
                 text=True,
@@ -3526,44 +3548,6 @@ async def main():
                 if line.strip():
                     logger.debug("env_up_output", line=line)
             logger.info("env_up_completed")
-
-            # Update symlinks in logs/ root to point to eval logs instead of manual_run
-            logs_root = ROOT / "logs"
-            links = [
-                ("evals/current/controller.log", "controller.log"),
-                ("evals/current/controller_debug.log", "controller_debug.log"),
-                ("evals/current/worker_light.log", "worker_light.log"),
-                ("evals/current/worker_heavy.log", "worker_heavy.log"),
-                ("evals/current/worker_light_debug.log", "worker_light_debug.log"),
-                ("evals/current/worker_heavy_debug.log", "worker_heavy_debug.log"),
-                ("evals/current/temporal_worker.log", "temporal_worker.log"),
-                (
-                    "evals/current/temporal_worker_debug.log",
-                    "temporal_worker_debug.log",
-                ),
-                ("evals/current/controller_errors.log", "controller_errors.log"),
-                ("evals/current/worker_light_errors.log", "worker_light_errors.log"),
-                ("evals/current/worker_heavy_errors.log", "worker_heavy_errors.log"),
-                (
-                    "evals/current/worker_heavy_temporal_errors.log",
-                    "worker_heavy_temporal_errors.log",
-                ),
-                (
-                    "evals/current/temporal_worker_errors.log",
-                    "temporal_worker_errors.log",
-                ),
-                ("evals/current/frontend.log", "frontend.log"),
-                ("evals/current/run_evals.log", "run_evals.log"),
-                ("evals/current/readable_agent_logs.log", "readable_agent_logs.log"),
-            ]
-            for target, link_name in links:
-                link_path = logs_root / link_name
-                try:
-                    if link_path.exists() or link_path.is_symlink():
-                        link_path.unlink()
-                    link_path.symlink_to(target)
-                except Exception:
-                    pass
 
         except subprocess.CalledProcessError as e:
             logger.warning("env_up_failed", stdout=e.stdout, stderr=e.stderr)

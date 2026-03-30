@@ -20,6 +20,10 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from evals.logic.stack_profiles import apply_stack_profile_env  # noqa: E402
+
+apply_stack_profile_env("eval", env=os.environ, root=ROOT)
+
 from evals.logic.codex_workspace import (  # noqa: E402
     launch_codex_exec,
     open_codex_ui,
@@ -171,7 +175,11 @@ def _env_up() -> None:
         raise FileNotFoundError(f"Missing env bootstrap script: {env_up_path}")
 
     print(f"bootstrapping eval environment with: {env_up_path}")
-    completed = subprocess.run([str(env_up_path)], check=False, env=dict(os.environ))
+    completed = subprocess.run(
+        [str(env_up_path), "--profile", "eval"],
+        check=False,
+        env=dict(os.environ),
+    )
     if completed.returncode != 0:
         raise SystemExit(completed.returncode)
 

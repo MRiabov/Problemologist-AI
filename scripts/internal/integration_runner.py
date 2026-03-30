@@ -26,6 +26,13 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Literal, TextIO
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from evals.logic.notifications import audibly_notify
+from evals.logic.stack_profiles import apply_stack_profile_env
+
 INTEGRATION_WORKFLOW_HINT = (
     "If you are seeing a startup timeout or unhealthy service here, "
     "you are probably not using ./scripts/run_integration_tests.sh. "
@@ -883,27 +890,7 @@ def _maybe_notify_long_integration_run(elapsed_s: float) -> None:
     duration = _format_elapsed_duration(elapsed_s)
     message = f"integration tests finished after {duration}"
     print(f"[integration-runner] {message}")
-    print("\a", end="", flush=True)
-
-    speech_commands = (
-        ["say", "integration tests finished"],
-        ["spd-say", "integration tests finished"],
-        ["espeak-ng", "integration tests finished"],
-        ["espeak", "integration tests finished"],
-    )
-    for cmd in speech_commands:
-        executable = cmd[0]
-        if not shutil.which(executable):
-            continue
-        try:
-            subprocess.Popen(
-                cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        except OSError:
-            pass
-        break
+    audibly_notify("integration tests finished")
 
 
 def _parse_check(definition: str, *, kind: CheckKind) -> HealthCheck:
@@ -1922,8 +1909,27 @@ def _run_integration_command(
         os.environ["SMOKE_TEST_MODE"] = "false"
 
     _load_env_file(repo_root / ".env")
+    apply_stack_profile_env("integration", env=os.environ, root=repo_root)
+    os.environ["IS_INTEGRATION_TEST"] = "true"
+    os.environ["SMOKE_TEST_MODE"] = "true"
+    os.environ["TEMPORAL_URL"] = "127.0.0.1:17233"
+    os.environ["S3_ENDPOINT"] = "http://127.0.0.1:19000"
+    os.environ["S3_ENDPOINT_URL"] = "http://127.0.0.1:19000"
+    os.environ["S3_ACCESS_KEY"] = "minioadmin"
+    os.environ["S3_SECRET_KEY"] = "minioadmin"
+    os.environ["AWS_ACCESS_KEY_ID"] = "minioadmin"
+    os.environ["AWS_SECRET_ACCESS_KEY"] = "minioadmin"
+    os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
+    os.environ["WORKER_URL"] = "http://127.0.0.1:18001"
+    os.environ["WORKER_HEAVY_URL"] = "http://127.0.0.1:18002"
+    os.environ["ASSET_S3_BUCKET"] = "problemologist"
+    os.environ["BACKUP_S3_BUCKET"] = "problemologist-backup"
+    os.environ["BENCHMARK_SOURCE_BUCKET"] = "benchmarks-source"
+    os.environ["BENCHMARK_ASSETS_BUCKET"] = "benchmarks-assets"
+    os.environ["GENESIS_FORCE_CPU"] = "1"
+    os.environ["WORKER_SESSIONS_DIR"] = sessions_dir
 
-    _run(["bash", "scripts/env_down.sh"])
+    _run(["bash", "scripts/env_down.sh", "--profile", "integration"])
 
     if args.full_sim:
         os.environ["SIMULATION_DEFAULT_BACKEND"] = "GENESIS"

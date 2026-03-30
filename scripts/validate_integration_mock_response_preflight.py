@@ -36,13 +36,18 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 MOCK_RESPONSES_ROOT = ROOT / "tests" / "integration" / "mock_responses"
+
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from evals.logic.stack_profiles import apply_stack_profile_env  # noqa: E402
+
+apply_stack_profile_env("integration", env=os.environ, root=ROOT)
+
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 MANUFACTURING_CONFIG_TEXT = (
     ROOT / "worker_heavy" / "workbenches" / "manufacturing_config.yaml"
 ).read_text(encoding="utf-8")
-
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
 from controller.agent.mock_scenarios import load_integration_mock_scenarios
 from controller.agent.node_entry_validation import (
@@ -249,7 +254,7 @@ def _parse_args() -> argparse.Namespace:
 def _run_env_up() -> None:
     env_up_path = ROOT / "scripts" / "env_up.sh"
     result = subprocess.run(
-        [str(env_up_path)],
+        [str(env_up_path), "--profile", "integration"],
         check=True,
         capture_output=True,
         text=True,
