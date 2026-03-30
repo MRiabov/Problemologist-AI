@@ -15,7 +15,12 @@ if str(ROOT) not in sys.path:
 
 from evals.logic.stack_profiles import apply_stack_profile_env  # noqa: E402
 
-apply_stack_profile_env("eval", env=os.environ, root=ROOT)
+_STACK_PROFILE_NAME = (
+    "integration"
+    if os.getenv("IS_INTEGRATION_TEST", "").strip().lower() == "true"
+    else "eval"
+)
+apply_stack_profile_env(_STACK_PROFILE_NAME, env=os.environ, root=ROOT)
 
 from controller.clients.worker import WorkerClient  # noqa: E402
 from evals.logic.curation import load_dataset_curation_manifest  # noqa: E402

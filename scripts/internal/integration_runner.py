@@ -879,6 +879,66 @@ def _run(
     )
 
 
+def _worker_renderer_compose_cmd(*, compose_project_name: str) -> list[str]:
+    return ["docker", "compose", "-p", compose_project_name, "-f", "docker-compose.yml"]
+
+
+def _start_worker_renderer_container(
+    *,
+    compose_project_name: str,
+    log_file: Path,
+) -> str:
+    compose_cmd = _worker_renderer_compose_cmd(
+        compose_project_name=compose_project_name
+    )
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    with log_file.open("ab") as handle:
+        handle.write(b"Starting Worker Renderer container via docker compose...\n")
+
+    with log_file.open("ab") as handle:
+        result = subprocess.run(
+            [*compose_cmd, "up", "-d", "--no-deps", "worker-renderer"],
+            check=False,
+            cwd=_repo_root(),
+            stdout=handle,
+            stderr=subprocess.STDOUT,
+        )
+    if result.returncode != 0:
+        raise subprocess.CalledProcessError(
+            result.returncode,
+            [*compose_cmd, "up", "-d", "--no-deps", "worker-renderer"],
+        )
+
+    container_id = ""
+    for _ in range(30):
+        inspect_result = _run(
+            [*compose_cmd, "ps", "-q", "worker-renderer"],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
+        container_id = inspect_result.stdout.decode("utf-8", errors="ignore").strip()
+        if container_id:
+            break
+        time.sleep(0.5)
+
+    if not container_id:
+        raise RuntimeError("Worker Renderer container id not found after startup")
+
+    with log_file.open("ab") as handle:
+        handle.write(f"Worker Renderer container id: {container_id}\n".encode("utf-8"))
+
+    print(f"Worker Renderer container started (ID: {container_id})")
+    return container_id
+
+
+def _stop_worker_renderer_container(*, compose_project_name: str) -> None:
+    compose_cmd = _worker_renderer_compose_cmd(
+        compose_project_name=compose_project_name
+    )
+    _run([*compose_cmd, "stop", "worker-renderer"], check=False)
+
+
 def _format_elapsed_duration(elapsed_s: float) -> str:
     total_seconds = max(0, int(round(elapsed_s)))
     minutes, seconds = divmod(total_seconds, 60)
@@ -1124,7 +1184,7 @@ def _normalize_pytest_args(pytest_args: list[str]) -> tuple[list[str], bool, boo
         elif len(normalized) == 0:
             normalized = [
                 "-m",
-                "integration_p0 or integration_p1 or integration_p2 or integration_frontend",
+                "integration_p0 or integration_p1 or integration_p2 or integration_frontend or integration",
             ]
 
     if not has_file:
@@ -1164,6 +1224,10 @@ def _ordered_integration_marker_slices() -> list[tuple[str, str]]:
         (
             "integration_p2",
             "integration_p2 and not integration_p0 and not integration_p1 and not integration_agent and not integration_frontend",
+        ),
+        (
+            "integration_rest",
+            "integration and not integration_p0 and not integration_p1 and not integration_p2 and not integration_agent and not integration_frontend",
         ),
     ]
 
@@ -1718,6 +1782,7 @@ def _cleanup_pid_files(repo_root: Path) -> None:
         repo_root / "logs" / "temporal_worker.pid",
         repo_root / "logs" / "worker_heavy_temporal.pid",
         repo_root / "logs" / "worker_light.pid",
+        repo_root / "logs" / "worker_renderer.pid",
         repo_root / "logs" / "worker_heavy.pid",
         repo_root / "logs" / "worker.pid",
         repo_root / "logs" / "frontend.pid",
@@ -1812,6 +1877,9 @@ def _run_cleanup_command(args: argparse.Namespace) -> int:
         target_pids=target_pids,
     )
     print(f"Scheduled detached force-kill fallback (grace={force_kill_grace_s:.1f}s).")
+    compose_project_name = os.environ.get("COMPOSE_PROJECT_NAME", "").strip()
+    if compose_project_name:
+        _stop_worker_renderer_container(compose_project_name=compose_project_name)
     _cleanup_pid_files(repo_root)
     _cleanup_sessions_dir(args.sessions_dir)
 
@@ -2053,7 +2121,9 @@ def _run_integration_command(
         os.environ["SMOKE_TEST_MODE"] = "false"
 
     _load_env_file(repo_root / ".env")
-    apply_stack_profile_env("integration", env=os.environ, root=repo_root)
+    stack_profile = apply_stack_profile_env(
+        "integration", env=os.environ, root=repo_root
+    )
     os.environ["IS_INTEGRATION_TEST"] = "true"
     os.environ["SMOKE_TEST_MODE"] = "true"
     os.environ["TEMPORAL_URL"] = "127.0.0.1:17233"
@@ -2116,7 +2186,9 @@ def _run_integration_command(
         for future in concurrent.futures.as_completed(prep_futures):
             future.result()
 
-    print("Starting Application Servers (Controller, Worker, Temporal Worker)...")
+    print(
+        "Starting Application Servers (Controller, Worker, Renderer Container, Temporal Worker)..."
+    )
 
     integration_logs_root = repo_root / "logs" / "integration_tests"
     log_dir = _prepare_integration_run_dir(integration_logs_root)
@@ -2134,25 +2206,14 @@ def _run_integration_command(
     cleanup_target_pids: list[int] = []
 
     try:
-        print("Starting Xvfb for headless rendering...")
-        xvfb = subprocess.Popen(
-            ["Xvfb", ":99", "-screen", "0", "1024x768x24"],
-            cwd=repo_root,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        processes.append(StartedProcess(name="Xvfb", process=xvfb))
-        os.environ["DISPLAY"] = ":99"
-
-        time.sleep(2)
-        if xvfb.poll() is not None:
-            print("Xvfb failed to start. Headless rendering might fail.")
-        else:
-            print(f"Xvfb started (PID: {xvfb.pid}) on :99")
-
         pythonpath = os.environ.get("PYTHONPATH", "")
         combined_pythonpath = f"{pythonpath}:." if pythonpath else "."
         session_log_root = log_dir / "sessions"
+        os.environ["WORKER_RENDERER_LOG_DIR"] = str(log_dir)
+        _start_worker_renderer_container(
+            compose_project_name=stack_profile.compose_project_name,
+            log_file=log_dir / "worker_renderer.log",
+        )
         processes.extend(
             _start_processes_parallel(
                 [
@@ -2179,34 +2240,6 @@ def _run_integration_command(
                             "SESSION_LOG_ROOT": str(session_log_root),
                         },
                         pid_file=repo_root / "logs" / "worker_light.pid",
-                    ),
-                    ProcessSpec(
-                        name="Worker Renderer",
-                        cmd=[
-                            "uv",
-                            "run",
-                            "uvicorn",
-                            "worker_renderer.app:app",
-                            "--host",
-                            "0.0.0.0",
-                            "--port",
-                            "18003",
-                        ],
-                        log_file=log_dir / "worker_renderer.log",
-                        env_updates={
-                            "WORKER_TYPE": "renderer",
-                            "EXTRA_DEBUG_LOG": str(
-                                log_dir / "worker_renderer_debug.log"
-                            ),
-                            "EXTRA_ERROR_LOG": str(
-                                log_dir / "worker_renderer_errors.log"
-                            ),
-                            "EXTRA_ERROR_JSON_LOG": str(
-                                json_log_dir / "worker_renderer_errors.json"
-                            ),
-                            "SESSION_LOG_ROOT": str(session_log_root),
-                        },
-                        pid_file=repo_root / "logs" / "worker_renderer.pid",
                     ),
                     ProcessSpec(
                         name="Worker Heavy",

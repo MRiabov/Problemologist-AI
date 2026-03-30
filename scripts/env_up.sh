@@ -1,6 +1,7 @@
 #!/bin/bash
 # scripts/env_up.sh
-# Sets up the Problemologist-AI development environment using local infra and FastAPI servers.
+# Sets up the Problemologist-AI development environment using local infra,
+# local FastAPI servers, and the containerized renderer.
 # Use this for local debugging, optimization, or manual testing.
 
 set -e
@@ -149,13 +150,18 @@ WORKER_LIGHT_PID=$!
 echo $WORKER_LIGHT_PID > "$STACK_PID_DIR/worker_light.pid"
 echo "Worker Light started (PID: $WORKER_LIGHT_PID)"
 
-# Start Worker Renderer (port 18003)
-export WORKER_TYPE=renderer
-export EXTRA_DEBUG_LOG="$LOG_DIR/worker_renderer_debug.log"
-nohup .venv/bin/python -m uvicorn worker_renderer.app:app --host 0.0.0.0 --port "$WORKER_RENDERER_HOST_PORT" > "$LOG_DIR/worker_renderer.log" 2>&1 &
-WORKER_RENDERER_PID=$!
-echo $WORKER_RENDERER_PID > "$STACK_PID_DIR/worker_renderer.pid"
-echo "Worker Renderer started (PID: $WORKER_RENDERER_PID)"
+# Start Worker Renderer in Docker (port 18003)
+export WORKER_RENDERER_LOG_DIR="$LOG_DIR"
+WORKER_RENDERER_COMPOSE_CMD=(docker compose -p "$COMPOSE_PROJECT_NAME" -f docker-compose.yml)
+echo "Starting Worker Renderer container..."
+"${WORKER_RENDERER_COMPOSE_CMD[@]}" up -d --no-deps worker-renderer > "$LOG_DIR/worker_renderer.log" 2>&1
+WORKER_RENDERER_CONTAINER_ID=$("${WORKER_RENDERER_COMPOSE_CMD[@]}" ps -q worker-renderer | tr -d '\r')
+if [ -z "$WORKER_RENDERER_CONTAINER_ID" ]; then
+  echo "Failed to resolve Worker Renderer container id."
+  exit 1
+fi
+echo "$WORKER_RENDERER_CONTAINER_ID" > "$STACK_PID_DIR/worker_renderer.pid"
+echo "Worker Renderer container started (ID: $WORKER_RENDERER_CONTAINER_ID)"
 
 # Start Worker Heavy (port 18002)
 export WORKER_TYPE=heavy
@@ -254,24 +260,32 @@ wait_for_health() {
   return 1
 }
 
-check_pid_alive() {
+check_runtime_alive() {
   local name="$1"
-  local pid="$2"
-  if kill -0 "$pid" 2>/dev/null; then
+  local runtime_id="$2"
+  if [ -z "$runtime_id" ]; then
+    echo "$name runtime id is empty"
+    return 1
+  fi
+  if [[ "$runtime_id" =~ ^[0-9]+$ ]]; then
+    if kill -0 "$runtime_id" 2>/dev/null; then
+      return 0
+    fi
+  elif docker inspect -f '{{.State.Running}}' "$runtime_id" 2>/dev/null | grep -q '^true$'; then
     return 0
   fi
-  echo "$name process is not running (PID: $pid)"
+  echo "$name runtime is not running (ID: $runtime_id)"
   return 1
 }
 
 FAIL=0
 
-check_pid_alive "Worker Light" "$WORKER_LIGHT_PID" || FAIL=1
-check_pid_alive "Worker Renderer" "$WORKER_RENDERER_PID" || FAIL=1
-check_pid_alive "Worker Heavy" "$WORKER_HEAVY_PID" || FAIL=1
-check_pid_alive "Controller" "$CONTROLLER_PID" || FAIL=1
-check_pid_alive "Temporal Worker" "$TEMP_WORKER_PID" || FAIL=1
-check_pid_alive "Heavy Temporal Worker" "$HEAVY_TEMP_WORKER_PID" || FAIL=1
+check_runtime_alive "Worker Light" "$WORKER_LIGHT_PID" || FAIL=1
+check_runtime_alive "Worker Renderer" "$WORKER_RENDERER_CONTAINER_ID" || FAIL=1
+check_runtime_alive "Worker Heavy" "$WORKER_HEAVY_PID" || FAIL=1
+check_runtime_alive "Controller" "$CONTROLLER_PID" || FAIL=1
+check_runtime_alive "Temporal Worker" "$TEMP_WORKER_PID" || FAIL=1
+check_runtime_alive "Heavy Temporal Worker" "$HEAVY_TEMP_WORKER_PID" || FAIL=1
 
 wait_for_health "Worker Light" "http://127.0.0.1:${WORKER_LIGHT_HOST_PORT}/health" || FAIL=1
 wait_for_health "Worker Renderer" "http://127.0.0.1:${WORKER_RENDERER_HOST_PORT}/health" || FAIL=1

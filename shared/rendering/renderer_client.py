@@ -42,15 +42,18 @@ def _post_json_with_busy_retry(
     payload: dict[str, Any],
     session_id: str | None,
     timeout: float,
-    attempts: int = 8,
+    attempts: int | None = None,
     initial_delay_s: float = 0.5,
+    max_delay_s: float = 5.0,
 ) -> dict[str, Any]:
     """POST JSON to the renderer, retrying transient worker-busy responses."""
 
     delay_s = initial_delay_s
-    last_error: Exception | None = None
+    busy_retry_deadline_s = time.monotonic() + timeout
+    attempt = 0
 
-    for attempt in range(1, attempts + 1):
+    while True:
+        attempt += 1
         with httpx.Client(
             timeout=timeout, headers=_session_headers(session_id)
         ) as client:
@@ -58,9 +61,12 @@ def _post_json_with_busy_retry(
             try:
                 response.raise_for_status()
                 return response.json()
-            except httpx.HTTPStatusError as exc:
-                last_error = exc
-                if response.status_code != 503 or attempt >= attempts:
+            except httpx.HTTPStatusError:
+                if response.status_code != 503:
+                    raise
+                if attempts is not None and attempt >= attempts:
+                    raise
+                if time.monotonic() >= busy_retry_deadline_s:
                     raise
 
                 logger.warning(
@@ -71,12 +77,11 @@ def _post_json_with_busy_retry(
                     delay_s=delay_s,
                     session_id=session_id,
                 )
-                time.sleep(delay_s)
-                delay_s = min(delay_s * 1.5, 3.0)
-
-    if last_error is not None:
-        raise last_error
-    raise RuntimeError("renderer request failed without a response")
+                remaining_s = busy_retry_deadline_s - time.monotonic()
+                if remaining_s <= 0:
+                    raise
+                time.sleep(min(delay_s, remaining_s))
+                delay_s = min(delay_s * 1.5, max_delay_s)
 
 
 def render_preview(
