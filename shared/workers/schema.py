@@ -544,6 +544,13 @@ class PreviewDesignResponse(BaseModel):
     success: StrictBool
     message: StrictStr
     image_path: StrictStr | None = None
+    image_bytes_base64: StrictStr | None = Field(
+        default=None,
+        description=(
+            "Base64-encoded preview image payload used internally by worker "
+            "delegation layers."
+        ),
+    )
     events: list[BaseEvent] = Field(default_factory=list)
 
 
@@ -581,6 +588,16 @@ class HeavyPreviewParams(BaseModel):
     yaw: float = 45.0
 
 
+class SimulationVideoRequest(BaseModel):
+    """Request to encode simulation frames into a video artifact."""
+
+    bundle_base64: StrictStr
+    frame_paths: list[StrictStr] = Field(default_factory=list)
+    output_name: StrictStr = "simulation.mp4"
+    fps: StrictInt = Field(default=30, ge=1, le=240)
+    session_id: StrictStr | None = None
+
+
 class HeavySubmitParams(BaseModel):
     """Parameters for worker_submit_for_review activity."""
 
@@ -603,6 +620,7 @@ class HeavyPreviewResponse(BaseModel):
 
     success: bool
     image_bytes: bytes | None = None
+    image_path: str | None = None
     filename: str | None = None
 
 

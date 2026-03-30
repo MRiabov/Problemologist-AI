@@ -1,0 +1,141 @@
+from __future__ import annotations
+
+import base64
+import os
+from pathlib import Path
+from typing import Any
+
+import httpx
+import structlog
+
+from shared.workers.bundling import bundle_directory_base64
+from shared.workers.schema import (
+    BenchmarkToolRequest,
+    BenchmarkToolResponse,
+    PreviewDesignRequest,
+    PreviewDesignResponse,
+    SimulationVideoRequest,
+)
+
+logger = structlog.get_logger(__name__)
+
+
+def renderer_base_url() -> str:
+    return os.getenv("WORKER_RENDERER_URL", "http://worker-renderer:8003").rstrip("/")
+
+
+def bundle_workspace_base64(root: Path) -> str:
+    return bundle_directory_base64(root)
+
+
+def _session_headers(session_id: str | None) -> dict[str, str]:
+    headers: dict[str, str] = {}
+    if session_id:
+        headers["x-session-id"] = session_id
+    return headers
+
+
+def render_preview(
+    *,
+    bundle_base64: str | None,
+    script_path: str,
+    pitch: float,
+    yaw: float,
+    session_id: str | None = None,
+    script_content: str | None = None,
+) -> PreviewDesignResponse:
+    payload = PreviewDesignRequest(
+        bundle_base64=bundle_base64,
+        script_path=script_path,
+        pitch=pitch,
+        yaw=yaw,
+        script_content=script_content,
+    ).model_dump(mode="json")
+    url = f"{renderer_base_url()}/benchmark/preview"
+    with httpx.Client(timeout=60.0, headers=_session_headers(session_id)) as client:
+        response = client.post(url, json=payload)
+        response.raise_for_status()
+        data = response.json()
+    return PreviewDesignResponse.model_validate(data)
+
+
+def render_static_preview(
+    *,
+    bundle_base64: str | None,
+    script_path: str,
+    session_id: str,
+    smoke_test_mode: bool | None = None,
+    particle_budget: int | None = None,
+    script_content: str | None = None,
+) -> BenchmarkToolResponse:
+    payload = BenchmarkToolRequest(
+        bundle_base64=bundle_base64,
+        script_path=script_path,
+        smoke_test_mode=smoke_test_mode,
+        particle_budget=particle_budget,
+        script_content=script_content,
+    ).model_dump(mode="json")
+    payload["session_id"] = session_id
+    url = f"{renderer_base_url()}/benchmark/static-preview"
+    with httpx.Client(timeout=120.0, headers=_session_headers(session_id)) as client:
+        response = client.post(url, json=payload)
+        response.raise_for_status()
+        data = response.json()
+    return BenchmarkToolResponse.model_validate(data)
+
+
+def render_simulation_video(
+    *,
+    bundle_base64: str | None,
+    frame_paths: list[str],
+    output_name: str,
+    fps: int,
+    session_id: str,
+) -> BenchmarkToolResponse:
+    payload = SimulationVideoRequest(
+        bundle_base64=bundle_base64,
+        frame_paths=frame_paths,
+        output_name=output_name,
+        fps=fps,
+        session_id=session_id,
+    ).model_dump(mode="json")
+    url = f"{renderer_base_url()}/benchmark/simulation-video"
+    with httpx.Client(timeout=120.0, headers=_session_headers(session_id)) as client:
+        response = client.post(url, json=payload)
+        response.raise_for_status()
+        data = response.json()
+    return BenchmarkToolResponse.model_validate(data)
+
+
+def materialize_preview_response(
+    response: PreviewDesignResponse, output_dir: Path
+) -> Path | None:
+    """Persist a preview response payload into the local workspace."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if response.image_bytes_base64:
+        image_name = Path(response.image_path or "preview.jpg").name
+        image_path = output_dir / image_name
+        image_path.write_bytes(base64.b64decode(response.image_bytes_base64))
+        return image_path
+    if response.image_path:
+        return output_dir / Path(response.image_path).name
+    return None
+
+
+def materialize_render_artifacts(
+    artifacts: Any, workspace_root: Path, *, default_subdir: str = "renders"
+) -> list[str]:
+    """Persist renderer artifact blobs into the caller's workspace."""
+    render_paths: list[str] = []
+    render_blobs = getattr(artifacts, "render_blobs_base64", None) or {}
+    for rel_path, blob in render_blobs.items():
+        target = workspace_root / rel_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(base64.b64decode(blob))
+        render_paths.append(str(Path(rel_path)))
+    if not render_paths:
+        render_paths = [
+            str(Path(default_subdir) / Path(path).name)
+            for path in getattr(artifacts, "render_paths", [])
+        ]
+    return render_paths

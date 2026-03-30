@@ -3156,6 +3156,18 @@
             ],
             "title": "Image Path"
           },
+          "image_bytes_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Bytes Base64",
+            "description": "Base64-encoded preview image payload used internally by worker delegation layers."
+          },
           "events": {
             "items": {
               "$ref": "#/components/schemas/BaseEvent"
