@@ -1365,6 +1365,9 @@ def _prepare_frontend_dist(repo_root: Path, frontend_state_file: Path | None) ->
         )
         env = os.environ.copy()
         env["PYTHONPATH"] = "."
+        # CI checkouts do not have frontend node_modules populated, so install
+        # the locked frontend toolchain before generating API clients or building.
+        _run(["npm", "ci"], cwd=repo_root / "frontend")
         _run(["uv", "run", "python", "scripts/generate_openapi.py"], env=env)
         _run(["npm", "run", "gen:api"], cwd=repo_root / "frontend")
         production_env = repo_root / "frontend" / ".env.production"
