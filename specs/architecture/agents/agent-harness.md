@@ -185,6 +185,8 @@ The runner behavior for Codex mode is:
 4. Optionally run local judge/reviewer passes against the same workspace artifacts when the run requests judge/reviewer mode and the local stage contracts are satisfied.
 5. Persist session metadata including workspace path, launch return code, verification result, judge/reviewer outcomes when run, and failure reason.
 6. Fail closed if the local Codex CLI is missing or the workspace verification fails.
+7. Controller-backed eval runs apply the `eval` stack profile so the eval bootstrap does not tear down or probe the integration stack, and the profile skips the frontend dev server because evals do not need it.
+8. Long-running controller-backed eval runs emit the audible reminder `eval setup running` every five minutes until the run exits.
 
 The runner does not require controller/worker orchestration for the agent loop in Codex mode.
 The controller-backed preflight and health checks remain part of the paid-provider/controller path only.

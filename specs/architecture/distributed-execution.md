@@ -31,6 +31,15 @@ In the future we may well refactor to run on distributed nodes, perhaps even IPv
 
 The split is intentional: keep fast, high-throughput operations on light infra while isolating heavy physics/render workloads onto dedicated nodes.
 
+## Local stack profiles
+
+Local bootstrap uses profile-scoped host-port namespaces and compose project names so integration tests and eval runs can coexist on the same workstation.
+
+1. The `integration` profile keeps the existing local integration ports (`18000/18001/18002`, `15432`, `17233`, `19000/19001`, `15173`) and remains the default profile for the integration runner.
+2. The `eval` profile uses a disjoint host-port namespace (`28000/28001/28002`, `25432`, `27233`, `29000/29001`) for the controller, workers, and infra so eval runs do not tear down or probe the integration stack.
+3. Compose project names, worker-session directories, and service-log state are profile-scoped; the bootstrap layer uses one compose definition with profile-driven env vars instead of duplicated YAML.
+4. The integration profile starts the frontend dev server on its normal local port; the eval profile leaves the frontend off because the eval runner only needs the backend services.
+
 ## Worker API
 
 The worker API is physically split into two specialized services to optimize resource allocation and separate concerns: **Worker Light** and **Worker Heavy**.
