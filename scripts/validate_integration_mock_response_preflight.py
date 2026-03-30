@@ -517,8 +517,9 @@ async def _async_main(args: argparse.Namespace) -> int:
             "!!! important validation warning !!! "
             "This validator checks happy-path mock-response fixtures only. "
             "It does not account for explicit-failure cases. Before treating a "
-            "failure as a fixture defect, check specs/integration-tests.md to "
-            "confirm whether the case is intentionally negative or actually invalid. "
+            "failure as a fixture defect, check specs/integration-test-rules.md and "
+            "specs/integration-test-list.md to confirm whether the case is "
+            "intentionally negative or actually invalid. "
             "--- validation warning end ---"
         ),
     )

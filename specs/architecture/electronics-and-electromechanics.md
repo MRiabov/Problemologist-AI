@@ -520,7 +520,7 @@ The system should present:
 
 ## Acceptance and gates
 
-The main release gates for this capability live in [specs/integration-tests.md](../integration-tests.md).
+The main release gates for this capability live in [specs/integration-test-list.md](../integration-test-list.md).
 
 The key groups are:
 

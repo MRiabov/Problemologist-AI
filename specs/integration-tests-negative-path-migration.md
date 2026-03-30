@@ -1,7 +1,7 @@
 # Integration Test Negative-Path Migration Matrix
 
 This document maps current integration coverage to the negative-path split that
-`specs/integration-tests.md` is converging toward.
+`specs/integration-test-list.md` is converging toward.
 
 Heuristic used here:
 

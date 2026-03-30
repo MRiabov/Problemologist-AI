@@ -20,7 +20,7 @@ To save me refactors and to speed up debugging, please read these architecture s
 
 ## Rules
 
-In this repo, the convention is to not use unit tests because they are flaky, but to use only real integration tests. They are faster to debug against. So, when implementing new logic, verify it against integration tests. The integration test list and spec can be found at @specs/integration-tests.md
+In this repo, the convention is to not use unit tests because they are flaky, but to use only real integration tests. They are faster to debug against. So, when implementing new logic, verify it against integration tests. The integration-test rules live at @specs/integration-test-rules.md and the canonical test catalog lives at @specs/integration-test-list.md
 
 ______________________________________________________________________
 

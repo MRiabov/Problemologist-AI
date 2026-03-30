@@ -24,7 +24,7 @@ This document maps the architecture spec set to the self-contained docs bundle. 
 | `architecture/observability.md` | `docs/backend-reference.md`, `docs/data-models.md` | Traces, events, lineage, backups, and feedback |
 | `architecture/fluids-and-deformables.md` | `docs/backend-reference.md`, `docs/data-models.md` | Genesis-only fluid/deformable branch and stress summaries |
 | `architecture/electronics-and-electromechanics.md` | `docs/backend-reference.md`, `docs/api-contracts.md`, `docs/data-models.md` | Electronics requirements, circuit validation, and wire routing |
-| `integration-tests.md` | `docs/development-guide.md`, `docs/deployment-guide.md`, `docs/api-contracts.md` | Integration-first verification and HTTP boundary contracts |
+| `integration-test-rules.md` | `docs/development-guide.md`, `docs/deployment-guide.md`, `docs/api-contracts.md` | Integration-first verification and HTTP boundary contracts; canonical ID mappings live in `integration-test-list.md` |
 
 ## Backend-Focused Reading Order
 

@@ -98,8 +98,7 @@ The worker API is physically split into three specialized services to optimize r
 - Render jobs are dispatched to `worker-renderer`; the heavy worker does not own the graphics stack.
 - All non-Temporal worker calls are session-scoped with `X-Session-ID`.
 - The `WorkerClient` is the single boundary adapter; agents do not know about service split.
-- `validate()` is a high-frequency LLM touchpoint. Keep its agent-facing route stable through the controller script-tools proxy rather than exposing alternate direct worker paths, so the LLM/tool layer does not have to understand worker-specific transport for a near-instant check.
-- Heavy-worker and renderer-worker admission are fail-closed: busy workers return deterministic busy responses; they do not enqueue additional work internally.
+- Heavy-worker and renderer-worker admission are fail-closed: direct worker HTTP busy responses are allowed on the worker boundary, but controller and agent-facing product routes must not surface those raw `503 WORKER_BUSY` responses. Product routes either wait/retry through Temporal or fail closed at the orchestration layer if Temporal itself cannot complete.
 
 ### Heavy Execution Path Contract
 
@@ -186,6 +185,7 @@ Heavy-worker concurrency is a single-flight contract:
 - A heavy worker instance can execute exactly one active job at a time.
 - The heavy worker app does not own internal multi-job management (no in-process queue/semaphore/scheduler for multiple external jobs).
 - If a request arrives while a job is active, the heavy worker returns a deterministic busy response (`503` + machine-readable reason such as `WORKER_BUSY`) instead of buffering jobs.
+- That `503` is the direct heavy-worker admission/readiness signal, not the expected controller-path response.
 - `/ready` and equivalent readiness signals must report `not ready` while a job is active, so load balancers route only to idle instances.
 - Any queueing, retries, and fan-out for concurrent demand are owned outside `worker-heavy` (Temporal orchestration and infrastructure load balancing), not by heavy-worker app internals.
 - Cross-worker fan-out/scaling policy is intentionally out of scope for this phase; the enforced contract here is per-instance single-flight admission plus deterministic busy behavior.

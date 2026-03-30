@@ -7,7 +7,7 @@ the small set of live UI flows that need a real browser, implemented with
 `pytest-playwright`.
 
 Integration test additions, removals, renames, and scope changes must keep
-their `INT-xxx` mapping in `specs/integration-tests.md`.
+their `INT-xxx` mapping in `specs/integration-test-list.md`.
 
 Optional browser tests live under:
 
@@ -26,6 +26,21 @@ The canonical integration entrypoint is:
 That script starts the compose stack, runs migrations, starts backend services,
 and then runs pytest with the repo's integration filters. It only builds and
 serves the frontend when the browser slice is selected.
+
+By default, a full run is split into ordered marker buckets so release-blocking
+coverage lands first:
+
+1. `integration_p0`
+2. `integration_p1`
+3. `integration_agent`
+4. `integration_frontend`
+5. `integration_p2`
+
+The bucket expressions are disjoint, so a test runs once. Overlaps such as
+`integration_agent` + `integration_p1` stay in the later category bucket rather
+than being duplicated.
+Set `INTEGRATION_ORDERED_MARKER_SPLITS=0` if you want the old single-pass
+pytest behavior.
 
 Integration session IDs use the `INT-{number}-{uuid8}` pattern. Keep that
 shape in any test-authored artifacts or assertions that need to correlate a

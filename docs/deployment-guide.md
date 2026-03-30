@@ -118,7 +118,7 @@ This stack is intentionally smaller than the full compose file because the appli
 | -- | -- | -- |
 | Controller | `/health` | Reports controller health and integration-test mode |
 | Worker Light | `/health` | Reports worker-light health |
-| Worker Heavy | `/health`, `/ready` | `/ready` returns `503 WORKER_BUSY` while a heavy job is active |
+| Worker Heavy | `/health`, `/ready` | Direct worker admission/readiness signal only: `/ready` returns `503 WORKER_BUSY` while a heavy job is active; controller/product routes must not expose that raw status |
 
 ## Persistence And Runtime State
 

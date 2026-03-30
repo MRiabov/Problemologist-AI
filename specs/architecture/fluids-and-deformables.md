@@ -468,7 +468,7 @@ The exact helper function names are not the architectural concern here.
 
 ## Acceptance and gates
 
-The primary release gates for this capability live in [specs/integration-tests.md](../integration-tests.md).
+The primary release gates for this capability live in [specs/integration-test-list.md](../integration-test-list.md).
 
 The key groups are:
 

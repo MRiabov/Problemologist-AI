@@ -54,7 +54,7 @@ The repository policy favors integration tests over unit tests for product behav
 
 Integration session IDs follow the `INT-{number}-{uuid8}` pattern. Keep that format in any new test artifacts and assertions that need to correlate a run with its logs or persisted records.
 
-Any added, removed, renamed, or repurposed integration case must keep its `INT-xxx` mapping in `specs/integration-tests.md`.
+Any added, removed, renamed, or repurposed integration case must keep its `INT-xxx` mapping in `specs/integration-test-list.md`.
 
 The runner sets `IS_INTEGRATION_TEST=true` for integration runs, chooses `SIMULATION_DEFAULT_BACKEND` per run, and enables backend-error early-stop by default. Set `INTEGRATION_EARLY_STOP_ON_BACKEND_ERRORS=0` only when you explicitly need a longer triage run.
 

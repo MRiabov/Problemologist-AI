@@ -221,7 +221,6 @@ I propose the following set of tools (their usage is below). Notably, the tools 
   - The validation tool also generates the standard 24-view static preview package.
   - That static preview package uses the validation-preview renderer, which is build123d/VTK by default.
   - `validate()` is therefore a fast geometry + preview gate, not a Genesis-runtime parity gate.
-  - `validate()` stays behind the controller script-tools proxy because it is a high-frequency LLM touchpoint; the agent/tool layer should not need alternate direct worker transport for a near-instant check.
   - Current implementation bug to eliminate: `validate()` must fail closed if the compound being validated can only be reproduced from transient shell state and not from the persisted script/workspace snapshot. A minimal fix is to derive a canonical semantic signature from the compound's child/component history, using primitive/component types, authored parameters, label, bounding box, rounded volume, face count, and wire length with tolerance-aware normalization, and compare it against the persisted authored script state; any mismatch is a fail-fast validation error. Raw mesh equality and direct volume equality are too brittle for this gate.
 
 - `simulate(Compound) -> SimulationResult` - a simulation that, unlike the engineering simulation, can not fail, except if not valid as per `validate()`.

@@ -27,7 +27,7 @@ In this repo, the convention is to not use unit tests because they are flaky, bu
 
 When you need to verify, reproduce, or debug behavior at the system boundary, use `./scripts/run_integration_tests.sh` as the only integration test entrypoint. Do not run plain `pytest` for integration verification.
 
-When implementing new logic, verify it against the narrowest relevant integration slice first, then widen only if needed. The integration test list and spec can be found at @specs/integration-tests.md
+When implementing new logic, verify it against the narrowest relevant integration slice first, then widen only if needed. The integration-test rules live at @specs/integration-test-rules.md and the canonical test catalog lives at @specs/integration-test-list.md
 
 ______________________________________________________________________
 

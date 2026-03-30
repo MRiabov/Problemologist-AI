@@ -77,7 +77,7 @@ overhead and improve end-to-end tool latency (noted estimate: ~20-40% from OpenA
 As per conversation:
 
 ```md
-specs/integration-tests.md; specs/desired_architecture.md
+specs/integration-test-rules.md; specs/integration-test-list.md; specs/desired_architecture.md
 
   Are there any "meta" requirements we want to tighten in integration tests as related to desired_architecture? Basically, I've
   found many bugs in integration tests by enforcing no errors logged in the console (as per integration test spec). I'm now
