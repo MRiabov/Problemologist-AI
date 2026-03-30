@@ -51,6 +51,7 @@ from shared.simulation.schemas import (
     SimulatorBackendType,
     get_default_simulator_backend,
 )
+from shared.simulation.smoke_mode import ensure_smoke_test_mode_allowed
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.filesystem.policy import FilesystemPolicy
 from shared.workers.schema import (
@@ -792,6 +793,9 @@ class RemoteFilesystemMiddleware:
         """Trigger physics simulation via worker client (with bundling)."""
         p_str = str(script_path)
         resolved_backend = backend or get_default_simulator_backend()
+        ensure_smoke_test_mode_allowed(
+            smoke_test_mode, integration_enabled=worker_settings.is_integration_test
+        )
         # Record request
         await record_events(
             episode_id=self.episode_id,
@@ -901,6 +905,11 @@ class RemoteFilesystemMiddleware:
         """Trigger runtime-randomization verification via worker client."""
         if smoke_test_mode is None:
             smoke_test_mode = worker_settings.smoke_test_mode
+        else:
+            ensure_smoke_test_mode_allowed(
+                smoke_test_mode,
+                integration_enabled=worker_settings.is_integration_test,
+            )
         self._require_temporal_for_heavy_operation("verify")
 
         bundle = await self.client.bundle_session()

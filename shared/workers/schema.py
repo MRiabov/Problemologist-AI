@@ -556,11 +556,6 @@ class HeavySimulationParams(BaseModel):
     smoke_test_mode: bool | None = None
     session_id: str
 
-    @field_validator("smoke_test_mode", mode="after")
-    @classmethod
-    def validate_smoke_test_mode(cls, value: bool | None) -> bool | None:
-        return ensure_smoke_test_mode_allowed(value)
-
 
 class HeavyValidationParams(BaseModel):
     """Parameters for worker_validate_design activity."""
@@ -569,11 +564,6 @@ class HeavyValidationParams(BaseModel):
     script_path: str
     session_id: str
     smoke_test_mode: bool | None = None
-
-    @field_validator("smoke_test_mode", mode="after")
-    @classmethod
-    def validate_smoke_test_mode(cls, value: bool | None) -> bool | None:
-        return ensure_smoke_test_mode_allowed(value)
 
 
 class HeavyVerifyParams(VerificationRequest):
