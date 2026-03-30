@@ -3,7 +3,7 @@
   "reviewer_stage": "engineering_execution_reviewer",
   "timestamp": "2026-03-11T12:00:00Z",
   "session_id": "seed-eer-005-central-forbid-route",
-  "revision": "e0a2fe0130cb6234e5d9883c9b96abad3f4e2397",
+  "revision": "c44ac096d2160408497f92c6234a5ef24c95c7cd",
   "script_path": "script.py",
   "script_sha256": "433d78c44fa2b4b26f55985e680210ba51dc44fcc0d6d67ccd05e763a6b23445",
   "validation_success": true,
