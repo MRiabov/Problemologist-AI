@@ -285,9 +285,13 @@ class BaseNode:
             return [render_paths[0]]
 
         else:
-            preview_path = "renders/dof_review_preview.png"
-            preview_exists = await self.ctx.worker_client.exists(preview_path)
-            if preview_exists:
+            for preview_path in (
+                "renders/render_e45_a45.png",
+                "renders/dof_review_preview.png",
+            ):
+                preview_exists = await self.ctx.worker_client.exists(preview_path)
+                if not preview_exists:
+                    continue
                 db_callback = self.ctx.get_database_recorder(self.ctx.episode_id)
                 input_data = json.dumps({"args": [preview_path]})
                 trace_id = db_callback.record_tool_start_sync(

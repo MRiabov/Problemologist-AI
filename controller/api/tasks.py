@@ -29,7 +29,6 @@ from controller.observability.langfuse import (
 )
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode, Trace
-from controller.utils import infer_integration_test_id
 from shared.enums import (
     AgentName,
     AssetType,
@@ -474,9 +473,7 @@ async def execute_agent_task(
                 # Use a 32-char hex trace_id for OTEL/Langfuse v3 compatibility
                 trace_id = uuid.uuid4().hex
 
-                workspace_session_id = (
-                    infer_integration_test_id(task, session_id) or session_id
-                )
+                workspace_session_id = session_id
 
                 client = get_worker_client(workspace_session_id)
                 middleware = RemoteFilesystemMiddleware(

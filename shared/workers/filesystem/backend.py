@@ -36,6 +36,11 @@ from shared.type_checking import type_check
 
 logger = structlog.get_logger(__name__)
 
+_INTEGRATION_SESSION_RE = re.compile(
+    r"\b(INT-(?:NEG-\d+|\d+))\b",
+    re.IGNORECASE,
+)
+
 
 class FileInfo(BaseModel):
     """Information about a file or directory."""
@@ -159,16 +164,25 @@ class BaseFilesystemBackend(BackendProtocol, ABC):
 _SESSION_DIR_REGISTRY: dict[str, tempfile.TemporaryDirectory] = {}
 
 
+def _normalize_session_id(session_id: str) -> str:
+    return session_id
+
+
 def get_session_root(session_id: str) -> Path:
     """Get or create a temporary directory for a session."""
-    if session_id not in _SESSION_DIR_REGISTRY:
+    canonical_session_id = _normalize_session_id(session_id)
+    if canonical_session_id not in _SESSION_DIR_REGISTRY:
         # Create a new unique temporary directory.
         # The prefix helps identify the session during debugging.
-        td = tempfile.TemporaryDirectory(prefix=f"pb-sess-{session_id}-")
-        _SESSION_DIR_REGISTRY[session_id] = td
-        logger.info("session_directory_created", session_id=session_id, path=td.name)
+        td = tempfile.TemporaryDirectory(prefix=f"pb-sess-{canonical_session_id}-")
+        _SESSION_DIR_REGISTRY[canonical_session_id] = td
+        logger.info(
+            "session_directory_created",
+            session_id=canonical_session_id,
+            path=td.name,
+        )
 
-    return Path(_SESSION_DIR_REGISTRY[session_id].name)
+    return Path(_SESSION_DIR_REGISTRY[canonical_session_id].name)
 
 
 @type_check

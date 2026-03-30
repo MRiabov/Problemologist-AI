@@ -59,7 +59,6 @@ from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode, Trace
-from controller.utils import infer_integration_test_id
 from shared.enums import (
     AgentName,
     EpisodePhase,
@@ -255,10 +254,7 @@ def _effective_benchmark_worker_session_id(
         if worker_session_id:
             return worker_session_id
         session_id = str(state.session.session_id)
-        prompt = state.session.prompt
-
-    inferred = infer_integration_test_id(prompt, session_id)
-    return inferred or (session_id or "").strip()
+    return (session_id or "").strip()
 
 
 def _normalized_failure_items(text: str | None) -> list[str]:
@@ -1533,9 +1529,7 @@ async def run_generation_session(
     from shared.enums import EpisodeType, SeedMatchMethod
     from shared.models.schemas import EpisodeMetadata
 
-    worker_session_id = infer_integration_test_id(prompt, str(session_id))
-    if not worker_session_id:
-        worker_session_id = str(session_id)
+    worker_session_id = str(session_id)
 
     session_factory = get_sessionmaker()
     async with session_factory() as db:

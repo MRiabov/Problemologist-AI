@@ -570,8 +570,15 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ],
               "title": "Session Id"
             }
           }
@@ -623,8 +630,15 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ],
               "title": "Session Id"
             }
           },
@@ -1816,8 +1830,15 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ],
               "title": "Session Id"
             }
           }
@@ -1869,8 +1890,15 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ],
               "title": "Session Id"
             }
           },

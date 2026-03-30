@@ -1783,6 +1783,7 @@ class BenchmarkCoderNode(BaseNode):
                         submit_res = await self.ctx.worker_client.submit(
                             script_path=SCRIPT_FILE,
                             reviewer_stage=AgentName.BENCHMARK_REVIEWER,
+                            episode_id=state.episode_id,
                         )
                         logger.info(
                             "benchmark_coder_submit_result",

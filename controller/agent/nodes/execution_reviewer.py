@@ -617,9 +617,11 @@ class ExecutionReviewerNode(BaseNode):
             )
 
         try:
+            episode_id = self.ctx.episode_id
             submit_result = await self.ctx.worker_client.submit(
                 "script.py",
                 reviewer_stage="engineering_execution_reviewer",
+                episode_id=episode_id,
             )
         except Exception as exc:
             return f"Execution review blocked: submit_for_review failed: {exc}"

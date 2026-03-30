@@ -26,6 +26,7 @@ from controller.api.schemas import (
 from controller.clients.worker import WorkerClient
 from controller.persistence.db import get_db
 from controller.persistence.models import Episode, Trace
+from controller.utils import resolve_episode_id
 from shared.enums import AgentName, GenerationKind, ResponseStatus
 from shared.models.schemas import BenchmarkDefinition, CustomObjectives
 from shared.simulation.schemas import (
@@ -129,7 +130,7 @@ class ConfirmRequest(BaseModel):
 
 @router.post("/{session_id}/confirm", response_model=BenchmarkConfirmResponse)
 async def confirm_benchmark(
-    session_id: uuid.UUID,
+    session_id: str | uuid.UUID,
     request: ConfirmRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -140,10 +141,13 @@ async def confirm_benchmark(
     from controller.persistence.models import Trace
     from shared.enums import TraceType
 
+    benchmark_episode_id = resolve_episode_id(session_id)
+
     # Record user comment if provided
     logger.info(
         "benchmark_confirm_requested",
         session_id=str(session_id),
+        benchmark_episode_id=str(benchmark_episode_id),
         has_comment=bool(request.comment),
         comment=request.comment,
         additional_turns=request.additional_turns,
@@ -155,7 +159,7 @@ async def confirm_benchmark(
 
         metadata = TraceMetadata(additional_info={"comment": request.comment})
         trace_record = Trace(
-            episode_id=session_id,
+            episode_id=benchmark_episode_id,
             trace_type=TraceType.LOG,
             content=f"User confirmation comment: {request.comment}",
             name="user_confirmation",
@@ -168,14 +172,14 @@ async def confirm_benchmark(
         from controller.agent.execution_limits import grant_episode_additional_turns
 
         await grant_episode_additional_turns(
-            episode_id=session_id,
+            episode_id=benchmark_episode_id,
             additional_turns=request.additional_turns,
         )
 
     launch_tracked_benchmark_task(
-        session_id,
+        benchmark_episode_id,
         continue_generation_session(
-            session_id=session_id,
+            session_id=benchmark_episode_id,
         ),
     )
 
@@ -186,13 +190,17 @@ async def confirm_benchmark(
 
 
 @router.websocket("/{session_id}/ws")
-async def benchmark_websocket(websocket: WebSocket, session_id: uuid.UUID):
-    await manager.connect(session_id, websocket)
+async def benchmark_websocket(websocket: WebSocket, session_id: str | uuid.UUID):
+    benchmark_episode_id = resolve_episode_id(session_id)
+    await manager.connect(benchmark_episode_id, websocket)
     try:
         await websocket.send_json(
             {
                 "type": "log",
-                "data": f"Subscribed to benchmark updates for session {session_id}",
+                "data": (
+                    "Subscribed to benchmark updates for session "
+                    f"{benchmark_episode_id}"
+                ),
                 "timestamp": datetime.utcnow().isoformat(),
             }
         )
@@ -201,19 +209,21 @@ async def benchmark_websocket(websocket: WebSocket, session_id: uuid.UUID):
             await asyncio.sleep(30)
             await websocket.send_json({"type": "heartbeat"})
     except WebSocketDisconnect:
-        manager.disconnect(session_id, websocket)
+        manager.disconnect(benchmark_episode_id, websocket)
     except Exception as e:
-        manager.disconnect(session_id, websocket)
+        manager.disconnect(benchmark_episode_id, websocket)
         if _is_closed_websocket_error(e):
             logger.info(
                 "benchmark_websocket_closed",
                 session_id=str(session_id),
+                benchmark_episode_id=str(benchmark_episode_id),
                 error=str(e),
             )
             return
         logger.exception(
             "benchmark_websocket_error",
             session_id=str(session_id),
+            benchmark_episode_id=str(benchmark_episode_id),
             error=str(e),
         )
         raise
@@ -228,7 +238,7 @@ async def benchmark_websocket(websocket: WebSocket, session_id: uuid.UUID):
 
 @router.get("/{session_id}", response_model=EpisodeResponse)
 async def get_session(
-    session_id: uuid.UUID,
+    session_id: str | uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     include_traces: bool = True,
     trace_limit: int = 200,
@@ -236,9 +246,11 @@ async def get_session(
 ):
     from sqlalchemy.orm import selectinload
 
+    benchmark_episode_id = resolve_episode_id(session_id)
+
     stmt = (
         select(Episode)
-        .where(Episode.id == session_id)
+        .where(Episode.id == benchmark_episode_id)
         .options(selectinload(Episode.assets))
     )
     result = await db.execute(stmt)
@@ -248,7 +260,7 @@ async def get_session(
         raise HTTPException(status_code=404, detail="Session not found")
 
     last_trace_id = await db.scalar(
-        select(func.max(Trace.id)).where(Trace.episode_id == session_id)
+        select(func.max(Trace.id)).where(Trace.episode_id == benchmark_episode_id)
     )
 
     response = EpisodeResponse(
@@ -278,7 +290,7 @@ async def get_session(
 
     trace_stmt = (
         select(Trace)
-        .where(Trace.episode_id == session_id)
+        .where(Trace.episode_id == benchmark_episode_id)
         .order_by(Trace.id.desc())
         .limit(safe_trace_limit)
     )

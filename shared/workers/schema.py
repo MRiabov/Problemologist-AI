@@ -247,11 +247,6 @@ class BenchmarkToolRequest(BaseModel):
             return LEGACY_REVIEWER_STAGE_ALIASES.get(value, value)
         return value
 
-    @field_validator("smoke_test_mode", mode="after")
-    @classmethod
-    def validate_smoke_test_mode(cls, value: bool | None) -> bool | None:
-        return ensure_smoke_test_mode_allowed(value)
-
 
 class AnalyzeRequest(BenchmarkToolRequest):
     """Request to run manufacturing analysis."""

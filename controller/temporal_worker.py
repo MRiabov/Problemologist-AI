@@ -18,6 +18,7 @@ from controller.workflows.heavy import (
     HeavySimulationWorkflow,
     HeavySubmitWorkflow,
     HeavyValidationWorkflow,
+    HeavyVerifyWorkflow,
 )
 from controller.workflows.simulation import SimulationWorkflow
 from shared.ops.workflows import BackupWorkflow, run_backup_activity
@@ -58,6 +59,7 @@ async def main():
             ScriptExecutionWorkflow,
             HeavySimulationWorkflow,
             HeavyValidationWorkflow,
+            HeavyVerifyWorkflow,
             HeavyPreviewWorkflow,
             HeavySubmitWorkflow,
             BackupWorkflow,

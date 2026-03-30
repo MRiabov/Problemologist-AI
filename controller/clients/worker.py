@@ -981,6 +981,7 @@ class WorkerClient:
         script_path: str = "script.py",
         script_content: str | None = None,
         reviewer_stage: ReviewerStage | None = None,
+        episode_id: str | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger handover to review via worker."""
         effective_stage = reviewer_stage or self._default_reviewer_stage(
@@ -991,6 +992,7 @@ class WorkerClient:
                 "script_path": script_path,
                 "agent_role": self.agent_role,
                 "reviewer_stage": effective_stage,
+                "episode_id": episode_id,
             }
             if script_content is not None:
                 raise NotImplementedError(
@@ -1011,6 +1013,8 @@ class WorkerClient:
                 payload["script_content"] = script_content
             if effective_stage:
                 payload["reviewer_stage"] = effective_stage
+            if episode_id is not None:
+                payload["episode_id"] = episode_id
 
             await self._add_bundle_to_payload(payload)
 

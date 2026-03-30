@@ -611,6 +611,7 @@ async def _materialize_reviewer_handover(
     client: WorkerClient,
     *,
     reviewer_stage: ReviewerStage = "engineering_execution_reviewer",
+    episode_id: str | None = None,
 ) -> str | None:
     async def _run_with_transient_busy_retry(operation_name: str, coro_factory):
         deadline = asyncio.get_running_loop().time() + _TRANSIENT_BUSY_MAX_WAIT_SECONDS
@@ -706,6 +707,7 @@ async def _materialize_reviewer_handover(
             lambda: client.submit(
                 "script.py",
                 reviewer_stage=reviewer_stage,
+                episode_id=episode_id,
             ),
         )
     except Exception as exc:
