@@ -74,16 +74,15 @@ The project needs to render the models in images (for preview) and for rendering
 
 #### Rendering CAD
 
-To simplify matters *(actually, I couldn't debug pyvista, so I'm doing this)*, the CAD will be rendered by porting to MuJoCo/Genesis and rendering in there. It'll also provide a unified view for the model.
-Alternatively, we could use some simple GLB renderer, but MuJoCo/Gensis already do it for us!
+All CAD and simulation render jobs are executed by the dedicated headless `worker-renderer` service. The renderer worker owns the graphics backend stack and runs the VTK, EGL, or other render dependencies in its own container; physics workers only supply scene state, camera policy, and artifact metadata.
 
 The rendering backend is not a single global choice. We split rendering by purpose:
 
-1. Static validation preview renders use build123d/VTK by default.
-2. Dynamic simulation artifacts use the active physics backend.
-3. Genesis-native visual outputs remain Genesis-side when the artifact depends on Genesis-only behavior such as FEM, fluids, or backend-native stress/state output.
+1. Static validation preview renders use build123d/VTK by default inside the renderer worker.
+2. Dynamic simulation artifacts use the active physics backend's render family inside the renderer worker.
+3. Genesis-native visual outputs use Genesis render paths inside the renderer worker when the artifact depends on Genesis-only behavior such as FEM, fluids, or backend-native stress/state output.
 
-This split is intentional. Static 24-view preview does not require Genesis runtime features and is therefore kept on the build123d/VTK geometry path.
+This split is intentional. Static 24-view preview does not require Genesis runtime features and is therefore kept on the build123d/VTK geometry path, but it still goes through the dedicated render worker boundary.
 
 Validation-preview renders are context artifacts, not backend-authoritative proof of Genesis runtime compatibility. Genesis-specific runtime behavior is still established through actual Genesis simulation runs where Genesis behavior is required.
 
@@ -93,8 +92,8 @@ I presume the model will need to render a view or a set of views to get an under
 
 For the standard benchmark handoff package, we render 24 static preview views. The default policy is:
 
-1. `/benchmark/validate` generates those 24 static preview views through build123d/VTK.
-2. `/benchmark/simulate` may generate backend-native dynamic renders or videos using the selected simulation backend.
+1. `/benchmark/validate` generates those 24 static preview views through build123d/VTK in the renderer worker.
+2. `/benchmark/simulate` may generate backend-native dynamic renders or videos using the selected simulation backend in the renderer worker.
 3. We do not use `/benchmark/validate` to regenerate the same static preview through Genesis only for parity.
 
 For build123d/VTK-backed static preview renders, each camera view is persisted as an image triplet under `renders/`:
@@ -105,7 +104,7 @@ For build123d/VTK-backed static preview renders, each camera view is persisted a
 
 Those files are context artifacts for downstream agents and reviewers. They follow the same persistence/discovery flow as the existing preview images rather than introducing a second artifact channel.
 
-Dynamic simulation renders and videos are resolved at runtime from the selected simulation backend and are recorded in `simulation_result.json`; they do not take their camera/view contract from `agents_config.yaml` or from benchmark task metadata. See [Simulation and Rendering](./simulation-and-rendering.md#render-profile-ownership) for the ownership split.
+Dynamic simulation renders and videos are resolved at runtime from the selected simulation backend and are recorded in `simulation_result.json`; they do not take their camera/view contract from `agents_config.yaml` or from benchmark task metadata. The renderer worker executes those jobs and persists the outputs. See [Simulation and Rendering](./simulation-and-rendering.md#render-profile-ownership) for the ownership split.
 
 The simulation backend still exposes a typed render-capability record so the runtime can distinguish supported artifact modes from unsupported ones. Static preview emission is separately governed by the YAML render policy in `config/agents_config.yaml`.
 

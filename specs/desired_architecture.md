@@ -28,8 +28,8 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 
 ### Runtime and infrastructure
 
-- [Distributed execution](./architecture/distributed-execution.md): controller/worker split, worker APIs, persistence, Temporal boundary, and backend-routing rules such as fast validation preview versus physics simulation.
-- [CAD and other infrastructure](./architecture/CAD-and-other-infra.md): CAD metadata, rendering direction, validation-preview rendering policy, schema contracts, and supporting infra assumptions.
+- [Distributed execution](./architecture/distributed-execution.md): controller/worker split, worker APIs, dedicated renderer worker, persistence, Temporal boundary, and backend-routing rules such as fast validation preview versus physics simulation.
+- [CAD and other infrastructure](./architecture/CAD-and-other-infra.md): CAD metadata, rendering direction, dedicated renderer worker boundary, validation-preview rendering policy, schema contracts, and supporting infra assumptions.
 
 ### Evaluation and quality gates
 
@@ -39,7 +39,7 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 
 ### Simulation
 
-- [Simulation and rendering](./architecture/simulation-and-rendering.md): physics assumptions, backend responsibility split, constraints model, and rendering/preview ownership.
+- [Simulation and rendering](./architecture/simulation-and-rendering.md): physics assumptions, backend responsibility split, dedicated renderer worker, constraints model, and rendering/preview ownership.
 - [Fluids, FEM, and stress validation](./architecture/fluids-and-deformables.md): Genesis-backed fluid simulation, deformable-material contracts, stress objectives, smoke-test policy, and WP2-specific artifacts.
 - [Electronics and electromechanical systems](./architecture/electronics-and-electromechanics.md): electrical schema, circuit-validation gate, 3D wire routing, power-gated actuation, and WP3-specific artifacts.
 

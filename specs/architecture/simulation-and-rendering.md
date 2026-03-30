@@ -8,6 +8,18 @@
 - Detailed fluids/deformables and electromechanical modality contracts live in [fluids-and-deformables.md](./fluids-and-deformables.md) and [electronics-and-electromechanics.md](./electronics-and-electromechanics.md).
 - Use this file for changes related to simulation semantics, constraints, or rendering logic.
 
+### Dedicated renderer worker
+
+All render execution runs in a dedicated headless `worker-renderer` container, including:
+
+1. static validation preview renders,
+2. dynamic simulation videos and other runtime evidence artifacts,
+3. selection snapshots, depth renders, segmentation renders, and render-manifest generation.
+
+The physics backends do not own render process state. They supply scene state, camera policy, and render-capability metadata; the renderer worker owns the graphics stack and executes the render job inside its own container boundary.
+
+The render worker is containerized in every environment, including development, so the graphics stack stays isolated from simulation and from the controller process.
+
 ## Genesis for simulation
 
 While this platform has notable downsides for future use, we pick Genesis because it supports fluid interaction and Finite Element analysis; being fast enough to work.
@@ -110,7 +122,7 @@ The backend contract is:
 
 1. `physics.backend` selects the physics simulation backend.
 2. Genesis remains the backend for Genesis-only simulation behavior such as FEM and fluids.
-3. Static 24-view validation preview rendering uses build123d/VTK by default.
+3. Static 24-view validation preview rendering uses build123d/VTK by default and is executed by the renderer worker.
 4. The static validation preview path is a fast geometry/context artifact path, not a Genesis-runtime proof path.
 
 This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asymmetric:
@@ -118,13 +130,14 @@ This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asy
 1. `/benchmark/validate`
    - checks geometry/objective consistency,
    - generates static preview artifacts,
-   - uses build123d/VTK for that static preview by default,
+   - uses build123d/VTK for that static preview by default through the renderer worker,
    - preserves the same script-source snapshot selected by the parent request when it launches an isolated preview child, so inline `script_content` and non-default `script_path` entrypoints do not get silently replaced by `working_dir/script.py`,
-   - does not add an extra Genesis load/render/build gate solely for parity checking.
+   - does not add an extra Genesis load/render/build gate solely for parity checking,
    - fails closed on duplicate top-level labels or labels that use the reserved `environment` or `zone_` namespaces, because MJCF mesh/body names are derived from authored labels and the simulator owns the scene root and `zone_*` bodies.
 2. `/benchmark/simulate`
    - runs the selected physics backend,
    - remains the runtime path for Genesis-specific behavior when Genesis is selected.
+   - requests dynamic render/video artifacts through the renderer worker when simulation evidence is needed.
 
 Genesis-specific runtime behavior is therefore established by actual Genesis simulation runs where Genesis behavior is required, not by duplicating a Genesis render/build check inside fast validation.
 
@@ -134,10 +147,10 @@ The render contract for dynamic simulation evidence is runtime-resolved and reco
 
 The rule is:
 
-1. The selected physics backend determines the renderer family for simulation video.
+1. The selected physics backend determines the renderer family for simulation video, but the render job itself is executed by the renderer worker.
 2. The renderer backend exposes a typed capability record that states what artifact modes and view policies it supports.
 3. The runtime-selected simulation render choice is serialized in `simulation_result.json` so reviewers can replay the exact evidence path.
-4. Static build123d/VTK preview remains a separate preview contract and continues to live in the preview manifest path.
+4. Static build123d/VTK preview remains a separate preview contract, executed by the renderer worker, and continues to live in the preview manifest path.
 5. If a backend cannot satisfy the selected render path, the failure should surface as a validation/runtime contract error rather than being hidden behind an unrelated global fallback.
 
 This keeps MuJoCo and Genesis distinct while still allowing each backend to use its own canonical default view when the runtime resolver allows that.

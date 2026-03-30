@@ -3,7 +3,7 @@
 ## Scope summary
 
 - Primary focus: controller and split-worker deployment architecture.
-- Defines `worker-light` vs `worker-heavy` responsibilities, worker APIs, and routing contract.
+- Defines `worker-light`, `worker-heavy`, and `worker-renderer` responsibilities, worker APIs, and routing contract.
 - Covers persistence/storage expectations, concurrency model, WebSocket control-plane transport, and Temporal orchestration boundary.
 - Use this file when changing infra topology or controller-to-worker integration behavior.
 
@@ -12,8 +12,9 @@ The controller remains the orchestration layer. The LLM/tool substrate under tha
 There is a controller node which runs the LLM and tool calls, and a split worker plane:
 
 1. `worker-light` for filesystem + execution tooling,
-2. `worker-heavy` for simulation + validation + rendering,
-3. `controller-worker` (Temporal worker) for durable orchestration.
+2. `worker-heavy` for simulation + validation coordination,
+3. `worker-renderer` for all static and dynamic rendering,
+4. `controller-worker` (Temporal worker) for durable orchestration.
 
 For both safety and performance reasons, it is desirable that the LLM-generated scripts are never executed on the controller machine.
 
@@ -26,7 +27,8 @@ In the future we may well refactor to run on distributed nodes, perhaps even IPv
 - `controller` (FastAPI): public API, LLM/tool orchestration, business logic.
 - `controller-worker` (Temporal worker): durable execution for long-running workflows/retries and heavy-task queue consumption/dispatch.
 - `worker-light` (FastAPI): session filesystem, git, linting, runtime execution, static asset serving.
-- `worker-heavy` (FastAPI single-flight executor): simulation, validation, rendering, manufacturability analysis, review handover.
+- `worker-heavy` (FastAPI single-flight executor): simulation, validation coordination, manufacturability analysis, review handover.
+- `worker-renderer` (FastAPI single-flight executor): headless rendering for static preview, selection snapshots, and simulation videos.
 - Shared dependencies: `temporal`, `postgres`, `minio`.
 
 The split is intentional: keep fast, high-throughput operations on light infra while isolating heavy physics/render workloads onto dedicated nodes.
@@ -42,7 +44,7 @@ Local bootstrap uses profile-scoped host-port namespaces and compose project nam
 
 ## Worker API
 
-The worker API is physically split into two specialized services to optimize resource allocation and separate concerns: **Worker Light** and **Worker Heavy**.
+The worker API is physically split into three specialized services to optimize resource allocation and separate concerns: **Worker Light**, **Worker Heavy**, and **Worker Renderer**.
 
 ### Worker Light
 
@@ -62,22 +64,34 @@ The worker API is physically split into two specialized services to optimize res
 - **Purpose**: Handles compute-intensive, long-running tasks.
 - **Responsibilities**:
   - Physics simulation (`/benchmark/simulate`).
-  - Geometric validation plus static preview generation (`/benchmark/validate`).
+  - Geometric validation plus static preview coordination (`/benchmark/validate`).
   - Design handover and DFM checks (`/benchmark/submit`).
   - Manufacturing analysis (`/benchmark/analyze`).
-  - Rendering and preview generation (`/benchmark/preview`).
+  - Render-request coordination for validation and simulation jobs.
   - Asset building (`/benchmark/build`).
   - Single-flight execution gate: one active heavy job per worker instance.
 - **HTTP boundary**: Direct benchmark endpoints are reserved for integration tests; production job dispatch stays behind Temporal.
 - **Operational profile**: one active external heavy job at a time per instance, no in-process multi-request scheduler.
 
+### Worker Renderer
+
+- **Purpose**: Handles all headless rendering jobs.
+- **Responsibilities**:
+  - Static validation preview generation through build123d/VTK.
+  - Simulation video generation and frame extraction.
+  - Selection snapshots, depth images, segmentation images, and render-manifest persistence.
+  - All render-only post-processing that does not require physics stepping.
+- **HTTP boundary**: renderer endpoints are internal-only; public benchmark routes stay on the controller and worker-heavy paths.
+- **Operational profile**: headless single-flight rendering; one active render job at a time per renderer instance, no internal render queue.
+
 ### Routing Contract (Controller -> Workers)
 
 - Controller routes light operations to light worker over the WebSocket control channel. The light worker executes scripts, which can ping the load balancer handling heavy workers.
 - Controller routes heavy operations through Temporal workflows, not directly to `WORKER_HEAVY_URL`.
+- Render jobs are dispatched to `worker-renderer`; the heavy worker does not own the graphics stack.
 - All non-Temporal worker calls are session-scoped with `X-Session-ID`.
 - The `WorkerClient` is the single boundary adapter; agents do not know about service split.
-- Heavy-worker admission is fail-closed: busy workers return deterministic busy responses; they do not enqueue additional work internally.
+- Heavy-worker and renderer-worker admission are fail-closed: busy workers return deterministic busy responses; they do not enqueue additional work internally.
 
 ### Heavy Execution Path Contract
 
@@ -85,20 +99,21 @@ Heavy compute execution has one production path:
 
 - Controller tools call Temporal workflows for heavy operations.
 - Temporal workflows dispatch heavy activities on `heavy-tasks-queue`.
-- Heavy activity execution runs simulation/validation/render in isolated child process scope (crash containment boundary).
+- Heavy activity execution runs simulation/validation in isolated child process scope (crash containment boundary) and dispatches render jobs to the renderer worker.
 
 Backend responsibility is split by operation purpose:
 
-1. `/benchmark/simulate` uses the selected physics backend.
-2. `/benchmark/validate` performs fast validation plus static preview generation.
+1. `/benchmark/simulate` uses the selected physics backend and requests dynamic render/video artifacts from the renderer worker.
+2. `/benchmark/validate` performs fast validation plus static preview generation through the renderer worker.
 3. Static preview generation for `/benchmark/validate` uses build123d/VTK by default even when `physics.backend=genesis`.
 4. `/benchmark/validate` does not add a separate Genesis load/render gate solely for parity checking; Genesis-specific runtime behavior is established by actual Genesis simulation runs where Genesis behavior is required.
+5. Both paths use the same renderer worker service; only the render job kind differs.
 
 Backend choice is orthogonal to the controller/worker split:
 
 - API-backed runs execute through the controller's HTTP orchestration path.
 - Codex-backed runs execute through the local Codex workspace path.
-- Both paths still rely on the same worker services for filesystem, execution, validation, simulation, and rendering.
+- Both paths still rely on the same worker services for filesystem, execution, validation, simulation, and the renderer worker.
 
 Direct `worker-heavy` benchmark endpoints (`/benchmark/*`) are reserved for integration tests that verify worker-level boundaries, not an alternate orchestration model with independent queueing semantics.
 
@@ -127,10 +142,15 @@ Worker-specific logic stays in:
 - `worker_heavy/*` for:
   - heavy simulation
   - validation
-  - rendering.
+  - simulation/validation coordination that dispatches render jobs.
   - any GPU work, if necessary.
+- `worker_renderer/*` for:
+  - static preview generation
+  - simulation video rendering
+  - selection snapshots and render-manifest generation
+  - all headless rendering dependencies and post-processing
 
-Validation is still part of `worker-heavy`, but the static preview part of validation is intentionally lighter than Genesis simulation. The point of the split is to keep validation on the build123d/VTK geometry path and avoid unnecessary Genesis render cost on validation-only requests.
+Validation is still part of `worker-heavy`, but the static preview part of validation is executed by `worker-renderer`. The point of the split is to keep validation on the build123d/VTK geometry path while isolating the graphics stack from simulation state.
 
 Note: we want to offload work from `worker_heavy` as much as possible because:
 
@@ -141,14 +161,14 @@ Note: we want to offload work from `worker_heavy` as much as possible because:
 
 ### Worker filesystem and communication
 
-Upon requesting simulation or rendering, worker light prepares the session bundle and git state needed for heavy execution. The controller-worker Temporal path owns the actual heavy dispatch, retry, and completion tracking.
+Upon requesting simulation or rendering, worker light prepares the session bundle and git state needed for heavy execution. The controller-worker Temporal path owns the actual heavy dispatch, render dispatch, retry, and completion tracking.
 
-Predominantly, worker light communicates with controller-worker orchestration for heavy dispatch through the WebSocket control plane; direct worker-heavy contact is reserved for integration tests that verify worker-level boundaries and for termination signals from the controller. There is a load balancer pinging `/ready` status in worker. Ideally, the worker-heavy is hidden behind Temporal/controller-worker orchestration, which also acts as the admission and retry boundary.
+Predominantly, worker light communicates with controller-worker orchestration for heavy dispatch through the WebSocket control plane; direct worker-heavy contact is reserved for integration tests that verify worker-level boundaries and for termination signals from the controller. There is a load balancer pinging `/ready` status in worker. Ideally, the worker-heavy and worker-renderer are hidden behind Temporal/controller-worker orchestration, which also acts as the admission and retry boundary.
 
 ### OpenAPI Artifacts
 
 - `controller_openapi.json` documents the controller surface.
-- Worker OpenAPI generation must include both worker surfaces (light and heavy) or provide separate specs (`worker_light_openapi.json`, `worker_heavy_openapi.json`) to avoid missing benchmark endpoints from generated artifacts.
+- Worker OpenAPI generation must include all worker surfaces (light, heavy, and renderer) or provide separate specs (`worker_light_openapi.json`, `worker_heavy_openapi.json`, `worker_renderer_openapi.json`) to avoid missing benchmark endpoints from generated artifacts.
 - If a single `worker_openapi.json` is kept, it must be a merged schema, not just `worker_light` endpoints.
 
 ### Concurrency and Parallelism
@@ -170,6 +190,13 @@ Heavy-worker concurrency is a single-flight contract:
 - Temporal heavy-task dispatch is worker-poll task queue delivery. Webhook-style triggers, if used, are external orchestration inputs and not Temporal server task-delivery mode.
 - FastAPI API serving and Temporal heavy-activity polling/execution must be process-isolated (separate process/container boundary) so a simulation child-process crash cannot terminate the API process.
 - Optional startup pre-warming is still allowed per worker instance to reduce first-run backend/JIT latency.
+
+Renderer-worker concurrency is also a single-flight contract:
+
+- A renderer worker instance can execute exactly one active render job at a time.
+- The renderer worker app does not own internal multi-job management (no in-process queue/semaphore/scheduler for multiple external render jobs).
+- If a render request arrives while a job is active, the renderer worker returns a deterministic busy response instead of buffering jobs.
+- Any queueing, retries, and fan-out for concurrent render demand are owned outside `worker-renderer` (Temporal/controller-worker orchestration and infrastructure load balancing), not by renderer-worker internals.
 
 ## Persistent state and durable execution
 
