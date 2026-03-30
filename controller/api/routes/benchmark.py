@@ -39,6 +39,12 @@ logger = structlog.get_logger(__name__)
 _PROMPT_LOG_PREVIEW_LIMIT = 500
 
 
+def _is_closed_websocket_error(exc: Exception) -> bool:
+    return isinstance(exc, RuntimeError) and (
+        'Cannot call "send" once a close message has been sent.' in str(exc)
+    )
+
+
 class BenchmarkGenerateRequest(BaseModel):
     prompt: str
     session_id: uuid.UUID | None = None
@@ -197,9 +203,20 @@ async def benchmark_websocket(websocket: WebSocket, session_id: uuid.UUID):
     except WebSocketDisconnect:
         manager.disconnect(session_id, websocket)
     except Exception as e:
-        print(f"WebSocket error: {e}")
         manager.disconnect(session_id, websocket)
-        raise e from None
+        if _is_closed_websocket_error(e):
+            logger.info(
+                "benchmark_websocket_closed",
+                session_id=str(session_id),
+                error=str(e),
+            )
+            return
+        logger.exception(
+            "benchmark_websocket_error",
+            session_id=str(session_id),
+            error=str(e),
+        )
+        raise
 
 
 # Note: We might need an endpoint to get the status/result of a specific session

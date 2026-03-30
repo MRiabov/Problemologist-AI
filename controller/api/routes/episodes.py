@@ -64,6 +64,12 @@ logger = structlog.get_logger(__name__)
 _MESSAGE_LOG_PREVIEW_LIMIT = 500
 
 
+def _is_closed_websocket_error(exc: Exception) -> bool:
+    return isinstance(exc, RuntimeError) and (
+        'Cannot call "send" once a close message has been sent.' in str(exc)
+    )
+
+
 def _normalize_plan_markdown(plan_content: str | None) -> str | None:
     """Normalize persisted plans for list responses used by dataset-readiness checks."""
     if not plan_content:
@@ -1345,9 +1351,20 @@ async def episode_websocket(
     except WebSocketDisconnect:
         manager.disconnect(episode_id, websocket)
     except Exception as e:
-        print(f"WebSocket error: {e}")
         manager.disconnect(episode_id, websocket)
-        raise e from None
+        if _is_closed_websocket_error(e):
+            logger.info(
+                "episode_websocket_closed",
+                episode_id=str(episode_id),
+                error=str(e),
+            )
+            return
+        logger.exception(
+            "episode_websocket_error",
+            episode_id=str(episode_id),
+            error=str(e),
+        )
+        raise
 
 
 @router.post("/{episode_id}/interrupt")

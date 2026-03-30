@@ -46,6 +46,7 @@ class AgentState(BaseModel):
     entry_validation_reroute_target: StrictStr | None = None
     entry_validation_errors: list[dict[str, str | None]] = Field(default_factory=list)
     entry_validation_trace_emitted: bool = False
+    worker_session_id: StrictStr | None = None
     worker_client: Any = None
     fs: Any = None
 
