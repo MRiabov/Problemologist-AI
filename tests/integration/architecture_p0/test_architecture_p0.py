@@ -27,6 +27,8 @@ from shared.workers.schema import (
     ExecuteRequest,
     ExecuteResponse,
     ListFilesRequest,
+    PreviewDesignRequest,
+    PreviewDesignResponse,
     ReadFileRequest,
     VerificationRequest,
     WriteFileRequest,
@@ -41,6 +43,7 @@ from tests.integration.contracts import HealthResponse
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
+WORKER_RENDERER_URL = os.getenv("WORKER_RENDERER_URL", "http://127.0.0.1:18003")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 
@@ -87,11 +90,141 @@ async def test_int_001_compose_boot_health_contract():
         heavy_health = HealthResponse.model_validate(resp.json())
         assert heavy_health.status.value == "HEALTHY"
 
+        # Worker Renderer health
+        resp = await client.get(f"{WORKER_RENDERER_URL}/health", timeout=5.0)
+        assert resp.status_code == 200
+        renderer_health = HealthResponse.model_validate(resp.json())
+        assert renderer_health.status.value == "HEALTHY"
+
         # Controller health
         resp = await client.get(f"{CONTROLLER_URL}/health", timeout=5.0)
         assert resp.status_code == 200
         controller_health = HealthResponse.model_validate(resp.json())
         assert controller_health.status.value == "HEALTHY"
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_208_renderer_worker_direct_preview_contract():
+    """INT-208: Renderer worker serves preview requests directly."""
+    script_content = """
+from build123d import Align, Box
+from shared.models.schemas import PartMetadata
+
+part = Box(1, 1, 1, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+part.label = "renderer_worker_smoke_box"
+part.metadata = PartMetadata(material_id="aluminum_6061", fixed=False)
+result = part
+"""
+
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        resp = await client.post(
+            f"{WORKER_RENDERER_URL}/benchmark/preview",
+            json=PreviewDesignRequest(
+                script_path="script.py",
+                script_content=script_content,
+                pitch=-35.0,
+                yaw=45.0,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": f"INT-208-{uuid.uuid4().hex[:8]}"},
+            timeout=180.0,
+        )
+        assert resp.status_code == 200, resp.text
+        preview = PreviewDesignResponse.model_validate(resp.json())
+        assert preview.success, preview.message
+        assert preview.image_path is not None
+        assert preview.image_path.startswith("renders/"), preview
+        assert preview.image_bytes_base64 is not None
+
+
+def _simulation_video_smoke_script() -> str:
+    return """
+from build123d import Align, Box
+from shared.models.schemas import PartMetadata
+
+def build():
+    part = Box(1, 1, 1, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    part.label = "simulation_video_smoke_box"
+    part.metadata = PartMetadata(material_id="aluminum_6061", fixed=False)
+    return part
+"""
+
+
+async def _assert_simulation_video_contract(
+    *,
+    client: httpx.AsyncClient,
+    session_id: str,
+    backend: SimulatorBackendType,
+) -> None:
+    await seed_benchmark_assembly_definition(client, session_id)
+    await client.post(
+        f"{WORKER_LIGHT_URL}/fs/write",
+        json=WriteFileRequest(
+            path="script.py",
+            content=_simulation_video_smoke_script(),
+            overwrite=True,
+        ).model_dump(mode="json"),
+        headers={"X-Session-ID": session_id},
+    )
+
+    bundle64 = await get_bundle(client, session_id)
+    resp = await client.post(
+        f"{WORKER_HEAVY_URL}/benchmark/simulate",
+        json=BenchmarkToolRequest(
+            script_path="script.py",
+            backend=backend,
+            bundle_base64=bundle64,
+            smoke_test_mode=True,
+        ).model_dump(mode="json"),
+        headers={"X-Session-ID": session_id},
+        timeout=1200.0,
+    )
+    assert resp.status_code == 200, resp.text
+    data = BenchmarkToolResponse.model_validate(resp.json())
+    assert data.success, data.message
+    assert data.artifacts is not None
+
+    render_paths = list(data.artifacts.render_paths)
+    assert any(path.endswith(".mp4") for path in render_paths), render_paths
+    assert "renders/render_manifest.json" in data.artifacts.render_blobs_base64
+    mp4_keys = [
+        path for path in data.artifacts.render_blobs_base64 if path.endswith(".mp4")
+    ]
+    assert mp4_keys, data.artifacts.render_blobs_base64
+    for key in mp4_keys:
+        assert data.artifacts.render_blobs_base64[key], key
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_210_mujoco_simulation_video_delegates_to_renderer_worker():
+    """INT-210: MuJoCo simulation video is encoded by worker-renderer."""
+    if selected_backend() != SimulatorBackendType.MUJOCO:
+        pytest.skip("MuJoCo video smoke only runs when MuJoCo is the selected backend")
+
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        await _assert_simulation_video_contract(
+            client=client,
+            session_id=f"INT-210-{uuid.uuid4().hex[:8]}",
+            backend=SimulatorBackendType.MUJOCO,
+        )
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_211_genesis_simulation_video_delegates_to_renderer_worker():
+    """INT-211: Genesis simulation video uses the same renderer-worker contract."""
+    if selected_backend() != SimulatorBackendType.GENESIS:
+        pytest.skip(
+            "Genesis video smoke only runs when Genesis is the selected backend"
+        )
+
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        await _assert_simulation_video_contract(
+            client=client,
+            session_id=f"INT-211-{uuid.uuid4().hex[:8]}",
+            backend=SimulatorBackendType.GENESIS,
+        )
 
 
 @pytest.mark.integration_p0

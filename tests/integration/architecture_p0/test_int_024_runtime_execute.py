@@ -256,6 +256,65 @@ print(f"VALIDATE_MESSAGE={message}")
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+async def test_int_024_runtime_validate_rejects_transient_shell_state_mismatch():
+    """
+    INT-024: utils.submission.validate() must fail closed when the live
+    compound differs from the persisted script.py semantic signature.
+    """
+    session_id = f"INT-024-SIG-{uuid.uuid4().hex[:8]}"
+    headers = {"X-Session-ID": session_id}
+
+    persisted_script = """
+from build123d import Box
+
+def build():
+    return Box(4, 4, 4)
+
+result = build()
+"""
+
+    runtime_code = """python3 - <<'PY'
+from build123d import Box
+from utils.submission import validate
+
+result = Box(5, 5, 5)
+success, message = validate(result)
+print(f"VALIDATE_SUCCESS={success}")
+print(f"VALIDATE_MESSAGE={message}")
+PY
+"""
+
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        write_script = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="script.py",
+                content=persisted_script,
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+            timeout=60.0,
+        )
+        assert write_script.status_code == 200, write_script.text
+
+        exec_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/runtime/execute",
+            json=ExecuteRequest(
+                code=runtime_code,
+                timeout=60,
+            ).model_dump(mode="json"),
+            headers=headers,
+            timeout=90.0,
+        )
+        assert exec_resp.status_code == 200, exec_resp.text
+        data = ExecuteResponse.model_validate(exec_resp.json())
+        assert data.exit_code == 0
+        assert "VALIDATE_SUCCESS=False" in data.stdout
+        assert "persisted script semantic signature" in data.stdout
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
 async def test_int_024_runtime_validate_rejects_parent_only_fixed_metadata():
     """
     INT-024: benchmark validation fails closed when a parent Compound is marked
