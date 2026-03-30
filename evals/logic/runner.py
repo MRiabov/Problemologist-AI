@@ -38,6 +38,9 @@ from controller.agent.reward import (
 )
 from controller.clients.worker import WorkerClient
 from evals.logic.codex_session_trace import (
+    CodexSessionTraceArtifact,
+)
+from evals.logic.codex_session_trace import (
     capture_latest_codex_session_artifacts as _capture_latest_codex_session_artifacts,
 )
 from evals.logic.codex_session_trace import (
@@ -901,6 +904,42 @@ def _append_readable_log_line(line: str, *, eval_log_key: str | None = None) -> 
             session_file.parent.mkdir(parents=True, exist_ok=True)
             with session_file.open("a", encoding="utf-8") as handle:
                 handle.write(line.rstrip() + "\n")
+
+
+def _mirror_codex_session_trace_to_readable_logs(
+    trace_artifacts: CodexSessionTraceArtifact,
+    *,
+    eval_log_key: str | None,
+) -> None:
+    transcript_path = trace_artifacts.transcript_path
+    session_id = _sanitize_readable_text(trace_artifacts.session_id)
+    if transcript_path is None:
+        _append_readable_log_line(
+            f"CODEX_SESSION_TRACE_IMPORTED session_id={session_id} transcript_path=None",
+            eval_log_key=eval_log_key,
+        )
+        return
+
+    _append_readable_log_line(
+        "CODEX_SESSION_TRACE_IMPORTED "
+        f"session_id={session_id} "
+        f"transcript_path={_sanitize_readable_text(str(transcript_path))}",
+        eval_log_key=eval_log_key,
+    )
+    try:
+        transcript_text = transcript_path.read_text(encoding="utf-8")
+    except Exception as exc:
+        _append_readable_log_line(
+            "CODEX_SESSION_TRACE_READ_FAILED "
+            f"session_id={session_id} "
+            f"error={_sanitize_readable_text(exc)}",
+            eval_log_key=eval_log_key,
+        )
+        return
+
+    for line in transcript_text.splitlines():
+        if line.strip():
+            _append_readable_log_line(line, eval_log_key=eval_log_key)
 
 
 def _write_eval_session_metadata(
@@ -2315,6 +2354,13 @@ async def _run_codex_eval(
             prompt_path=str(materialized.prompt_path),
             copied_paths=materialized.copied_paths,
         )
+        _append_readable_log_line(
+            "CODEX_WORKSPACE_MATERIALIZED "
+            f"task_id={task_id} "
+            f"session_id={session_id} "
+            f"workspace_dir={_sanitize_readable_text(str(materialized.workspace_dir))}",
+            eval_log_key=eval_log_key,
+        )
         baseline_snapshot = _snapshot_workspace_state(
             workspace_dir=materialized.workspace_dir,
         )
@@ -2334,6 +2380,10 @@ async def _run_codex_eval(
             },
         )
 
+        _append_readable_log_line(
+            f"CODEX_EXEC_LAUNCHED task_id={task_id} session_id={session_id}",
+            eval_log_key=eval_log_key,
+        )
         launch_started_at_ns = time.time_ns()
         launch_return_code = await asyncio.to_thread(
             _launch_codex_exec,
@@ -2378,6 +2428,10 @@ async def _run_codex_eval(
                 workspace_dir=str(materialized.workspace_dir),
             )
         else:
+            _mirror_codex_session_trace_to_readable_logs(
+                codex_trace_artifacts,
+                eval_log_key=eval_log_key,
+            )
             log.info(
                 "codex_session_trace_imported",
                 session_id=session_id,

@@ -159,19 +159,6 @@ async def initialize_agent_files(
     if tasks:
         await asyncio.gather(*tasks)
 
-    if agent_name in {
-        AgentName.ENGINEER_CODER,
-        AgentName.ENGINEER_PLAN_REVIEWER,
-        AgentName.ENGINEER_EXECUTION_REVIEWER,
-        AgentName.ELECTRONICS_PLANNER,
-        AgentName.ELECTRONICS_REVIEWER,
-    }:
-        await seed_benchmark_assembly_definition(
-            backend,
-            overwrite=overwrite,
-            existing_files=existing_files,
-        )
-
     # Skills are mounted read-only at /skills on worker side; initialization must not
     # attempt to write there through normal agent permissions.
     available_skills = 0
@@ -235,54 +222,6 @@ async def seed_manufacturing_config(
     await worker_client.write_file(
         "manufacturing_config.yaml",
         manufacturing_config_content,
-        overwrite=True,
-        bypass_agent_permissions=True,
-    )
-    return True
-
-
-async def seed_benchmark_assembly_definition(
-    backend: RemoteFilesystemBackend,
-    *,
-    overwrite: bool = False,
-    existing_files: set[str] | None = None,
-) -> bool:
-    """
-    Seed the workspace benchmark assembly definition as a system write.
-
-    Engineer coder and reviewer-style workspaces require the benchmark handoff
-    file, but the normal file policy does not grant them write access to it.
-    """
-    benchmark_assembly_definition_path = (
-        TEMPLATE_REPOS_ROOT / "engineer" / "benchmark_assembly_definition.yaml"
-    )
-    if not benchmark_assembly_definition_path.is_file():
-        return False
-    benchmark_assembly_definition_content = (
-        benchmark_assembly_definition_path.read_text(encoding="utf-8")
-    )
-
-    assembly_path = _normalize_remote_path("benchmark_assembly_definition.yaml")
-    if existing_files is None:
-        existing_files = set()
-        try:
-            info = await backend.als_info(".")
-            existing_files = {
-                normalized
-                for item in info
-                if (path := _extract_entry_path(item))
-                and (normalized := _normalize_remote_path(path))
-            }
-        except Exception:
-            existing_files = set()
-
-    if not overwrite and assembly_path in existing_files:
-        return False
-
-    worker_client = getattr(backend.client, "client", backend.client)
-    await worker_client.write_file(
-        "benchmark_assembly_definition.yaml",
-        benchmark_assembly_definition_content,
         overwrite=True,
         bypass_agent_permissions=True,
     )
