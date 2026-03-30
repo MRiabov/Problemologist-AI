@@ -413,10 +413,12 @@ This section exists to force implementation as true integration tests, not unit 
 
 - `tests/integration/smoke/`: INT-001..INT-004 (fast baseline).
 - `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-070..INT-075, INT-101..INT-114, INT-120..INT-128, INT-184, INT-187, INT-200, INT-201, INT-204.
--  `tests/integration/architecture_p1/`: (TODO: find tests here)
--  `tests/integration/architecture_p2/`: (TODO: find tests here)
+- `tests/integration/architecture_p1/`: (TODO: find tests here)
+- `tests/integration/architecture_p2/`: (TODO: find tests here)
+
 <!--- `tests/integration/evals_p2/`: INT-046..INT-052, INT-151..INT-156. 
 Note: eval tests are not in force - eval themselves are.--->
+
 - `tests/integration/agent/p1/`: INT-181, INT-182, INT-183, INT-185, INT-186.
 - `tests/integration/frontend/p0/`: INT-157, INT-158, INT-159, INT-162, INT-163, INT-164, INT-165, INT-167, INT-170, INT-172, INT-173, INT-174, INT-177, INT-189, INT-205.
 - `tests/integration/frontend/p1/`: INT-160, INT-161, INT-166, INT-168, INT-171, INT-175, INT-176, INT-178, INT-179.

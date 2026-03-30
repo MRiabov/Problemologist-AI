@@ -164,4 +164,5 @@ Validation-preview tests should therefore assert:
 Controller-initiated heavy operations are expected to travel through Temporal workflows. Integration tests that verify product behavior from controller or agent tool paths should assert workflow lifecycle, persisted events, and returned results from the Temporal-mediated path.
 
 Direct `worker-heavy` HTTP requests remain valid only in integration tests that exercise worker-level boundaries such as single-flight admission, crash containment, and preview artifact generation. They are not the product-path routing model for controller tool calls.
+
 <!--FIXME: so are worker-render-->
