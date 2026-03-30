@@ -42,6 +42,29 @@ uv run python scripts/experiments/syntax/probe_dspy_tool_syntax.py \
 - `dspy_native_tool_probe.tool_calls_present=true` means DSPy itself is still usable if we replace `ReAct` with a custom tool loop.
 - `openrouter_native_tool_probe.tool_calls_present=true` means the provider path supports native tools, so the text protocol is a DSPy runtime choice rather than an OpenRouter limitation.
 
+# Build123d Construction Signature Probe
+
+This experiment inspects whether `build123d` exposes enough authored object metadata to support a tolerant semantic comparison gate instead of a brittle mesh-equality check.
+
+1. Do primitive objects such as `Box`, `Cylinder`, and `Rectangle` retain their authored parameters on the object?
+2. Does the fused `BuildPart` output keep any child history after boolean fusion?
+3. What coarse topology metrics remain available on the final `Part`?
+
+## Run
+
+Inspect the installed `build123d` runtime only:
+
+```bash
+uv run python scripts/experiments/syntax/probe_build123d_construction_signature.py
+```
+
+## Interpretation
+
+- `primitive.visible_dict` shows the authored parameters exposed directly by the primitive object.
+- `build123d_part.children_count=0` means the fused output does not keep a direct child tree in this probe, so a validator cannot rely on the final `Part` alone for semantic reconstruction.
+- `build123d_part.solids_count`, `faces_count`, `edges_count`, and `wires_count` are the coarse invariants available for fallback comparison.
+- The intended conclusion is whether the runtime should compare authored construction metadata first and use coarse geometric invariants only as a fallback.
+
 # Eval Display Environment Probe
 
 This companion experiment records the environment behavior that affected recent
