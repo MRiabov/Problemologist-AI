@@ -97,6 +97,19 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def _project_python() -> str:
+    return sys.executable
+
+
+def _project_python_cmd(*args: str) -> list[str]:
+    return [_project_python(), *args]
+
+
+def _integration_repo_revision() -> str:
+    revision = _git_output(["git", "-C", str(_repo_root()), "rev-parse", "HEAD"])
+    return revision.strip().lower()
+
+
 def _extract_int_ids_from_args(values: list[str]) -> list[str]:
     int_ids: set[str] = set()
     for value in values:
@@ -638,9 +651,7 @@ def run_pytest_subprocess(
         and xdist_workers not in {"0", "0.0", "false", "False", "none", "None"}
     )
     cmd = [
-        "uv",
-        "run",
-        "pytest",
+        *_project_python_cmd("-m", "pytest"),
         "-v",
         "-o",
         "addopts=-n0",
@@ -659,6 +670,7 @@ def run_pytest_subprocess(
     env = os.environ.copy()
     if extra_env:
         env.update(extra_env)
+    env.setdefault("REPO_REVISION", _integration_repo_revision())
     env.setdefault("AUTO_MANIFEST_UPDATE", "1")
     manifest_update_disable_payload = (
         _load_or_generate_test_level_manifest_update_disable_payload(_repo_root())
@@ -1443,7 +1455,7 @@ def _prepare_parts_db(repo_root: Path) -> None:
     print("parts.db missing motor catalog entries. Populating COTS database...")
     env = os.environ.copy()
     env["PYTHONPATH"] = "."
-    _run(["uv", "run", "python", "-m", "shared.cots.indexer"], env=env)
+    _run(_project_python_cmd("-m", "shared.cots.indexer"), env=env)
 
 
 def _wait_for_temporal_stable_tcp(
@@ -1533,13 +1545,13 @@ def _bring_up_infra_and_migrate(integration_db_name: str) -> None:
     _wait_for_temporal_stable_tcp()
 
     print("Purging local S3 buckets before the run...")
-    _run(["uv", "run", "python", "scripts/cleanup_local_s3.py"])
+    _run(_project_python_cmd("scripts/cleanup_local_s3.py"))
 
     print(f"Ensuring integration database exists ({integration_db_name})...")
     _ensure_postgres_database(integration_db_name)
 
     print("Running migrations...")
-    _run(["uv", "run", "alembic", "upgrade", "head"])
+    _run(_project_python_cmd("-m", "alembic", "upgrade", "head"))
 
 
 def _prepare_frontend_dist(repo_root: Path, frontend_state_file: Path | None) -> None:
@@ -1552,7 +1564,7 @@ def _prepare_frontend_dist(repo_root: Path, frontend_state_file: Path | None) ->
         # CI checkouts do not have frontend node_modules populated, so install
         # the locked frontend toolchain before generating API clients or building.
         _run(["npm", "ci"], cwd=repo_root / "frontend")
-        _run(["uv", "run", "python", "scripts/generate_openapi.py"], env=env)
+        _run(_project_python_cmd("scripts/generate_openapi.py"), env=env)
         _run(["npm", "run", "gen:api"], cwd=repo_root / "frontend")
         production_env = repo_root / "frontend" / ".env.production"
         production_env.write_text(
@@ -1595,6 +1607,7 @@ def _start_process(
     env = os.environ.copy()
     if env_updates:
         env.update(env_updates)
+    env.setdefault("REPO_REVISION", _integration_repo_revision())
 
     log_file.parent.mkdir(parents=True, exist_ok=True)
     handle = open(log_file, "ab")
@@ -2121,6 +2134,7 @@ def _run_integration_command(
         os.environ["SMOKE_TEST_MODE"] = "false"
 
     _load_env_file(repo_root / ".env")
+    os.environ.setdefault("REPO_REVISION", _integration_repo_revision())
     stack_profile = apply_stack_profile_env(
         "integration", env=os.environ, root=repo_root
     )
@@ -2220,9 +2234,7 @@ def _run_integration_command(
                     ProcessSpec(
                         name="Worker Light",
                         cmd=[
-                            "uv",
-                            "run",
-                            "uvicorn",
+                            *_project_python_cmd("-m", "uvicorn"),
                             "worker_light.app:app",
                             "--host",
                             "0.0.0.0",
@@ -2244,9 +2256,7 @@ def _run_integration_command(
                     ProcessSpec(
                         name="Worker Heavy",
                         cmd=[
-                            "uv",
-                            "run",
-                            "uvicorn",
+                            *_project_python_cmd("-m", "uvicorn"),
                             "worker_heavy.app:app",
                             "--host",
                             "0.0.0.0",
@@ -2268,11 +2278,7 @@ def _run_integration_command(
                     ProcessSpec(
                         name="Worker Heavy Temporal",
                         cmd=[
-                            "uv",
-                            "run",
-                            "python",
-                            "-m",
-                            "worker_heavy.temporal_worker",
+                            *_project_python_cmd("-m", "worker_heavy.temporal_worker"),
                         ],
                         log_file=log_dir / "worker_heavy_temporal.log",
                         env_updates={
@@ -2294,9 +2300,7 @@ def _run_integration_command(
                     ProcessSpec(
                         name="Controller",
                         cmd=[
-                            "uv",
-                            "run",
-                            "uvicorn",
+                            *_project_python_cmd("-m", "uvicorn"),
                             "controller.api.main:app",
                             "--host",
                             "0.0.0.0",
@@ -2316,7 +2320,7 @@ def _run_integration_command(
                     ),
                     ProcessSpec(
                         name="Temporal Worker",
-                        cmd=["uv", "run", "python", "-m", "controller.temporal_worker"],
+                        cmd=_project_python_cmd("-m", "controller.temporal_worker"),
                         log_file=log_dir / "temporal_worker.log",
                         env_updates={
                             "PYTHONPATH": combined_pythonpath,
@@ -2469,7 +2473,7 @@ def _run_integration_command(
                 ],
             )
 
-        _run(["uv", "run", "python", "scripts/persist_test_results.py"], check=False)
+        _run(_project_python_cmd("scripts/persist_test_results.py"), check=False)
 
         if pytest_exit == 0:
             print("Integration tests PASSED!")

@@ -141,6 +141,7 @@ services:
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_ACCESS_KEY=minioadmin
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - REPO_REVISION=${REPO_REVISION}
       - WORKER_TYPE=light
     networks:
       - default
@@ -216,6 +217,7 @@ services:
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_ACCESS_KEY=minioadmin
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - REPO_REVISION=${REPO_REVISION}
     networks:
       - default
     env_file:

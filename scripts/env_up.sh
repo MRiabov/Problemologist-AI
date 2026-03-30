@@ -72,6 +72,7 @@ eval "$(python3 -m evals.logic.stack_profiles --profile "$STACK_PROFILE" --root 
 export LOG_DIR="${LOG_DIR:-$STACK_DEFAULT_LOG_DIR}"
 export ARCHIVE_DIR="${ARCHIVE_DIR:-$STACK_DEFAULT_ARCHIVE_DIR}"
 export WORKER_SESSIONS_DIR="${WORKER_SESSIONS_DIR:-$STACK_DEFAULT_WORKER_SESSIONS_DIR}"
+export REPO_REVISION="${REPO_REVISION:-$(git rev-parse HEAD)}"
 mkdir -p "$WORKER_SESSIONS_DIR"
 mkdir -p "$STACK_STATE_DIR"
 mkdir -p "$STACK_PID_DIR"

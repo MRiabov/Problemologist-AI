@@ -1,3 +1,4 @@
+import os
 import subprocess
 from pathlib import Path
 
@@ -52,6 +53,9 @@ def commit_all(path: Path, message: str) -> str | None:
 def repo_revision(path: Path) -> str | None:
     """Return the current git HEAD commit for a repository root."""
     try:
+        env_revision = os.environ.get("REPO_REVISION", "").strip().lower()
+        if env_revision:
+            return env_revision
         revision = (
             subprocess.check_output(
                 ["git", "-C", str(path), "rev-parse", "--verify", "HEAD"],
