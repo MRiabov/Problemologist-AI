@@ -804,27 +804,50 @@ class Build123dRendererBackend(RendererBackend):
         if self.scene is None:
             raise RuntimeError("Scene not loaded")
 
-        camera_position, lookat, up = self._resolve_camera(camera_name)
-        bundle = _build_renderer(
-            self.scene,
+        logger.debug(
+            "build123d_render_camera_start",
+            camera_name=camera_name,
             width=width,
             height=height,
-            segmentation=False,
-            include_axes=self.rgb_axes,
-            include_edges=self.rgb_edges,
-            include_fill=True,
-            axes_color=_RGB_AXES_COLOR,
-            edge_color=_RGB_EDGE_COLOR,
-            background=(0.98, 0.98, 0.99),
         )
-        rgb_image, _ = _render_view(
-            bundle,
-            camera_position=camera_position,
-            lookat=lookat,
-            up=up,
-            capture_depth=False,
-        )
-        return rgb_image
+        try:
+            camera_position, lookat, up = self._resolve_camera(camera_name)
+            bundle = _build_renderer(
+                self.scene,
+                width=width,
+                height=height,
+                segmentation=False,
+                include_axes=self.rgb_axes,
+                include_edges=self.rgb_edges,
+                include_fill=True,
+                axes_color=_RGB_AXES_COLOR,
+                edge_color=_RGB_EDGE_COLOR,
+                background=(0.98, 0.98, 0.99),
+            )
+            rgb_image, _ = _render_view(
+                bundle,
+                camera_position=camera_position,
+                lookat=lookat,
+                up=up,
+                capture_depth=False,
+            )
+            logger.debug(
+                "build123d_render_camera_complete",
+                camera_name=camera_name,
+                width=width,
+                height=height,
+                shape=tuple(rgb_image.shape),
+            )
+            return rgb_image
+        except Exception as exc:
+            logger.error(
+                "build123d_render_camera_failed",
+                camera_name=camera_name,
+                width=width,
+                height=height,
+                error=str(exc),
+            )
+            raise
 
     def get_particle_positions(self) -> np.ndarray | None:
         return None
@@ -842,136 +865,174 @@ class Build123dRendererBackend(RendererBackend):
         if self.scene is None:
             raise RuntimeError("Scene not loaded")
 
-        camera_position, lookat, up = self._resolve_camera(camera_name)
-        rgb_bundle: _RendererBundle | None = None
-        if include_rgb:
-            rgb_bundle = _build_renderer(
-                self.scene,
-                width=width,
-                height=height,
-                segmentation=False,
-                include_axes=self.rgb_axes,
-                include_edges=self.rgb_edges,
-                include_fill=True,
-                axes_color=_RGB_AXES_COLOR,
-                edge_color=_RGB_EDGE_COLOR,
-                background=(0.98, 0.98, 0.99),
-            )
-
-        depth_base_bundle: _RendererBundle | None = None
-        depth_overlay_bundle: _RendererBundle | None = None
-        if include_depth:
-            depth_base_bundle = _build_renderer(
-                self.scene,
-                width=width,
-                height=height,
-                segmentation=False,
-                include_axes=False,
-                include_edges=False,
-                include_fill=True,
-                axes_color=_OVERLAY_AXES_COLOR,
-                edge_color=_OVERLAY_EDGE_COLOR,
-                background=(0.98, 0.98, 0.99),
-            )
-            if self.depth_axes or self.depth_edges:
-                depth_overlay_bundle = _build_renderer(
-                    self.scene,
-                    width=width,
-                    height=height,
-                    segmentation=False,
-                    include_axes=self.depth_axes,
-                    include_edges=self.depth_edges,
-                    include_fill=False,
-                    axes_color=_OVERLAY_AXES_COLOR,
-                    edge_color=_OVERLAY_EDGE_COLOR,
-                    background=(0.0, 0.0, 0.0),
-                )
-
-        seg_base_bundle: _RendererBundle | None = None
-        seg_overlay_bundle: _RendererBundle | None = None
-        if include_segmentation:
-            seg_base_bundle = _build_renderer(
-                self.scene,
-                width=width,
-                height=height,
-                segmentation=True,
-                include_axes=False,
-                include_edges=False,
-                include_fill=True,
-                axes_color=_OVERLAY_AXES_COLOR,
-                edge_color=_OVERLAY_EDGE_COLOR,
-                background=(0.0, 0.0, 0.0),
-            )
-            if self.segmentation_axes or self.segmentation_edges:
-                seg_overlay_bundle = _build_renderer(
-                    self.scene,
-                    width=width,
-                    height=height,
-                    segmentation=False,
-                    include_axes=self.segmentation_axes,
-                    include_edges=self.segmentation_edges,
-                    include_fill=False,
-                    axes_color=_OVERLAY_AXES_COLOR,
-                    edge_color=_OVERLAY_EDGE_COLOR,
-                    background=(0.0, 0.0, 0.0),
-                )
-
-        rgb_image: np.ndarray | None = None
-        depth_image: np.ndarray | None = None
-        seg_image: np.ndarray | None = None
-
-        if rgb_bundle is not None:
-            rgb_image, _ = _render_view(
-                rgb_bundle,
-                camera_position=camera_position,
-                lookat=lookat,
-                up=up,
-                capture_depth=False,
-            )
-        if depth_base_bundle is not None:
-            _, depth_buffer = _render_view(
-                depth_base_bundle,
-                camera_position=camera_position,
-                lookat=lookat,
-                up=up,
-                capture_depth=True,
-            )
-            if depth_buffer is None:
-                raise RuntimeError("depth rendering was disabled for render")
-            depth_render = _depth_buffer_to_uint8(depth_buffer)
-            if depth_overlay_bundle is not None:
-                depth_overlay, _ = _render_view(
-                    depth_overlay_bundle,
-                    camera_position=camera_position,
-                    lookat=lookat,
-                    up=up,
-                    capture_depth=False,
-                )
-                depth_image = _composite_non_black(depth_render, depth_overlay)
-            else:
-                depth_image = depth_render
-        if seg_base_bundle is not None:
-            seg_image, _ = _render_view(
-                seg_base_bundle,
-                camera_position=camera_position,
-                lookat=lookat,
-                up=up,
-                capture_depth=False,
-            )
-            if seg_overlay_bundle is not None:
-                seg_overlay, _ = _render_view(
-                    seg_overlay_bundle,
-                    camera_position=camera_position,
-                    lookat=lookat,
-                    up=up,
-                    capture_depth=False,
-                )
-                seg_image = _composite_non_black(seg_image, seg_overlay)
-        return (
-            rgb_image if include_rgb else None,
-            depth_image if include_depth else None,
-            seg_image if include_segmentation else None,
+        logger.debug(
+            "build123d_render_camera_modalities_start",
+            camera_name=camera_name,
+            width=width,
+            height=height,
+            include_rgb=include_rgb,
+            include_depth=include_depth,
+            include_segmentation=include_segmentation,
         )
+        try:
+            camera_position, lookat, up = self._resolve_camera(camera_name)
+            rgb_bundle: _RendererBundle | None = None
+            if include_rgb:
+                rgb_bundle = _build_renderer(
+                    self.scene,
+                    width=width,
+                    height=height,
+                    segmentation=False,
+                    include_axes=self.rgb_axes,
+                    include_edges=self.rgb_edges,
+                    include_fill=True,
+                    axes_color=_RGB_AXES_COLOR,
+                    edge_color=_RGB_EDGE_COLOR,
+                    background=(0.98, 0.98, 0.99),
+                )
+
+            depth_base_bundle: _RendererBundle | None = None
+            depth_overlay_bundle: _RendererBundle | None = None
+            if include_depth:
+                depth_base_bundle = _build_renderer(
+                    self.scene,
+                    width=width,
+                    height=height,
+                    segmentation=False,
+                    include_axes=False,
+                    include_edges=False,
+                    include_fill=True,
+                    axes_color=_OVERLAY_AXES_COLOR,
+                    edge_color=_OVERLAY_EDGE_COLOR,
+                    background=(0.98, 0.98, 0.99),
+                )
+                if self.depth_axes or self.depth_edges:
+                    depth_overlay_bundle = _build_renderer(
+                        self.scene,
+                        width=width,
+                        height=height,
+                        segmentation=False,
+                        include_axes=self.depth_axes,
+                        include_edges=self.depth_edges,
+                        include_fill=False,
+                        axes_color=_OVERLAY_AXES_COLOR,
+                        edge_color=_OVERLAY_EDGE_COLOR,
+                        background=(0.0, 0.0, 0.0),
+                    )
+
+            seg_base_bundle: _RendererBundle | None = None
+            seg_overlay_bundle: _RendererBundle | None = None
+            if include_segmentation:
+                seg_base_bundle = _build_renderer(
+                    self.scene,
+                    width=width,
+                    height=height,
+                    segmentation=True,
+                    include_axes=False,
+                    include_edges=False,
+                    include_fill=True,
+                    axes_color=_OVERLAY_AXES_COLOR,
+                    edge_color=_OVERLAY_EDGE_COLOR,
+                    background=(0.0, 0.0, 0.0),
+                )
+                if self.segmentation_axes or self.segmentation_edges:
+                    seg_overlay_bundle = _build_renderer(
+                        self.scene,
+                        width=width,
+                        height=height,
+                        segmentation=False,
+                        include_axes=self.segmentation_axes,
+                        include_edges=self.segmentation_edges,
+                        include_fill=False,
+                        axes_color=_OVERLAY_AXES_COLOR,
+                        edge_color=_OVERLAY_EDGE_COLOR,
+                        background=(0.0, 0.0, 0.0),
+                    )
+
+            rgb_image: np.ndarray | None = None
+            depth_image: np.ndarray | None = None
+            seg_image: np.ndarray | None = None
+
+            if rgb_bundle is not None:
+                rgb_image, _ = _render_view(
+                    rgb_bundle,
+                    camera_position=camera_position,
+                    lookat=lookat,
+                    up=up,
+                    capture_depth=False,
+                )
+            if depth_base_bundle is not None:
+                _, depth_buffer = _render_view(
+                    depth_base_bundle,
+                    camera_position=camera_position,
+                    lookat=lookat,
+                    up=up,
+                    capture_depth=True,
+                )
+                if depth_buffer is None:
+                    raise RuntimeError("depth rendering was disabled for render")
+                depth_render = _depth_buffer_to_uint8(depth_buffer)
+                if depth_overlay_bundle is not None:
+                    depth_overlay, _ = _render_view(
+                        depth_overlay_bundle,
+                        camera_position=camera_position,
+                        lookat=lookat,
+                        up=up,
+                        capture_depth=False,
+                    )
+                    depth_image = _composite_non_black(depth_render, depth_overlay)
+                else:
+                    depth_image = depth_render
+            if seg_base_bundle is not None:
+                seg_image, _ = _render_view(
+                    seg_base_bundle,
+                    camera_position=camera_position,
+                    lookat=lookat,
+                    up=up,
+                    capture_depth=False,
+                )
+                if seg_overlay_bundle is not None:
+                    seg_overlay, _ = _render_view(
+                        seg_overlay_bundle,
+                        camera_position=camera_position,
+                        lookat=lookat,
+                        up=up,
+                        capture_depth=False,
+                    )
+                    seg_image = _composite_non_black(seg_image, seg_overlay)
+            logger.debug(
+                "build123d_render_camera_modalities_complete",
+                camera_name=camera_name,
+                width=width,
+                height=height,
+                include_rgb=include_rgb,
+                include_depth=include_depth,
+                include_segmentation=include_segmentation,
+                rgb_shape=tuple(rgb_image.shape) if rgb_image is not None else None,
+                depth_shape=(
+                    tuple(depth_image.shape) if depth_image is not None else None
+                ),
+                segmentation_shape=(
+                    tuple(seg_image.shape) if seg_image is not None else None
+                ),
+            )
+            return (
+                rgb_image if include_rgb else None,
+                depth_image if include_depth else None,
+                seg_image if include_segmentation else None,
+            )
+        except Exception as exc:
+            logger.error(
+                "build123d_render_camera_modalities_failed",
+                camera_name=camera_name,
+                width=width,
+                height=height,
+                include_rgb=include_rgb,
+                include_depth=include_depth,
+                include_segmentation=include_segmentation,
+                error=str(exc),
+            )
+            raise
 
     def describe_segmentation(
         self, segmentation_frame: np.ndarray

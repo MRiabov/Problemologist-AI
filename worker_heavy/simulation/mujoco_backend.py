@@ -237,52 +237,93 @@ class MuJoCoBackend(PhysicsRendererBackend):
         include_depth: bool = True,
         include_segmentation: bool = True,
     ) -> tuple[np.ndarray | None, np.ndarray | None, np.ndarray | None]:
-        # Recreate renderer every time to avoid resolution/framebuffer issues
-        if self.renderer is not None:
-            with contextlib.suppress(BaseException):
-                self.renderer.close()
+        logger.debug(
+            "mujoco_render_camera_modalities_start",
+            camera_name=camera_name,
+            width=width,
+            height=height,
+            include_rgb=include_rgb,
+            include_depth=include_depth,
+            include_segmentation=include_segmentation,
+            session_id=self.session_id,
+        )
+        try:
+            # Recreate renderer every time to avoid resolution/framebuffer issues
+            if self.renderer is not None:
+                with contextlib.suppress(BaseException):
+                    self.renderer.close()
 
-        self.renderer = mujoco.Renderer(self.model, width, height)
+            self.renderer = mujoco.Renderer(self.model, width, height)
 
-        # Require an explicit camera. Silent default-view fallback hides bad
-        # scene contracts and makes render failures look like success.
-        cam = self.custom_cameras.get(camera_name, camera_name)
-        if isinstance(cam, str):
-            cid = self._get_camera_id(cam)
-            if cid == -1:
-                raise ValueError(f"Unknown MuJoCo camera: {cam}")
+            # Require an explicit camera. Silent default-view fallback hides bad
+            # scene contracts and makes render failures look like success.
+            cam = self.custom_cameras.get(camera_name, camera_name)
+            if isinstance(cam, str):
+                cid = self._get_camera_id(cam)
+                if cid == -1:
+                    raise ValueError(f"Unknown MuJoCo camera: {cam}")
 
-        frame = None
-        depth_frame = None
-        segmentation_frame = None
+            frame = None
+            depth_frame = None
+            segmentation_frame = None
 
-        if include_rgb:
-            if cam is None:
-                self.renderer.update_scene(self.data)
-            else:
-                self.renderer.update_scene(self.data, camera=cam)
-            frame = np.array(self.renderer.render(), copy=True)
+            if include_rgb:
+                if cam is None:
+                    self.renderer.update_scene(self.data)
+                else:
+                    self.renderer.update_scene(self.data, camera=cam)
+                frame = np.array(self.renderer.render(), copy=True)
 
-        if include_depth:
-            self.renderer.enable_depth_rendering()
-            if cam is None:
-                self.renderer.update_scene(self.data)
-            else:
-                self.renderer.update_scene(self.data, camera=cam)
-            depth_frame = np.array(self.renderer.render(), copy=True)
-            self.renderer.disable_depth_rendering()
+            if include_depth:
+                self.renderer.enable_depth_rendering()
+                if cam is None:
+                    self.renderer.update_scene(self.data)
+                else:
+                    self.renderer.update_scene(self.data, camera=cam)
+                depth_frame = np.array(self.renderer.render(), copy=True)
+                self.renderer.disable_depth_rendering()
 
-        if include_segmentation:
-            self.renderer.enable_segmentation_rendering()
-            if cam is None:
-                self.renderer.update_scene(self.data)
-            else:
-                self.renderer.update_scene(self.data, camera=cam)
-            # MuJoCo returns (objid, objtype) pairs per pixel in segmentation mode.
-            segmentation_frame = np.array(self.renderer.render(), copy=True)
-            self.renderer.disable_segmentation_rendering()
+            if include_segmentation:
+                self.renderer.enable_segmentation_rendering()
+                if cam is None:
+                    self.renderer.update_scene(self.data)
+                else:
+                    self.renderer.update_scene(self.data, camera=cam)
+                # MuJoCo returns (objid, objtype) pairs per pixel in segmentation mode.
+                segmentation_frame = np.array(self.renderer.render(), copy=True)
+                self.renderer.disable_segmentation_rendering()
 
-        return frame, depth_frame, segmentation_frame
+            logger.debug(
+                "mujoco_render_camera_modalities_complete",
+                camera_name=camera_name,
+                width=width,
+                height=height,
+                include_rgb=include_rgb,
+                include_depth=include_depth,
+                include_segmentation=include_segmentation,
+                session_id=self.session_id,
+                rgb_shape=tuple(frame.shape) if frame is not None else None,
+                depth_shape=tuple(depth_frame.shape) if depth_frame is not None else None,
+                segmentation_shape=(
+                    tuple(segmentation_frame.shape)
+                    if segmentation_frame is not None
+                    else None
+                ),
+            )
+            return frame, depth_frame, segmentation_frame
+        except Exception as exc:
+            logger.error(
+                "mujoco_render_camera_modalities_failed",
+                camera_name=camera_name,
+                width=width,
+                height=height,
+                include_rgb=include_rgb,
+                include_depth=include_depth,
+                include_segmentation=include_segmentation,
+                session_id=self.session_id,
+                error=str(exc),
+            )
+            raise
 
     def describe_segmentation(
         self, segmentation_frame: np.ndarray

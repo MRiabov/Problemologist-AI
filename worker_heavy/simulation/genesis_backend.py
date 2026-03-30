@@ -1139,24 +1139,58 @@ class GenesisBackend(PhysicsRendererBackend):
         )
 
     def render_camera(self, camera_name: str, width: int, height: int) -> np.ndarray:
-        with self._lock:
-            if not self.scene:
-                return np.zeros((height, width, 3), dtype=np.uint8)
+        logger.debug(
+            "genesis_render_camera_start",
+            camera_name=camera_name,
+            width=width,
+            height=height,
+            session_id=self.session_id,
+        )
+        try:
+            with self._lock:
+                if not self.scene:
+                    logger.debug(
+                        "genesis_render_camera_empty_scene",
+                        camera_name=camera_name,
+                        width=width,
+                        height=height,
+                        session_id=self.session_id,
+                    )
+                    return np.zeros((height, width, 3), dtype=np.uint8)
 
-        if camera_name not in self.cameras:
-            # Add a default camera if not found
-            cam = self.scene.add_camera(res=(width, height))
-            self.cameras[camera_name] = cam
+            if camera_name not in self.cameras:
+                # Add a default camera if not found
+                cam = self.scene.add_camera(res=(width, height))
+                self.cameras[camera_name] = cam
 
-        cam = self.cameras[camera_name]
-        # Genesis can return (rgb, depth, segmentation) or more
-        res = cam.render()
-        rgb = res[0] if isinstance(res, tuple) else res
+            cam = self.cameras[camera_name]
+            # Genesis can return (rgb, depth, segmentation) or more
+            res = cam.render()
+            rgb = res[0] if isinstance(res, tuple) else res
 
-        if hasattr(rgb, "cpu"):
-            rgb = rgb.cpu().numpy()
+            if hasattr(rgb, "cpu"):
+                rgb = rgb.cpu().numpy()
 
-        return rgb.astype(np.uint8)
+            rgb_image = rgb.astype(np.uint8)
+            logger.debug(
+                "genesis_render_camera_complete",
+                camera_name=camera_name,
+                width=width,
+                height=height,
+                session_id=self.session_id,
+                shape=tuple(rgb_image.shape),
+            )
+            return rgb_image
+        except Exception as exc:
+            logger.error(
+                "genesis_render_camera_failed",
+                camera_name=camera_name,
+                width=width,
+                height=height,
+                session_id=self.session_id,
+                error=str(exc),
+            )
+            raise
 
     def set_camera(
         self,
