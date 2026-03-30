@@ -27,6 +27,7 @@ from controller.agent.handover_constants import (
     ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
     ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
     ENGINEER_PLANNER_HANDOFF_ARTIFACTS,
+    ENGINEERING_EXECUTION_REVIEW_MANIFEST,
     ENGINEERING_PLAN_REVIEW_MANIFEST,
     REVIEWER_HANDOFF_ARTIFACTS,
     SCHEMA_BACKED_HANDOFF_PATHS,
@@ -613,6 +614,19 @@ async def _materialize_reviewer_handover(
     reviewer_stage: ReviewerStage = "engineering_execution_reviewer",
     episode_id: str | None = None,
 ) -> str | None:
+    if reviewer_stage == "engineering_execution_reviewer":
+        try:
+            existing_handover_error = await validate_reviewer_handover(
+                client,
+                manifest_path=ENGINEERING_EXECUTION_REVIEW_MANIFEST,
+                expected_stage=reviewer_stage,
+            )
+        except Exception:
+            existing_handover_error = "unknown reviewer handover validation error"
+        else:
+            if existing_handover_error is None:
+                return None
+
     async def _run_with_transient_busy_retry(operation_name: str, coro_factory):
         deadline = asyncio.get_running_loop().time() + _TRANSIENT_BUSY_MAX_WAIT_SECONDS
         last_exc: Exception | None = None

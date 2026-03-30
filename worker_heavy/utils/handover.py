@@ -23,6 +23,7 @@ from worker_heavy.utils.dfm import (
 from worker_heavy.utils.file_validation import (
     validate_declared_planner_cost_contract,
     validate_environment_attachment_contract,
+    validate_planner_handoff_cross_contract,
 )
 from worker_heavy.utils.validation import (
     validate_benchmark_submission_simulation_bounds,
@@ -471,6 +472,22 @@ def submit_for_review(
         )
         raise ValueError(
             "Prior validation is stale for current script revision. Re-run validate."
+        )
+
+    cross_contract_errors = validate_planner_handoff_cross_contract(
+        benchmark_definition=objectives_model,
+        assembly_definition=estimation,
+        manufacturing_config=dfm_config,
+    )
+    if cross_contract_errors:
+        logger.warning(
+            "planner_handoff_cross_contract_invalid",
+            errors=cross_contract_errors,
+            session_id=session_id,
+        )
+        raise ValueError(
+            "benchmark_assembly_definition.yaml invalid: "
+            + "; ".join(cross_contract_errors)
         )
 
     # 3b. Verify prior simulation for current script revision and objective success.

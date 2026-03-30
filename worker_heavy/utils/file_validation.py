@@ -841,10 +841,23 @@ def validate_planner_handoff_cross_contract(
             errors.append(f"{observed_label} is missing; planner caps are required")
             continue
         if observed_value - expected_value > 1e-6:
-            errors.append(
-                f"{observed_label} ({observed_value:.2f}) must be less than or equal "
-                f"to {expected_label} ({expected_value:.2f})"
-            )
+            if observed_label.endswith("planner_target_max_unit_cost_usd"):
+                errors.append(
+                    "Planner target cost "
+                    f"({observed_value:.1f}) must be less than or equal to "
+                    f"benchmark max cost ({expected_value:.1f})"
+                )
+            elif observed_label.endswith("planner_target_max_weight_g"):
+                errors.append(
+                    "Planner target weight "
+                    f"({observed_value:.1f}) must be less than or equal to "
+                    f"benchmark max weight ({expected_value:.1f})"
+                )
+            else:
+                errors.append(
+                    f"{observed_label} ({observed_value:.2f}) must be less than or equal "
+                    f"to {expected_label} ({expected_value:.2f})"
+                )
 
     copied_cap_pairs = (
         (

@@ -76,8 +76,9 @@ def _probe_vtk_display(
 def ensure_headless_vtk_display() -> str:
     """Validate the ambient X display for VTK rendering.
 
-    Private Xvfb startup and scanned display fallbacks were removed. The
-    renderer must run against the host's actual display/session auth.
+    The renderer container owns its own private Xvfb session. The host does not
+    need to provide a desktop display, but the process must still expose a
+    working DISPLAY and XAUTHORITY pair to VTK.
     """
 
     display = os.environ.get("DISPLAY")
@@ -87,10 +88,6 @@ def ensure_headless_vtk_display() -> str:
         )
 
     xauthority = os.environ.get("XAUTHORITY")
-    if not xauthority:
-        raise ValueError(
-            "deprecated functionality removed: private Xvfb fallback; ambient XAUTHORITY is required"
-        )
 
     probe_ok, probe_error = _probe_vtk_display(display, xauthority)
     if not probe_ok:
@@ -106,6 +103,7 @@ def ensure_headless_vtk_display() -> str:
         )
 
     os.environ["DISPLAY"] = display
-    os.environ["XAUTHORITY"] = xauthority
+    if xauthority:
+        os.environ["XAUTHORITY"] = xauthority
     logger.info("ambient_vtk_display_ready", display=display)
     return display

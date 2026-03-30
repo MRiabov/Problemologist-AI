@@ -6,6 +6,7 @@ import math
 import os
 import tempfile
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
 
 import numpy as np
@@ -1470,7 +1471,23 @@ def render_preview_view(
         raise RuntimeError("renderer returned no preview image bytes")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_bytes(base64.b64decode(response.image_bytes_base64))
+    image_bytes = base64.b64decode(response.image_bytes_base64)
+    output_suffix = output_path.suffix.lower()
+    output_format_map = {
+        ".jpg": "JPEG",
+        ".jpeg": "JPEG",
+        ".png": "PNG",
+    }
+    output_format = output_format_map.get(output_suffix)
+    if output_format is None:
+        output_path.write_bytes(image_bytes)
+        return output_path
+
+    with Image.open(BytesIO(image_bytes)) as preview_image:
+        image_to_save = preview_image
+        if output_format == "JPEG" and preview_image.mode not in {"RGB", "L"}:
+            image_to_save = preview_image.convert("RGB")
+        image_to_save.save(output_path, format=output_format)
     return output_path
 
 
