@@ -35,6 +35,7 @@ Additionally:
 10. Every JSON, YAML, XML is converted to models e.g. Pydantic models and only then assertions are happening against them (for test maintainability and explainability). If there is no model for a JSON or similar schema, add it.
 11. Tests must utilize state-based polling (e.g., waiting for specific API responses, DB states, or UI elements) rather than hardcoded sleeps or generic timeouts. This ensures tests are deterministic and fail-fast.
 12. Each `INT-xxx` or `INT-NEG-###` ID must map to **exactly one** test function. The canonical ID must be declared once for that function via a dedicated `@pytest.mark.int_id(...)` marker, and the runtime `session_id` must be derived from that declared ID. Creating multiple test functions or multiple canonical declarations for the same ID is forbidden. If a single ID requires multiple sub-assertions, they must be consolidated into one test.
+13. Integration tests must be parallelizable under `pytest -n4` without custom per-test parallelization logic. If a test cannot run in that mode, it is unacceptable unless it is demonstrably CPU-bound or RAM-bound in a way that still would not be a constraint on materially larger machines; MuJoCo-heavy tests are not a blanket exception, because the current suite does not approach OOM and resource pressure is not a valid default waiver.
 
 *Exception to the importing rules*: you can import python models and enums to use appropriate schema to avoid using pure json which will need to be manually updated later.
 Commonly, these models and enums would be in `shared/` folder.
@@ -164,11 +165,14 @@ Direct `worker-heavy` HTTP requests remain valid only in integration tests that 
 
 Priorities:
 
-- `P0`: Must pass before merge to `main`.
-- `P1`: Must pass in nightly/pre-release.
-- `P2`: Extended production-quality/evaluation suite.
+- `P0`: Release-blocking integration tests. Failures here block merge to `main`. Reserve this tier for core user flows, service availability, data integrity, security, and other high-blast-radius contracts.
+- `P1`: Important regression tests that should pass in nightly/pre-release runs. Use this tier for material workflows and high-risk behaviors that are not merge-blocking on every PR.
+- `P2`: Extended coverage for slower, rarer, statistical, or developer-utility checks. Use this tier for valuable validation that does not need to gate a PR or a pre-release.
+- Priority follows risk, not perceived importance. A test belongs in `P0` only when its failure is a clear release blocker; if the failure is localized, recoverable, or non-core, classify it as `P1` or `P2`.
 
 ### P0: Architecture parity baseline
+
+This section is the smallest must-pass set. Keep it narrowly scoped, deterministic, and directly release-blocking.
 
 | ID | Test | Required assertions |
 | -- | -- | -- |
