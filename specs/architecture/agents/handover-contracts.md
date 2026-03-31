@@ -126,7 +126,7 @@ If the user provides explicit benchmark objective overrides (for example `max_un
 
 `Benchmark Plan Reviewer` gate requirements:
 
-- Source of truth contract: benchmark planner handoff artifacts are `plan.md`, `todo.md`, `benchmark_definition.yaml`, and benchmark-owned `benchmark_assembly_definition.yaml`.
+- Source of truth contract: benchmark planner handoff artifacts are `plan.md`, `todo.md`, `benchmark_definition.yaml`, and benchmark-owned `benchmark_assembly_definition.yaml`. `benchmark_script.py` is created later by `Benchmark Coder` after plan approval.
 - Reviewer-stage manifest: `.manifests/benchmark_plan_review_manifest.json`.
 - Entry guard behavior:
   - Reject when the manifest is missing, stale for the latest planner revision, or schema-invalid.
@@ -143,6 +143,8 @@ If the user provides explicit benchmark objective overrides (for example `max_un
 - Approval effect:
   - Only an approved benchmark plan reviewer handoff is allowed to pause in `PLANNED` state and unblock `Benchmark Coder`.
 
+`Benchmark Coder` owns all implementation changes to `benchmark_script.py` and helper implementation modules for the current revision.
+
 ## Benchmark Generator with Engineer handover
 
 The Engineer agent(s) (for whom the first point of access is Engineering Planner) have access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
@@ -152,7 +154,7 @@ The benchmark-owned environment, benchmark input objects, benchmark objective ma
 Benchmark-owned authored labels are part of that read-only contract too: `moved_object.label` and any top-level build123d object label in the benchmark handoff must be non-empty and stable, and runtime must not invent fallback labels when one is missing.
 
 Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
-Treat that preview as one static render bundle under `renders/`: each of the 24 views persists RGB, depth, and segmentation siblings, so the bundle is 72 files total but one conceptual input surface. The exact role-level render consumption policy stays config-driven in `config/agents_config.yaml`.
+Treat that preview as one static render bundle under `renders/`, but keep the workflow-specific subdirectory inside that bundle. Benchmark-side static preview evidence lives under `renders/benchmark_renders/`, engineer single-view inspection previews live under `renders/engineer_renders/`, and final engineer-side preview bundles live under `renders/final_preview_renders/`. Each of the 24 views still persists RGB, depth, and segmentation siblings, so the bundle is 72 files total but one conceptual input surface. Handover and submission collectors recurse through the selected bucket directory, so nested render files and `render_manifest.json` survive the payload assembly step unchanged. The exact role-level render consumption policy stays config-driven in `config/agents_config.yaml`.
 
 These renders are not only passive assets in storage. Reviewer and other vision-using nodes must inspect them through the dedicated media-inspection tool (`inspect_media(...)`) when visual evidence is required. Merely listing files in `renders/` or reading text artifacts that mention render paths is not treated as image review.
 
@@ -161,10 +163,10 @@ These renders are not only passive assets in storage. Reviewer and other vision-
 - Benchmark Planner: render media are not a mandatory node-entry input.
 - Benchmark Plan Reviewer: render media are not a mandatory node-entry input; if latest-revision render assets already exist, visual inspection still follows the role policy in `config/agents_config.yaml`.
 - Benchmark Coder: render media are not a mandatory node-entry input.
-- Benchmark Reviewer: receives the latest benchmark render evidence for the approved revision, which includes the full static 24-view bundle and the latest simulation video when benchmark-owned motion exists.
-- Engineering Planner: receives the same latest benchmark full static render bundle as read-only context.
-- Engineering Coder: receives the same latest benchmark full static render bundle, and the latest simulation video when benchmark-owned motion exists, as read-only context.
-- Engineering Execution Reviewer: receives the same full static render bundle plus the latest simulation video evidence when present, and must inspect the required media before approval.
+- Benchmark Reviewer: receives the latest benchmark render evidence for the approved revision, which includes the full static 24-view bundle under `renders/benchmark_renders/` and the latest simulation video when benchmark-owned motion exists.
+- Engineering Planner: receives the same latest benchmark full static render bundle under `renders/benchmark_renders/` as read-only context.
+- Engineering Coder: receives the same latest benchmark full static render bundle under `renders/benchmark_renders/`, the latest simulation video when benchmark-owned motion exists, and any engineer-owned inspection previews under `renders/engineer_renders/` as read-only context.
+- Engineering Execution Reviewer: receives the same full static render bundle under `renders/benchmark_renders/` plus the latest final preview bundle under `renders/final_preview_renders/` and the latest simulation video evidence when present, and must inspect the required media before approval.
 
 The source of truth for which roles must perform visual inspection is `config/agents_config.yaml` under each role's `visual_inspection` policy. Current required roles in engineering/benchmark handoff flow are:
 
@@ -184,9 +186,9 @@ The engineer will also receive YAML files with:
 Note that the maximum price and weight are also set by the planner later internally. However, the planner sets their own constraints *under* the maximum price. Here the "maximum prices and weight" are a "customer-specified price and weight" (the "customer" being the benchmark generator), and the planner price and weight are their own price and weight.
     <!-- (in future work) Later on, we will challenge the agent to optimize its previous result. It would have to beat its own solution, by, say, 15%.  -->
 
-The positions of objectives (including a build zone) and runtime randomization are in `benchmark_definition.yaml`. The Benchmark Planner's `benchmark_assembly_definition.yaml` is a required benchmark-owned handoff artifact copied into the engineer session as read-only context.
+The positions of objectives (including a build zone) and runtime randomization are in `benchmark_definition.yaml`. The Benchmark Planner's `benchmark_assembly_definition.yaml` is a required benchmark-owned handoff artifact copied into the engineer session as read-only context. The benchmark-owned geometry source is materialized in `benchmark_script.py` by `Benchmark Coder` after plan approval, and preview callers compose its `objectives_geometry()` output with the benchmark assembly context before rendering benchmark context.
 
-Engineering may read `benchmark_assembly_definition.yaml`, reason about it, and design against it, but must not modify benchmark-owned fixtures or benchmark motion definitions. Missing `benchmark_assembly_definition.yaml` is a handoff failure, not an optional omission, and the file remains benchmark-owned read-only context rather than an engineer-owned planning artifact.
+Engineering may read `benchmark_assembly_definition.yaml`, reason about it, and design against it, but must not modify benchmark-owned fixtures or benchmark motion definitions. Missing `benchmark_assembly_definition.yaml` is a handoff failure, not an optional omission, and the file remains benchmark-owned read-only context rather than an engineer-owned planning artifact. `benchmark_script.py` is also read-only context for engineering intake once it exists.
 
 If the benchmark includes moving benchmark-owned fixtures, the engineer intake still needs motion-visible facts. Those facts may live in `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml`. The minimum contract for each moving benchmark fixture is:
 
@@ -206,6 +208,8 @@ If a benchmark-owned fixture is meant to be interactable by engineering, the rel
 4. mechanically actuating a benchmark-owned control feature such as a lever, latch, or trigger.
 
 That flag is a permission, not transfer of ownership. The engineer may interact with the intended benchmark-owned surface, but may not redefine benchmark-owned components.
+
+The benchmark-owned geometry source is created in `benchmark_script.py` by `Benchmark Coder` and is copied read-only into downstream engineer workspaces and benchmark execution review. The engineer-owned solution source lives in `solution_script.py`.
 
 #### Renders
 
@@ -280,8 +284,8 @@ Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
 
 Unified coder contract:
 
-- `Engineering Coder` reads the combined planner handoff, including any planner-owned `assembly_definition.yaml.electronics` section and benchmark `benchmark_definition.yaml.electronics_requirements`.
-- `Engineering Coder` owns all implementation changes to `script.py` and helper implementation modules for the current revision.
+- `Engineering Coder` reads the combined planner handoff, including any planner-owned `assembly_definition.yaml.electronics` section, benchmark `benchmark_definition.yaml.electronics_requirements`, and read-only benchmark geometry context from `benchmark_script.py`.
+- `Engineering Coder` owns all implementation changes to `solution_script.py` and helper implementation modules for the current revision.
 - `Engineering Coder` may implement both mechanical and electrical details in one pass when the task requires electronics.
 - `Engineering Coder` must not assume that electronics can be deferred to a later dedicated implementation node.
 
@@ -571,7 +575,7 @@ Validation requirement:
 
 The Execution Reviewer (`Engineering Execution Reviewer`) is a post-validation/post-simulation stage.
 
-1. Entry is blocked unless latest-revision reviewer handoff artifacts are valid (`script.py`, `validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_review_manifest.json`).
+1. Entry is blocked unless latest-revision reviewer handoff artifacts are valid (`solution_script.py`, `validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_review_manifest.json`).
    - Source of truth contracts: `REVIEWER_HANDOFF_ARTIFACTS` + execution-review custom handover check in node-entry validation (using reviewer-scoped manifest filenames from this document).
 2. The Execution Reviewer has read-only access to implementation and evidence files, plus write/edit only to its stage-specific YAML review pair in `reviews/`.
 3. Primary review is robustness and realism: this node runs only after validation + simulation success paths have completed (including minor runtime-randomization pass criteria), then verifies the result is not flaky and is likely repeatable.

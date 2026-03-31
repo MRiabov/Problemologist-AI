@@ -24,6 +24,7 @@ The split between benchmark plan review and benchmark execution review is mandat
 
 - `Benchmark Plan Reviewer` checks planner-hand-off quality before implementation starts and persists reviewer output to the benchmark-plan review YAML pair in `reviews/`.
 - `Benchmark Reviewer` remains the post-validation/post-simulation review gate for the implemented benchmark environment and persists reviewer output to the benchmark-execution review YAML pair in `reviews/`.
+- After plan approval, a single `Benchmark Coder` creates and owns benchmark geometry changes in `benchmark_script.py` and any helper implementation modules. The `Benchmark Planner` does not receive `benchmark_script.py` before plan approval.
 
 ## Engineering workflow
 
@@ -41,7 +42,7 @@ Implementation ownership is intentionally unified.
 
 - `Engineering Planner` and `Electronics Planner` may both refine planner-owned artifacts before the plan-review gate.
 
-- After plan approval, a single `Engineering Coder` owns implementation changes to `script.py` and any helper implementation modules.
+- After plan approval, a single `Engineering Coder` owns implementation changes to `solution_script.py` and any helper implementation modules.
 
 - We do not run separate mechanical and electrical implementation agents in sequence for the same workspace revision. That late serialized split creates avoidable cross-domain handoff damage when wiring, PSU placement, connector access, or route clearance require mechanical adjustments.
 

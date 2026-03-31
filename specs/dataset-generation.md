@@ -45,7 +45,7 @@ The inputs to each model are as described in @desired_architecture.md document. 
 - reviews/** (read)
 - renders/** (read, tool-generated)
 - journal.md (read/write)
-- script.py / template-backed implementation file(s) (read/write; plus additional *.py)
+- benchmark_script.py / solution_script.py / template-backed implementation file(s) (role-appropriate read/write; `benchmark_script.py` appears only after benchmark implementation exists; plus additional *.py)
 - plan_refusal.md (write only, when refusing plan)
 ```
 
@@ -53,8 +53,8 @@ Note that skills and utils files are loaded at runtime (currently from the most 
 
 When the exact same starter artifact recurs across rows or agent families, store that body once in
 `shared/agent_templates/common/` and copy it into the workspace from there. Dataset rows should keep only row-specific
-custom artifacts in their seed folders; common boilerplate such as `script.py`, `todo.md`, and `journal.md` should not
-be duplicated in the row bundle.
+custom artifacts in their seed folders; common boilerplate such as `todo.md` and `journal.md` should not be duplicated
+in the row bundle. The authored `benchmark_script.py` and `solution_script.py` files remain row-specific artifacts once their respective stages exist.
 
 This means that the dataset rows (it actually is archives on s3; the only item in DB is metadata) must contain all of them; or nulls where nullable. They will be later persisted as files.
 

@@ -222,7 +222,7 @@ This split between `benchmark_definition.yaml` and `assembly_definition.yaml` is
 Implementation ownership rule:
 
 1. `assembly_definition.yaml.electronics` is planner-owned after plan approval,
-2. `Engineering Coder` implements that approved electrical design in `script.py` and helper modules,
+2. `Engineering Coder` implements that approved electrical design in `solution_script.py` and helper modules,
 3. implementation changes that require planner-level electrical redesign must route through plan refusal / replanning, not through a separate late electrical implementer node.
 
 ## Circuit model contract

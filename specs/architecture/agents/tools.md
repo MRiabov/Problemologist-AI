@@ -91,8 +91,8 @@ Importantly, we have all these methods as async functions, their names with `are
 Rules:
 
 1. The command string is interpreted as a shell command, exactly as an agent would type it in a terminal.
-2. Workspace-relative paths such as `script.py`, `plan.md`, and `renders/` remain the canonical path contract inside that shell session.
-3. Shell usage such as `python -c ...`, `python script.py`, `bash -lc ...`, `uv run ...`, `ls`, `cat`, and similar terminal invocations is valid if it stays within filesystem policy.
+2. Workspace-relative paths such as `solution_script.py`, `benchmark_script.py` once created by `Benchmark Coder`, `plan.md`, and `renders/` remain the canonical path contract inside that shell session.
+3. Shell usage such as `python -c ...`, `python solution_script.py`, `python benchmark_script.py` once created by `Benchmark Coder`, `bash -lc ...`, `uv run ...`, `ls`, `cat`, and similar terminal invocations is valid if it stays within filesystem policy.
 4. Any implementation that accepts only raw Python source for `execute_command(...)` is a runtime bug or temporary drift, not the intended architecture contract.
 5. If we want a raw-Python helper in the future, it should be a separate tool with a separate name and spec, not an overload of `execute_command(...)`.
 
@@ -165,8 +165,8 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 
 <!-- Same: what's in the compound? -->
 
-- `preview_design` - a way to render the CAD files. Used for the engineer to get a visual inspection of its work. Probably doesn't need to render all 24 pictures (maybe, allow a `pitch=180, yaw = 45` parameter to look from a specific side.)
-  Note - used by default by
+- `preview(component: Part|Compound, pitch: float = 45, yaw: float = 45, rendering_type: RenderingType | Literal["rgb", "depth", "segmentation"])` - a way to render the CAD files on demand. Used for the engineer to get a visual inspection of its work. The single-view preview bundle is persisted under `renders/engineer_renders/` rather than being flattened into the root render directory. Benchmark callers compose benchmark geometry first and then preview the composed result.
+- `objectives_geometry()` - a zero-argument utility imported from `utils` that materializes the benchmark objective geometry from the canonical benchmark definition path for the current workspace. Preview callers combine its output with benchmark `build()` output before rendering benchmark context.
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service which does it fo us-->
 
 #### Reviewer / media-inspection tool
@@ -176,7 +176,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
   - Supported first-line inputs are image files (`.png`, `.jpg`, `.jpeg`).
   - For videos such as `simulation.mp4`, runtime may expose representative extracted frames through the same tool contract when `config/agents_config.yaml render.split_video_renders_to_images=true`. Frame cadence is controlled by `render.video_frame_attachment_stride`, so the tool attaches every Nth frame rather than a fixed cap. That remains a media-inspection action, not a text-file read.
   - The tool returns structured metadata (for example path, media kind, frame/image count, attach success), while the actual image/frame content is attached to the LLM call through the runtime's multimodal message path.
-  - When the inspected file is a render artifact under `renders/`, the tool should also return persisted render metadata from `renders/render_manifest.json` when available.
+  - When the inspected file is a render artifact under `renders/benchmark_renders/`, `renders/engineer_renders/`, or `renders/final_preview_renders/`, the tool should also return persisted render metadata from `renders/render_manifest.json` when available.
   - For segmentation renders, that metadata must include a color legend mapping rendered colors to object identity.
   - Segmentation legend entries must expose both:
     1. a semantic label the model can reason about (`semantic_label`),
@@ -199,7 +199,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
   - `engineer_plan_reviewer`
   - `engineer_execution_reviewer`
 - `min_images` is policy-driven. Current implementation uses `1` for the roles above.
-- The gate is conditional on actual image availability in `renders/`. If no render images exist for the current node/revision, the media requirement does not trigger.
+- The gate is conditional on actual image availability in `renders/**`. If no render images exist for the current node/revision, the media requirement does not trigger.
 - Runtime behavior is fail-closed:
   - for required non-reviewer roles in native tool-loop mode, `finish` is blocked until the configured image minimum is satisfied
   - for reviewer roles, approval is invalid unless required media inspection occurred during the current review attempt (enforced before accepting `submit_review.sh`)
@@ -218,9 +218,14 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 
   Validated under all environment randomization.
 
-  - The validation tool also generates the standard 24-view static preview package.
+  - `objectives_geometry()` returns benchmark objective geometry for the current workspace. It takes no arguments because the benchmark objectives are defined in the canonical `benchmark_definition.yaml` path for the current workspace, and preview callers compose the returned geometry with the benchmark assembly output before rendering.
+
+  - The validation tool also generates the standard 24-view static preview package, persisted under `renders/benchmark_renders/` for benchmark-side validation and `renders/final_preview_renders/` for engineer-side validation.
+
   - That static preview package uses the validation-preview renderer, which is build123d/VTK by default.
+
   - `validate()` is therefore a fast geometry + preview gate, not a Genesis-runtime parity gate.
+
   - Current implementation bug to eliminate: `validate()` must fail closed if the compound being validated can only be reproduced from transient shell state and not from the persisted script/workspace snapshot. A minimal fix is to derive a canonical semantic signature from the compound's child/component history, using primitive/component types, authored parameters, label, bounding box, rounded volume, face count, and wire length with tolerance-aware normalization, and compare it against the persisted authored script state; any mismatch is a fail-fast validation error. Raw mesh equality and direct volume equality are too brittle for this gate.
 
 - `simulate(Compound) -> SimulationResult` - a simulation that, unlike the engineering simulation, can not fail, except if not valid as per `validate()`.

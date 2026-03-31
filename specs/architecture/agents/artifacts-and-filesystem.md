@@ -39,19 +39,19 @@ The agent-specific workspace surface is role-scoped.
 Representative examples:
 
 - Engineering Planner:
-  - read: `skills/**`, `utils/**`, `benchmark_definition.yaml`, `plan.md`, `todo.md`, `journal.md`, `renders/**`
+  - read: `skills/**`, `utils/**`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `plan.md`, `todo.md`, `journal.md`, `renders/**`
   - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml`, `benchmark_definition.yaml`
 - Engineering Coder:
-  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
-  - write: `script.py`, additional `*.py` implementation files, `todo.md`, `journal.md`, `renders/**`, `plan_refusal.md`
+  - read: `skills/**`, `utils/**`, `benchmark_script.py`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
+  - write: `solution_script.py`, additional `*.py` implementation files, `todo.md`, `journal.md`, `renders/**`, `plan_refusal.md`
 - Benchmark Planner:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `journal.md`, `renders/**`
   - write: `plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`
 - Benchmark Coder:
-  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `reviews/**`, `renders/**`
-  - write: `script.py`, additional `*.py` implementation files, `todo.md`, `journal.md`, `renders/**`, `plan_refusal.md`
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `reviews/**`, `renders/**`
+  - write: `benchmark_script.py`, additional `*.py` implementation files, `todo.md`, `journal.md`, `renders/**`, `plan_refusal.md`
 - Reviewer roles:
-  - read: the stage-owned planner/coder artifacts plus `renders/**` and `journal.md`
+  - read: the stage-owned planner/coder artifacts plus the authored source for that stage once it exists (`benchmark_script.py` for benchmark execution review and `solution_script.py` for engineering execution review), `renders/**`, and `journal.md`
   - write: stage-scoped `reviews/*.yaml` files only
 - COTS Search subagent:
   - read: `parts.db`, COTS query helpers/CLI, and the caller-provided request string
@@ -66,7 +66,7 @@ Manifest ownership summary:
 
 | Artifact | Writer / owner | Trigger | Path |
 | -- | -- | -- | -- |
-| Render metadata manifest | `worker-renderer` | Render job completion for static preview or simulation evidence | `renders/render_manifest.json` |
+| Render metadata manifest | `worker-renderer` | Render job completion for static preview or simulation evidence in `renders/benchmark_renders/`, `renders/engineer_renders/`, or `renders/final_preview_renders/` | `renders/render_manifest.json` |
 
 <!-- FIXME: consider moving render metadata manifests into `.manifests/` in a future refactor so render metadata and handoff metadata share one backend-owned manifest bucket. -->
 
@@ -108,7 +108,7 @@ Before planner submission, planner roles may edit planner-owned files.
 After planner submission is accepted:
 
 1. benchmark-side `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml` become read-only for benchmark Coder/Reviewer,
-2. the same `benchmark_assembly_definition.yaml` is also available in engineer intake as read-only context,
+2. the same `benchmark_assembly_definition.yaml` and `benchmark_script.py` are also available in engineer intake as read-only context,
 3. engineer-side `assembly_definition.yaml` becomes read-only for engineering Coder/Reviewer,
 4. only replanning can mutate planner-owned files.
 
@@ -136,7 +136,7 @@ Rules:
 6. `.manifests/**` is non-overridable deny for all LLM agent roles; only backend runtime utilities may access it.
 7. No agent role may be granted access to filesystem paths outside its sandbox/workspace root.
 8. `config/agents_config.yaml` also owns preview-render modality policy under top-level `render: {rgb, depth, segmentation}`.
-9. Those flags control whether build123d/VTK-backed preview artifacts are persisted into `renders/` for each modality; they do not change worker routing or backend selection policy.
+9. Those flags control whether build123d/VTK-backed preview artifacts are persisted into `renders/**` for each modality; they do not change worker routing or backend selection policy. The bundle subdirectory still reflects the workflow that produced it.
 
 ## Immutability validation
 
@@ -146,8 +146,10 @@ Control-file ownership split:
 
 1. `benchmark_definition.yaml` owns benchmark/task definition and benchmark fixture metadata (`benchmark_parts`).
 2. `benchmark_assembly_definition.yaml` owns benchmark-owned fixture structure, motion metadata, and benchmark-side implementation details.
-3. `assembly_definition.yaml` owns engineer-planned solution structure, costing inputs, and motion metadata.
-4. We do not duplicate engineer solution metadata into `benchmark_definition.yaml`.
+3. `benchmark_script.py` owns benchmark-owned geometry composition and read-only benchmark preview context.
+4. `solution_script.py` owns engineer-planned solution geometry and implementation code.
+5. `assembly_definition.yaml` owns engineer-planned solution structure, costing inputs, and motion metadata.
+6. We do not duplicate engineer solution metadata into `benchmark_definition.yaml`.
 
 ## File updates
 

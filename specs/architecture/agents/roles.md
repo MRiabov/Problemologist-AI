@@ -227,7 +227,7 @@ The Engineering Planner workflow is:
 
    - Read `benchmark_definition.yaml` as present from the benchmark generator (goal/forbid/build zones, runtime jitter, planner-authored benchmark estimates, and runtime-derived benchmark/customer caps `max_unit_cost`/`max_weight_g`).
    - Read `benchmark_assembly_definition.yaml` as required benchmark-owned read-only handoff context copied into the engineer workspace. Use it to understand benchmark-owned fixtures, motion, and which benchmark-owned components explicitly allow engineer interaction, but fail closed if the file is missing and do not treat it as an engineer-owned costing artifact.
-   - Read benchmark visuals (`renders/images`, 24-view context) and environment geometry metadata.
+   - Read benchmark visuals from `renders/benchmark_renders/` and environment geometry metadata.
    - Read required skills/config inputs (CAD drafting skill, manufacturing knowledge when cost/quantity matters, manufacturing config + catalog).
 
 2. **Plan the mechanism and budgets**
@@ -350,8 +350,9 @@ The engineering loop has two reviewer stages with different responsibilities.
 Engineer-side visual-inspection policy:
 
 1. `Engineering Planner`, `Engineering Coder`, `Engineering Plan Reviewer`, and `Engineering Execution Reviewer` are all policy-configured visual-inspection roles.
-2. The requirement is conditional on render-image availability in `renders/`.
+2. The requirement is conditional on render-image availability in `renders/**`.
 3. The current policy minimum is one distinct image per required node, but the architecture treats this as config-owned rather than hardcoded.
+4. Engineering Coder and Engineering Execution Reviewer must be able to inspect both benchmark evidence under `renders/benchmark_renders/` and engineer-owned preview evidence under `renders/engineer_renders/` or `renders/final_preview_renders/` when those bundles exist for the current revision.
 
 Reviewer manifest naming in engineering:
 

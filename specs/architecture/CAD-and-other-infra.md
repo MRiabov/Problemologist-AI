@@ -88,23 +88,31 @@ This split is intentional. Static 24-view preview does not require Genesis runti
 
 Validation-preview renders are context artifacts, not backend-authoritative proof of Genesis runtime compatibility. Genesis-specific runtime behavior is still established through actual Genesis simulation runs where Genesis behavior is required.
 
+On-demand preview uses the worker-light-facing `preview(...)` helper instead of the validation bundle path. Benchmark callers compose `objectives_geometry()` with the benchmark assembly context before previewing benchmark context, while engineer callers preview their solution geometry directly. The helper persists workflow-specific preview artifacts under the existing render buckets and does not imply Genesis parity.
+
 #### Rendering views
 
 I presume the model will need to render a view or a set of views to get an understanding of what's happening during the simulation. Allow an extra `view_angles` parameter on `simulate` to trigger simulation from different sides, which would essentially reposition a camera (or a multiple) to render.
 
 For the standard benchmark handoff package, we render 24 static preview views. The default policy is:
 
-1. `/benchmark/validate` generates those 24 static preview views through build123d/VTK in the renderer worker.
+1. `/benchmark/validate` generates the benchmark-side 24-view preview bundle through build123d/VTK in the renderer worker.
 2. `/benchmark/simulate` may generate backend-native dynamic renders or videos using the selected simulation backend in the renderer worker.
 3. We do not use `/benchmark/validate` to regenerate the same static preview through Genesis only for parity.
 
-For build123d/VTK-backed static preview renders, each camera view is persisted as an image triplet under `renders/`:
+Static preview bundles preserve the workflow that produced them instead of flattening every image into a single directory:
+
+1. benchmark-side validation preview bundles are persisted under `renders/benchmark_renders/`,
+2. single-view engineer inspection previews are persisted under `renders/engineer_renders/`,
+3. final engineer-side preview bundles are persisted under `renders/final_preview_renders/`.
+
+For build123d/VTK-backed static preview renders, each camera view is still persisted as an image triplet inside the selected bundle directory:
 
 1. the standard RGB preview image,
 2. a sibling depth-map image with `_depth.png` suffix,
 3. a sibling segmentation-map image with `_segmentation.png` suffix.
 
-Those files are context artifacts for downstream agents and reviewers. They follow the same persistence/discovery flow as the existing preview images rather than introducing a second artifact channel.
+Those files are context artifacts for downstream agents and reviewers. They follow the same persistence/discovery flow as the existing preview images rather than introducing a second artifact channel, and the render path itself now encodes whether the evidence belongs to benchmark input, engineer inspection, or final preview review.
 
 Dynamic simulation renders and videos are resolved at runtime from the selected simulation backend and are recorded in `simulation_result.json`; they do not take their camera/view contract from `agents_config.yaml` or from benchmark task metadata. The renderer worker executes those jobs and persists the outputs. See [Simulation and Rendering](./simulation-and-rendering.md#render-profile-ownership) for the ownership split.
 
@@ -141,7 +149,7 @@ render:
     edges: true
 ```
 
-If one of the `enabled` flags is set to `false`, the corresponding preview artifact type is not emitted into `renders/`. This switch controls static preview artifact persistence, not the higher-level worker routing policy.
+If one of the `enabled` flags is set to `false`, the corresponding preview artifact type is not emitted into `renders/**`. This switch controls static preview artifact persistence, not the higher-level worker routing policy.
 `split_video_renders_to_images` is separate from the static preview modality flags. When enabled, agent-facing media inspection may decode persisted `.mp4` artifacts into representative image frames for multimodal review. The sampling cadence is controlled by `video_frame_attachment_stride`, which means the tool attaches every Nth frame rather than imposing a fixed cap. `video_frame_jpeg_quality_percent` controls the JPEG encoding quality as a percent value. These settings do not change which artifacts are stored, only how `inspect_media(...)` attaches them to the model.
 
 Each modality can independently enable world-coordinate axes and edge emphasis. Those overlays are controlled by `render.<modality>.axes` and `render.<modality>.edges`.
