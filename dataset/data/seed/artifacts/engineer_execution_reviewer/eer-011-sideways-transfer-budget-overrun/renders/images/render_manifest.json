@@ -2,7 +2,7 @@
   "version": "1.0",
   "episode_id": "eer-011-sideways-transfer-budget-overrun",
   "worker_session_id": "eer-011-sideways-transfer-budget-overrun",
-  "revision": "ee8a3288c64e5a12ee3520b2ab33fac674c9d2d1",
+  "revision": "51568fa4532bff7ef5039b68fe183adc51ea42cb",
   "environment_version": "integration-test",
   "preview_evidence_paths": [
     "renders/images/context_view_01.png",
