@@ -31,7 +31,7 @@ The result is a compatibility layer that can mask real failures. If the local pa
 The following runtime pieces still depend on the shim or on the older display-based renderer bootstrap:
 
 | Area | Current behavior | Why it must change |
-| --- | --- | --- |
+| -- | -- | -- |
 | `worker_renderer/app.py` | Sets `WORKER_RENDERER_LOCAL_RENDER=1` on startup | This bakes the shim into the renderer process instead of removing it |
 | `worker_heavy/utils/rendering.py` | Reads `WORKER_RENDERER_LOCAL_RENDER` and chooses local build123d/VTK rendering when it is present | The helper must have one behavior, not two |
 | `worker_renderer/api/routes.py` | Falls back to `prerender_24_views()` for script-backed static preview | That route is currently what makes the shim necessary |

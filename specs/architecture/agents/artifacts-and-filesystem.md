@@ -20,12 +20,17 @@ The filesystem rules are:
 
 ## Templates
 
-Reusable starter files are defined once in `shared/agent_templates/common/`.
-The shared starter set includes `.admin/clear_env.py`, which resets the current seeded workspace in place without changing the conversation context.
+Reusable starter files are defined once in `shared/agent_templates/`.
+The shared starter set includes `.admin/clear_env.py`, which resets the current
+seeded workspace in place without changing the conversation context.
 
-Role-specific planner scaffolds remain in their existing template-repo locations and are copied into each workspace before node entry. `worker_light/agent_files/` mirrors the same starter content for runtime bootstrap and local inspection.
+Role-specific planner scaffolds remain in their existing template-repo
+locations and are copied into each workspace before node entry.
+`worker_light/agent_files/` mirrors the same starter content for runtime
+bootstrap and local inspection.
 
-Template files are intentional source artifacts, not ad hoc runtime defaults or symlinks.
+Template files are intentional source artifacts, not ad hoc runtime defaults
+or symlinks.
 
 ## Initial files for each agent and read-write permissions
 
@@ -54,7 +59,26 @@ Representative examples:
 
 ## System-only metadata
 
-`.manifests/**` is reserved for deterministic handover/state metadata written by backend utilities.
+`.manifests/**` is reserved for deterministic handover/state metadata written
+by backend utilities.
+
+Manifest ownership summary:
+
+| Artifact | Writer / owner | Trigger | Path |
+| -- | -- | -- | -- |
+| Render metadata manifest | `worker-renderer` | Render job completion for static preview or simulation evidence | `renders/render_manifest.json` |
+
+<!-- FIXME: consider moving render metadata manifests into `.manifests/` in a future refactor so render metadata and handoff metadata share one backend-owned manifest bucket. -->
+
+| Benchmark plan-review manifest | backend runtime utility invoked by `submit_plan()` | Successful `Benchmark Planner` `submit_plan()` | `.manifests/benchmark_plan_review_manifest.json` |
+| Engineering plan-review manifest | backend runtime utility invoked by `submit_plan()` | Successful `Engineering Planner` `submit_plan()` | `.manifests/engineering_plan_review_manifest.json` |
+| Benchmark review manifest | backend runtime utility invoked by `submit_for_review(...)` | Successful benchmark `submit_for_review(...)` | `.manifests/benchmark_review_manifest.json` |
+| Engineering execution-review manifest | backend runtime utility invoked by `submit_for_review(...)` | Successful engineering `submit_for_review(...)` | `.manifests/engineering_execution_review_manifest.json` |
+| Electronics review manifest | backend runtime utility invoked by `submit_for_review(...)` | Successful electronics `submit_for_review(...)` | `.manifests/electronics_review_manifest.json` |
+
+The agent-facing tools are the submission triggers. The actual manifest write
+happens in the backend runtime utility, and `.manifests/**` remains
+inaccessible to LLM roles.
 
 Reviewer-stage manifest filenames are explicit and role-scoped:
 
@@ -92,7 +116,9 @@ After planner submission is accepted:
 
 Where possible, templates have a validation schema.
 
-YAML templates are schema-validated when they are materialized into a workspace, so starter drift is caught at source rather than after a node has already started.
+YAML templates are schema-validated when they are materialized into a
+workspace, so starter drift is caught at source rather than after a node has
+already started.
 
 ## `agents_config.yaml` (path permissions policy)
 

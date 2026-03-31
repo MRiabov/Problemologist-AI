@@ -51,4 +51,3 @@ Disposition terms:
 | UNDOC-063 | Benchmark plan rejection with latest revision evidence | Promote | P1 | Promote to `INT-203`, but keep it at P1. This is a reviewer rejection path, not a launch gate. |
 | UNDOC-064 | Approval requires media inspection | Promote | P1 | Promote to `INT-204`, but keep it at P1. The latest-revision inspection rule is important but still a reviewer-quality gate, not P0 availability. |
 | UNDOC-066, UNDOC-067, UNDOC-068, UNDOC-069, UNDOC-070, UNDOC-071, UNDOC-072 | Evaluation and dataset materialization regressions | Promote | P2 | Promote these to the canonical P2 evaluation rows (`INT-046` through `INT-052`). They are useful analytic coverage and should stay out of P0. |
-

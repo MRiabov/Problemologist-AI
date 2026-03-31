@@ -140,12 +140,25 @@ preferable to keeping it around as a low-value P0 residue.
 
 ## Bottom Line
 
+### Observability and reviewer evidence
+
+`UNDOC-053` through `UNDOC-056` are still real integration checks, but they are
+observability and storage-durability contracts, not user-facing launch gates.
+The lifecycle and upload logging behavior is worth keeping canonical, yet the
+failure-injection variant is the one most likely to slide down into P1 if the
+same retry path is already covered elsewhere.
+
+`UNDOC-059` through `UNDOC-065` are the same story with reviewer evidence. The
+canonical evidence contract matters because the reviewer path depends on it,
+but the individual media-inspection and preview-evidence variants are narrower
+than the parent gate. They should be merged upward instead of keeping separate
+P0 rows.
+
 The inventory should converge to three shapes:
 
 1. Core product gates that stay in P0.
 2. Support and tooling contracts that move to P1 or P2.
 3. Explicit negative paths that move to `INT-NEG-###`.
 
-That keeps the integration catalog honest and brings the P0 suite back to being
-the smallest genuinely release-blocking set.
-
+That keeps the integration catalog honest and brings the P0 suite back to
+being the smallest genuinely release-blocking set.
