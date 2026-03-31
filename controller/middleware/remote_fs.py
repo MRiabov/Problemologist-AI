@@ -30,8 +30,8 @@ from controller.workflows.heavy import (
     HeavyVerifyWorkflow,
 )
 from shared.agents.config import resolve_agents_config_path
-from shared.git_utils import repo_revision
 from shared.enums import AgentName, ManufacturingMethod
+from shared.git_utils import repo_revision
 from shared.models.schemas import EpisodeMetadata
 from shared.observability.schemas import (
     EditFileToolEvent,
