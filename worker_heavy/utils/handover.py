@@ -11,7 +11,6 @@ from shared.models.schemas import BenchmarkDefinition
 from shared.models.simulation import SimulationResult
 from shared.workers.schema import (
     BenchmarkAttachmentPolicySummary,
-    RenderArtifactMetadata,
     RenderManifest,
     ReviewerStage,
     ReviewManifest,
@@ -26,7 +25,6 @@ from worker_heavy.utils.file_validation import (
     validate_environment_attachment_contract,
     validate_planner_handoff_cross_contract,
 )
-from worker_heavy.utils.rendering import build_render_manifest
 from worker_heavy.utils.validation import (
     validate_benchmark_submission_simulation_bounds,
 )
@@ -577,34 +575,13 @@ def submit_for_review(
         or _derived_episode_id(resolved_session_id)
     )
 
-    manifest_artifacts: dict[str, RenderArtifactMetadata] = {}
-    for render_path in render_paths:
-        suffix = Path(render_path).suffix.lower()
-        if suffix == ".mp4":
-            modality = "unknown"
-        elif render_path.endswith("_depth.png"):
-            modality = "depth"
-        elif render_path.endswith("_segmentation.png"):
-            modality = "segmentation"
-        else:
-            modality = "rgb"
-        manifest_artifacts[render_path] = RenderArtifactMetadata(modality=modality)
-
-    render_manifest = build_render_manifest(
-        manifest_artifacts,
-        workspace_root=cwd,
-        episode_id=resolved_episode_id,
-        worker_session_id=resolved_session_id,
-        revision=revision,
-        environment_version=str(estimation.version).strip() or None,
-        preview_evidence_paths=render_paths,
-    )
-    manifest_path = renders_dir / "render_manifest.json"
-    manifest_path.write_text(
-        render_manifest.model_dump_json(indent=2), encoding="utf-8"
-    )
-
     _validate_render_manifest_bundle(renders_dir=renders_dir, render_paths=render_paths)
+    logger.info(
+        "render_manifest_bundle_validated",
+        count=len(render_paths),
+        session_id=session_id,
+    )
+
     logger.info("renders_persisted", count=len(render_paths), session_id=session_id)
 
     # 5. Create reviewer-stage manifest

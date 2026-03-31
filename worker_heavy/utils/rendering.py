@@ -342,24 +342,29 @@ def prerender_24_views(
             ]
             if not render_paths:
                 raise RuntimeError("renderer returned no preview image artifacts")
-            manifest = build_render_manifest(
-                {
-                    path: RenderArtifactMetadata(
-                        modality="unknown" if path.endswith(".mp4") else "rgb"
-                    )
-                    for path in render_paths
-                },
-                workspace_root=workspace_root,
-                episode_id=session_id,
-                worker_session_id=session_id,
-                revision=revision,
-                environment_version=environment_version,
-            )
             manifest_path = output_path / "render_manifest.json"
-            manifest_path.write_text(
-                manifest.model_dump_json(indent=2),
-                encoding="utf-8",
-            )
+            # The renderer worker already materializes a rich render manifest when
+            # it can build one from preview scene metadata. Preserve that manifest
+            # instead of overwriting it with a synthetic RGB-only fallback, which
+            # would discard segmentation legends and modality-specific metadata.
+            if not manifest_path.exists():
+                manifest = build_render_manifest(
+                    {
+                        path: RenderArtifactMetadata(
+                            modality="unknown" if path.endswith(".mp4") else "rgb"
+                        )
+                        for path in render_paths
+                    },
+                    workspace_root=workspace_root,
+                    episode_id=session_id,
+                    worker_session_id=session_id,
+                    revision=revision,
+                    environment_version=environment_version,
+                )
+                manifest_path.write_text(
+                    manifest.model_dump_json(indent=2),
+                    encoding="utf-8",
+                )
             saved_files = list(render_paths)
 
         emit_event(
