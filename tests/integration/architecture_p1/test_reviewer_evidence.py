@@ -70,13 +70,12 @@ def _is_inspect_media_trace(trace) -> bool:
 
 def _benchmark_plan_review_artifacts_ready(episode: EpisodeResponse) -> bool:
     traces = episode.traces or []
-    rejected_traces = [
+    approved_traces = [
         trace
         for trace in traces
         if trace.name == "review_decision"
         and trace.metadata_vars is not None
-        and trace.metadata_vars.decision == ReviewDecision.REJECT_PLAN
-        and "UNSOLVABLE_SCENARIO" in (trace.content or "")
+        and trace.metadata_vars.decision == ReviewDecision.APPROVED
     ]
     artifact_paths = [asset.s3_path for asset in (episode.assets or [])]
     decision_paths = [
@@ -95,7 +94,7 @@ def _benchmark_plan_review_artifacts_ready(episode: EpisodeResponse) -> bool:
         if path.endswith("benchmark_plan_review_manifest.json")
     ]
     return bool(
-        rejected_traces and decision_paths and comments_paths and manifest_paths
+        approved_traces and decision_paths and comments_paths and manifest_paths
     )
 
 
@@ -867,14 +866,14 @@ async def test_engineer_execution_reviewer_handover_accepts_preview_evidence_pat
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
-async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_evidence():
+async def test_benchmark_plan_reviewer_approval_persists_latest_revision_evidence():
     """
-    INT-203: benchmark plan reviewer rejection must carry latest-revision
+    INT-203: benchmark plan reviewer approval must carry latest-revision
     solvability evidence into the persisted review artifacts.
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         request = BenchmarkGenerateRequest(
-            prompt="INT-203 benchmark planner solvability rejection.",
+            prompt="INT-203 benchmark planner solvability approval.",
             backend=SimulatorBackendType.GENESIS,
         )
         resp = await client.post("/benchmark/generate", json=request.model_dump())
@@ -893,15 +892,14 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
             )
         )
         traces = latest_episode.traces or []
-        rejected_traces = [
+        approved_traces = [
             trace
             for trace in traces
             if trace.name == "review_decision"
             and trace.metadata_vars is not None
-            and trace.metadata_vars.decision == ReviewDecision.REJECT_PLAN
-            and "UNSOLVABLE_SCENARIO" in (trace.content or "")
+            and trace.metadata_vars.decision == ReviewDecision.APPROVED
         ]
-        rejected_review_trace = max(rejected_traces, key=lambda trace: trace.id)
+        approved_review_trace = max(approved_traces, key=lambda trace: trace.id)
         artifact_paths = [asset.s3_path for asset in (latest_episode.assets or [])]
         decision_paths = [
             path
@@ -925,7 +923,7 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
             trace for trace in traces if _is_inspect_media_trace(trace)
         ]
         assert len(inspect_media_traces) >= 2, (
-            "Benchmark plan reviewer rejection must inspect the latest revision "
+            "Benchmark plan reviewer approval must inspect the latest revision "
             "render bundle before making a decision."
         )
         render_image_paths = {
@@ -947,11 +945,11 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
             f"not arbitrary media. inspected_render_paths={sorted(inspected_render_paths)} "
             f"render_image_paths={sorted(render_image_paths)}"
         )
-        assert rejected_review_trace is not None, (
-            "Expected benchmark plan reviewer rejection mentioning UNSOLVABLE_SCENARIO."
+        assert approved_review_trace is not None, (
+            "Expected benchmark plan reviewer approval."
         )
         assert any(
-            trace.id < rejected_review_trace.id for trace in inspect_media_traces
+            trace.id < approved_review_trace.id for trace in inspect_media_traces
         ), "inspect_media must occur before the final benchmark plan review decision."
 
         artifact_paths = [asset.s3_path for asset in (latest_episode.assets or [])]
@@ -970,19 +968,20 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
         )
         assert decision_resp.status_code == 200, decision_resp.text
         decision = yaml.safe_load(decision_resp.text)
-        assert decision["decision"] == ReviewDecision.REJECT_PLAN.value, decision
+        assert decision["decision"] == ReviewDecision.APPROVED.value, decision
 
         comments_resp = await client.get(
             f"/episodes/{session_id}/assets/{comments_paths[0]}"
         )
         assert comments_resp.status_code == 200, comments_resp.text
         comments = yaml.safe_load(comments_resp.text)
-        assert comments["summary"].startswith("REJECT_PLAN:"), comments
+        assert comments["summary"].startswith("APPROVED:"), comments
         assert comments["checklist"]["render_count"] == 2
         assert comments["checklist"]["visual_inspection_satisfied"] is True
         assert comments["checklist"]["latest_revision_verified"] is True
         assert comments["checklist"]["deterministic_error_count"] == 0
         assert "solvability_summary" in comments["checklist"]
+        assert comments["checklist"]["deterministic_refusal_reason"] == "none"
         assert comments["checklist"]["review_manifest_revision"], comments
 
         manifest_resp = await client.get(
@@ -994,7 +993,7 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
         assert manifest.reviewer_stage == AgentName.BENCHMARK_PLAN_REVIEWER
         assert manifest.planner_node_type == AgentName.BENCHMARK_PLANNER
         assert manifest.episode_id == str(benchmark_resp.episode_id)
-        assert manifest.worker_session_id == "INT-203"
+        assert manifest.worker_session_id == session_id
         assert manifest.benchmark_revision == repo_git_revision()
         assert manifest.environment_version is not None
         assert manifest.artifact_hashes, manifest

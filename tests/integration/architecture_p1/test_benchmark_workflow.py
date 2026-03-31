@@ -318,15 +318,15 @@ async def test_benchmark_planner_cad_reviewer_path():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
-async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
+async def test_benchmark_plan_reviewer_approves_solvable_render_bundle():
     """
-    INT-203: A schema-valid benchmark that is logically unsolvable must be
-    rejected explicitly by the benchmark plan reviewer and must not advance to
-    benchmark coding.
+    INT-203: A schema-valid benchmark that is logically solvable must be
+    approved explicitly by the benchmark plan reviewer and persist the review
+    artifacts for the latest revision.
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         request = BenchmarkGenerateRequest(
-            prompt="INT-203 benchmark planner solvability rejection.",
+            prompt="INT-203 benchmark planner solvability approval.",
             backend=SimulatorBackendType.GENESIS,
         )
         resp = await client.post("/benchmark/generate", json=request.model_dump())
@@ -345,8 +345,7 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
                     any(
                         trace.name == "review_decision"
                         and trace.metadata_vars is not None
-                        and trace.metadata_vars.decision == ReviewDecision.REJECT_PLAN
-                        and "UNSOLVABLE_SCENARIO" in (trace.content or "")
+                        and trace.metadata_vars.decision == ReviewDecision.APPROVED
                         for trace in (candidate.traces or [])
                     )
                     and any(
@@ -369,15 +368,14 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
             )
         )
         traces = latest_episode.traces or []
-        rejected_traces = [
+        approved_traces = [
             trace
             for trace in traces
             if trace.name == "review_decision"
             and trace.metadata_vars is not None
-            and trace.metadata_vars.decision == ReviewDecision.REJECT_PLAN
-            and "UNSOLVABLE_SCENARIO" in (trace.content or "")
+            and trace.metadata_vars.decision == ReviewDecision.APPROVED
         ]
-        rejected_review_trace = max(rejected_traces, key=lambda trace: trace.id)
+        approved_review_trace = max(approved_traces, key=lambda trace: trace.id)
         artifact_paths = [asset.s3_path for asset in (latest_episode.assets or [])]
         decision_paths = [
             path
@@ -395,14 +393,14 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
             if path.endswith("benchmark_plan_review_manifest.json")
         ]
 
-        assert rejected_review_trace is not None, (
-            "Expected benchmark plan reviewer rejection mentioning UNSOLVABLE_SCENARIO."
+        assert approved_review_trace is not None, (
+            "Expected benchmark plan reviewer approval."
         )
         assert not any(
             trace.name == "benchmark_coder"
             and "Starting task phase" in (trace.content or "")
             for trace in traces
-        ), "Benchmark coder must not start after unsolvable benchmark rejection."
+        ), "Benchmark coder must not start after benchmark plan review approval."
 
         artifact_paths = [asset.s3_path for asset in (latest_episode.assets or [])]
         assert decision_paths, f"Decision artifact missing. Artifacts: {artifact_paths}"
@@ -414,10 +412,11 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
         )
         assert comments_resp.status_code == 200, comments_resp.text
         comments = yaml.safe_load(comments_resp.text)
-        assert comments["summary"].startswith("REJECT_PLAN:"), comments
+        assert comments["summary"].startswith("APPROVED:"), comments
         assert comments["checklist"]["render_count"] == 2
         assert comments["checklist"]["visual_inspection_satisfied"] is True
         assert comments["checklist"]["latest_revision_verified"] is True
+        assert comments["checklist"]["deterministic_refusal_reason"] == "none"
 
         plan_review_manifest_paths = [
             path
