@@ -21,6 +21,7 @@ from shared.enums import (
     FailureReason,
     MotorControlMode,
 )
+from shared.git_utils import repo_revision
 from shared.models.schemas import (
     AssemblyDefinition,
     BenchmarkDefinition,
@@ -178,6 +179,7 @@ def _prerender_24_views_isolated(
     session_id: str | None,
     smoke_test_mode: bool,
     particle_budget: int | None,
+    revision: str | None = None,
     script_path: Path | str | None = None,
     script_content: str | None = None,
     objectives: BenchmarkDefinition | None = None,
@@ -199,6 +201,9 @@ def _prerender_24_views_isolated(
         else str(repo_root)
     )
     child_env["IS_HEAVY_WORKER"] = "1"
+    current_revision = repo_revision(repo_root)
+    if current_revision:
+        child_env.setdefault("REPO_REVISION", current_revision)
 
     render_paths_fd, render_paths_name = tempfile.mkstemp(
         prefix="prerender_paths_", suffix=".json"
@@ -276,6 +281,7 @@ def _prerender_24_views_isolated(
             session_id=session_id,
             smoke_test_mode=smoke_test_mode,
             particle_budget=particle_budget,
+            revision=revision,
         )
         render_paths_file.write_text(
             json.dumps(render_paths, indent=2),
@@ -1568,6 +1574,7 @@ def simulate(
         status_msg = metrics.fail_reason or (
             "Goal achieved." if metrics.success else "Simulation stable."
         )
+        runtime_revision = repo_revision(Path(__file__).resolve().parents[2])
 
         try:
             isolated_script_path = working_dir / "script.py"
@@ -1579,6 +1586,7 @@ def simulate(
                     session_id=session_id,
                     smoke_test_mode=smoke_test_mode,
                     particle_budget=particle_budget,
+                    revision=runtime_revision,
                     script_path=script_path,
                     script_content=script_content,
                     objectives=objectives,
@@ -1591,6 +1599,7 @@ def simulate(
                     session_id=session_id,
                     scene_path=str(scene_path),
                     smoke_test_mode=smoke_test_mode,
+                    revision=runtime_revision,
                 )
         except Exception as exc:
             logger.warning(

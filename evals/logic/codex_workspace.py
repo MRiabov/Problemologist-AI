@@ -30,6 +30,7 @@ from shared.agent_templates import (
     load_role_template_files,
 )
 from shared.enums import AgentName
+from shared.git_utils import repo_revision
 from shared.models.schemas import ReviewComments, ReviewFrontmatter
 from shared.skills import build_skill_catalog_lines
 from shared.workers.filesystem.backend import FileInfo
@@ -631,6 +632,9 @@ def build_codex_env(
     env.setdefault("PROBLEMOLOGIST_SCRIPT_IMPORT_MODE", "0")
     env.setdefault("COTS_DB_PATH", str(ROOT / "parts.db"))
     env.setdefault("PROBLEMOLOGIST_REPO_ROOT", str(ROOT))
+    current_revision = repo_revision(ROOT)
+    if current_revision:
+        env.setdefault("REPO_REVISION", current_revision)
     existing_pythonpath = env.get("PYTHONPATH", "")
     pythonpath_entries = [str(workspace_path), str(ROOT)]
     if existing_pythonpath:
