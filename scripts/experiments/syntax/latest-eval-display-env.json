@@ -6,7 +6,7 @@
     "MUJOCO_GL": "egl",
     "PYOPENGL_PLATFORM": "egl",
     "PYVISTA_OFF_SCREEN": "true",
-    "VTK_DEFAULT_OPENGL_RENDERER": "EGL",
+    "VTK_DEFAULT_OPENGL_WINDOW": "vtkEGLRenderWindow",
     "XAUTHORITY": "/run/user/1000/.mutter-Xwaylandauth.ABCRM3"
   },
   "current_env": {

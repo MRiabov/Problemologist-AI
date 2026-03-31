@@ -603,7 +603,7 @@ def build_codex_env(
     env["MUJOCO_GL"] = "egl"
     env["PYOPENGL_PLATFORM"] = "egl"
     env["PYVISTA_OFF_SCREEN"] = "true"
-    env["VTK_DEFAULT_OPENGL_RENDERER"] = "EGL"
+    env["VTK_DEFAULT_OPENGL_WINDOW"] = "vtkEGLRenderWindow"
     env["PYGLET_HEADLESS"] = "1"
     env["HOME"] = str(codex_home_root)
     env["CODEX_HOME"] = str(codex_home_root / ".codex")

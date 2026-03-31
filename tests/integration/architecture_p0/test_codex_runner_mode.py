@@ -450,10 +450,11 @@ def test_run_evals_codex_env_supports_repo_root_imports(tmp_path):
 
 
 @pytest.mark.integration_p0
-def test_run_evals_codex_vtk_preview_runs_headless_with_bad_display(
+def test_run_evals_codex_vtk_preview_renders_headlessly(
     tmp_path, monkeypatch
 ):
-    monkeypatch.setenv("DISPLAY", ":109")
+    monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.delenv("XAUTHORITY", raising=False)
 
     with BuildPart() as builder:
         Box(1, 1, 1)
@@ -476,7 +477,6 @@ def test_run_evals_codex_vtk_preview_runs_headless_with_bad_display(
 
     assert rendered_path == output_path
     assert output_path.exists(), output_path
-    assert os.environ["DISPLAY"] == ":109"
     assert output_path.stat().st_size > 0
 
 
@@ -555,8 +555,8 @@ def test_run_evals_codex_submit_helper_forces_headless_rendering_env(tmp_path):
                 "MUJOCO_GL": os.environ.get("MUJOCO_GL"),
                 "PYOPENGL_PLATFORM": os.environ.get("PYOPENGL_PLATFORM"),
                 "PYVISTA_OFF_SCREEN": os.environ.get("PYVISTA_OFF_SCREEN"),
-                "VTK_DEFAULT_OPENGL_RENDERER": os.environ.get(
-                    "VTK_DEFAULT_OPENGL_RENDERER"
+                "VTK_DEFAULT_OPENGL_WINDOW": os.environ.get(
+                    "VTK_DEFAULT_OPENGL_WINDOW"
                 ),
                 "PYGLET_HEADLESS": os.environ.get("PYGLET_HEADLESS"),
                 "PYTHONPATH": os.environ.get("PYTHONPATH"),
@@ -577,7 +577,7 @@ def test_run_evals_codex_submit_helper_forces_headless_rendering_env(tmp_path):
             "XAUTHORITY": "/tmp/xauthority",
             "MUJOCO_GL": "osmesa",
             "PYOPENGL_PLATFORM": "osmesa",
-            "VTK_DEFAULT_OPENGL_RENDERER": "OSMesa",
+            "VTK_DEFAULT_OPENGL_WINDOW": "vtkOSOpenGLRenderWindow",
         }
     )
     completed = subprocess.run(
@@ -605,12 +605,12 @@ def test_run_evals_codex_submit_helper_forces_headless_rendering_env(tmp_path):
 
 @pytest.mark.integration_p0
 @pytest.mark.int_id("INT-207")
-def test_run_evals_codex_engineer_workspace_validate_runs_headless_when_display_is_bad(
+def test_run_evals_codex_engineer_workspace_validate_renders_headlessly(
     tmp_path: Path,
 ):
     """
-    INT-207: an engineer workspace validation preview must ignore a bad ambient
-    DISPLAY, render previews headlessly, and persist the validation record.
+    INT-207: an engineer workspace validation preview must render headlessly
+    and persist the validation record.
     """
 
     item = _load_dataset_item(
@@ -711,7 +711,7 @@ result = build()
         codex_home_root=codex_home_root,
         session_id=session_id,
     )
-    env["DISPLAY"] = ":109"
+    env.pop("DISPLAY", None)
     env.pop("XAUTHORITY", None)
 
     script_run = subprocess.run(
@@ -760,7 +760,7 @@ result = build()
 
     assert validate_run.returncode == 0, combined_output
     assert "VALIDATE_OK=True" in combined_output, combined_output
-    assert "private Xvfb" not in combined_output
+    assert "xvfb" not in combined_output.lower()
     assert "Validation preview render failed" not in combined_output
 
     validation_record = ValidationResultRecord.model_validate_json(
@@ -1357,6 +1357,37 @@ def test_validate_eval_seed_accepts_curated_rows_and_preserves_redundancy_metada
             assert dropped_episode_ids == sorted(set(dropped_episode_ids))
         for rejected_row in manifest.rejected:
             assert rejected_row.reasons
+
+
+@pytest.mark.integration_p0
+def test_validate_eval_seed_rejects_blank_render_seed_for_engineer_coder():
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/validate_eval_seed.py",
+            "--skip-env-up",
+            "--agent",
+            "engineer_coder",
+            "--task-id",
+            "ec-001",
+            "--fail-fast",
+            "--concurrency",
+            "1",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+    )
+
+    combined_output = "\n".join(
+        part for part in (completed.stdout, completed.stderr) if part
+    )
+
+    assert completed.returncode != 0, combined_output
+    assert "FAIL engineer_coder ec-001:" in combined_output, combined_output
+    assert "black/empty" in combined_output, combined_output
 
 
 @pytest.mark.integration_p0

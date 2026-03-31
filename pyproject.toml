@@ -27,7 +27,6 @@ rendering = [
     "opencv-python-headless>=4.13.0.92",
     "pillow<12.0",
     "trimesh[easy]>=4.11.2",
-    "vtk>=9.4.2",
 ]
 filesystem = [
     "sqlalchemy>=2.0.46",

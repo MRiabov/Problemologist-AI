@@ -78,14 +78,6 @@ REASON_POLICY_INVALID = "policy_invalid"
 REASON_NO_PREVIOUS_NODE = "no_previous_node"
 REASON_CUSTOM_CHECK_FAILED = "custom_check_failed"
 
-_VISUAL_REVIEWER_TARGET_NODES: frozenset[AgentName] = frozenset(
-    {
-        AgentName.BENCHMARK_REVIEWER,
-        AgentName.ENGINEER_EXECUTION_REVIEWER,
-    }
-)
-
-
 class ValidationGraph(StrEnum):
     ENGINEER = "engineer"
     BENCHMARK = "benchmark"
@@ -999,17 +991,16 @@ async def validate_seeded_workspace_handoff_artifacts(
                     artifact_path="benchmark_assembly_definition.yaml",
                 )
                 for message in handover_errors
-            )
-
-    if target_node in _VISUAL_REVIEWER_TARGET_NODES:
-        render_error = await validate_render_images_non_black(worker_client)
-        if render_error is not None:
-            errors.append(
-                _seeded_schema_error(
-                    message=render_error,
-                    artifact_path="renders",
                 )
+
+    render_error = await validate_render_images_non_black(worker_client)
+    if render_error is not None:
+        errors.append(
+            _seeded_schema_error(
+                message=render_error,
+                artifact_path="renders",
             )
+        )
 
     return errors
 

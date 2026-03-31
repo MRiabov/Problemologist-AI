@@ -52,7 +52,7 @@ def _codex_env_snapshot() -> dict[str, Any]:
         "MUJOCO_GL": env.get("MUJOCO_GL"),
         "PYOPENGL_PLATFORM": env.get("PYOPENGL_PLATFORM"),
         "PYVISTA_OFF_SCREEN": env.get("PYVISTA_OFF_SCREEN"),
-        "VTK_DEFAULT_OPENGL_RENDERER": env.get("VTK_DEFAULT_OPENGL_RENDERER"),
+        "VTK_DEFAULT_OPENGL_WINDOW": env.get("VTK_DEFAULT_OPENGL_WINDOW"),
     }
 
 

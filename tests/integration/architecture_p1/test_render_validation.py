@@ -46,6 +46,30 @@ async def test_render_validation_rejects_black_rgb_seed():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+async def test_render_validation_rejects_black_rgb_seed_for_engineer_coder():
+    session_id = f"INT-192-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        await worker.upload_file(
+            "renders/images/context_view_01.png",
+            _png_bytes((0, 0, 0)),
+            bypass_agent_permissions=True,
+        )
+
+        errors = await validate_seeded_workspace_handoff_artifacts(
+            worker_client=worker,
+            target_node=AgentName.ENGINEER_CODER,
+        )
+    finally:
+        await worker.aclose()
+
+    render_errors = [error for error in errors if error.artifact_path == "renders"]
+    assert render_errors, errors
+    assert any("black/empty" in error.message for error in render_errors), render_errors
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
 async def test_render_validation_allows_visible_rgb_seed():
     session_id = f"INT-191-{uuid.uuid4().hex[:8]}"
     worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)

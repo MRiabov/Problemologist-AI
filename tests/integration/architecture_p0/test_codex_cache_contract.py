@@ -70,7 +70,7 @@ def test_codex_env_defaults_to_headless_rendering(tmp_path: Path, monkeypatch) -
     assert env["MUJOCO_GL"] == "egl"
     assert env["PYOPENGL_PLATFORM"] == "egl"
     assert env["PYVISTA_OFF_SCREEN"] == "true"
-    assert env["VTK_DEFAULT_OPENGL_RENDERER"] == "EGL"
+    assert env["VTK_DEFAULT_OPENGL_WINDOW"] == "vtkEGLRenderWindow"
     assert env["PYGLET_HEADLESS"] == "1"
 
 

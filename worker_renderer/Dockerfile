@@ -38,21 +38,21 @@ RUN chown -R agent:agent /app
 
 USER agent
 
+COPY --chown=agent:agent worker_renderer/pyproject.toml worker_renderer/uv.lock ./worker_renderer/
+
+RUN python -m venv /app/.venv
+
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
+
 RUN --mount=type=cache,target=/home/agent/.cache/uv,uid=1000 \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-install-project --no-dev --group rendering
+    uv sync --project worker_renderer --active --frozen --no-install-project --no-dev
 
 COPY --chown=agent:agent worker_renderer ./worker_renderer
 COPY --chown=agent:agent worker_heavy ./worker_heavy
 COPY --chown=agent:agent shared ./shared
 COPY --chown=agent:agent config ./config
-COPY --chown=agent:agent pyproject.toml uv.lock ./
-
-RUN --mount=type=cache,target=/home/agent/.cache/uv,uid=1000 \
-    uv sync --frozen --no-dev --group rendering
 
 ENV PYTHONPATH=/app
-ENV PATH="/app/.venv/bin:$PATH"
 
 CMD ["/app/.venv/bin/uvicorn", "worker_renderer.app:app", "--host", "0.0.0.0", "--port", "8003"]
