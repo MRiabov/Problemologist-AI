@@ -10,6 +10,7 @@ from typing import Any
 from build123d import Compound
 
 from shared.enums import AgentName
+from shared.script_contracts import authored_script_path_for_agent
 from shared.workers.persistence import record_validation_result
 from utils.submission import simulate, validate
 from worker_heavy.utils.handover import submit_for_review as _handover_submit_for_review
@@ -29,16 +30,20 @@ def _coder_agent(workspace: Path) -> AgentName | None:
     return None
 
 
-def _load_solution() -> Compound:
-    module = import_module("script")
+def _script_path_for_agent(agent_name: AgentName) -> str:
+    return authored_script_path_for_agent(agent_name)
+
+
+def _load_solution(script_path: str) -> Compound:
+    module = import_module(Path(script_path).stem)
     solution = getattr(module, "result", None)
     if solution is None and hasattr(module, "build"):
         solution = module.build()
     if solution is None:
-        raise ValueError("script.py must define module-level result or build()")
+        raise ValueError(f"{script_path} must define module-level result or build()")
     if not isinstance(solution, Compound):
         raise TypeError(
-            f"script.py must export a build123d.Compound; got {type(solution).__name__}"
+            f"{script_path} must export a build123d.Compound; got {type(solution).__name__}"
         )
     return solution
 
@@ -69,8 +74,9 @@ def main() -> int:
         )
         return 1
 
+    script_path = _script_path_for_agent(agent_name)
     try:
-        solution = _load_solution()
+        solution = _load_solution(script_path)
     except Exception as exc:
         _print_json(
             {
@@ -91,7 +97,7 @@ def main() -> int:
         workspace,
         validation_ok,
         validation_message,
-        script_path="script.py",
+        script_path=script_path,
         session_id=session_id,
     )
     if not validation_ok:
@@ -131,7 +137,7 @@ def main() -> int:
             else AgentName.BENCHMARK_REVIEWER
         ),
         episode_id=episode_id,
-        script_path="script.py",
+        script_path=script_path,
     )
     if not submitted:
         _print_json(

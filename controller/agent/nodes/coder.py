@@ -11,6 +11,7 @@ from controller.agent.config import settings
 from controller.agent.state import AgentState
 from controller.agent.tools import get_engineer_tools
 from shared.enums import AgentName
+from shared.script_contracts import BENCHMARK_SCRIPT_PATH, SOLUTION_SCRIPT_PATH
 from shared.type_checking import type_check
 
 from .base import BaseNode, SharedNodeContext
@@ -20,9 +21,10 @@ logger = structlog.get_logger(__name__)
 
 class CoderSignature(dspy.Signature):
     """
-    Engineer coder node: implement the approved handoff in `script.py` using the
-    current runtime contract and the relevant skills. `benchmark_assembly_definition.yaml`
-    is read-only benchmark context; do not modify it.
+    Engineer coder node: implement the approved handoff in `solution_script.py`
+    using the current runtime contract and the relevant skills.
+    `benchmark_assembly_definition.yaml` and `benchmark_script.py` are read-only
+    benchmark context; do not modify them.
     """
 
     task = dspy.InputField()
@@ -97,7 +99,8 @@ class CoderNode(BaseNode):
             "todo.md",
             "benchmark_definition.yaml",
             "assembly_definition.yaml",
-            "script.py",
+            BENCHMARK_SCRIPT_PATH,
+            SOLUTION_SCRIPT_PATH,
             "benchmark_assembly_definition.yaml",
         ]
 

@@ -10,6 +10,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from controller.persistence.models import BenchmarkAsset as BenchmarkAssetModel
+from shared.script_contracts import BENCHMARK_SCRIPT_PATH
 
 from .models import BenchmarkAsset
 
@@ -45,7 +46,7 @@ class BenchmarkStorage:
         """
 
         # 1. Upload Script
-        script_key = f"{benchmark_id}/script.py"
+        script_key = f"{benchmark_id}/{BENCHMARK_SCRIPT_PATH}"
         await self._upload_string(
             self.source_bucket, script_key, script, "text/x-python"
         )

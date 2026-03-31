@@ -16,20 +16,21 @@ from controller.agent.benchmark_handover_validation import (
 )
 from controller.agent.config import settings as agent_settings
 from controller.agent.handover_constants import (
+    BENCHMARK_CODER_HANDOFF_ARTIFACTS,
     BENCHMARK_CODER_HANDOVER_CHECK,
     BENCHMARK_PLAN_REVIEW_MANIFEST,
     BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
     BENCHMARK_PLANNER_HANDOFF_ARTIFACTS,
     BENCHMARK_REVIEWER_HANDOVER_CHECK,
     ELECTRONICS_REVIEWER_HANDOVER_CHECK,
-    ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS,
+    ENGINEER_BENCHMARK_SOURCE_ARTIFACTS,
     ENGINEER_BENCHMARK_HANDOVER_CHECK,
     ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
+    ENGINEERING_EXECUTION_REVIEWER_HANDOFF_ARTIFACTS,
     ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
     ENGINEER_PLANNER_HANDOFF_ARTIFACTS,
     ENGINEERING_EXECUTION_REVIEW_MANIFEST,
     ENGINEERING_PLAN_REVIEW_MANIFEST,
-    REVIEWER_HANDOFF_ARTIFACTS,
     SCHEMA_BACKED_HANDOFF_PATHS,
 )
 from controller.agent.render_validation import validate_render_images_non_black
@@ -49,6 +50,11 @@ from shared.models.schemas import (
     AssemblyDefinition,
     BenchmarkDefinition,
     EpisodeMetadata,
+)
+from shared.script_contracts import (
+    BENCHMARK_SCRIPT_PATH,
+    SOLUTION_SCRIPT_PATH,
+    authored_script_path_for_reviewer_stage,
 )
 from shared.models.simulation import SimulationResult
 from shared.simulation.schemas import CustomObjectives
@@ -184,12 +190,13 @@ def build_benchmark_node_contracts() -> dict[AgentName, NodeEntryContract]:
         AgentName.BENCHMARK_CODER: NodeEntryContract(
             node=AgentName.BENCHMARK_CODER,
             required_state_fields=["session", "episode_id"],
-            required_artifacts=list(BENCHMARK_PLANNER_HANDOFF_ARTIFACTS),
+            required_artifacts=list(BENCHMARK_CODER_HANDOFF_ARTIFACTS),
             custom_check=BENCHMARK_CODER_HANDOVER_CHECK,
         ),
         AgentName.BENCHMARK_REVIEWER: NodeEntryContract(
             node=AgentName.BENCHMARK_REVIEWER,
             required_state_fields=["session", "episode_id"],
+            required_artifacts=[BENCHMARK_SCRIPT_PATH],
             custom_check=BENCHMARK_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.COTS_SEARCH: NodeEntryContract(
@@ -234,16 +241,22 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
         AgentName.ENGINEER_CODER: NodeEntryContract(
             node=AgentName.ENGINEER_CODER,
             required_state_fields=["episode_id"],
-            required_artifacts=list(ENGINEER_PLANNER_HANDOFF_ARTIFACTS),
+            required_artifacts=[
+                *ENGINEER_PLANNER_HANDOFF_ARTIFACTS,
+                *ENGINEER_BENCHMARK_SOURCE_ARTIFACTS,
+                SOLUTION_SCRIPT_PATH,
+            ],
         ),
         AgentName.ELECTRONICS_REVIEWER: NodeEntryContract(
             node=AgentName.ELECTRONICS_REVIEWER,
             required_state_fields=["episode_id"],
+            required_artifacts=[SOLUTION_SCRIPT_PATH],
             custom_check=ELECTRONICS_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.ENGINEER_EXECUTION_REVIEWER: NodeEntryContract(
             node=AgentName.ENGINEER_EXECUTION_REVIEWER,
             required_state_fields=["episode_id"],
+            required_artifacts=list(ENGINEERING_EXECUTION_REVIEWER_HANDOFF_ARTIFACTS),
             custom_check=ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.COTS_SEARCH: NodeEntryContract(
@@ -617,7 +630,7 @@ async def _materialize_reviewer_handover(
         except Exception:
             existing_handover_error = "unknown reviewer handover validation error"
         else:
-            if existing_handover_error is None:
+        if existing_handover_error is None:
                 return None
 
     async def _run_with_transient_busy_retry(operation_name: str, coro_factory):
@@ -661,13 +674,14 @@ async def _materialize_reviewer_handover(
             raise last_exc
         raise RuntimeError(f"{operation_name} failed without exception")
 
-    if not await client.exists("script.py"):
-        return "script.py missing; cannot materialize review handover."
+    script_path = authored_script_path_for_reviewer_stage(reviewer_stage)
+    if not await client.exists(script_path):
+        return f"{script_path} missing; cannot materialize review handover."
 
     try:
         validate_result = await _run_with_transient_busy_retry(
             "validate",
-            lambda: client.validate("script.py"),
+            lambda: client.validate(script_path),
         )
     except Exception as exc:
         return f"validate failed while materializing handover: {exc}"
@@ -680,7 +694,7 @@ async def _materialize_reviewer_handover(
     try:
         simulate_result = await _run_with_transient_busy_retry(
             "simulate",
-            lambda: client.simulate("script.py"),
+            lambda: client.simulate(script_path),
         )
     except Exception as exc:
         return f"simulate failed while materializing handover: {exc}"
@@ -694,7 +708,7 @@ async def _materialize_reviewer_handover(
         verify_result = await _run_with_transient_busy_retry(
             "verify",
             lambda: client.verify(
-                "script.py",
+                script_path,
                 num_scenes=1 if controller_settings.is_integration_test else None,
                 duration=1.0 if controller_settings.is_integration_test else None,
                 smoke_test_mode=controller_settings.is_integration_test,
@@ -712,7 +726,7 @@ async def _materialize_reviewer_handover(
         submit_result = await _run_with_transient_busy_retry(
             "submit",
             lambda: client.submit(
-                "script.py",
+                script_path,
                 reviewer_stage=reviewer_stage,
                 episode_id=episode_id,
             ),
@@ -1179,7 +1193,6 @@ __all__ = [
     "REASON_POLICY_INVALID",
     "REASON_REVIEWER_ENTRY_BLOCKED",
     "REASON_STATE_INVALID",
-    "REVIEWER_HANDOFF_ARTIFACTS",
     "NodeEntryContract",
     "NodeEntryValidationError",
     "NodeEntryValidationResult",

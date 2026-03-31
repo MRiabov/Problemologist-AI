@@ -15,6 +15,7 @@ from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import PlannerSubmissionResult
 from shared.observability.schemas import RunCommandToolEvent
+from shared.script_contracts import authored_script_path_for_agent
 from shared.workers.schema import PlanReviewManifest
 
 
@@ -139,6 +140,8 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
     Includes filesystem operations and COTS catalog search.
     """
 
+    default_script_path = authored_script_path_for_agent(fs.agent_role)
+
     async def list_files(path: str = "/"):
         """List files in the workspace (filesystem)."""
         return await fs.list_files(path)
@@ -174,7 +177,9 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         )
         return await fs.run_command(command)
 
-    async def inspect_topology(target_id: str, script_path: str = "script.py") -> dict:
+    async def inspect_topology(
+        target_id: str, script_path: str = default_script_path
+    ) -> dict:
         """
         Inspect geometric properties of a selected feature (face, edge, part).
         Returns center, normal, area, and bounding box.
@@ -182,7 +187,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         return await fs.inspect_topology(target_id, script_path)
 
     async def verify(
-        script_path: str = "script.py",
+        script_path: str = default_script_path,
         jitter_range: tuple[float, float, float] | None = None,
         num_scenes: int | None = None,
         duration: float | None = None,

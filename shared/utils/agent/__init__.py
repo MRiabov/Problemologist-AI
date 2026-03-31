@@ -10,6 +10,7 @@ from build123d import Compound
 from pydantic import BaseModel
 
 from shared.enums import AgentName
+from shared.script_contracts import authored_script_path_for_agent
 from shared.simulation.schemas import get_default_simulator_backend
 from shared.utils.fasteners import HoleType as HoleType
 from shared.utils.fasteners import fastener_hole as fastener_hole
@@ -62,6 +63,10 @@ def _controller_base_url() -> str | None:
 
 def _script_agent_role() -> str:
     return os.getenv(AGENT_NAME_ENV, AgentName.ENGINEER_CODER.value)
+
+
+def _workspace_script_path() -> str:
+    return authored_script_path_for_agent(_script_agent_role())
 
 
 def _default_reviewer_stage() -> str:
@@ -242,9 +247,10 @@ def _signature_summary(signature: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _load_script_component(script_path: str | Path = "script.py") -> Any:
+def _load_script_component(script_path: str | Path | None = None) -> Any:
     from shared.workers.loader import load_component_from_script
 
+    script_path = script_path or _workspace_script_path()
     return load_component_from_script(
         script_path=script_path,
         session_root=Path.cwd(),
@@ -252,8 +258,9 @@ def _load_script_component(script_path: str | Path = "script.py") -> Any:
 
 
 def _ensure_component_matches_workspace_script(
-    component: Any, *, script_path: str | Path = "script.py"
+    component: Any, *, script_path: str | Path | None = None
 ) -> tuple[bool, str | None]:
+    script_path = script_path or _workspace_script_path()
     try:
         script_component = _load_script_component(script_path)
     except Exception as exc:
@@ -282,7 +289,7 @@ def simulate(compound: Compound, **kwargs) -> BenchmarkToolResponse:
             success=True,
             message=SCRIPT_IMPORT_DEFERRED_MESSAGE,
         )
-    script_path = kwargs.get("script_path", "script.py")
+    script_path = kwargs.get("script_path") or _workspace_script_path()
     matches, mismatch_message = _ensure_component_matches_workspace_script(
         compound, script_path=script_path
     )
@@ -319,7 +326,7 @@ def validate(compound: Compound, **kwargs) -> tuple[bool, str | None]:
     """Proxy for benchmark geometric validation."""
     if _is_script_import_mode():
         return True, SCRIPT_IMPORT_DEFERRED_MESSAGE
-    script_path = kwargs.get("script_path", "script.py")
+    script_path = kwargs.get("script_path") or _workspace_script_path()
     matches, mismatch_message = _ensure_component_matches_workspace_script(
         compound, script_path=script_path
     )
@@ -381,7 +388,10 @@ def submit_for_review(compound: Compound) -> bool:
     """Proxy for benchmark submission to the benchmark reviewer stage."""
     if _is_script_import_mode():
         return True
-    matches, mismatch_message = _ensure_component_matches_workspace_script(compound)
+    script_path = _workspace_script_path()
+    matches, mismatch_message = _ensure_component_matches_workspace_script(
+        compound, script_path=script_path
+    )
     if not matches:
         logger.info(
             "submit_for_review_deferred_script_mismatch",
@@ -412,7 +422,7 @@ def submit_for_review(compound: Compound) -> bool:
         )
 
     controller_payload = {
-        "script_path": "script.py",
+        "script_path": script_path,
         "agent_role": _script_agent_role(),
         "reviewer_stage": reviewer_stage,
         "episode_id": episode_id,
@@ -426,7 +436,7 @@ def submit_for_review(compound: Compound) -> bool:
         return parsed.success
 
     payload = {
-        "script_path": "script.py",
+        "script_path": script_path,
         "reviewer_stage": reviewer_stage,
         "episode_id": episode_id,
     }

@@ -11,6 +11,7 @@ from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events
 from shared.enums import AgentName, ReviewDecision
 from shared.models.schemas import ReviewResult
+from shared.script_contracts import SOLUTION_SCRIPT_PATH
 from shared.observability.schemas import ReviewDecisionEvent
 from shared.type_checking import type_check
 
@@ -22,7 +23,8 @@ logger = structlog.get_logger(__name__)
 class ElectronicsReviewerSignature(dspy.Signature):
     """
     Electronics Reviewer node: Evaluates the electrical implementation.
-    You must use the provided tools to read 'script.py' and any circuit-related files.
+    You must use the provided tools to read 'solution_script.py' and any
+    circuit-related files.
     You also receive benchmark-owned read-only benchmark_assembly_definition.yaml handoff context copied into this workspace.
     Ensure the circuit is correctly defined, wires are routed properly, and it matches the electrical plan.
     When done, provide your final ReviewResult.
@@ -88,7 +90,7 @@ class ElectronicsReviewerNode(BaseNode):
 
         # Validate existence of key files
         validate_files = [
-            "script.py",
+            SOLUTION_SCRIPT_PATH,
             "assembly_definition.yaml",
             "benchmark_assembly_definition.yaml",
         ]

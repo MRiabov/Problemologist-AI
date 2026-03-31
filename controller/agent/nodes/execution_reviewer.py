@@ -16,6 +16,7 @@ from controller.observability.tracing import record_worker_events
 from shared.enums import AgentName, ReviewDecision
 from shared.models.schemas import ReviewResult
 from shared.models.simulation import SimulationResult
+from shared.script_contracts import SOLUTION_SCRIPT_PATH
 from shared.observability.schemas import (
     ExcessiveDofDetectedEvent,
     ReviewDecisionEvent,
@@ -575,13 +576,15 @@ class ExecutionReviewerNode(BaseNode):
         if not handoff_err:
             return None
 
-        if not await self.ctx.worker_client.exists("script.py"):
-            return "Execution review blocked: script.py missing."
+        if not await self.ctx.worker_client.exists(SOLUTION_SCRIPT_PATH):
+            return f"Execution review blocked: {SOLUTION_SCRIPT_PATH} missing."
 
         # System-side handoff materialization path. This avoids agent-permission
         # writes to protected manifest files while keeping submission strict.
         try:
-            validate_result = await self.ctx.worker_client.validate("script.py")
+            validate_result = await self.ctx.worker_client.validate(
+                SOLUTION_SCRIPT_PATH
+            )
         except Exception as exc:
             return f"Execution review blocked: validate failed: {exc}"
         if not validate_result.success:
@@ -591,7 +594,9 @@ class ExecutionReviewerNode(BaseNode):
             )
 
         try:
-            simulate_result = await self.ctx.worker_client.simulate("script.py")
+            simulate_result = await self.ctx.worker_client.simulate(
+                SOLUTION_SCRIPT_PATH
+            )
             await self._persist_simulation_artifacts(simulate_result)
         except Exception as exc:
             return f"Execution review blocked: simulate failed: {exc}"
@@ -603,7 +608,7 @@ class ExecutionReviewerNode(BaseNode):
 
         try:
             verify_result = await self.ctx.worker_client.verify(
-                "script.py",
+                SOLUTION_SCRIPT_PATH,
                 num_scenes=1 if settings.is_integration_test else None,
                 duration=1.0 if settings.is_integration_test else None,
                 smoke_test_mode=settings.is_integration_test,
@@ -619,7 +624,7 @@ class ExecutionReviewerNode(BaseNode):
         try:
             episode_id = self.ctx.episode_id
             submit_result = await self.ctx.worker_client.submit(
-                "script.py",
+                SOLUTION_SCRIPT_PATH,
                 reviewer_stage="engineering_execution_reviewer",
                 episode_id=episode_id,
             )

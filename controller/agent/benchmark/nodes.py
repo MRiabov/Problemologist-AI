@@ -32,6 +32,7 @@ from controller.observability.middleware_helper import record_events
 from controller.observability.tracing import record_worker_events
 from shared.enums import AgentName, ReviewDecision, SessionStatus
 from shared.models.schemas import ReviewResult
+from shared.script_contracts import BENCHMARK_SCRIPT_PATH
 from shared.models.simulation import SimulationResult
 from shared.observability.schemas import (
     ConversationLengthExceededEvent,
@@ -66,7 +67,7 @@ _BENCHMARK_REVIEW_RENDER_PATHS = (
 _SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER = "SYSTEM_TOOL_RETRY_EXHAUSTED"
 
 BENCHMARK_DEFINITION_FILE = "benchmark_definition.yaml"
-SCRIPT_FILE = "script.py"
+SCRIPT_FILE = BENCHMARK_SCRIPT_PATH
 
 
 def _benchmark_worker_session_id(state: BenchmarkGeneratorState) -> str:
@@ -89,7 +90,7 @@ def _script_contract_violations(script: str) -> list[str]:
     """Return benchmark script contract violations that must fail closed."""
     violations: list[str] = []
     if 'if __name__ == "__main__"' in script or "if __name__ == '__main__'" in script:
-        violations.append("script.py must not contain a __main__ block")
+        violations.append(f"{SCRIPT_FILE} must not contain a __main__ block")
 
     return list(dict.fromkeys(violations))
 
@@ -1439,7 +1440,8 @@ async def plan_reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGenerat
 class BenchmarkCoderSignature(dspy.Signature):
     """
     Generates build123d script and validates it for the benchmark.
-    You must use the provided tools to create the benchmark script in 'script.py'.
+    You must use the provided tools to create the benchmark script in
+    'benchmark_script.py'.
     When done, use SUBMIT to provide a summary of your work.
     """
 
@@ -1594,10 +1596,10 @@ class BenchmarkCoderNode(BaseNode):
         if not state.current_script or not state.current_script.strip():
             state.session.status = SessionStatus.REJECTED
             state.review_feedback = (
-                "Coder handoff blocked: script.py is missing after coder execution."
+                f"Coder handoff blocked: {SCRIPT_FILE} is missing after coder execution."
             )
             state.session.validation_logs.append(
-                "reviewer_submission: missing script.py after coder execution"
+                f"reviewer_submission: missing {SCRIPT_FILE} after coder execution"
             )
             return state
 
@@ -1756,7 +1758,7 @@ class BenchmarkCoderNode(BaseNode):
                             return state
 
                         # Control-plane handoff submit is executed only after
-                        # validate+simulate pass. script.py itself stays a pure
+                        # validate+simulate pass. benchmark_script.py itself stays a pure
                         # importable module with no in-module submission path.
                         submit_res = await self.ctx.worker_client.submit(
                             script_path=SCRIPT_FILE,

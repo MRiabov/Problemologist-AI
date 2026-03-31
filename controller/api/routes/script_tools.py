@@ -7,7 +7,7 @@ from pathlib import Path
 
 import httpx
 from fastapi import APIRouter, Header, Request
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from controller.clients.worker import WorkerClient
 from controller.config.settings import settings
@@ -15,6 +15,7 @@ from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.utils import EpisodeIdentity
 from shared.enums import AgentName
 from shared.logging import bind_log_context
+from shared.script_contracts import authored_script_path_for_agent
 from shared.simulation.schemas import (
     SimulatorBackendType,
     get_default_simulator_backend,
@@ -50,6 +51,12 @@ class ScriptToolRequest(BaseModel):
     @classmethod
     def validate_smoke_test_mode(cls, value: bool | None) -> bool | None:
         return ensure_smoke_test_mode_allowed(value)
+
+    @model_validator(mode="after")
+    def normalize_script_path(self) -> "ScriptToolRequest":
+        if self.script_path == "script.py":
+            self.script_path = authored_script_path_for_agent(self.agent_role)
+        return self
 
 
 @asynccontextmanager
