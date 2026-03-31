@@ -165,30 +165,24 @@ async def _validate_render_manifest_bundle(
             for path in render_manifest.artifacts.keys()
             if _is_static_preview_render(path)
         }
-        if actual_render_paths == expected_render_paths:
-            preview_paths = {
-                _normalize_render_path(path)
-                for path in render_manifest.preview_evidence_paths
-                if _is_static_preview_render(path)
-            }
-            if preview_paths == expected_render_paths:
-                continue
+        missing = sorted(expected_render_paths - actual_render_paths)
+        if missing:
             return (
                 f"{manifest_path} is out of sync with the latest preview bundle: "
-                "preview evidence paths do not match the artifact set."
+                f"missing entries: {missing}"
             )
 
-        missing = sorted(expected_render_paths - actual_render_paths)
-        unexpected = sorted(actual_render_paths - expected_render_paths)
-        details: list[str] = []
-        if missing:
-            details.append(f"missing entries: {missing}")
-        if unexpected:
-            details.append(f"unexpected entries: {unexpected}")
-        return (
-            f"{manifest_path} is out of sync with the latest preview bundle: "
-            + "; ".join(details)
-        )
+        preview_paths = {
+            _normalize_render_path(path)
+            for path in render_manifest.preview_evidence_paths
+            if _is_static_preview_render(path)
+        }
+        missing_preview = sorted(expected_render_paths - preview_paths)
+        if missing_preview:
+            return (
+                f"{manifest_path} is out of sync with the latest preview bundle: "
+                f"preview evidence paths missing entries: {missing_preview}"
+            )
 
     return None
 

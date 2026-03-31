@@ -268,11 +268,23 @@ async def seed_execution_reviewer_handover(
         "  benchmark_max_unit_cost_usd: 200.0\n"
         "  benchmark_max_weight_g: 1000.0\n"
     )
-    assembly_definition_seed = (
-        "version: 1.0\n"
-        "constraints:\n"
-        "  planner_target_max_unit_cost_usd: 200.0\n"
-        "  planner_target_max_weight_g: 1000.0\n"
+    assembly_definition_seed = yaml.safe_dump(
+        AssemblyDefinition(
+            version="1.0",
+            constraints=AssemblyConstraints(
+                planner_target_max_unit_cost_usd=200.0,
+                planner_target_max_weight_g=1000.0,
+            ),
+            manufactured_parts=[],
+            cots_parts=[],
+            final_assembly=[],
+            totals=CostTotals(
+                estimated_unit_cost_usd=0.0,
+                estimated_weight_g=0.0,
+                estimate_confidence="high",
+            ),
+        ).model_dump(mode="json", by_alias=True, exclude_none=True),
+        sort_keys=False,
     )
 
     validation_record = ValidationResultRecord(

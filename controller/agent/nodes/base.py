@@ -2053,59 +2053,67 @@ class BaseNode:
             return None, "missing episode_id for submission trace lookup"
 
         recorder = self.ctx.get_database_recorder(episode_id)
-        async with recorder.session_factory() as db:
-            query = (
-                select(Trace)
-                .where(
-                    Trace.episode_id == recorder.episode_id,
-                    Trace.trace_type == TraceType.TOOL_START,
-                    Trace.name == "submit_plan",
+        last_error: str | None = None
+        for attempt in range(10):
+            async with recorder.session_factory() as db:
+                query = (
+                    select(Trace)
+                    .where(
+                        Trace.episode_id == recorder.episode_id,
+                        Trace.trace_type == TraceType.TOOL_START,
+                        Trace.name == "submit_plan",
+                    )
+                    .order_by(Trace.id.desc())
+                    .limit(1)
                 )
-                .order_by(Trace.id.desc())
-                .limit(1)
-            )
-            result = await db.execute(query)
-            trace_row = result.scalars().first()
+                result = await db.execute(query)
+                trace_row = result.scalars().first()
 
-        if trace_row is None:
-            return None, "submit_plan() tool trace not found"
+            if trace_row is None:
+                last_error = "submit_plan() tool trace not found"
+            else:
+                metadata_vars = trace_row.metadata_vars or {}
+                observation_raw = metadata_vars.get("observation")
+                if observation_raw:
+                    payload: dict[str, Any] | None = None
+                    if isinstance(observation_raw, dict):
+                        payload = observation_raw
+                    elif isinstance(observation_raw, str):
+                        text = observation_raw.strip()
+                        with suppress(Exception):
+                            parsed_json = json.loads(text)
+                            if isinstance(parsed_json, dict):
+                                payload = parsed_json
+                        with suppress(Exception):
+                            if payload is None:
+                                parsed = ast.literal_eval(text)
+                                if isinstance(parsed, dict):
+                                    payload = parsed
 
-        metadata_vars = trace_row.metadata_vars or {}
-        observation_raw = metadata_vars.get("observation")
-        if not observation_raw:
-            error_raw = metadata_vars.get("error")
-            if isinstance(error_raw, str) and error_raw.strip():
-                return None, f"submit_plan() execution failed: {error_raw.strip()}"
-            return None, "submit_plan() observation is missing"
+                    if payload is None:
+                        return None, "submit_plan() observation is not a structured payload"
 
-        payload: dict[str, Any] | None = None
-        if isinstance(observation_raw, dict):
-            payload = observation_raw
-        elif isinstance(observation_raw, str):
-            text = observation_raw.strip()
-            with suppress(Exception):
-                parsed_json = json.loads(text)
-                if isinstance(parsed_json, dict):
-                    payload = parsed_json
-            with suppress(Exception):
-                if payload is None:
-                    parsed = ast.literal_eval(text)
-                    if isinstance(parsed, dict):
-                        payload = parsed
+                    with suppress(Exception):
+                        submission = PlannerSubmissionResult.model_validate(payload)
+                        if submission.node_type != expected_node_type:
+                            return (
+                                None,
+                                "submit_plan() node_type mismatch: "
+                                f"expected {expected_node_type.value}, got {submission.node_type.value}",
+                            )
+                        return submission, None
+                    return None, "submit_plan() observation does not match PlannerSubmissionResult"
 
-        if payload is None:
-            return None, "submit_plan() observation is not a structured payload"
+                error_raw = metadata_vars.get("error")
+                if isinstance(error_raw, str) and error_raw.strip():
+                    last_error = f"submit_plan() execution failed: {error_raw.strip()}"
+                else:
+                    last_error = "submit_plan() observation is missing"
 
-        with suppress(Exception):
-            submission = PlannerSubmissionResult.model_validate(payload)
-            if submission.node_type != expected_node_type:
-                return (
-                    None,
-                    "submit_plan() node_type mismatch: "
-                    f"expected {expected_node_type.value}, got {submission.node_type.value}",
-                )
-            return submission, None
-        return None, "submit_plan() observation does not match PlannerSubmissionResult"
+            if attempt < 9:
+                await asyncio.sleep(0.25)
+
+        return None, last_error or "submit_plan() tool trace not found"
 
     async def _get_latest_tool_trace_metadata(
         self, tool_name: str

@@ -143,6 +143,7 @@ class ExecutionReviewerNode(BaseNode):
                 "plan.md", plan_markdown
             )
             try:
+                await self._ensure_current_revision_render_inspection()
                 findings = collect_excessive_dof_findings(assembly_definition)
             except Exception as exc:
                 feedback = f"Execution reviewer DOF validation failed: {exc}"
@@ -398,7 +399,6 @@ class ExecutionReviewerNode(BaseNode):
                 )
 
             review = ReviewResult.model_validate(prediction.review)
-            await self._ensure_current_revision_render_inspection()
             review = apply_canonical_dof_checklist(
                 review, reviewer_stage="engineering_execution_reviewer"
             )
