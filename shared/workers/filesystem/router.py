@@ -127,7 +127,12 @@ class FilesystemRouter:
 
     @staticmethod
     def _is_static_preview_render(path: str | Path) -> bool:
-        return Path(str(path)).suffix.lower() in {".png", ".jpg", ".jpeg"}
+        return Path(str(path)).suffix.lower() in {
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".mp4",
+        }
 
     def _sync_render_manifest(self, trigger_path: str) -> None:
         """Keep the render manifest aligned with the latest preview images."""
@@ -157,9 +162,14 @@ class FilesystemRouter:
         if not render_paths:
             return
 
+        def _artifact_metadata(rel_path: str) -> RenderArtifactMetadata:
+            suffix = Path(rel_path).suffix.lower()
+            modality = "rgb" if suffix in {".png", ".jpg", ".jpeg"} else "unknown"
+            return RenderArtifactMetadata(modality=modality)
+
         manifest = build_render_manifest(
             {
-                rel_path: RenderArtifactMetadata(modality="rgb")
+                rel_path: _artifact_metadata(rel_path)
                 for rel_path in sorted(dict.fromkeys(render_paths))
             },
             workspace_root=renders_dir.parent,

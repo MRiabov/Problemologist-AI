@@ -89,7 +89,7 @@ def _collect_submission_artifacts(
     render_blobs_base64: dict[str, str] = {}
     renders_dir = root / "renders"
     if renders_dir.exists():
-        render_image_paths: list[str] = []
+        render_paths: list[str] = []
         for render_path in sorted(renders_dir.iterdir()):
             if not render_path.is_file():
                 continue
@@ -97,21 +97,25 @@ def _collect_submission_artifacts(
                 continue
             rel_path = str(render_path.relative_to(root))
             artifacts.render_paths.append(rel_path)
+            render_paths.append(rel_path)
             render_blobs_base64[rel_path] = base64.b64encode(
                 render_path.read_bytes()
             ).decode("ascii")
-            if render_path.suffix.lower() in {".png", ".jpg", ".jpeg"}:
-                render_image_paths.append(rel_path)
         render_manifest_path = renders_dir / "render_manifest.json"
         if render_manifest_path.exists():
             render_blobs_base64[str(Path("renders") / "render_manifest.json")] = (
                 base64.b64encode(render_manifest_path.read_bytes()).decode("ascii")
             )
-        elif render_image_paths:
+        elif render_paths:
+            def _artifact_metadata(rel_path: str) -> RenderArtifactMetadata:
+                suffix = Path(rel_path).suffix.lower()
+                modality = "rgb" if suffix in {".png", ".jpg", ".jpeg"} else "unknown"
+                return RenderArtifactMetadata(modality=modality)
+
             synthesized_manifest = build_render_manifest(
                 {
-                    path: RenderArtifactMetadata(modality="rgb")
-                    for path in sorted(dict.fromkeys(render_image_paths))
+                    path: _artifact_metadata(path)
+                    for path in sorted(dict.fromkeys(render_paths))
                 },
                 workspace_root=root,
                 episode_id=session_id,
@@ -144,7 +148,7 @@ def _collect_simulation_artifacts(
         artifacts.simulation_result_json = sim_result_path.read_text(encoding="utf-8")
 
     render_blobs_base64: dict[str, str] = {}
-    render_image_paths: list[str] = []
+    render_paths: list[str] = []
     for raw_path in artifacts.render_paths:
         render_path = root / raw_path
         if not render_path.exists() or not render_path.is_file():
@@ -156,19 +160,23 @@ def _collect_simulation_artifacts(
         render_blobs_base64[rel_path] = base64.b64encode(
             render_path.read_bytes()
         ).decode("ascii")
-        if suffix in {".png", ".jpg", ".jpeg"}:
-            render_image_paths.append(rel_path)
+        render_paths.append(rel_path)
 
     render_manifest_path = root / "renders" / "render_manifest.json"
     if render_manifest_path.exists():
         render_blobs_base64[str(Path("renders") / "render_manifest.json")] = (
             base64.b64encode(render_manifest_path.read_bytes()).decode("ascii")
         )
-    elif render_image_paths:
+    elif render_paths:
+        def _artifact_metadata(rel_path: str) -> RenderArtifactMetadata:
+            suffix = Path(rel_path).suffix.lower()
+            modality = "rgb" if suffix in {".png", ".jpg", ".jpeg"} else "unknown"
+            return RenderArtifactMetadata(modality=modality)
+
         synthesized_manifest = build_render_manifest(
             {
-                path: RenderArtifactMetadata(modality="rgb")
-                for path in sorted(dict.fromkeys(render_image_paths))
+                path: _artifact_metadata(path)
+                for path in sorted(dict.fromkeys(render_paths))
             },
             workspace_root=root,
             episode_id=session_id,

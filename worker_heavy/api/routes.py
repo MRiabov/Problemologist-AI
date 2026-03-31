@@ -108,6 +108,17 @@ def _normalize_render_paths(root: Path, render_paths: list[str]) -> list[str]:
     return normalized
 
 
+def _render_manifest_artifacts_for_paths(
+    render_paths: list[str],
+) -> dict[str, RenderArtifactMetadata]:
+    artifacts: dict[str, RenderArtifactMetadata] = {}
+    for rel_path in sorted(dict.fromkeys(render_paths)):
+        suffix = Path(rel_path).suffix.lower()
+        modality = "rgb" if suffix in {".png", ".jpg", ".jpeg"} else "unknown"
+        artifacts[rel_path] = RenderArtifactMetadata(modality=modality)
+    return artifacts
+
+
 @contextlib.contextmanager
 def bundle_context(bundle_base64: str | None, default_root: Path):
     """Context manager to optionally extract a workspace bundle."""
@@ -323,12 +334,9 @@ async def api_simulate(
                     ] = base64.b64encode(render_manifest_path.read_bytes()).decode(
                         "ascii"
                     )
-                elif render_image_paths:
+                elif artifacts.render_paths:
                     synthesized_manifest = build_render_manifest(
-                        {
-                            path: RenderArtifactMetadata(modality="rgb")
-                            for path in sorted(dict.fromkeys(render_image_paths))
-                        },
+                        _render_manifest_artifacts_for_paths(artifacts.render_paths),
                         workspace_root=root,
                         episode_id=x_session_id,
                         worker_session_id=x_session_id,
@@ -710,12 +718,9 @@ async def api_submit(
                         render_blobs_base64[rel_path] = base64.b64encode(
                             render_path.read_bytes()
                         ).decode("ascii")
-                if not render_manifest_path.exists() and render_image_paths:
+                if not render_manifest_path.exists() and artifacts.render_paths:
                     synthesized_manifest = build_render_manifest(
-                        {
-                            path: RenderArtifactMetadata(modality="rgb")
-                            for path in sorted(dict.fromkeys(render_image_paths))
-                        },
+                        _render_manifest_artifacts_for_paths(artifacts.render_paths),
                         workspace_root=root,
                         episode_id=x_session_id,
                         worker_session_id=x_session_id,

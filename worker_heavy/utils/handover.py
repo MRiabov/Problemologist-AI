@@ -11,6 +11,7 @@ from shared.models.schemas import BenchmarkDefinition
 from shared.models.simulation import SimulationResult
 from shared.workers.schema import (
     BenchmarkAttachmentPolicySummary,
+    RenderArtifactMetadata,
     RenderManifest,
     ReviewerStage,
     ReviewManifest,
@@ -25,6 +26,7 @@ from worker_heavy.utils.file_validation import (
     validate_environment_attachment_contract,
     validate_planner_handoff_cross_contract,
 )
+from worker_heavy.utils.rendering import build_render_manifest
 from worker_heavy.utils.validation import (
     validate_benchmark_submission_simulation_bounds,
 )
@@ -67,7 +69,13 @@ def _benchmark_attachment_policy_summary(
 
 
 def _is_static_preview_render(path: str) -> bool:
-    return Path(path).suffix.lower() in {".png", ".jpg", ".jpeg"}
+    return Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
+
+
+def _render_artifact_metadata_for_path(path: str) -> RenderArtifactMetadata:
+    suffix = Path(path).suffix.lower()
+    modality = "rgb" if suffix in {".png", ".jpg", ".jpeg"} else "unknown"
+    return RenderArtifactMetadata(modality=modality)
 
 
 def _normalize_render_path(path: str) -> str:
@@ -554,6 +562,22 @@ def submit_for_review(
 
             shutil.copy(src_path, dest_path)
         render_paths.append(str(Path("renders") / src_path.name))
+    if render_paths:
+        render_manifest = build_render_manifest(
+            {
+                path: _render_artifact_metadata_for_path(path)
+                for path in sorted(dict.fromkeys(render_paths))
+            },
+            workspace_root=cwd,
+            episode_id=resolved_episode_id,
+            worker_session_id=resolved_session_id,
+            revision=revision,
+            environment_version=estimation.version,
+        )
+        (renders_dir / "render_manifest.json").write_text(
+            render_manifest.model_dump_json(indent=2),
+            encoding="utf-8",
+        )
     _validate_render_manifest_bundle(renders_dir=renders_dir, render_paths=render_paths)
     logger.info("renders_persisted", count=len(render_paths), session_id=session_id)
 
