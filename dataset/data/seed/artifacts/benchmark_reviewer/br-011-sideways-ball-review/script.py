@@ -10,7 +10,7 @@ from build123d import (
 from shared.models.schemas import CompoundMetadata, PartMetadata
 
 
-def build_benchmark() -> Compound:
+def build() -> Compound:
     with BuildPart() as ground:
         Box(1.4, 0.3, 0.02, align=(Align.CENTER, Align.CENTER, Align.MIN))
     ground.part.label = "ground_plane"

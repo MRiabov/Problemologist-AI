@@ -10,7 +10,7 @@ from build123d import (
 from shared.models.schemas import CompoundMetadata, PartMetadata
 
 
-def build_benchmark() -> Compound:
+def build() -> Compound:
     with BuildPart() as ground:
         Box(1.4, 0.3, 0.02, align=(Align.CENTER, Align.CENTER, Align.MIN))
     ground.part.label = "ground_plane"
@@ -62,12 +62,4 @@ def build_benchmark() -> Compound:
         ],
     )
     benchmark_compound.metadata = CompoundMetadata(fixed=False)
-    # submit_for_review is expected to be in global scope during execution
-    try:
-        from utils import submit_for_review  # noqa: F401
-    except ImportError:
-        pass
-
-    if "submit_for_review" in globals():
-        globals()["submit_for_review"](benchmark_compound)
     return benchmark_compound
