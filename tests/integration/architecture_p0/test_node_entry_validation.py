@@ -485,6 +485,7 @@ async def test_int_184_engineer_planner_requires_benchmark_assembly_definition()
 
 
 @pytest.mark.integration_p0
+@pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.allow_backend_errors(
     regexes=[
         "approved_benchmark_bundle_validation_failed",
