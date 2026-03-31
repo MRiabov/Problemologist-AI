@@ -56,6 +56,7 @@ I have already started editing an exiting int-033 to make it much closer to the 
 2. Verified the narrow `test_engineering_full_loop` slice passes on a fresh integration run (`run_20260330_214602`).
 3. Updated the handover path to synthesize `renders/render_manifest.json` from actual preview artifacts so the execution-review gate no longer depends on the old renderer workaround.
 4. Verified the exact INT-033 full-loop slice on `run_20260331_012032`; the coder now reaches `submit_for_review` and writes the execution-review manifest successfully.
+5. Rechecked the same INT-033 slice after the latest fixture drift and fixed the stale `benchmark_definition.yaml` hash assertion to canonicalize YAML the same way the manifest does; the rerun passed.
 
 [x] - definitely completed.
 
@@ -70,6 +71,12 @@ I have already started editing an exiting int-033 to make it much closer to the 
 1. [x] Restored INT-016 to the actual planner/coder contract: added the required `inspect_media(renders/render_e45_a45.png)` planner step, aligned the coder transcript with `python script.py`, and fixed the benchmark geometry so validation/simulation can reach `submit_for_review(compound)`.
 2. [x] Verified `tests/integration/architecture_p1/test_dataset_export.py::test_dataset_export_solution_row_round_trip` passes on a fresh integration run after the INT-016 fixture fixes.
 3. [ ] The broader `integration_p1` sweep was not rerun after the targeted INT-016 fix; the last full sweep still had separate failures in `INT-186` and `INT-042`, which need a follow-up pass.
+
+4. [x] Aligned the stale `INT-205` engineer-coder benchmark assembly fixture with the seeded benchmark definition so the retry-lineage planner no longer trips the old `200/1200` constraint mismatch.
+
+5. [x] Verified `tests/integration/architecture_p1/test_engineering_loop.py::test_engineering_retry_reuses_same_benchmark_linkage` passes on a fresh integration run after the fixture fix.
+
+6. [ ] The broader `integration_p1` sweep is still being rechecked after the INT-205 fix; I have not yet closed the full-marker result this cycle.
 
 1. [x] Repaired `INT-186` so the forced worker-light outage waits for the coder invoke boundary instead of firing during the planner's validation submission.
 
