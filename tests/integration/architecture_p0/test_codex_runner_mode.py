@@ -765,7 +765,7 @@ result = build()
         (workspace_dir / "validation_results.json").read_text(encoding="utf-8")
     )
     assert validation_record.success is True
-    assert validation_record.script_path == "script.py"
+    assert validation_record.script_path == "solution_script.py"
 
     render_manifest = RenderManifest.model_validate_json(
         (workspace_dir / "renders" / "render_manifest.json").read_text(encoding="utf-8")

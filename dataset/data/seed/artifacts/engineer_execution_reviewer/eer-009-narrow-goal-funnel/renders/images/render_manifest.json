@@ -2,7 +2,7 @@
   "version": "1.0",
   "episode_id": "eer-009-narrow-goal-funnel",
   "worker_session_id": "eer-009-narrow-goal-funnel",
-  "revision": "2e5fc8de5485f633333a1b1897f644e45b705201",
+  "revision": "c850b4288b341e438097fe8911f708981e21c91f",
   "environment_version": "integration-test",
   "preview_evidence_paths": [
     "renders/images/render_e15_a0.png",
