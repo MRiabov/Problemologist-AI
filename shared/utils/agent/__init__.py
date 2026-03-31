@@ -1,8 +1,12 @@
+import contextlib
+import importlib.util
 import math
 import os
+import sys
 from enum import Enum
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import httpx
 import structlog
@@ -10,14 +14,20 @@ from build123d import Compound
 from pydantic import BaseModel
 
 from shared.enums import AgentName
+from shared.rendering import materialize_preview_response, render_preview
 from shared.script_contracts import authored_script_path_for_agent
 from shared.simulation.schemas import get_default_simulator_backend
 from shared.utils.fasteners import HoleType as HoleType
 from shared.utils.fasteners import fastener_hole as fastener_hole
+from shared.workers.loader import sys_path_context
 from shared.workers.schema import (
     BenchmarkToolResponse,
     PlanRefusal,
+    PreviewDesignResponse,
+    PreviewRenderingType,
 )
+from worker_heavy.utils.build123d_rendering import export_preview_scene_bundle
+from worker_heavy.utils.rendering import select_single_preview_render_subdir
 
 logger = structlog.get_logger(__name__)
 SCRIPT_IMPORT_MODE_ENV = "PROBLEMOLOGIST_SCRIPT_IMPORT_MODE"
@@ -67,6 +77,52 @@ def _script_agent_role() -> str:
 
 def _workspace_script_path() -> str:
     return authored_script_path_for_agent(_script_agent_role())
+
+
+def _workspace_root() -> Path:
+    sessions_dir = os.getenv("WORKER_SESSIONS_DIR")
+    session_id = os.getenv("SESSION_ID")
+    if sessions_dir and session_id:
+        return Path(sessions_dir) / session_id
+    return Path.cwd()
+
+
+def _preview_output_dir() -> Path:
+    return (
+        _workspace_root()
+        / "renders"
+        / select_single_preview_render_subdir(_workspace_root())
+    )
+
+
+def _load_module_from_path(module_path: Path) -> Any:
+    if not module_path.exists():
+        raise FileNotFoundError(f"Module not found at {module_path}")
+
+    module_name = f"dynamic_preview_{module_path.stem}_{uuid4().hex}"
+    with sys_path_context(str(module_path.parent)):
+        spec = importlib.util.spec_from_file_location(module_name, str(module_path))
+        if spec is None or spec.loader is None:
+            raise RuntimeError(f"Could not load module spec for {module_path}")
+        module = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(module)
+        finally:
+            with contextlib.suppress(Exception):
+                sys.modules.pop(module_name, None)
+    return module
+
+
+def objectives_geometry() -> Any:
+    """Materialize benchmark objective geometry for the current workspace."""
+    benchmark_script = _workspace_root() / "benchmark_script.py"
+    module = _load_module_from_path(benchmark_script)
+    factory = getattr(module, "objectives_geometry", None)
+    if not callable(factory):
+        raise AttributeError(
+            "benchmark_script.py must define an objectives_geometry() function"
+        )
+    return factory()
 
 
 def _default_reviewer_stage() -> str:
@@ -253,7 +309,7 @@ def _load_script_component(script_path: str | Path | None = None) -> Any:
     script_path = script_path or _workspace_script_path()
     return load_component_from_script(
         script_path=script_path,
-        session_root=Path.cwd(),
+        session_root=_workspace_root(),
     )
 
 
@@ -444,6 +500,65 @@ def submit_for_review(compound: Compound) -> bool:
     }
     res = _call_heavy_worker("/benchmark/submit", payload)
     return BenchmarkToolResponse.model_validate(res).success
+
+
+def preview(
+    component: Any,
+    pitch: float = 45,
+    yaw: float = 45,
+    rendering_type: PreviewRenderingType | str = PreviewRenderingType.RGB,
+) -> PreviewDesignResponse:
+    """Render an on-demand preview for a live build123d component."""
+    if _is_script_import_mode():
+        return PreviewDesignResponse(
+            success=True,
+            status_text=SCRIPT_IMPORT_DEFERRED_MESSAGE,
+            message=SCRIPT_IMPORT_DEFERRED_MESSAGE,
+            rendering_type=PreviewRenderingType(str(rendering_type)),
+        )
+
+    preview_scene_bundle = export_preview_scene_bundle(
+        component,
+        objectives=None,
+        workspace_root=_workspace_root(),
+    )
+    controller_response = _call_controller_script_tool(
+        "preview",
+        {
+            "script_path": "preview_scene.json",
+            "bundle_base64": preview_scene_bundle,
+            "pitch": pitch,
+            "yaw": yaw,
+            "rendering_type": PreviewRenderingType(str(rendering_type)).value,
+            "agent_role": _script_agent_role(),
+        },
+    )
+    if controller_response is not None:
+        response = PreviewDesignResponse.model_validate(controller_response)
+    else:
+        response = render_preview(
+            bundle_base64=preview_scene_bundle,
+            script_path="preview_scene.json",
+            pitch=pitch,
+            yaw=yaw,
+            rendering_type=PreviewRenderingType(str(rendering_type)),
+            session_id=os.getenv("SESSION_ID"),
+        )
+    if not response.success:
+        return response
+
+    materialize_preview_response(response, _preview_output_dir())
+    if response.artifact_path is None and response.image_path is not None:
+        response.artifact_path = response.image_path
+    if response.manifest_path is None:
+        response.manifest_path = str(Path("renders") / "render_manifest.json")
+    if response.pitch is None:
+        response.pitch = pitch
+    if response.yaw is None:
+        response.yaw = yaw
+    if response.status_text is None:
+        response.status_text = response.message or "Preview generated successfully"
+    return response
 
 
 def refuse_plan(reason: str) -> bool:

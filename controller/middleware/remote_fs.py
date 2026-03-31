@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import json
 import uuid
 from contextlib import suppress
 from hashlib import sha256
@@ -23,12 +24,12 @@ from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset
 from controller.workflows.execution import ScriptExecutionWorkflow
 from controller.workflows.heavy import (
-    HeavyPreviewWorkflow,
     HeavySimulationWorkflow,
     HeavySubmitWorkflow,
     HeavyValidationWorkflow,
     HeavyVerifyWorkflow,
 )
+from controller.workflows.preview import PreviewWorkflow
 from shared.agents.config import resolve_agents_config_path
 from shared.enums import AgentName, ManufacturingMethod
 from shared.observability.schemas import (
@@ -59,8 +60,6 @@ from shared.workers.schema import (
     EditOp,
     ExecuteResponse,
     GrepMatch,
-    HeavyPreviewParams,
-    HeavyPreviewResponse,
     HeavySimulationParams,
     HeavySubmitParams,
     HeavyValidationParams,
@@ -69,6 +68,8 @@ from shared.workers.schema import (
     InspectTopologyResponse,
     MediaInspectionResult,
     PreviewDesignResponse,
+    PreviewRenderingType,
+    PreviewWorkflowParams,
     RenderArtifactMetadata,
     RenderManifest,
     ReviewerStage,
@@ -91,6 +92,33 @@ _VIDEO_MEDIA_TYPES = {
 def _bundle_workflow_id(prefix: str, session_id: str, bundle: bytes) -> str:
     """Derive a deterministic workflow id from the exact workspace bundle."""
     return f"{prefix}-{session_id}-{sha256(bundle).hexdigest()}"
+
+
+def _preview_workflow_id(
+    session_id: str,
+    bundle: bytes,
+    request: Any,
+) -> str:
+    """Derive a deterministic workflow id for preview requests."""
+    request_model = getattr(request, "request", request)
+    if isinstance(request_model, dict):
+        request_payload = {
+            "script_path": request_model.get("script_path"),
+            "pitch": request_model.get("pitch"),
+            "yaw": request_model.get("yaw"),
+            "rendering_type": str(request_model.get("rendering_type", "")),
+            "script_content": request_model.get("script_content"),
+        }
+    else:
+        request_payload = {
+            "script_path": getattr(request_model, "script_path", None),
+            "pitch": getattr(request_model, "pitch", None),
+            "yaw": getattr(request_model, "yaw", None),
+            "rendering_type": str(getattr(request_model, "rendering_type", "")),
+            "script_content": getattr(request_model, "script_content", None),
+        }
+    digest_source = bundle + json.dumps(request_payload, sort_keys=True).encode("utf-8")
+    return f"preview-{session_id}-{sha256(digest_source).hexdigest()}"
 
 
 # Global policy instance (cached)
@@ -831,31 +859,63 @@ class RemoteFilesystemMiddleware:
         script_path: str | Path,
         pitch: float = -45.0,
         yaw: float = 45.0,
+        rendering_type: str = "rgb",
+        bundle_base64: str | None = None,
+        smoke_test_mode: bool | None = None,
+        script_content: str | None = None,
     ) -> PreviewDesignResponse:
-        """Trigger design preview via worker client (with bundling)."""
+        """Trigger design preview via controller orchestration when available."""
         p_str = str(script_path)
-
-        self._require_temporal_for_heavy_operation("preview")
-
-        bundle = await self.client.bundle_session()
-        workflow_id = f"prev-{self.client.session_id}-{abs(hash(p_str)) % 10**8}"
-        res: HeavyPreviewResponse = await self._execute_or_use_existing_workflow(
-            HeavyPreviewWorkflow.run,
-            workflow_id,
-            HeavyPreviewParams(
-                bundle_base64=base64.b64encode(bundle).decode("utf-8"),
-                script_path=p_str,
+        if self.temporal_client is None:
+            return await self.client.preview(
+                p_str,
+                script_content=script_content,
                 pitch=pitch,
                 yaw=yaw,
-            ),
-            result_type=HeavyPreviewResponse,
+                rendering_type=PreviewRenderingType(str(rendering_type)),
+                bundle_base64=bundle_base64,
+                smoke_test_mode=smoke_test_mode,
+            )
+
+        bundle = (
+            base64.b64decode(bundle_base64)
+            if bundle_base64 is not None
+            else await self.client.bundle_session()
         )
-        return PreviewDesignResponse(
-            success=res.success,
-            message="Preview generated via Temporal"
-            if res.success
-            else "Preview failed",
-            image_path=res.image_path or res.filename,
+        if bundle_base64 is None:
+            bundle_base64 = base64.b64encode(bundle).decode("utf-8")
+
+        workflow_id = _preview_workflow_id(
+            self.client.session_id,
+            bundle,
+            {
+                "script_path": p_str,
+                "script_content": script_content,
+                "pitch": pitch,
+                "yaw": yaw,
+                "rendering_type": PreviewRenderingType(str(rendering_type)),
+            },
+        )
+        agent_role_value = (
+            self.agent_role.value
+            if isinstance(self.agent_role, AgentName)
+            else str(self.agent_role)
+        )
+        return await self._execute_or_use_existing_workflow(
+            PreviewWorkflow.run,
+            workflow_id,
+            PreviewWorkflowParams(
+                bundle_base64=bundle_base64,
+                script_path=p_str,
+                script_content=script_content,
+                pitch=pitch,
+                yaw=yaw,
+                rendering_type=PreviewRenderingType(str(rendering_type)),
+                smoke_test_mode=smoke_test_mode,
+                session_id=self.client.session_id,
+                agent_role=agent_role_value,
+            ),
+            result_type=PreviewDesignResponse,
         )
 
     async def validate(

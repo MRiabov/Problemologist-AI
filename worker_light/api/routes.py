@@ -1,3 +1,4 @@
+import asyncio
 import base64
 from pathlib import Path
 from typing import Any
@@ -18,6 +19,7 @@ from fastapi import (
 from fastapi.encoders import jsonable_encoder
 
 from shared.enums import ResponseStatus
+from shared.rendering import materialize_preview_response, render_preview
 from shared.workers.filesystem.router import (
     WritePermissionError,
     create_filesystem_router,
@@ -42,6 +44,8 @@ from shared.workers.schema import (
     LintRequest,
     LintResponse,
     ListFilesRequest,
+    PreviewDesignRequest,
+    PreviewDesignResponse,
     ReadFileRequest,
     ReadFileResponse,
     StatusResponse,
@@ -50,6 +54,7 @@ from shared.workers.schema import (
     WorkerLightRpcResponse,
     WriteFileRequest,
 )
+from worker_heavy.utils.rendering import select_single_preview_render_subdir
 from worker_light.runtime.executor import RuntimeConfig, run_command_async
 from worker_light.utils.assets import get_media_type, validate_asset_source
 from worker_light.utils.git import (
@@ -120,6 +125,72 @@ async def api_inspect_topology(
     except Exception as e:
         logger.warning("api_inspect_topology_failed", error=str(e))
         return InspectTopologyResponse(success=False, message=str(e))
+
+
+@light_router.post(
+    "/benchmark/preview",
+    response_model=PreviewDesignResponse,
+    response_model_exclude_none=True,
+)
+async def api_preview(
+    request: PreviewDesignRequest,
+    fs_router=Depends(get_router),
+    x_session_id: str = Header(...),
+):
+    """Forward a preview request to the renderer worker and persist the result."""
+    try:
+        workspace_root = fs_router.local_backend.root
+        bundle_base64 = base64.b64encode(_bundle_session_bytes(fs_router)).decode(
+            "utf-8"
+        )
+        response = await asyncio.to_thread(
+            render_preview,
+            bundle_base64=bundle_base64,
+            script_path=request.script_path,
+            pitch=request.pitch,
+            yaw=request.yaw,
+            rendering_type=request.rendering_type,
+            session_id=x_session_id,
+            script_content=request.script_content,
+        )
+        if not response.success:
+            raise RuntimeError(response.message or "preview request failed")
+
+        preview_renders_dir = (
+            workspace_root
+            / "renders"
+            / select_single_preview_render_subdir(workspace_root)
+        )
+        image_path = materialize_preview_response(response, preview_renders_dir)
+        if image_path is None:
+            raise RuntimeError("renderer returned no preview image")
+
+        events = _collect_events(fs_router)
+        artifact_path = str(image_path.relative_to(workspace_root))
+        return PreviewDesignResponse(
+            success=True,
+            status_text="Preview generated successfully",
+            message="Preview generated successfully",
+            artifact_path=artifact_path,
+            manifest_path=str(Path("renders") / "render_manifest.json"),
+            rendering_type=request.rendering_type,
+            pitch=request.pitch,
+            yaw=request.yaw,
+            image_path=artifact_path,
+            image_bytes_base64=response.image_bytes_base64,
+            render_manifest_json=response.render_manifest_json,
+            events=events,
+        )
+    except Exception as exc:
+        logger.warning("api_preview_failed", error=str(exc))
+        return PreviewDesignResponse(
+            success=False,
+            status_text="Preview generation failed",
+            message=str(exc),
+            rendering_type=request.rendering_type,
+            pitch=request.pitch,
+            yaw=request.yaw,
+        )
 
 
 def _collect_events(fs_router) -> list[dict[str, Any]]:
@@ -874,6 +945,11 @@ async def execute_code(
             "EPISODE_ID": request.episode_id or x_session_id,
             "WORKER_HEAVY_URL": settings.worker_heavy_url,
             "CONTROLLER_URL": "",
+            **(
+                {"WORKER_SESSIONS_DIR": settings.sessions_dir}
+                if settings.sessions_dir is not None
+                else {}
+            ),
         },
         config=config,
         session_id=x_session_id,

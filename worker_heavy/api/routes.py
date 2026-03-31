@@ -561,6 +561,7 @@ async def api_preview(
                     script_path=request.script_path,
                     pitch=request.pitch,
                     yaw=request.yaw,
+                    rendering_type=request.rendering_type,
                     session_id=x_session_id,
                     script_content=request.script_content,
                 )
@@ -580,7 +581,15 @@ async def api_preview(
                 return PreviewDesignResponse(
                     success=response.success,
                     message=response.message,
+                    status_text=response.status_text,
                     image_path=str(image_path.relative_to(root)),
+                    artifact_path=str(image_path.relative_to(root)),
+                    manifest_path=str(Path("renders") / "render_manifest.json"),
+                    rendering_type=request.rendering_type,
+                    pitch=request.pitch,
+                    yaw=request.yaw,
+                    image_bytes_base64=response.image_bytes_base64,
+                    render_manifest_json=response.render_manifest_json,
                     events=response.events,
                 )
 
@@ -588,7 +597,14 @@ async def api_preview(
         raise
     except Exception as e:
         logger.warning("api_benchmark_preview_failed", error=str(e))
-        return PreviewDesignResponse(success=False, message=str(e))
+        return PreviewDesignResponse(
+            success=False,
+            message=str(e),
+            status_text="Preview generation failed",
+            rendering_type=request.rendering_type,
+            pitch=request.pitch,
+            yaw=request.yaw,
+        )
 
 
 @heavy_router.post("/benchmark/build", response_model=BenchmarkToolResponse)

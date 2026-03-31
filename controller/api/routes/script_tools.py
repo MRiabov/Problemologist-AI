@@ -27,6 +27,8 @@ from shared.simulation.smoke_mode import (
 from shared.workers.schema import (
     BenchmarkToolResponse,
     HeavyValidationResponse,
+    PreviewDesignResponse,
+    PreviewRenderingType,
     ReviewerStage,
     SimulationArtifacts,
     ValidationResultRecord,
@@ -40,6 +42,10 @@ class ScriptToolRequest(BaseModel):
     agent_role: AgentName = Field(default=AgentName.ENGINEER_CODER)
     backend: SimulatorBackendType = Field(default_factory=get_default_simulator_backend)
     smoke_test_mode: bool | None = None
+    bundle_base64: str | None = None
+    pitch: float = -45.0
+    yaw: float = 45.0
+    rendering_type: PreviewRenderingType = PreviewRenderingType.RGB
     reviewer_stage: ReviewerStage | None = None
     jitter_range: tuple[float, float, float] | None = None
     num_scenes: int | None = None
@@ -283,6 +289,27 @@ async def verify_script(
             )
             await middleware.client._sync_handover_artifacts_to_light(response)
             return response
+
+
+@router.post("/preview", response_model=PreviewDesignResponse)
+async def preview_script(
+    request: Request,
+    payload: ScriptToolRequest,
+    x_session_id: str = Header(...),
+):
+    with _script_log_context(payload, x_session_id):
+        async with _controller_script_middleware(
+            x_session_id, payload.agent_role, request, payload.episode_id
+        ) as middleware:
+            result = await middleware.preview(
+                payload.script_path,
+                pitch=payload.pitch,
+                yaw=payload.yaw,
+                rendering_type=payload.rendering_type,
+                bundle_base64=payload.bundle_base64,
+                smoke_test_mode=payload.smoke_test_mode,
+            )
+            return result
 
 
 @router.post("/submit", response_model=BenchmarkToolResponse)

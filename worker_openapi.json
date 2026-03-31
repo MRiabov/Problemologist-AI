@@ -59,6 +59,59 @@
         }
       }
     },
+    "/benchmark/preview": {
+      "post": {
+        "tags": [
+          "worker-heavy"
+        ],
+        "summary": "Api Preview",
+        "description": "Render a preview of the CAD design from specified camera angles.",
+        "operationId": "api_preview_benchmark_preview_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewDesignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewDesignResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/fs/ls": {
       "post": {
         "tags": [
@@ -1470,59 +1523,6 @@
         }
       }
     },
-    "/benchmark/preview": {
-      "post": {
-        "tags": [
-          "worker-heavy"
-        ],
-        "summary": "Api Preview",
-        "description": "Render a preview of the CAD design from specified camera angles.",
-        "operationId": "api_preview_benchmark_preview_post",
-        "parameters": [
-          {
-            "name": "x-session-id",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "X-Session-Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PreviewDesignRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PreviewDesignResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/benchmark/build": {
       "post": {
         "tags": [
@@ -2338,6 +2338,205 @@
         ],
         "title": "ObservabilityEventType"
       },
+      "PreviewDesignRequest": {
+        "properties": {
+          "script_path": {
+            "type": "string",
+            "title": "Script Path",
+            "description": "Path to the authored script. The runtime accepts either build() or a module-level final assembly such as `result = ...`.",
+            "default": "script.py"
+          },
+          "script_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Script Content",
+            "description": "Direct content of the script."
+          },
+          "bundle_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Base64",
+            "description": "Gzipped tarball of the session workspace (base64 encoded)."
+          },
+          "pitch": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Pitch",
+            "description": "Camera elevation angle in degrees (negative = looking down).",
+            "default": -45.0
+          },
+          "yaw": {
+            "type": "number",
+            "exclusiveMaximum": 360.0,
+            "minimum": 0.0,
+            "title": "Yaw",
+            "description": "Camera azimuth angle in degrees (clockwise from front).",
+            "default": 45.0
+          },
+          "rendering_type": {
+            "$ref": "#/components/schemas/PreviewRenderingType",
+            "description": "Requested preview modality.",
+            "default": "rgb"
+          },
+          "smoke_test_mode": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smoke Test Mode",
+            "description": "If true: cap particles to 5000, label results as approximate."
+          }
+        },
+        "type": "object",
+        "title": "PreviewDesignRequest",
+        "description": "Request to preview a CAD design from specific angles."
+      },
+      "PreviewDesignResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "status_text": {
+            "type": "string",
+            "title": "Status Text"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "artifact_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Path"
+          },
+          "manifest_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Path"
+          },
+          "rendering_type": {
+            "$ref": "#/components/schemas/PreviewRenderingType",
+            "default": "rgb"
+          },
+          "pitch": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pitch"
+          },
+          "yaw": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yaw"
+          },
+          "image_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Path"
+          },
+          "image_bytes_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Bytes Base64",
+            "description": "Base64-encoded preview image payload used internally by worker delegation layers."
+          },
+          "render_manifest_json": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Render Manifest Json"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/BaseEvent"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "status_text"
+        ],
+        "title": "PreviewDesignResponse",
+        "description": "Response from preview design endpoint."
+      },
+      "PreviewRenderingType": {
+        "type": "string",
+        "enum": [
+          "rgb",
+          "depth",
+          "segmentation"
+        ],
+        "title": "PreviewRenderingType",
+        "description": "Supported single-view preview modalities."
+      },
       "ReadFileRequest": {
         "properties": {
           "path": {
@@ -3069,120 +3268,6 @@
         ],
         "title": "PowerSupplyConfig",
         "description": "Configuration for a DC power supply."
-      },
-      "PreviewDesignRequest": {
-        "properties": {
-          "script_path": {
-            "type": "string",
-            "title": "Script Path",
-            "description": "Path to the authored script. The runtime accepts either build() or a module-level final assembly such as `result = ...`.",
-            "default": "script.py"
-          },
-          "script_content": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Script Content",
-            "description": "Direct content of the script."
-          },
-          "bundle_base64": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Bundle Base64",
-            "description": "Gzipped tarball of the session workspace (base64 encoded)."
-          },
-          "pitch": {
-            "type": "number",
-            "maximum": 90.0,
-            "minimum": -90.0,
-            "title": "Pitch",
-            "description": "Camera elevation angle in degrees (negative = looking down).",
-            "default": -45.0
-          },
-          "yaw": {
-            "type": "number",
-            "exclusiveMaximum": 360.0,
-            "minimum": 0.0,
-            "title": "Yaw",
-            "description": "Camera azimuth angle in degrees (clockwise from front).",
-            "default": 45.0
-          },
-          "smoke_test_mode": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Smoke Test Mode",
-            "description": "If true: cap particles to 5000, label results as approximate."
-          }
-        },
-        "type": "object",
-        "title": "PreviewDesignRequest",
-        "description": "Request to preview a CAD design from specific angles."
-      },
-      "PreviewDesignResponse": {
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "title": "Success"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message"
-          },
-          "image_path": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Image Path"
-          },
-          "image_bytes_base64": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Image Bytes Base64",
-            "description": "Base64-encoded preview image payload used internally by worker delegation layers."
-          },
-          "events": {
-            "items": {
-              "$ref": "#/components/schemas/BaseEvent"
-            },
-            "type": "array",
-            "title": "Events"
-          }
-        },
-        "type": "object",
-        "required": [
-          "success",
-          "message"
-        ],
-        "title": "PreviewDesignResponse",
-        "description": "Response from preview design endpoint."
       },
       "SimulationArtifacts": {
         "properties": {

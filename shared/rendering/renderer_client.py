@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import os
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,7 @@ from shared.workers.schema import (
     BenchmarkToolResponse,
     PreviewDesignRequest,
     PreviewDesignResponse,
+    PreviewRenderingType,
     SimulationVideoRequest,
 )
 
@@ -34,6 +36,16 @@ def _session_headers(session_id: str | None) -> dict[str, str]:
     if session_id:
         headers["x-session-id"] = session_id
     return headers
+
+
+def _write_text_atomic(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", dir=str(path.parent), delete=False
+    ) as tmp:
+        tmp.write(content)
+        tmp_path = Path(tmp.name)
+    tmp_path.replace(path)
 
 
 def _post_json_with_busy_retry(
@@ -90,6 +102,7 @@ def render_preview(
     script_path: str,
     pitch: float,
     yaw: float,
+    rendering_type: PreviewRenderingType = PreviewRenderingType.RGB,
     session_id: str | None = None,
     script_content: str | None = None,
 ) -> PreviewDesignResponse:
@@ -98,6 +111,7 @@ def render_preview(
         script_path=script_path,
         pitch=pitch,
         yaw=yaw,
+        rendering_type=rendering_type,
         script_content=script_content,
     ).model_dump(mode="json")
     url = f"{renderer_base_url()}/benchmark/preview"
@@ -171,9 +185,18 @@ def materialize_preview_response(
         image_name = Path(response.image_path or "preview.jpg").name
         image_path = output_dir / image_name
         image_path.write_bytes(base64.b64decode(response.image_bytes_base64))
+        if response.render_manifest_json:
+            manifest_path = output_dir.parent / "render_manifest.json"
+            _write_text_atomic(manifest_path, response.render_manifest_json)
         return image_path
     if response.image_path:
+        if response.render_manifest_json:
+            manifest_path = output_dir.parent / "render_manifest.json"
+            _write_text_atomic(manifest_path, response.render_manifest_json)
         return output_dir / Path(response.image_path).name
+    if response.render_manifest_json:
+        manifest_path = output_dir.parent / "render_manifest.json"
+        _write_text_atomic(manifest_path, response.render_manifest_json)
     return None
 
 

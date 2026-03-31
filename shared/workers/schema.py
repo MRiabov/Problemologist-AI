@@ -1,3 +1,4 @@
+from enum import StrEnum
 from typing import Any, Literal, TypeAlias
 
 from pydantic import (
@@ -31,6 +32,15 @@ ReviewerStage: TypeAlias = Literal[
     "engineering_execution_reviewer",
     "electronics_reviewer",
 ]
+
+
+class PreviewRenderingType(StrEnum):
+    """Supported single-view preview modalities."""
+
+    RGB = "rgb"
+    DEPTH = "depth"
+    SEGMENTATION = "segmentation"
+
 
 LEGACY_REVIEWER_STAGE_ALIASES = {
     "engineer_execution_reviewer": "engineering_execution_reviewer",
@@ -522,6 +532,10 @@ class PreviewDesignRequest(BaseModel):
         lt=360.0,
         description="Camera azimuth angle in degrees (clockwise from front).",
     )
+    rendering_type: PreviewRenderingType = Field(
+        default=PreviewRenderingType.RGB,
+        description="Requested preview modality.",
+    )
     smoke_test_mode: bool | None = Field(
         default=None,
         description="If true: cap particles to 5000, label results as approximate.",
@@ -537,7 +551,13 @@ class PreviewDesignResponse(BaseModel):
     """Response from preview design endpoint."""
 
     success: StrictBool
-    message: StrictStr
+    status_text: StrictStr
+    message: StrictStr | None = None
+    artifact_path: StrictStr | None = None
+    manifest_path: StrictStr | None = None
+    rendering_type: PreviewRenderingType = PreviewRenderingType.RGB
+    pitch: float | None = None
+    yaw: float | None = None
     image_path: StrictStr | None = None
     image_bytes_base64: StrictStr | None = Field(
         default=None,
@@ -546,7 +566,25 @@ class PreviewDesignResponse(BaseModel):
             "delegation layers."
         ),
     )
+    render_manifest_json: StrictStr | None = None
     events: list[BaseEvent] = Field(default_factory=list)
+
+
+class PreviewWorkflowParams(BaseModel):
+    """Parameters for the controller preview workflow."""
+
+    bundle_base64: StrictStr
+    script_path: StrictStr = Field(default="script.py")
+    script_content: StrictStr | None = None
+    pitch: float = Field(default=-45.0)
+    yaw: float = Field(default=45.0)
+    rendering_type: PreviewRenderingType = Field(
+        default=PreviewRenderingType.RGB,
+        description="Requested preview modality.",
+    )
+    smoke_test_mode: bool | None = None
+    session_id: StrictStr
+    agent_role: StrictStr
 
 
 class HeavySimulationParams(BaseModel):
@@ -581,6 +619,7 @@ class HeavyPreviewParams(BaseModel):
     script_path: str
     pitch: float = -45.0
     yaw: float = 45.0
+    rendering_type: PreviewRenderingType = PreviewRenderingType.RGB
 
 
 class SimulationVideoRequest(BaseModel):

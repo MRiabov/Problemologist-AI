@@ -5,6 +5,7 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from controller.activities.execution import execute_script_activity
+from controller.activities.preview import preview_render_activity
 from controller.activities.simulation import (
     compile_mjcf_activity,
     render_video_activity,
@@ -20,6 +21,7 @@ from controller.workflows.heavy import (
     HeavyValidationWorkflow,
     HeavyVerifyWorkflow,
 )
+from controller.workflows.preview import PreviewWorkflow
 from controller.workflows.simulation import SimulationWorkflow
 from shared.ops.workflows import BackupWorkflow, run_backup_activity
 
@@ -57,6 +59,7 @@ async def main():
         workflows=[
             SimulationWorkflow,
             ScriptExecutionWorkflow,
+            PreviewWorkflow,
             HeavySimulationWorkflow,
             HeavyValidationWorkflow,
             HeavyVerifyWorkflow,
@@ -71,6 +74,7 @@ async def main():
             upload_to_s3_activity,
             update_trace_activity,
             execute_script_activity,
+            preview_render_activity,
             run_backup_activity,
         ],
     )

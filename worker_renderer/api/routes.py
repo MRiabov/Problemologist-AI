@@ -10,6 +10,7 @@ from typing import Any
 
 import structlog
 from fastapi import APIRouter, Header, HTTPException
+from PIL import Image
 
 from shared.agents.config import load_agents_config
 from shared.git_utils import repo_revision
@@ -22,6 +23,7 @@ from shared.workers.schema import (
     BenchmarkToolResponse,
     PreviewDesignRequest,
     PreviewDesignResponse,
+    PreviewRenderingType,
     RenderArtifactMetadata,
     RenderManifest,
     RenderSiblingPaths,
@@ -30,13 +32,23 @@ from shared.workers.schema import (
     SimulationVideoRequest,
 )
 from worker_heavy.utils.build123d_rendering import (
+    _OVERLAY_AXES_COLOR,
+    _OVERLAY_EDGE_COLOR,
+    _RGB_AXES_COLOR,
+    _RGB_EDGE_COLOR,
     PreviewScene,
+    _build_renderer,
+    _composite_non_black,
+    _depth_buffer_to_display_rgb,
+    _preview_camera_distance,
+    _preview_segmentation_legend,
+    _render_view,
+    camera_position_from_orbit,
+    collect_preview_scene,
     render_preview_bundle,
-    render_preview_scene,
     render_preview_scene_bundle,
 )
 from worker_heavy.utils.file_validation import validate_benchmark_definition_yaml
-from worker_heavy.utils.preview import preview_design
 from worker_heavy.utils.rendering import (
     build_render_manifest,
     normalize_render_manifest,
@@ -210,6 +222,230 @@ def _collect_render_artifacts(
     return artifacts
 
 
+def _write_text_atomic(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", dir=str(path.parent), delete=False
+    ) as tmp:
+        tmp.write(content)
+        tmp_path = Path(tmp.name)
+    tmp_path.replace(path)
+
+
+def _single_preview_group_key(pitch: float, yaw: float) -> str:
+    return f"render_e{abs(int(round(pitch)))}_a{int(round(yaw))}"
+
+
+def _render_single_preview(
+    scene: PreviewScene,
+    *,
+    output_dir: Path,
+    pitch: float,
+    yaw: float,
+    rendering_type: PreviewRenderingType,
+    include_rgb_axes: bool,
+    include_rgb_edges: bool,
+    include_depth_axes: bool,
+    include_depth_edges: bool,
+    include_segmentation_axes: bool,
+    include_segmentation_edges: bool,
+) -> tuple[Path, dict[str, RenderArtifactMetadata]]:
+    center = scene.center
+    distance = _preview_camera_distance(scene, width=640, height=480)
+    camera_position = camera_position_from_orbit(center, distance, pitch, yaw)
+    group_key = _single_preview_group_key(pitch, yaw)
+    workspace_root = output_dir.parent.parent
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    artifacts: dict[str, RenderArtifactMetadata] = {}
+
+    if rendering_type == PreviewRenderingType.RGB:
+        bundle = _build_renderer(
+            scene,
+            width=640,
+            height=480,
+            segmentation=False,
+            include_axes=include_rgb_axes,
+            include_edges=include_rgb_edges,
+            include_fill=True,
+            axes_color=_RGB_AXES_COLOR,
+            edge_color=_RGB_EDGE_COLOR,
+            background=(0.98, 0.98, 0.99),
+        )
+        try:
+            rgb_image, _ = _render_view(
+                bundle,
+                camera_position=camera_position,
+                lookat=center,
+                up=(0.0, 0.0, 1.0),
+                capture_depth=False,
+            )
+        finally:
+            del bundle
+
+        image_path = output_dir / f"{group_key}.jpg"
+        Image.fromarray(rgb_image).convert("RGB").save(image_path, "JPEG")
+        rel_path = str(image_path.relative_to(workspace_root))
+        artifacts[rel_path] = RenderArtifactMetadata(
+            modality="rgb",
+            group_key=group_key,
+            siblings=RenderSiblingPaths(
+                rgb=str(image_path.relative_to(workspace_root)),
+                depth=str(
+                    (output_dir / f"{group_key}_depth.png").relative_to(workspace_root)
+                ),
+                segmentation=str(
+                    (output_dir / f"{group_key}_segmentation.png").relative_to(
+                        workspace_root
+                    )
+                ),
+            ),
+        )
+        return image_path, artifacts
+
+    if rendering_type == PreviewRenderingType.DEPTH:
+        depth_base_bundle = _build_renderer(
+            scene,
+            width=640,
+            height=480,
+            segmentation=False,
+            include_axes=False,
+            include_edges=False,
+            include_fill=True,
+            axes_color=_OVERLAY_AXES_COLOR,
+            edge_color=_OVERLAY_EDGE_COLOR,
+            background=(0.98, 0.98, 0.99),
+        )
+        depth_overlay_bundle: Any | None = None
+        if include_depth_axes or include_depth_edges:
+            depth_overlay_bundle = _build_renderer(
+                scene,
+                width=640,
+                height=480,
+                segmentation=False,
+                include_axes=include_depth_axes,
+                include_edges=include_depth_edges,
+                include_fill=False,
+                axes_color=_OVERLAY_AXES_COLOR,
+                edge_color=_OVERLAY_EDGE_COLOR,
+                background=(0.0, 0.0, 0.0),
+            )
+        try:
+            _, depth_buffer = _render_view(
+                depth_base_bundle,
+                camera_position=camera_position,
+                lookat=center,
+                up=(0.0, 0.0, 1.0),
+                capture_depth=True,
+            )
+            if depth_buffer is None:
+                raise RuntimeError("depth rendering was disabled for render")
+            depth_image, depth_range = _depth_buffer_to_display_rgb(depth_buffer)
+            if depth_overlay_bundle is not None:
+                depth_overlay, _ = _render_view(
+                    depth_overlay_bundle,
+                    camera_position=camera_position,
+                    lookat=center,
+                    up=(0.0, 0.0, 1.0),
+                    capture_depth=False,
+                )
+                depth_image = _composite_non_black(depth_image, depth_overlay)
+        finally:
+            del depth_base_bundle
+            if depth_overlay_bundle is not None:
+                del depth_overlay_bundle
+
+        image_path = output_dir / f"{group_key}_depth.png"
+        Image.fromarray(depth_image, mode="RGB").save(image_path, "PNG")
+        rel_path = str(image_path.relative_to(workspace_root))
+        artifacts[rel_path] = RenderArtifactMetadata(
+            modality="depth",
+            group_key=group_key,
+            siblings=RenderSiblingPaths(
+                rgb=str((output_dir / f"{group_key}.jpg").relative_to(workspace_root)),
+                depth=str(image_path.relative_to(workspace_root)),
+                segmentation=str(
+                    (output_dir / f"{group_key}_segmentation.png").relative_to(
+                        workspace_root
+                    )
+                ),
+            ),
+            depth_interpretation=(
+                "Camera-space depth in meters. False-color pixels are scaled "
+                "from the build123d/VTK preview renderer's linear depth "
+                "buffer; see depth_min_m and depth_max_m for the metric range."
+            ),
+            depth_min_m=depth_range[0],
+            depth_max_m=depth_range[1],
+        )
+        return image_path, artifacts
+
+    seg_base_bundle = _build_renderer(
+        scene,
+        width=640,
+        height=480,
+        segmentation=True,
+        include_axes=False,
+        include_edges=False,
+        include_fill=True,
+        axes_color=_OVERLAY_AXES_COLOR,
+        edge_color=_OVERLAY_EDGE_COLOR,
+        background=(0.0, 0.0, 0.0),
+    )
+    seg_overlay_bundle: Any | None = None
+    if include_segmentation_axes or include_segmentation_edges:
+        seg_overlay_bundle = _build_renderer(
+            scene,
+            width=640,
+            height=480,
+            segmentation=False,
+            include_axes=include_segmentation_axes,
+            include_edges=include_segmentation_edges,
+            include_fill=False,
+            axes_color=_OVERLAY_AXES_COLOR,
+            edge_color=_OVERLAY_EDGE_COLOR,
+            background=(0.0, 0.0, 0.0),
+        )
+    try:
+        seg_image, _ = _render_view(
+            seg_base_bundle,
+            camera_position=camera_position,
+            lookat=center,
+            up=(0.0, 0.0, 1.0),
+            capture_depth=False,
+        )
+        if seg_overlay_bundle is not None:
+            seg_overlay, _ = _render_view(
+                seg_overlay_bundle,
+                camera_position=camera_position,
+                lookat=center,
+                up=(0.0, 0.0, 1.0),
+                capture_depth=False,
+            )
+            seg_image = _composite_non_black(seg_image, seg_overlay)
+    finally:
+        del seg_base_bundle
+        if seg_overlay_bundle is not None:
+            del seg_overlay_bundle
+
+    image_path = output_dir / f"{group_key}_segmentation.png"
+    Image.fromarray(seg_image, mode="RGB").save(image_path, "PNG")
+    rel_path = str(image_path.relative_to(workspace_root))
+    artifacts[rel_path] = RenderArtifactMetadata(
+        modality="segmentation",
+        group_key=group_key,
+        siblings=RenderSiblingPaths(
+            rgb=str((output_dir / f"{group_key}.jpg").relative_to(workspace_root)),
+            depth=str(
+                (output_dir / f"{group_key}_depth.png").relative_to(workspace_root)
+            ),
+            segmentation=str(image_path.relative_to(workspace_root)),
+        ),
+        segmentation_legend=_preview_segmentation_legend(scene),
+    )
+    return image_path, artifacts
+
+
 def _build_preview_manifest(
     *,
     root: Path,
@@ -281,7 +517,7 @@ def _build_preview_manifest(
         preview_evidence_paths=preview_evidence_paths,
     )
     manifest_path = root / "renders" / "render_manifest.json"
-    manifest_path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+    _write_text_atomic(manifest_path, manifest.model_dump_json(indent=2))
     return manifest_path
 
 
@@ -350,15 +586,37 @@ async def api_preview(
                     renders_dir = (
                         root / "renders" / select_single_preview_render_subdir(root)
                     )
-                    renders_dir.mkdir(parents=True, exist_ok=True)
+                    render_policy = load_agents_config().render
+                    if (
+                        request.rendering_type == PreviewRenderingType.RGB
+                        and not render_policy.rgb.enabled
+                    ):
+                        raise ValueError("rgb preview rendering is disabled")
+                    if (
+                        request.rendering_type == PreviewRenderingType.DEPTH
+                        and not render_policy.depth.enabled
+                    ):
+                        raise ValueError("depth preview rendering is disabled")
+                    if (
+                        request.rendering_type == PreviewRenderingType.SEGMENTATION
+                        and not render_policy.segmentation.enabled
+                    ):
+                        raise ValueError("segmentation preview rendering is disabled")
                     scene = _load_preview_scene(root)
                     if scene is not None:
-                        image_path = await asyncio.to_thread(
-                            render_preview_scene,
+                        image_path, artifacts = await asyncio.to_thread(
+                            _render_single_preview,
                             scene,
+                            output_dir=renders_dir,
                             pitch=request.pitch,
                             yaw=request.yaw,
-                            output_dir=renders_dir,
+                            rendering_type=request.rendering_type,
+                            include_rgb_axes=render_policy.rgb.axes,
+                            include_rgb_edges=render_policy.rgb.edges,
+                            include_depth_axes=render_policy.depth.axes,
+                            include_depth_edges=render_policy.depth.edges,
+                            include_segmentation_axes=render_policy.segmentation.axes,
+                            include_segmentation_edges=render_policy.segmentation.edges,
                         )
                     else:
                         component = load_component_from_script(
@@ -366,23 +624,57 @@ async def api_preview(
                             session_root=root,
                             script_content=request.script_content,
                         )
-                        image_path = await asyncio.to_thread(
-                            preview_design,
-                            component,
-                            pitch=request.pitch,
-                            yaw=request.yaw,
-                            output_dir=renders_dir,
-                            objectives=objectives,
-                        )
+                        with tempfile.TemporaryDirectory() as mesh_tmpdir:
+                            preview_scene = await asyncio.to_thread(
+                                collect_preview_scene,
+                                component,
+                                objectives=objectives,
+                                workspace_root=root,
+                                smoke_test_mode=bool(request.smoke_test_mode),
+                                mesh_root=Path(mesh_tmpdir),
+                            )
+                            image_path, artifacts = await asyncio.to_thread(
+                                _render_single_preview,
+                                preview_scene,
+                                output_dir=renders_dir,
+                                pitch=request.pitch,
+                                yaw=request.yaw,
+                                rendering_type=request.rendering_type,
+                                include_rgb_axes=render_policy.rgb.axes,
+                                include_rgb_edges=render_policy.rgb.edges,
+                                include_depth_axes=render_policy.depth.axes,
+                                include_depth_edges=render_policy.depth.edges,
+                                include_segmentation_axes=render_policy.segmentation.axes,
+                                include_segmentation_edges=render_policy.segmentation.edges,
+                            )
+
+                preview_manifest = build_render_manifest(
+                    artifacts,
+                    workspace_root=root,
+                    episode_id=x_session_id,
+                    worker_session_id=x_session_id,
+                    preview_evidence_paths=list(artifacts.keys()),
+                )
+                manifest_json = preview_manifest.model_dump_json(indent=2)
+                _write_text_atomic(
+                    root / "renders" / "render_manifest.json", manifest_json
+                )
 
                 events = collect_and_cleanup_events(root, session_id=x_session_id)
                 return PreviewDesignResponse(
                     success=True,
+                    status_text="Preview generated successfully",
                     message="Preview generated successfully",
+                    artifact_path=str(image_path.relative_to(root)),
+                    manifest_path=str(Path("renders") / "render_manifest.json"),
+                    rendering_type=request.rendering_type,
+                    pitch=request.pitch,
+                    yaw=request.yaw,
                     image_path=str(image_path.relative_to(root)),
                     image_bytes_base64=base64.b64encode(image_path.read_bytes()).decode(
                         "ascii"
                     ),
+                    render_manifest_json=manifest_json,
                     events=events,
                 )
     except HTTPException:
@@ -391,7 +683,14 @@ async def api_preview(
         logger.warning(
             "renderer_preview_failed", error=str(exc), session_id=x_session_id
         )
-        return PreviewDesignResponse(success=False, message=str(exc))
+        return PreviewDesignResponse(
+            success=False,
+            status_text="Preview generation failed",
+            message=str(exc),
+            rendering_type=request.rendering_type,
+            pitch=request.pitch,
+            yaw=request.yaw,
+        )
 
 
 @renderer_router.post("/benchmark/static-preview", response_model=BenchmarkToolResponse)

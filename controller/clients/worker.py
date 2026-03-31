@@ -29,6 +29,8 @@ from shared.workers.schema import (
     GitStatusResponse,
     GrepMatch,
     InspectTopologyResponse,
+    PreviewDesignResponse,
+    PreviewRenderingType,
     RenderManifest,
     ReviewerStage,
     WorkerLightRpcAction,
@@ -526,9 +528,13 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
-    async def _add_bundle_to_payload(self, payload: dict):
+    async def _add_bundle_to_payload(
+        self, payload: dict, *, bundle_base64: str | None = None
+    ):
         """Append workspace bundle payload for split light/heavy worker mode."""
-        if self.light_url != self.heavy_url:
+        if bundle_base64 is not None:
+            payload["bundle_base64"] = bundle_base64
+        elif self.light_url != self.heavy_url:
             bundle = await self.bundle_session()
             payload["bundle_base64"] = base64.b64encode(bundle).decode("utf-8")
 
@@ -720,7 +726,10 @@ class WorkerClient:
         script_content: str | None = None,
         pitch: float = -45.0,
         yaw: float = 45.0,
-    ) -> dict[str, Any]:
+        rendering_type: PreviewRenderingType | str = PreviewRenderingType.RGB,
+        bundle_base64: str | None = None,
+        smoke_test_mode: bool | None = None,
+    ) -> PreviewDesignResponse:
         """Trigger design preview via worker."""
         client = await self._get_client()
         try:
@@ -728,20 +737,24 @@ class WorkerClient:
                 "script_path": script_path,
                 "pitch": pitch,
                 "yaw": yaw,
+                "rendering_type": rendering_type,
             }
             if script_content is not None:
                 payload["script_content"] = script_content
 
-            await self._add_bundle_to_payload(payload)
+            if smoke_test_mode is not None:
+                payload["smoke_test_mode"] = smoke_test_mode
+
+            await self._add_bundle_to_payload(payload, bundle_base64=bundle_base64)
 
             response = await client.post(
-                f"{self.heavy_url}/benchmark/preview",
+                f"{self.base_url}/benchmark/preview",
                 json=payload,
                 headers=self._request_headers(stage=self.agent_role),
-                timeout=30.0,
+                timeout=300.0,
             )
             response.raise_for_status()
-            return response.json()
+            return PreviewDesignResponse.model_validate(response.json())
         finally:
             await self._close_client(client)
 

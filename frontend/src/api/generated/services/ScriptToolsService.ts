@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { BenchmarkToolResponse } from '../models/BenchmarkToolResponse';
+import type { PreviewDesignResponse } from '../models/PreviewDesignResponse';
 import type { ScriptToolRequest } from '../models/ScriptToolRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -70,6 +71,30 @@ export class ScriptToolsService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/script-tools/verify',
+            headers: {
+                'x-session-id': xSessionId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Preview Script
+     * @param xSessionId
+     * @param requestBody
+     * @returns PreviewDesignResponse Successful Response
+     * @throws ApiError
+     */
+    public static previewScriptApiScriptToolsPreviewPost(
+        xSessionId: string,
+        requestBody: ScriptToolRequest,
+    ): CancelablePromise<PreviewDesignResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/script-tools/preview',
             headers: {
                 'x-session-id': xSessionId,
             },
@@ -166,6 +191,30 @@ export class ScriptToolsService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/script-tools/verify',
+            headers: {
+                'x-session-id': xSessionId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Preview Script
+     * @param xSessionId
+     * @param requestBody
+     * @returns PreviewDesignResponse Successful Response
+     * @throws ApiError
+     */
+    public static previewScriptScriptToolsPreviewPost(
+        xSessionId: string,
+        requestBody: ScriptToolRequest,
+    ): CancelablePromise<PreviewDesignResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/script-tools/preview',
             headers: {
                 'x-session-id': xSessionId,
             },
