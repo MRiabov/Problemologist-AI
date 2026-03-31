@@ -233,6 +233,7 @@ def _prerender_24_views_isolated(
 
         import base64
         import json
+        import os
         import sys
         from pathlib import Path
 
@@ -269,6 +270,8 @@ def _prerender_24_views_isolated(
             session_root=output_dir.parent,
             script_content=script_content,
         )
+
+        revision = os.environ.get("REPO_REVISION")
 
         backend_type = (
             SimulatorBackendType(backend_value) if backend_value else None

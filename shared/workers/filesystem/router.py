@@ -4,8 +4,6 @@ from pathlib import Path
 
 import structlog
 
-from shared.workers.schema import RenderArtifactMetadata
-from worker_heavy.utils.rendering import build_render_manifest
 from worker_light.config import settings
 
 from .backend import (
@@ -128,47 +126,6 @@ class FilesystemRouter:
     @staticmethod
     def _is_static_preview_render(path: str | Path) -> bool:
         return Path(str(path)).suffix.lower() in {".png", ".jpg", ".jpeg"}
-
-    def _sync_render_manifest(self, trigger_path: str) -> None:
-        """Keep the render manifest aligned with the latest preview images."""
-        normalized = (
-            trigger_path if trigger_path.startswith("/") else f"/{trigger_path}"
-        )
-        path_obj = Path(normalized.lstrip("/"))
-        if not path_obj.parts or path_obj.parts[0] != "renders":
-            return
-        if path_obj.name == "render_manifest.json":
-            return
-        if not self._is_static_preview_render(path_obj):
-            return
-
-        renders_dir = self.local_backend.root / "renders"
-        if not renders_dir.exists():
-            return
-
-        render_paths: list[str] = []
-        for entry in renders_dir.iterdir():
-            if not entry.is_file():
-                continue
-            if not self._is_static_preview_render(entry):
-                continue
-            render_paths.append(str(entry.relative_to(self.local_backend.root)))
-
-        if not render_paths:
-            return
-
-        manifest = build_render_manifest(
-            {
-                rel_path: RenderArtifactMetadata(modality="rgb")
-                for rel_path in sorted(dict.fromkeys(render_paths))
-            },
-            workspace_root=renders_dir.parent,
-        )
-        self.local_backend.write(
-            "renders/render_manifest.json",
-            manifest.model_dump_json(indent=2),
-            overwrite=True,
-        )
 
     def _resolve_local_path(self, path: str, mount: MountPoint) -> Path:
         """Resolve a virtual path to a local filesystem path.
@@ -323,8 +280,6 @@ class FilesystemRouter:
             # For "file exists", backend says "Cannot write to ... because it already exists."
             raise OSError(res.error)
 
-        self._sync_render_manifest(path)
-
     def upload_files(self, files: list[tuple[str, bytes]]) -> list[FileUploadResponse]:
         """Upload multiple files with read-only check.
 
@@ -358,9 +313,6 @@ class FilesystemRouter:
             # Delegate to backend
             backend_responses = self.local_backend.upload_files(allowed_files)
             responses.extend(backend_responses)
-
-        if manifest_sync_trigger is not None:
-            self._sync_render_manifest(manifest_sync_trigger)
 
         return responses
 

@@ -533,12 +533,19 @@ def submit_for_review(
                 session_id=session_id,
             )
             continue
-        dest_path = renders_dir / src_path.name
+        render_rel_path = Path(raw_render_path)
+        if render_rel_path.is_absolute():
+            try:
+                render_rel_path = render_rel_path.relative_to(cwd)
+            except ValueError:
+                render_rel_path = Path("renders") / src_path.name
+        dest_path = cwd / render_rel_path
         if src_path.resolve() != dest_path.resolve():
             import shutil
 
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(src_path, dest_path)
-        render_paths.append(str(Path("renders") / src_path.name))
+        render_paths.append(str(render_rel_path))
     _validate_render_manifest_bundle(renders_dir=renders_dir, render_paths=render_paths)
     logger.info("renders_persisted", count=len(render_paths), session_id=session_id)
 

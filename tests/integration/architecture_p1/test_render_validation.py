@@ -53,7 +53,6 @@ async def test_render_validation_allows_visible_rgb_seed():
         await worker.upload_file(
             "renders/images/context_view_01.png",
             _png_bytes((0, 255, 0)),
-            bypass_agent_permissions=True,
         )
 
         errors = await validate_seeded_workspace_handoff_artifacts(

@@ -16,10 +16,7 @@ from shared.utils.fasteners import fastener_hole as fastener_hole
 from shared.workers.schema import (
     BenchmarkToolResponse,
     PlanRefusal,
-    RenderArtifactMetadata,
-    RenderManifest,
 )
-from worker_heavy.utils.rendering import build_render_manifest
 
 logger = structlog.get_logger(__name__)
 SCRIPT_IMPORT_MODE_ENV = "PROBLEMOLOGIST_SCRIPT_IMPORT_MODE"
@@ -94,67 +91,6 @@ def _default_reviewer_stage() -> str:
     if (workspace / "benchmark_assembly_definition.yaml").exists():
         return AgentName.BENCHMARK_REVIEWER.value
     return AgentName.BENCHMARK_REVIEWER.value
-
-
-def _ensure_render_manifest() -> None:
-    """Materialize a revisioned render manifest before submit handoff.
-
-    The handover contract requires a `renders/render_manifest.json` bundle with a
-    repository revision. Some mock workspaces only have the preview renders
-    materialized, so synthesize a manifest from the current render files when the
-    workspace manifest is missing, invalid, or stale.
-    """
-    renders_dir = Path("renders")
-    manifest_path = renders_dir / "render_manifest.json"
-
-    current_revision = os.getenv("REPO_REVISION")
-    if not current_revision:
-        from shared.git_utils import repo_revision
-
-        current_revision = repo_revision(Path.cwd())
-    if not current_revision:
-        from shared.git_utils import repo_revision
-
-        current_revision = repo_revision(Path(__file__).resolve().parents[3])
-    if not current_revision:
-        return
-
-    if manifest_path.exists():
-        try:
-            manifest = RenderManifest.model_validate_json(
-                manifest_path.read_text(encoding="utf-8")
-            )
-            if (
-                manifest.revision
-                and manifest.revision.strip().lower() == current_revision.lower()
-            ):
-                return
-        except Exception:
-            pass
-
-    render_paths = sorted(
-        str(path.relative_to(Path.cwd()))
-        for path in renders_dir.rglob("*")
-        if path.is_file() and path.suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
-    )
-    if not render_paths:
-        return
-
-    artifacts = {
-        path: RenderArtifactMetadata(
-            modality="unknown" if path.endswith(".mp4") else "rgb"
-        )
-        for path in render_paths
-    }
-    manifest = build_render_manifest(
-        artifacts,
-        workspace_root=Path.cwd(),
-        episode_id=os.getenv("EPISODE_ID"),
-        worker_session_id=os.getenv("SESSION_ID"),
-        revision=current_revision,
-    )
-    renders_dir.mkdir(parents=True, exist_ok=True)
-    manifest_path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
 
 
 def _call_controller_script_tool(action: str, payload: dict[str, Any]) -> dict | None:
@@ -452,7 +388,6 @@ def submit_for_review(compound: Compound) -> bool:
             message=mismatch_message,
         )
         return False
-    _ensure_render_manifest()
     reviewer_stage = _default_reviewer_stage()
     episode_id = os.getenv("EPISODE_ID") or None
     if not Path("validation_results.json").exists():

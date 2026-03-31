@@ -32,7 +32,6 @@ from shared.workers.schema import (
     ElectronicsValidationRequest,
     PreviewDesignRequest,
     PreviewDesignResponse,
-    RenderArtifactMetadata,
     SimulationArtifacts,
     VerificationRequest,
 )
@@ -45,7 +44,6 @@ from worker_heavy.runtime.simulation_runner import (
 from worker_heavy.simulation.factory import close_all_session_backends
 from worker_heavy.utils import renderer_client, submit_for_review
 from worker_heavy.utils.file_validation import validate_benchmark_definition_yaml
-from worker_heavy.utils.rendering import build_render_manifest
 from worker_heavy.utils.topology import analyze_component
 from worker_heavy.utils.verification import run_verification_job
 
@@ -303,7 +301,6 @@ async def api_simulate(
                         encoding="utf-8"
                     )
                 render_blobs_base64: dict[str, str] = {}
-                render_image_paths: list[str] = []
                 for rel_path in artifacts.render_paths:
                     render_path = root / rel_path
                     if not render_path.exists() or not render_path.is_file():
@@ -314,8 +311,6 @@ async def api_simulate(
                     render_blobs_base64[rel_path] = base64.b64encode(
                         render_path.read_bytes()
                     ).decode("ascii")
-                    if suffix in {".png", ".jpg", ".jpeg"}:
-                        render_image_paths.append(rel_path)
                 render_manifest_path = root / "renders" / "render_manifest.json"
                 if render_manifest_path.exists():
                     render_blobs_base64[
@@ -323,21 +318,6 @@ async def api_simulate(
                     ] = base64.b64encode(render_manifest_path.read_bytes()).decode(
                         "ascii"
                     )
-                elif render_image_paths:
-                    synthesized_manifest = build_render_manifest(
-                        {
-                            path: RenderArtifactMetadata(modality="rgb")
-                            for path in sorted(dict.fromkeys(render_image_paths))
-                        },
-                        workspace_root=root,
-                        episode_id=x_session_id,
-                        worker_session_id=x_session_id,
-                    )
-                    render_blobs_base64[
-                        str(Path("renders") / "render_manifest.json")
-                    ] = base64.b64encode(
-                        synthesized_manifest.model_dump_json(indent=2).encode("utf-8")
-                    ).decode("ascii")
                 artifacts.render_blobs_base64 = render_blobs_base64
                 return BenchmarkToolResponse(
                     success=result.success,
@@ -686,7 +666,6 @@ async def api_submit(
                     ] = base64.b64encode(render_manifest_path.read_bytes()).decode(
                         "ascii"
                     )
-                render_image_paths: list[str] = []
                 if renders_dir.exists():
                     for render_path in sorted(renders_dir.iterdir()):
                         if not render_path.is_file():
@@ -699,27 +678,10 @@ async def api_submit(
                         }:
                             continue
                         rel_path = str(render_path.relative_to(root))
-                        if render_path.suffix.lower() in {".png", ".jpg", ".jpeg"}:
-                            render_image_paths.append(rel_path)
                         artifacts.render_paths.append(rel_path)
                         render_blobs_base64[rel_path] = base64.b64encode(
                             render_path.read_bytes()
                         ).decode("ascii")
-                if not render_manifest_path.exists() and render_image_paths:
-                    synthesized_manifest = build_render_manifest(
-                        {
-                            path: RenderArtifactMetadata(modality="rgb")
-                            for path in sorted(dict.fromkeys(render_image_paths))
-                        },
-                        workspace_root=root,
-                        episode_id=x_session_id,
-                        worker_session_id=x_session_id,
-                    )
-                    render_blobs_base64[
-                        str(Path("renders") / "render_manifest.json")
-                    ] = base64.b64encode(
-                        synthesized_manifest.model_dump_json(indent=2).encode("utf-8")
-                    ).decode("ascii")
                 artifacts.render_blobs_base64 = render_blobs_base64
                 return BenchmarkToolResponse(
                     success=success,
