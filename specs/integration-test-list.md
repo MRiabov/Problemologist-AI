@@ -363,6 +363,8 @@ benchmark geometry is exposed via `benchmark_script.py`, engineer code lives in
 | INT-208 | Call the renderer worker directly over HTTP with a minimal authored build123d script and assert `/benchmark/preview` returns a valid preview image and workspace-relative render path. | Exercising only the heavy-worker proxy path or reusing a host display instead of the renderer service boundary. |
 | INT-210 | Run a MuJoCo simulation that captures video frames, assert `VideoRenderer.save()` delegates encoding to `worker-renderer`, and verify the final MP4 is materialized in the session workspace. | Keeping MP4 encoding in-process or asserting only a synthetic video stub. |
 | INT-211 | Run a Genesis-backed simulation that captures render frames and assert the same renderer-worker video path and storage contract are used for the final MP4. | Testing Genesis frame capture without verifying the render handoff or artifact persistence. |
+| INT-212 | Call the exported `utils.preview(...)` helper from a live worker-light runtime session and assert the helper materializes a modality-specific render under the engineer preview bucket, writes `renders/render_manifest.json` atomically, and returns a structured depth preview response with workspace-relative paths. | Using a mocked preview helper or skipping the live worker-light/runtime boundary. |
+| INT-213 | Route `POST /api/script-tools/preview` through controller orchestration with a live preview bundle, assert the request passes through the Temporal-backed preview workflow, and confirm the structured response preserves the resolved artifact path, manifest path, modality, and camera angles. | Exercising only the worker-light helper or skipping the controller/Temporal preview route. |
 | INT-184 | Trigger deterministic node-entry rejection over HTTP (engineer + benchmark paths), assert terminal fail-fast, target-node non-execution, and persisted metadata schema (`node`, `disposition`, `reason_code`, `errors`, `reroute_target` when applicable); engineer planner/electronics planner runs must also fail closed when `benchmark_assembly_definition.yaml` is absent. | Calling `evaluate_node_entry_contract()` directly in-process or asserting only log strings without episode metadata/traces. |
 | INT-120 | Submit circuit via API; call `validate_circuit` endpoint; assert pass/fail controls whether simulate endpoint accepts the run. | Importing `validate_circuit()` and calling in-process. |
 | INT-121 | Submit circuit with near-zero-ohm path across supply via API; assert `FAILED_SHORT_CIRCUIT` and branch current in response. | Constructing PySpice result object manually. |
@@ -423,7 +425,7 @@ benchmark geometry is exposed via `benchmark_script.py`, engineer code lives in
 
 - `tests/integration/smoke/`: INT-001..INT-004 (fast baseline).
 - `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-070..INT-075, INT-101..INT-114, INT-120..INT-128, INT-184, INT-187, INT-188, INT-189, INT-200, INT-201, INT-202, INT-203, INT-204, INT-205.
-- `tests/integration/architecture_p1/`: INT-034, INT-160..INT-179, INT-190, INT-192, INT-206, INT-207, INT-208, INT-210, INT-211.
+- `tests/integration/architecture_p1/`: INT-034, INT-160..INT-179, INT-190, INT-192, INT-206, INT-207, INT-208, INT-210, INT-211, INT-212, INT-213.
 - `tests/integration/architecture_p2/`: (TODO: find tests here)
 
 <!--- `tests/integration/evals_p2/`: INT-046..INT-052, INT-151..INT-156. 

@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import uuid
 
@@ -22,6 +23,11 @@ from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
     BenchmarkToolRequest,
     BenchmarkToolResponse,
+    ExecuteRequest,
+    ExecuteResponse,
+    PreviewDesignResponse,
+    ReadFileRequest,
+    RenderManifest,
     WriteFileRequest,
 )
 
@@ -120,6 +126,40 @@ def build():
 """
 
 
+def _preview_solution_script() -> str:
+    return """
+from build123d import Align, Box
+from shared.models.schemas import PartMetadata
+
+
+def build():
+    part = Box(2.0, 2.0, 2.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    part.label = "preview_helper_box"
+    part.metadata = PartMetadata(material_id="aluminum_6061", fixed=False)
+    return part
+
+
+result = build()
+"""
+
+
+def _preview_probe_script() -> str:
+    return """
+from solution_script import result
+from utils import preview
+
+
+response = preview(result, pitch=-35.0, yaw=45.0, rendering_type="depth")
+print(f"PREVIEW_SUCCESS={response.success}")
+print(f"PREVIEW_STATUS={response.status_text}")
+print(f"PREVIEW_RENDERING_TYPE={response.rendering_type.value}")
+print(f"PREVIEW_ARTIFACT_PATH={response.artifact_path}")
+print(f"PREVIEW_MANIFEST_PATH={response.manifest_path}")
+print(f"PREVIEW_PITCH={response.pitch}")
+print(f"PREVIEW_YAW={response.yaw}")
+"""
+
+
 async def _write_session_workspace(
     client: httpx.AsyncClient, session_id: str, script_path: str
 ) -> None:
@@ -183,6 +223,43 @@ async def _write_session_workspace(
         headers=headers,
     )
     assert assembly_resp.status_code == 200, assembly_resp.text
+
+
+async def _write_preview_workspace(client: httpx.AsyncClient, session_id: str) -> None:
+    headers = {"X-Session-ID": session_id}
+
+    solution_resp = await client.post(
+        f"{WORKER_LIGHT_URL}/fs/write",
+        json=WriteFileRequest(
+            path="solution_script.py",
+            content=_preview_solution_script(),
+            overwrite=True,
+        ).model_dump(mode="json"),
+        headers=headers,
+    )
+    assert solution_resp.status_code == 200, solution_resp.text
+
+    assembly_resp = await client.post(
+        f"{WORKER_LIGHT_URL}/fs/write",
+        json=WriteFileRequest(
+            path="assembly_definition.yaml",
+            content="preview: true\n",
+            overwrite=True,
+        ).model_dump(mode="json"),
+        headers=headers,
+    )
+    assert assembly_resp.status_code == 200, assembly_resp.text
+
+    probe_resp = await client.post(
+        f"{WORKER_LIGHT_URL}/fs/write",
+        json=WriteFileRequest(
+            path="preview_probe.py",
+            content=_preview_probe_script(),
+            overwrite=True,
+        ).model_dump(mode="json"),
+        headers=headers,
+    )
+    assert probe_resp.status_code == 200, probe_resp.text
 
 
 @pytest.mark.integration_p1
@@ -414,6 +491,131 @@ async def test_int_193_controller_script_tools_verify_waits_through_temporal_que
         assert busy_resp.status_code == 200, busy_resp.text
         busy_data = BenchmarkToolResponse.model_validate(busy_resp.json())
         assert busy_data.success, busy_data.message
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_int_212_utils_preview_materializes_modality_manifest_and_depth_artifact():
+    """
+    INT-212: the exported utils.preview() helper must materialize a depth preview
+    bundle, write the manifest atomically, and persist a workspace-relative
+    engineer render bucket path.
+    """
+    session_id = f"INT-212-{uuid.uuid4().hex[:8]}"
+
+    async with httpx.AsyncClient(timeout=1000.0) as client:
+        await _write_preview_workspace(client, session_id)
+
+        exec_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/runtime/execute",
+            json=ExecuteRequest(
+                code="python preview_probe.py",
+                timeout=120,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=180.0,
+        )
+        assert exec_resp.status_code == 200, exec_resp.text
+        exec_data = ExecuteResponse.model_validate(exec_resp.json())
+        assert exec_data.exit_code == 0, exec_data.stderr
+        assert "PREVIEW_SUCCESS=True" in exec_data.stdout, exec_data.stdout
+        assert "PREVIEW_STATUS=Preview generated successfully" in exec_data.stdout
+        assert "PREVIEW_RENDERING_TYPE=depth" in exec_data.stdout
+        assert "PREVIEW_MANIFEST_PATH=renders/render_manifest.json" in exec_data.stdout
+        assert "PREVIEW_PITCH=-35.0" in exec_data.stdout
+        assert "PREVIEW_YAW=45.0" in exec_data.stdout
+        artifact_line = next(
+            line
+            for line in exec_data.stdout.splitlines()
+            if line.startswith("PREVIEW_ARTIFACT_PATH=")
+        )
+        artifact_path = artifact_line.split("=", 1)[1]
+        assert artifact_path.startswith("renders/")
+        assert artifact_path.endswith("_depth.png"), artifact_path
+        assert (
+            "/benchmark_renders/" in artifact_path
+            or "/engineer_renders/" in artifact_path
+        )
+
+        manifest_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/read",
+            json=ReadFileRequest(path="renders/render_manifest.json").model_dump(
+                mode="json"
+            ),
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+        assert manifest_resp.status_code == 200, manifest_resp.text
+        manifest_content = manifest_resp.json()["content"]
+        manifest = RenderManifest.model_validate_json(manifest_content)
+        assert manifest.worker_session_id == session_id
+        assert manifest.preview_evidence_paths == [artifact_path]
+        assert artifact_path in manifest.artifacts
+        artifact_metadata = manifest.artifacts[artifact_path]
+        assert artifact_metadata.modality == "depth"
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_int_213_controller_preview_route_materializes_depth_artifact_via_temporal():
+    """
+    INT-213: the controller preview route must accept a live bundle, route the
+    request through controller orchestration, and materialize a depth preview
+    bundle with an atomic manifest write.
+    """
+    session_id = f"INT-213-{uuid.uuid4().hex[:8]}"
+
+    async with httpx.AsyncClient(timeout=1000.0) as client:
+        await _write_preview_workspace(client, session_id)
+
+        bundle_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/bundle",
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+        assert bundle_resp.status_code == 200, bundle_resp.text
+        bundle_base64 = base64.b64encode(bundle_resp.content).decode("ascii")
+
+        preview_resp = await client.post(
+            f"{CONTROLLER_URL}/api/script-tools/preview",
+            json={
+                "script_path": "solution_script.py",
+                "agent_role": AgentName.ENGINEER_CODER.value,
+                "bundle_base64": bundle_base64,
+                "pitch": -35.0,
+                "yaw": 45.0,
+                "rendering_type": "depth",
+                "episode_id": session_id,
+            },
+            headers={"X-Session-ID": session_id},
+            timeout=180.0,
+        )
+
+        assert preview_resp.status_code == 200, preview_resp.text
+        preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
+        assert preview_data.success, preview_data.message
+        assert preview_data.status_text == "Preview generated successfully"
+        assert preview_data.rendering_type.value == "depth"
+        assert preview_data.manifest_path == "renders/render_manifest.json"
+        assert preview_data.pitch == -35.0
+        assert preview_data.yaw == 45.0
+        assert preview_data.artifact_path is not None
+        assert preview_data.artifact_path.startswith("renders/")
+        assert preview_data.artifact_path.endswith("_depth.png")
+
+        manifest_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/read",
+            json=ReadFileRequest(path="renders/render_manifest.json").model_dump(
+                mode="json"
+            ),
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+        assert manifest_resp.status_code == 200, manifest_resp.text
+        manifest_content = manifest_resp.json()["content"]
+        manifest = RenderManifest.model_validate_json(manifest_content)
+        assert manifest.worker_session_id == session_id
+        assert preview_data.artifact_path in manifest.artifacts
 
 
 @pytest.mark.integration_p1
