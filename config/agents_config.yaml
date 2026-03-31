@@ -183,6 +183,7 @@ agents:
         deny:
         - skills/**
         - utils/**
+        - benchmark_script.py
         - reviews/**/*.py
         - .manifests/**
     tools:
@@ -270,6 +271,7 @@ agents:
         - benchmark_assembly_definition.yaml
         - assembly_definition.yaml
         - plan_refusal.md
+        - benchmark_script.py
         - solution_script.py
         - '**/*.py'
         - simulation_result.json
@@ -318,6 +320,7 @@ agents:
         - assembly_definition.yaml
         - plan_refusal.md
         - solution_script.py
+        - benchmark_script.py
         - '**/*.py'
         - simulation_result.json
         - validation_results.json
@@ -538,7 +541,7 @@ agents:
         - benchmark_assembly_definition.yaml
         - assembly_definition.yaml
         - plan_refusal.md
-        - script.py
+        - benchmark_script.py
         - '**/*.py'
         - simulation_result.json
         - validation_results.json

@@ -25,6 +25,16 @@ BENCHMARK_CODER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
 
 ENGINEERING_EXECUTION_REVIEWER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     SOLUTION_SCRIPT_PATH,
+    BENCHMARK_SCRIPT_PATH,
+    "benchmark_assembly_definition.yaml",
+    "validation_results.json",
+    "simulation_result.json",
+)
+
+ELECTRONICS_REVIEWER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
+    SOLUTION_SCRIPT_PATH,
+    BENCHMARK_SCRIPT_PATH,
+    "benchmark_assembly_definition.yaml",
     "validation_results.json",
     "simulation_result.json",
 )
@@ -60,6 +70,8 @@ SCHEMA_BACKED_HANDOFF_PATHS: tuple[str, ...] = (
     "benchmark_definition.yaml",
     "assembly_definition.yaml",
     "benchmark_assembly_definition.yaml",
+    BENCHMARK_SCRIPT_PATH,
+    SOLUTION_SCRIPT_PATH,
     "validation_results.json",
     "simulation_result.json",
     BENCHMARK_PLAN_REVIEW_MANIFEST,
@@ -80,6 +92,7 @@ __all__ = [
     "BENCHMARK_REVIEW_MANIFEST",
     "ELECTRONICS_REVIEWER_HANDOVER_CHECK",
     "ELECTRONICS_REVIEW_MANIFEST",
+    "ELECTRONICS_REVIEWER_HANDOFF_ARTIFACTS",
     "ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS",
     "ENGINEER_BENCHMARK_SOURCE_ARTIFACTS",
     "ENGINEER_BENCHMARK_HANDOVER_CHECK",

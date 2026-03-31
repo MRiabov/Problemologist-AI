@@ -22,6 +22,7 @@ from controller.agent.handover_constants import (
     BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
     BENCHMARK_PLANNER_HANDOFF_ARTIFACTS,
     BENCHMARK_REVIEWER_HANDOVER_CHECK,
+    ELECTRONICS_REVIEWER_HANDOFF_ARTIFACTS,
     ELECTRONICS_REVIEWER_HANDOVER_CHECK,
     ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS,
     ENGINEER_BENCHMARK_HANDOVER_CHECK,
@@ -251,7 +252,7 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
         AgentName.ELECTRONICS_REVIEWER: NodeEntryContract(
             node=AgentName.ELECTRONICS_REVIEWER,
             required_state_fields=["episode_id"],
-            required_artifacts=[SOLUTION_SCRIPT_PATH],
+            required_artifacts=list(ELECTRONICS_REVIEWER_HANDOFF_ARTIFACTS),
             custom_check=ELECTRONICS_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.ENGINEER_EXECUTION_REVIEWER: NodeEntryContract(
