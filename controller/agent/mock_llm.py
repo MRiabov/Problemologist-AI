@@ -567,25 +567,13 @@ class MockDSPyLM(dspy.LM):
         return False, preview
 
     def _get_scenario_id(self, full_text: str | None = None) -> str:
-        """Extract scenario ID from session_id, test markers, and UUID fallbacks."""
+        """Extract a strict integration scenario ID from the session or prompt."""
         if full_text:
             explicit_match = re.search(r"\bINT-\d{3}\b", full_text)
             if explicit_match:
                 explicit_id = explicit_match.group(0)
                 if explicit_id in self.scenarios:
                     return explicit_id
-
-        # Check for UUID (roughly xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-        uuid_regex = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-        if re.match(uuid_regex, self.session_id.lower()):
-            if self.node_type in {
-                AgentName.BENCHMARK_PLANNER,
-                AgentName.BENCHMARK_PLAN_REVIEWER,
-                AgentName.BENCHMARK_CODER,
-                AgentName.BENCHMARK_REVIEWER,
-            }:
-                return "INT-129"
-            return self.session_id
 
         # Prefer exact scenario key before any normalization.
         if self.session_id in self.scenarios:
@@ -613,10 +601,15 @@ class MockDSPyLM(dspy.LM):
                     return scenario_parts[0] + "-" + scenario_parts[1]
                 return scenario
 
-            # Special case: INT-002 should stay INT-002
-            return self.session_id
+            # Special case: exact scenario IDs without a random suffix stay as-is.
+            if self.session_id in self.scenarios:
+                return self.session_id
 
-        return self.session_id
+        raise ValueError(
+            "MockDSPyLM could not resolve a strict integration scenario ID from "
+            f"session_id='{self.session_id}'. Provide an explicit INT-### marker in "
+            "the prompt or use an exact scenario ID."
+        )
 
     def _native_call_index(self, node_key: str, full_text: str) -> int:
         count = self._call_counts.get(node_key, 0)
@@ -711,7 +704,11 @@ class MockDSPyLM(dspy.LM):
         finish_fields: list[str],
         completion_tool_name: str = "finish",
     ) -> SimpleNamespace:
-        scenario_id = self._get_scenario_id()
+        # Native tool loop calls do not pass the original prompt separately, so
+        # resolve the scenario from the synthesized message text instead of
+        # falling back to the generic UUID benchmark scenario.
+        full_text = self._native_messages_text(messages)
+        scenario_id = self._get_scenario_id(full_text)
         if scenario_id not in self.scenarios:
             raise ValueError(
                 f"MockDSPyLM: Scenario '{scenario_id}' not found in integration mock scenarios "
@@ -724,7 +721,6 @@ class MockDSPyLM(dspy.LM):
         if node_key is None:
             raise ValueError("native_tool_completion requires explicit node_type.")
 
-        full_text = self._native_messages_text(messages)
         call_index = self._native_call_index(node_key.value, full_text)
         node_data: dict[str, Any] = scenario.get(node_key.value, {})
 
