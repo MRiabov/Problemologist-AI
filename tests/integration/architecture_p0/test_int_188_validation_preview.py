@@ -1056,7 +1056,12 @@ async def test_int_188_validation_preview_rejects_stale_render_manifest_bundle()
         session_id = f"INT-188-{uuid.uuid4().hex[:8]}"
         headers = {"X-Session-ID": session_id}
 
-        await seed_benchmark_assembly_definition(client, session_id)
+        await seed_benchmark_assembly_definition(
+            client,
+            session_id,
+            benchmark_max_unit_cost_usd=100.0,
+            planner_target_max_unit_cost_usd=80.0,
+        )
         await _write_benchmark_submit_inputs(client, headers)
 
         unique_label = "stale_manifest_box"

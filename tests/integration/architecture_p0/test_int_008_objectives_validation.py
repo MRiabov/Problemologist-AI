@@ -14,6 +14,8 @@ from shared.workers.schema import (
     WriteFileRequest,
 )
 
+pytestmark = pytest.mark.xdist_group(name="physics_sims")
+
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 
