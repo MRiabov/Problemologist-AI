@@ -54,8 +54,10 @@ I have already started editing an exiting int-033 to make it much closer to the 
 
 1. Restored the deleted INT-033 coder fixture script and aligned the mocked coder handoff to `python script.py`, which is what actually seeds `.manifests/engineering_execution_review_manifest.json`.
 2. Verified the narrow `test_engineering_full_loop` slice passes on a fresh integration run (`run_20260330_214602`).
+3. Updated the handover path to synthesize `renders/render_manifest.json` from actual preview artifacts so the execution-review gate no longer depends on the old renderer workaround.
+4. Verified the exact INT-033 full-loop slice on `run_20260331_012032`; the coder now reaches `submit_for_review` and writes the execution-review manifest successfully.
 
-\[x\] - definitely completed?
+[x] - definitely completed.
 
 2. `integration_p1` test suite is red.
    Our integration_p1 test red. I haven't run it in two weeks.
@@ -74,3 +76,11 @@ I have already started editing an exiting int-033 to make it much closer to the 
 4. [x] Verified `test_dataset_export_benchmark_row_round_trip` passes on a fresh integration run after the schema fix.
 
 5. `integration_p2` test suite wasn't even run in a month.
+
+**Progress and notes**:
+
+<!--Agent: write the progress on the task below-->
+
+1. [x] Ran `tests/integration/evals_p2/test_evals_p2.py` through `./scripts/run_integration_tests.sh` on a fresh stack.
+2. [x] Verified the slice passes cleanly on `run_20260330_234030` (`7 passed`).
+3. [x] Observed controller backend-error noise from the eval smoke cases (`INT-046` through `INT-048`) emitting `node_entry_validation_rejected` for missing `benchmark_assembly_definition.yaml`, but the integration slice still completed successfully.
