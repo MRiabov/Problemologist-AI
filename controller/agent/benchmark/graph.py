@@ -600,11 +600,12 @@ def _guarded_node(target_node: AgentName, node_callable):
                     plan=result.plan,
                     custom_objectives=result.session.custom_objectives,
                     worker_session_id=result.worker_session_id,
+                    submission=getattr(result, "submit_plan_result", None),
                 )
                 if planner_errors:
                     logger.error(
                         "planner_handoff_validation_failed",
-                        session_id=str(result.session.session_id),
+                        session_id=_effective_benchmark_worker_session_id(result),
                         errors=planner_errors,
                     )
                     result.session.validation_logs.extend(planner_errors)
@@ -717,6 +718,8 @@ async def _validate_planner_handoff(
     custom_objectives: CustomObjectives | None = None,
     *,
     worker_session_id: str | None = None,
+    submission: PlannerSubmissionResult | None = None,
+    submission_error: str | None = None,
 ) -> list[str]:
     """
     Validate benchmark planner output before allowing PLANNED state.
@@ -727,9 +730,10 @@ async def _validate_planner_handoff(
     - Structured planner output (`plan`) is present and schema-valid.
     - User-provided objective overrides are reflected in objectives constraints.
     """
-    submission, submission_error = await _get_latest_planner_submission_result(
-        episode_id
-    )
+    if submission is None and submission_error is None:
+        submission, submission_error = await _get_latest_planner_submission_result(
+            episode_id
+        )
     from controller.config.settings import settings as global_settings
 
     effective_worker_session_id = (
@@ -846,11 +850,12 @@ def define_graph():
             plan=state.plan,
             custom_objectives=state.session.custom_objectives,
             worker_session_id=state.worker_session_id,
+            submission=state.submit_plan_result,
         )
         if planner_errors:
             logger.error(
                 "planner_handoff_validation_failed",
-                session_id=str(state.session.session_id),
+                session_id=_effective_benchmark_worker_session_id(state),
                 errors=planner_errors,
             )
             state.session.status = SessionStatus.REJECTED
@@ -1235,6 +1240,7 @@ async def _execute_graph_streaming(
                     plan=final_state.plan,
                     custom_objectives=final_state.session.custom_objectives,
                     worker_session_id=final_state.worker_session_id,
+                    submission=getattr(final_state, "submit_plan_result", None),
                 )
                 if planner_errors:
                     logger.error(

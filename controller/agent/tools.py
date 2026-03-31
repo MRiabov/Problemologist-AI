@@ -37,6 +37,25 @@ def _workspace_environment_version(content: str) -> str | None:
     return version_text or None
 
 
+_CANONICAL_HASH_YAML_PATHS = {
+    "benchmark_definition.yaml",
+    "benchmark_assembly_definition.yaml",
+    "assembly_definition.yaml",
+}
+
+
+def _canonicalize_artifact_for_hash(rel_path: str, content: str) -> str:
+    if rel_path not in _CANONICAL_HASH_YAML_PATHS:
+        return content
+
+    try:
+        parsed = yaml.safe_load(content)
+    except Exception:
+        return content
+
+    return yaml.safe_dump(parsed or {}, sort_keys=False)
+
+
 def _tool_name(tool: Callable) -> str:
     return getattr(tool, "name", getattr(tool, "__name__", str(tool)))
 
@@ -539,7 +558,9 @@ def get_engineer_planner_tools(
 
         if is_valid:
             artifact_hashes = {
-                rel_path: hashlib.sha256(content.encode("utf-8")).hexdigest()
+                rel_path: hashlib.sha256(
+                    _canonicalize_artifact_for_hash(rel_path, content).encode("utf-8")
+                ).hexdigest()
                 for rel_path, content in artifacts.items()
             }
             manifest = PlanReviewManifest(

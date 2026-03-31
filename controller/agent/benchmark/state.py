@@ -6,6 +6,7 @@ from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
 
 from shared.enums import ReviewDecision
+from shared.models.schemas import PlannerSubmissionResult
 from shared.simulation.schemas import RandomizationStrategy, ValidationResult
 
 from .models import GenerationSession
@@ -24,6 +25,7 @@ class BenchmarkGeneratorState(BaseModel):
     review_decision: ReviewDecision | None = None  # Structured decision from reviewer
     start_node: str | None = None  # Optional explicit graph entry override
     hard_fail_code: str | None = None  # Structured hard-fail code from execution limits
+    submit_plan_result: PlannerSubmissionResult | None = None
     entry_validation_rejected: bool = False  # Guard rejected node entry this turn
     entry_validation_terminal: bool = False  # Guard rejection terminated workflow
     entry_validation_reason_code: str | None = None

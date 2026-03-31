@@ -14,6 +14,7 @@ from controller.agent.benchmark_handover_validation import (
     BenchmarkPlanReviewerEvidence,
     build_benchmark_plan_reviewer_evidence,
 )
+from controller.agent.tools import _canonicalize_artifact_for_hash
 from controller.clients.worker import WorkerClient
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode
@@ -630,7 +631,9 @@ async def validate_plan_reviewer_handover(
         content = await worker_client.read_file_optional(rel_path)
         if content is None:
             return f"planner artifact missing: {rel_path}"
-        actual_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        actual_hash = hashlib.sha256(
+            _canonicalize_artifact_for_hash(rel_path, content).encode("utf-8")
+        ).hexdigest()
         if actual_hash != expected_hash:
             return (
                 f"planner artifact hash mismatch for {rel_path}; "

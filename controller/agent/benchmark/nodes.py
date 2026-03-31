@@ -244,6 +244,7 @@ class BenchmarkPlannerNode(BaseNode):
         submission, submit_err = await self._get_latest_submit_plan_result(
             AgentName.BENCHMARK_PLANNER
         )
+        state.submit_plan_result = submission
         if submission is None or not submission.ok or submission.status != "submitted":
             submit_errors = (
                 [submit_err]

@@ -8,6 +8,7 @@ from pathlib import Path
 import yaml
 
 from controller.agent.tools import (
+    _canonicalize_artifact_for_hash,
     _invoke_cots_search_subagent,
     filter_tools_for_agent,
     get_common_tools,
@@ -326,7 +327,9 @@ def get_benchmark_planner_tools(
         )
         if is_valid:
             artifact_hashes = {
-                rel_path: hashlib.sha256(content.encode("utf-8")).hexdigest()
+                rel_path: hashlib.sha256(
+                    _canonicalize_artifact_for_hash(rel_path, content).encode("utf-8")
+                ).hexdigest()
                 for rel_path, content in artifacts.items()
             }
             manifest = PlanReviewManifest(

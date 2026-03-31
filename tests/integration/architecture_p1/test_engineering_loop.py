@@ -46,6 +46,12 @@ async def _read_episode_asset_text(
     return resp.text
 
 
+def _canonical_yaml_hash(text: str) -> str:
+    return hashlib.sha256(
+        yaml.safe_dump(yaml.safe_load(text), sort_keys=False).encode("utf-8")
+    ).hexdigest()
+
+
 @pytest.mark.integration_p1
 @pytest.mark.int_id("INT-033")
 @pytest.mark.asyncio
@@ -235,10 +241,13 @@ async def test_engineering_full_loop():
             asset_text = await _read_episode_asset_text(
                 client, planner_episode_id, asset_path
             )
-            assert (
-                hashlib.sha256(asset_text.encode("utf-8")).hexdigest()
-                == plan_manifest.artifact_hashes[asset_path]
-            ), f"Hash mismatch for {asset_path}"
+            if asset_path == "benchmark_definition.yaml":
+                actual_hash = _canonical_yaml_hash(asset_text)
+            else:
+                actual_hash = hashlib.sha256(asset_text.encode("utf-8")).hexdigest()
+            assert actual_hash == plan_manifest.artifact_hashes[asset_path], (
+                f"Hash mismatch for {asset_path}"
+            )
 
         assembly_definition_text = await _read_episode_asset_text(
             client, planner_episode_id, "assembly_definition.yaml"

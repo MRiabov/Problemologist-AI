@@ -1010,7 +1010,12 @@ async def test_benchmark_plan_reviewer_approval_persists_latest_revision_evidenc
         ]:
             asset_resp = await client.get(f"/episodes/{session_id}/assets/{rel_path}")
             assert asset_resp.status_code == 200, asset_resp.text
-            expected_hash = hashlib.sha256(asset_resp.text.encode("utf-8")).hexdigest()
+            canonical_asset_text = yaml.safe_dump(
+                yaml.safe_load(asset_resp.text), sort_keys=False
+            )
+            expected_hash = hashlib.sha256(
+                canonical_asset_text.encode("utf-8")
+            ).hexdigest()
             assert manifest.artifact_hashes[rel_path] == expected_hash, (
                 f"{rel_path} hash mismatch. Manifest: {manifest.artifact_hashes[rel_path]} "
                 f"Asset hash: {expected_hash}"

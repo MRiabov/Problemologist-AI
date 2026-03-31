@@ -21,5 +21,5 @@ benchmark_parts:
       fixed: true
       material_id: aluminum_6061
 constraints:
-  max_unit_cost: 180.0
-  max_weight_g: 1200.0
+  max_unit_cost: 200.0
+  max_weight_g: 1000.0
