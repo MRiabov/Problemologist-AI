@@ -621,19 +621,15 @@ def run_pytest_subprocess(
         or arg.startswith("--numprocesses=")
         for arg in pytest_args
     )
-    has_frontend_selection = any(
-        "integration_frontend" in arg
-        or "tests/integration/frontend" in arg
-        or "tests/e2e" in arg
-        for arg in pytest_args
-    )
     xdist_workers = os.environ.get("INTEGRATION_XDIST_WORKERS", "4").strip()
     xdist_dist = (
         os.environ.get("INTEGRATION_XDIST_DIST", "loadgroup").strip() or "loadgroup"
     )
+    # Keep xdist on for every integration path by default. The only supported
+    # way to serialize a subset is explicit xdist grouping or an explicit
+    # xdist opt-out/override from the caller.
     enable_xdist = (
         not has_explicit_xdist
-        and not has_frontend_selection
         and xdist_workers
         and xdist_workers not in {"0", "0.0", "false", "False", "none", "None"}
     )

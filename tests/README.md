@@ -28,7 +28,8 @@ and then runs pytest with the repo's integration filters. It only builds and
 serves the frontend when the browser slice is selected.
 
 By default, a full run is split into ordered marker buckets so release-blocking
-coverage lands first:
+coverage lands first, and the runner keeps pytest-xdist enabled for every
+integration path:
 
 1. `integration_p0`
 2. `integration_p1`
@@ -38,7 +39,9 @@ coverage lands first:
 
 The bucket expressions are disjoint, so a test runs once. Overlaps such as
 `integration_agent` + `integration_p1` stay in the later category bucket rather
-than being duplicated.
+than being duplicated. Anything not claimed by those explicit slices falls into
+the final `integration_rest` bucket.
+The bucket split is about ordering only; it does not disable xdist.
 Set `INTEGRATION_ORDERED_MARKER_SPLITS=0` if you want the old single-pass
 pytest behavior.
 
@@ -102,7 +105,12 @@ The default values are documented in `.env.example`.
 - Use `pytest.mark.integration_frontend` for browser tests that require the
   frontend stack.
 - Use `pytest.mark.xdist_group(...)` only for tests that truly cannot run
-  concurrently; do not infer serial lanes from module contents or helper names.
+  concurrently; do not infer serial lanes from module contents, helper names,
+  or the selected marker/file subset.
+- The integration runner always injects xdist for integration runs unless you
+  explicitly disable it with `INTEGRATION_XDIST_WORKERS=0` or pass your own
+  xdist flags. Selecting `integration_p1`, `integration_frontend`, `tests/e2e`,
+  or the full default suite must never turn xdist off by itself.
 - Prefer shared helpers and page objects over inline polling loops.
 - Keep assertions on observable UI state and backend responses.
 - Avoid arbitrary sleeps. Poll for a concrete DOM or API condition instead.
