@@ -17,7 +17,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from shared.models.schemas import BenchmarkDefinition
 from shared.models.simulation import RendererCapabilities, RenderMode
-from shared.rendering import configure_headless_vtk_egl, render_preview
+from shared.rendering import (
+    configure_headless_vtk_egl,
+    create_headless_vtk_render_window,
+    render_preview,
+)
 from shared.simulation.backends import RendererBackend
 from shared.workers.bundling import bundle_directory_base64
 from shared.workers.schema import SegmentationLegendEntry
@@ -151,6 +155,8 @@ _RGB_EDGE_COLOR = (0.08, 0.08, 0.08)
 _OVERLAY_EDGE_COLOR = (0.95, 0.68, 0.18)
 _RGB_AXES_COLOR = (0.12, 0.12, 0.12)
 _OVERLAY_AXES_COLOR = (0.94, 0.94, 0.94)
+_DEFAULT_PREVIEW_VIEW_ANGLE_DEG = 30.0
+_DEFAULT_PREVIEW_FRAMING_MARGIN = 1.25
 
 
 def _clamp(value: int, minimum: int, maximum: int) -> int:
@@ -254,6 +260,28 @@ def _combined_bounds(
             max_z = max(max_z, box.max[2])
 
     return (min_x, min_y, min_z), (max_x, max_y, max_z)
+
+
+def _preview_camera_distance(
+    scene: PreviewScene,
+    *,
+    width: int,
+    height: int,
+    view_angle_deg: float = _DEFAULT_PREVIEW_VIEW_ANGLE_DEG,
+    framing_margin: float = _DEFAULT_PREVIEW_FRAMING_MARGIN,
+) -> float:
+    """Return a perspective camera distance that keeps the scene fully in frame."""
+
+    aspect_ratio = max(float(width) / max(float(height), 1.0), 1e-6)
+    half_vertical_fov = math.radians(max(view_angle_deg, 1e-3) / 2.0)
+    half_horizontal_fov = math.atan(math.tan(half_vertical_fov) * aspect_ratio)
+    limiting_half_fov = max(min(half_vertical_fov, half_horizontal_fov), 1e-3)
+
+    radius = max(scene.diagonal * 0.5, 0.5)
+    return max(
+        (radius / math.sin(limiting_half_fov)) * framing_margin,
+        radius + 0.5,
+    )
 
 
 def _build_box_actor(
@@ -644,9 +672,8 @@ def _build_renderer(
         axes_actor = _build_axes_actor(scene, renderer, color=axes_color)
         renderer.AddActor2D(axes_actor)
 
-    render_window = vtkRenderWindow()
+    render_window = create_headless_vtk_render_window()
     render_window.AddRenderer(renderer)
-    render_window.SetOffScreenRendering(True)
     render_window.SetSize(width, height)
     render_window.SetMultiSamples(0)
     return _RendererBundle(renderer=renderer, window=render_window)
@@ -738,7 +765,7 @@ def render_preview_scene(
 ) -> Path:
     """Render a single preview image from a pre-built scene bundle."""
     center = scene.center
-    distance = max(scene.diagonal * 1.5, 0.5)
+    distance = _preview_camera_distance(scene, width=width, height=height)
     camera_position = camera_position_from_orbit(center, distance, pitch, yaw)
     bundle = _build_renderer(
         scene,
@@ -795,7 +822,7 @@ def render_preview_scene_bundle(
     legend_by_path: dict[str, list[SegmentationLegendEntry]] = {}
 
     center = scene.center
-    distance = max(scene.diagonal * 1.5, 0.5)
+    distance = _preview_camera_distance(scene, width=width, height=height)
     angles = [0, 45, 90, 135, 180, 225, 270, 315]
     elevations = [-15, -45, -75]
     if smoke_test_mode:
@@ -965,11 +992,14 @@ def _configure_camera(
     camera_position: tuple[float, float, float],
     lookat: tuple[float, float, float],
     up: tuple[float, float, float],
+    fov: float | None = None,
 ) -> None:
     camera = renderer.GetActiveCamera()
     camera.SetPosition(*camera_position)
     camera.SetFocalPoint(*lookat)
     camera.SetViewUp(*up)
+    if fov is not None:
+        camera.SetViewAngle(float(fov))
     camera.SetParallelProjection(False)
 
 
@@ -1015,6 +1045,7 @@ def _render_view(
     camera_position: tuple[float, float, float],
     lookat: tuple[float, float, float],
     up: tuple[float, float, float],
+    fov: float | None = None,
     capture_depth: bool = False,
 ) -> tuple[np.ndarray, np.ndarray | None]:
     _configure_camera(
@@ -1022,6 +1053,7 @@ def _render_view(
         camera_position=camera_position,
         lookat=lookat,
         up=up,
+        fov=fov,
     )
     bundle.renderer.ResetCameraClippingRange()
     bundle.window.Render()
@@ -1124,7 +1156,9 @@ class Build123dRendererBackend(RendererBackend):
             height=height,
         )
         try:
-            camera_position, lookat, up = self._resolve_camera(camera_name)
+            camera_position, lookat, up, fov = self._resolve_camera(
+                camera_name, width=width, height=height
+            )
             bundle = _build_renderer(
                 self.scene,
                 width=width,
@@ -1142,6 +1176,7 @@ class Build123dRendererBackend(RendererBackend):
                 camera_position=camera_position,
                 lookat=lookat,
                 up=up,
+                fov=fov,
                 capture_depth=False,
             )
             logger.debug(
@@ -1188,7 +1223,9 @@ class Build123dRendererBackend(RendererBackend):
             include_segmentation=include_segmentation,
         )
         try:
-            camera_position, lookat, up = self._resolve_camera(camera_name)
+            camera_position, lookat, up, fov = self._resolve_camera(
+                camera_name, width=width, height=height
+            )
             rgb_bundle: _RendererBundle | None = None
             if include_rgb:
                 rgb_bundle = _build_renderer(
@@ -1272,6 +1309,7 @@ class Build123dRendererBackend(RendererBackend):
                     camera_position=camera_position,
                     lookat=lookat,
                     up=up,
+                    fov=fov,
                     capture_depth=False,
                 )
             if depth_base_bundle is not None:
@@ -1280,6 +1318,7 @@ class Build123dRendererBackend(RendererBackend):
                     camera_position=camera_position,
                     lookat=lookat,
                     up=up,
+                    fov=fov,
                     capture_depth=True,
                 )
                 if depth_buffer is None:
@@ -1291,6 +1330,7 @@ class Build123dRendererBackend(RendererBackend):
                         camera_position=camera_position,
                         lookat=lookat,
                         up=up,
+                        fov=fov,
                         capture_depth=False,
                     )
                     depth_image = _composite_non_black(depth_render, depth_overlay)
@@ -1302,6 +1342,7 @@ class Build123dRendererBackend(RendererBackend):
                     camera_position=camera_position,
                     lookat=lookat,
                     up=up,
+                    fov=fov,
                     capture_depth=False,
                 )
                 if seg_overlay_bundle is not None:
@@ -1310,6 +1351,7 @@ class Build123dRendererBackend(RendererBackend):
                         camera_position=camera_position,
                         lookat=lookat,
                         up=up,
+                        fov=fov,
                         capture_depth=False,
                     )
                     seg_image = _composite_non_black(seg_image, seg_overlay)
@@ -1402,11 +1444,12 @@ class Build123dRendererBackend(RendererBackend):
         self._cleanup_mesh_temp_dir()
 
     def _resolve_camera(
-        self, camera_name: str
+        self, camera_name: str, *, width: int, height: int
     ) -> tuple[
         tuple[float, float, float],
         tuple[float, float, float],
         tuple[float, float, float],
+        float | None,
     ]:
         if self.scene is None:
             raise RuntimeError("Scene not loaded")
@@ -1417,9 +1460,17 @@ class Build123dRendererBackend(RendererBackend):
                 state.pos,
                 state.lookat,
                 state.up or (0.0, 0.0, 1.0),
+                state.fov,
             )
 
-        distance = max(self.scene.diagonal * 1.5, 0.5)
+        distance = _preview_camera_distance(
+            self.scene,
+            width=width,
+            height=height,
+            view_angle_deg=state.fov
+            if state and state.fov is not None
+            else _DEFAULT_PREVIEW_VIEW_ANGLE_DEG,
+        )
         default_lookat = self.scene.center
         default_pos = camera_position_from_orbit(
             default_lookat,
@@ -1427,7 +1478,12 @@ class Build123dRendererBackend(RendererBackend):
             -35.0,
             45.0,
         )
-        return default_pos, default_lookat, (0.0, 0.0, 1.0)
+        return (
+            default_pos,
+            default_lookat,
+            (0.0, 0.0, 1.0),
+            state.fov if state else None,
+        )
 
     def _cleanup_mesh_temp_dir(self) -> None:
         if self._mesh_temp_dir is None:

@@ -15,6 +15,7 @@ from shared.agents.config import load_agents_config
 from shared.models.schemas import BenchmarkDefinition
 from worker_heavy.utils.build123d_rendering import (
     Build123dRendererBackend,
+    _preview_camera_distance,
     camera_position_from_orbit,
 )
 
@@ -59,7 +60,7 @@ def preview_design(
             if scene is None:
                 raise RuntimeError("build123d preview scene failed to load")
 
-            distance = max(scene.diagonal * 1.5, 0.5)
+            distance = _preview_camera_distance(scene, width=width, height=height)
             camera_position = camera_position_from_orbit(
                 scene.center, distance, pitch, yaw
             )

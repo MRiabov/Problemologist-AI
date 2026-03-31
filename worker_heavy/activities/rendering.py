@@ -8,7 +8,10 @@ import structlog
 from build123d import export_stl
 
 from shared.observability.storage import S3Client, S3Config
-from shared.rendering import configure_headless_vtk_egl
+from shared.rendering import (
+    configure_headless_vtk_egl,
+    create_headless_vtk_render_window,
+)
 from shared.workers.loader import load_component_from_script as _load_component
 
 configure_headless_vtk_egl()
@@ -44,8 +47,7 @@ def render_selection_snapshot(
         tmp_path = Path(tmpdir)
 
         renderer = vtk.vtkRenderer()
-        render_window = vtk.vtkRenderWindow()
-        render_window.SetOffScreenRendering(1)
+        render_window = create_headless_vtk_render_window()
         render_window.AddRenderer(renderer)
 
         # 1. Add base geometry

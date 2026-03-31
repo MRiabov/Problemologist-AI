@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 import structlog
@@ -9,6 +10,8 @@ from shared.logging import configure_logging, log_marker_middleware
 from shared.rendering import configure_headless_vtk_egl
 
 configure_logging("worker-renderer")
+os.environ.setdefault("PYOPENGL_PLATFORM", "osmesa")
+os.environ.setdefault("VTK_DEFAULT_OPENGL_WINDOW", "vtkOSOpenGLRenderWindow")
 configure_headless_vtk_egl()
 
 from worker_renderer.api.routes import (
