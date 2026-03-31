@@ -128,68 +128,74 @@ async def _validate_render_manifest_bundle(
     *,
     render_paths: list[str],
 ) -> str | None:
-    render_manifests: dict[str, set[str]] = {}
-    for render_path in render_paths:
-        if not _is_static_preview_render(render_path):
-            continue
-        normalized_render_path = _normalize_render_path(render_path)
-        manifest_path = str(
-            Path(normalized_render_path).parent / "render_manifest.json"
+    expected_render_paths = {
+        _normalize_render_path(render_path)
+        for render_path in render_paths
+        if _is_static_preview_render(render_path)
+    }
+    if not expected_render_paths:
+        return None
+
+    manifest_candidates = (
+        "renders/render_manifest.json",
+        "workspace/renders/render_manifest.json",
+    )
+    manifest_path = None
+    manifest_raw = None
+    for candidate in manifest_candidates:
+        manifest_raw = await worker_client.read_file_optional(candidate)
+        if manifest_raw is not None:
+            manifest_path = candidate
+            break
+
+    if manifest_path is None or manifest_raw is None:
+        return "render manifest missing for latest preview bundle: renders/render_manifest.json"
+
+    try:
+        render_manifest = RenderManifest.model_validate_json(manifest_raw)
+    except Exception as exc:
+        return f"{manifest_path} invalid: {exc}"
+
+    if not render_manifest.revision:
+        return f"{manifest_path} revision is missing."
+    current_revision = _current_git_revision()
+    if current_revision is None:
+        return "current repository git revision could not be determined."
+    if render_manifest.revision.strip().lower() != current_revision:
+        return (
+            f"{manifest_path} revision does not match the latest repository "
+            "git revision."
         )
-        render_manifests.setdefault(manifest_path, set()).add(normalized_render_path)
 
-    for manifest_path, expected_render_paths in render_manifests.items():
-        manifest_raw = await worker_client.read_file_optional(manifest_path)
-        if manifest_raw is None:
-            return f"render manifest missing for latest preview bundle: {manifest_path}"
-
-        try:
-            render_manifest = RenderManifest.model_validate_json(manifest_raw)
-        except Exception as exc:
-            return f"{manifest_path} invalid: {exc}"
-
-        if not render_manifest.revision:
-            return f"{manifest_path} revision is missing."
-        current_revision = _current_git_revision()
-        if current_revision is None:
-            return "current repository git revision could not be determined."
-        if render_manifest.revision.strip().lower() != current_revision:
-            return (
-                f"{manifest_path} revision does not match the latest repository "
-                "git revision."
-            )
-
-        actual_render_paths = {
+    actual_render_paths = {
+        _normalize_render_path(path)
+        for path in render_manifest.artifacts.keys()
+        if _is_static_preview_render(path)
+    }
+    if actual_render_paths == expected_render_paths:
+        preview_paths = {
             _normalize_render_path(path)
-            for path in render_manifest.artifacts.keys()
+            for path in render_manifest.preview_evidence_paths
             if _is_static_preview_render(path)
         }
-        if actual_render_paths == expected_render_paths:
-            preview_paths = {
-                _normalize_render_path(path)
-                for path in render_manifest.preview_evidence_paths
-                if _is_static_preview_render(path)
-            }
-            if preview_paths == expected_render_paths:
-                continue
-            return (
-                f"{manifest_path} is out of sync with the latest preview bundle: "
-                "preview evidence paths do not match the artifact set."
-            )
-
-        missing = sorted(expected_render_paths - actual_render_paths)
-        unexpected = sorted(actual_render_paths - expected_render_paths)
-        details: list[str] = []
-        if missing:
-            details.append(f"missing entries: {missing}")
-        if unexpected:
-            details.append(f"unexpected entries: {unexpected}")
+        if preview_paths == expected_render_paths:
+            return None
         return (
             f"{manifest_path} is out of sync with the latest preview bundle: "
-            + "; ".join(details)
+            "preview evidence paths do not match the artifact set."
         )
 
-    return None
+    missing = sorted(expected_render_paths - actual_render_paths)
+    unexpected = sorted(actual_render_paths - expected_render_paths)
+    details: list[str] = []
+    if missing:
+        details.append(f"missing entries: {missing}")
+    if unexpected:
+        details.append(f"unexpected entries: {unexpected}")
+    return (
+        f"{manifest_path} is out of sync with the latest preview bundle: "
+        + "; ".join(details)
+    )
 
 
 def _is_binary_review_artifact(path: str) -> bool:

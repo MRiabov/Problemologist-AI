@@ -572,19 +572,23 @@ class RemoteFilesystemMiddleware:
         self, path: str | Path
     ) -> RenderArtifactMetadata | None:
         render_path = str(path).lstrip("/")
-        candidate_render_paths = [render_path]
-        if render_path and not render_path.startswith("workspace/"):
-            candidate_render_paths.append(f"workspace/{render_path}")
+        if render_path.startswith("workspace/"):
+            render_path = render_path.removeprefix("workspace/")
 
-        for candidate_render_path in candidate_render_paths:
-            manifest_path = Path(candidate_render_path).parent / "render_manifest.json"
-            manifest_raw = await self.client.read_file_optional(str(manifest_path))
+        manifest_candidates = (
+            "renders/render_manifest.json",
+            "workspace/renders/render_manifest.json",
+        )
+        for manifest_candidate in manifest_candidates:
+            manifest_raw = await self.client.read_file_optional(manifest_candidate)
             if manifest_raw is None:
                 continue
 
             with suppress(Exception):
                 manifest = RenderManifest.model_validate_json(manifest_raw)
-                return manifest.artifacts.get(render_path)
+                render_metadata = manifest.artifacts.get(render_path)
+                if render_metadata is not None:
+                    return render_metadata
         return None
 
     async def write_file(

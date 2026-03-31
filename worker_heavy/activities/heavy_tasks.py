@@ -106,6 +106,39 @@ def _collect_submission_artifacts(
     return artifacts
 
 
+def _collect_validation_artifacts(root: Path) -> SimulationArtifacts:
+    artifacts = SimulationArtifacts()
+
+    validation_result_path = root / "validation_results.json"
+    if validation_result_path.exists():
+        artifacts.validation_results_json = validation_result_path.read_text(
+            encoding="utf-8"
+        )
+
+    render_blobs_base64: dict[str, str] = {}
+    renders_dir = root / "renders"
+    if renders_dir.exists():
+        for render_path in sorted(renders_dir.rglob("*")):
+            if not render_path.is_file():
+                continue
+            if render_path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".mp4"}:
+                continue
+            rel_path = str(render_path.relative_to(root))
+            artifacts.render_paths.append(rel_path)
+            render_blobs_base64[rel_path] = base64.b64encode(
+                render_path.read_bytes()
+            ).decode("ascii")
+
+        render_manifest_path = renders_dir / "render_manifest.json"
+        if render_manifest_path.exists():
+            render_blobs_base64[str(Path("renders") / "render_manifest.json")] = (
+                base64.b64encode(render_manifest_path.read_bytes()).decode("ascii")
+            )
+
+    artifacts.render_blobs_base64 = render_blobs_base64
+    return artifacts
+
+
 def _collect_simulation_artifacts(
     root: Path, result: SimulationResult, *, session_id: str | None = None
 ) -> SimulationArtifacts:
@@ -210,7 +243,11 @@ async def validate_design_activity(
             smoke_test_mode=smoke_test_mode,
         )
 
-        return HeavyValidationResponse(success=is_valid, message=message)
+        return HeavyValidationResponse(
+            success=is_valid,
+            message=message,
+            artifacts=_collect_validation_artifacts(root),
+        )
 
 
 @activity.defn(name="worker_verify_design")

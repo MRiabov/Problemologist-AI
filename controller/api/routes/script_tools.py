@@ -25,12 +25,11 @@ from shared.simulation.smoke_mode import (
 )
 from shared.workers.schema import (
     BenchmarkToolResponse,
-    RenderArtifactMetadata,
+    HeavyValidationResponse,
     ReviewerStage,
     SimulationArtifacts,
     ValidationResultRecord,
 )
-from worker_heavy.utils.rendering import build_render_manifest
 
 router = APIRouter(prefix="/script-tools", tags=["script-tools"])
 
@@ -131,26 +130,14 @@ async def _collect_render_blobs(
             continue
 
     manifest_path = "renders/render_manifest.json"
-    try:
-        if await middleware.client.exists(manifest_path):
-            render_blobs_base64[manifest_path] = base64.b64encode(
-                await middleware.client.read_file_binary(manifest_path)
-            ).decode("ascii")
-        elif render_image_paths:
-            synthesized_manifest = build_render_manifest(
-                {
-                    path: RenderArtifactMetadata(modality="rgb")
-                    for path in sorted(dict.fromkeys(render_image_paths))
-                },
-                workspace_root=None,
-                episode_id=middleware.episode_id,
-                worker_session_id=middleware.client.session_id,
-            )
-            render_blobs_base64[manifest_path] = base64.b64encode(
-                synthesized_manifest.model_dump_json(indent=2).encode("utf-8")
-            ).decode("ascii")
-    except Exception:
-        pass
+    if await middleware.client.exists(manifest_path):
+        render_blobs_base64[manifest_path] = base64.b64encode(
+            await middleware.client.read_file_binary(manifest_path)
+        ).decode("ascii")
+    elif render_image_paths:
+        raise ValueError(
+            "renders/render_manifest.json missing for latest preview bundle"
+        )
 
     return render_blobs_base64
 
@@ -169,6 +156,15 @@ async def validate_script(
             if isinstance(result, BenchmarkToolResponse):
                 await middleware.client._sync_handover_artifacts_to_light(result)
                 return result
+            if isinstance(result, HeavyValidationResponse) and result.artifacts:
+                response = BenchmarkToolResponse(
+                    success=result.success,
+                    message=result.message or "Validation completed",
+                    confidence="high",
+                    artifacts=result.artifacts,
+                )
+                await middleware.client._sync_handover_artifacts_to_light(response)
+                return response
             if not await middleware.client.exists(payload.script_path):
                 raise FileNotFoundError(
                     f"script missing while materializing validation record: {payload.script_path}"

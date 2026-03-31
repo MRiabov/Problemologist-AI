@@ -1,5 +1,4 @@
 import asyncio
-import base64
 import hashlib
 import inspect
 import json
@@ -54,6 +53,7 @@ from ..review_handover import (
     collect_plan_reviewer_handover_evidence,
     validate_reviewer_handover,
 )
+from .render_seed import seed_benchmark_review_preview_bundle
 from .state import BenchmarkGeneratorState
 from .tools import get_benchmark_planner_tools, get_benchmark_tools
 
@@ -1271,8 +1271,8 @@ class BenchmarkPlanReviewerNode(BaseNode):
         solvability_evidence = evidence
 
         # Ensure the reviewer can actually inspect the render paths surfaced in
-        # the handover evidence. Some benchmark episodes register render assets
-        # before the underlying file is discoverable in the worker workspace.
+        # the handover evidence. The canonical seed path writes both the preview
+        # images and render manifest in one pass so the bundle stays complete.
         render_paths = [
             path for path in (solvability_evidence.render_paths or []) if path
         ]
@@ -1281,33 +1281,11 @@ class BenchmarkPlanReviewerNode(BaseNode):
             if render_path not in render_seed_paths:
                 render_seed_paths.append(render_path)
         try:
-            from controller.observability.middleware_helper import (
-                broadcast_file_update,
+            await seed_benchmark_review_preview_bundle(
+                self.ctx.worker_client,
+                session_id=str(state.episode_id),
+                render_paths=render_seed_paths,
             )
-
-            tiny_png = base64.b64decode(
-                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W8FcAAAAASUVORK5CYII="
-            )
-            for render_path in render_seed_paths:
-                normalized_render_path = str(render_path).lstrip("/")
-                if not normalized_render_path.lower().endswith(
-                    (".png", ".jpg", ".jpeg")
-                ):
-                    continue
-                try:
-                    if await self.ctx.worker_client.exists(normalized_render_path):
-                        continue
-                except Exception:
-                    continue
-                try:
-                    await self.ctx.worker_client.upload_file(
-                        normalized_render_path, tiny_png
-                    )
-                    await broadcast_file_update(
-                        str(state.episode_id), normalized_render_path, ""
-                    )
-                except Exception:
-                    continue
         except Exception as exc:
             logger.warning(
                 "benchmark_plan_reviewer_render_seed_failed",

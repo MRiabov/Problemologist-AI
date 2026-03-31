@@ -134,9 +134,12 @@ async def sync_asset(
         asset_type: Optional explicit AssetType. If None, inferred from extension.
     """
     episode_uuid = resolve_episode_id(episode_id)
+    normalized_path = Path(path).as_posix().lstrip("/")
+    if not normalized_path:
+        normalized_path = Path(path).as_posix()
 
     if asset_type is None:
-        p = Path(path)
+        p = Path(normalized_path)
         ext = p.suffix.lower()
         if ext == ".py":
             asset_type = AssetType.PYTHON
@@ -170,7 +173,7 @@ async def sync_asset(
 
         # Check if asset already exists
         stmt = select(Asset).where(
-            Asset.episode_id == episode_uuid, Asset.s3_path == path
+            Asset.episode_id == episode_uuid, Asset.s3_path == normalized_path
         )
         res = await db.execute(stmt)
         asset = res.scalar_one_or_none()
@@ -182,14 +185,14 @@ async def sync_asset(
             logger.info(
                 "sync_asset_updated",
                 episode_id=str(episode_uuid),
-                path=str(path),
+                path=normalized_path,
                 type=asset_type,
             )
         else:
             asset = Asset(
                 episode_id=episode_uuid,
                 user_session_id=user_session_id,
-                s3_path=str(path),
+                s3_path=normalized_path,
                 content=content,
                 asset_type=asset_type,
             )
@@ -197,7 +200,7 @@ async def sync_asset(
             logger.info(
                 "sync_asset_created",
                 episode_id=str(episode_uuid),
-                path=str(path),
+                path=normalized_path,
                 type=asset_type,
             )
 

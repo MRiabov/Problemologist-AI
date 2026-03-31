@@ -44,6 +44,7 @@ from shared.simulation.schemas import (
     get_default_simulator_backend,
 )
 from shared.wire_utils import calculate_path_length, check_wire_clearance
+from shared.workers.schema import RenderArtifactMetadata
 from shared.workers.workbench_models import ManufacturingConfig
 from worker_heavy.simulation.factory import (
     close_all_session_backends,
@@ -55,7 +56,7 @@ from worker_heavy.utils.build123d_rendering import (
     PREVIEW_BACKEND_NAME,
     export_preview_scene_bundle,
 )
-from worker_heavy.utils.rendering import prerender_24_views
+from worker_heavy.utils.rendering import build_render_manifest, prerender_24_views
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
 from .dfm import (
@@ -1922,6 +1923,26 @@ def validate(
                 "validation_renderer_materialized",
                 session_id=session_id,
                 render_paths=render_paths,
+            )
+        runtime_revision = repo_revision(Path(__file__).resolve().parents[2])
+
+        manifest_artifacts: dict[str, RenderArtifactMetadata] = {}
+        for render_path in render_paths:
+            suffix = Path(render_path).suffix.lower()
+            manifest_artifacts[render_path] = RenderArtifactMetadata(
+                modality="unknown" if suffix == ".mp4" else "rgb"
+            )
+        if render_paths:
+            manifest = build_render_manifest(
+                manifest_artifacts,
+                workspace_root=working_root,
+                episode_id=session_id,
+                worker_session_id=session_id,
+                revision=runtime_revision,
+            )
+            (renders_dir / "render_manifest.json").write_text(
+                manifest.model_dump_json(indent=2),
+                encoding="utf-8",
             )
     except Exception as e:
         logger.warning(

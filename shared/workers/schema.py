@@ -608,6 +608,7 @@ class HeavyValidationResponse(BaseModel):
 
     success: bool
     message: str | None = None
+    artifacts: SimulationArtifacts | None = None
 
 
 class HeavyPreviewResponse(BaseModel):

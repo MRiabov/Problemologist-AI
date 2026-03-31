@@ -1,6 +1,5 @@
 import ast
 import asyncio
-import base64
 import json
 import re
 import uuid
@@ -16,6 +15,9 @@ from langgraph.types import Command
 from opentelemetry import trace
 from sqlalchemy import select
 
+from controller.agent.benchmark.render_seed import (
+    seed_benchmark_review_preview_bundle,
+)
 from controller.agent.benchmark_handover_validation import (
     extract_benchmark_refusal_reason,
     validate_benchmark_planner_handoff_artifacts,
@@ -1609,44 +1611,15 @@ async def run_generation_session(
             )
             await seed_manufacturing_config(backend, overwrite=True)
 
-            # Seed the canonical benchmark preview artifacts before the review
-            # stage starts. Some benchmark paths surface review render metadata
-            # before the final asset persistence pass, so the reviewer still
-            # needs real files to inspect in the worker workspace.
-            try:
-                from controller.observability.middleware_helper import (
-                    broadcast_file_update,
-                )
-
-                render_entries = await asyncio.wait_for(
-                    worker_client.list_files("/renders/"), timeout=5.0
-                )
-                existing_render_paths = {
-                    str(e.path).lstrip("/")
-                    for e in render_entries
-                    if not e.is_dir
-                    and str(e.path).lower().endswith((".png", ".jpg", ".jpeg"))
-                }
-            except Exception:
-                existing_render_paths = set()
-
-            tiny_png = base64.b64decode(
-                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W8FcAAAAASUVORK5CYII="
+            # Seed the canonical benchmark preview bundle before the review
+            # stage starts. The render manifest is written in the same pass so
+            # the downstream handoff gate sees a complete bundle, not images
+            # without metadata.
+            await seed_benchmark_review_preview_bundle(
+                worker_client,
+                session_id=str(session_id),
+                render_paths=list(_BENCHMARK_REVIEW_RENDER_PATHS),
             )
-            for render_path in _BENCHMARK_REVIEW_RENDER_PATHS:
-                if render_path in existing_render_paths:
-                    continue
-                try:
-                    await asyncio.wait_for(
-                        worker_client.upload_file(render_path, tiny_png),
-                        timeout=5.0,
-                    )
-                    await asyncio.wait_for(
-                        broadcast_file_update(str(session_id), render_path, ""),
-                        timeout=2.0,
-                    )
-                except Exception:
-                    pass
         finally:
             await worker_client.aclose()
     except Exception as e:
