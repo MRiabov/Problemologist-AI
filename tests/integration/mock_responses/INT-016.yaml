@@ -27,6 +27,11 @@ transcript:
       overwrite: true
       content_file: INT-016/engineer_planner/entry_01/04__benchmark_definition.yaml
     expected_observation: success
+  - thought: Inspect the benchmark render before submission.
+    tool_name: inspect_media
+    tool_args:
+      path: renders/render_e45_a45.png
+    expected_observation: attached_to_model
   - tool_name: submit_plan
     expected_observation: submitted
   - finished: true
@@ -52,14 +57,22 @@ transcript:
       required_fixes: []
 - node: engineer_coder
   steps:
-  - tool_name: write_file
+  - thought: Implement metadata-compliant script that places projectile_ball inside
+      goal zone.
+    tool_name: write_file
     tool_args:
       path: script.py
       overwrite: true
       content_file: INT-016/engineer_coder/entry_01/01__script.py
     expected_observation: success
+  - thought: Run the authored script through validation, simulation, and review handoff.
+    tool_name: execute_command
+    tool_args:
+      command: python script.py
+    expected_observation: 'True'
   - finished: true
-    journal: INT-016 coder produced minimal execution artifact.
+    journal: INT-016 coder output generated.
+    thought: Implementation complete.
 - node: electronics_reviewer
   steps:
   - finished: true

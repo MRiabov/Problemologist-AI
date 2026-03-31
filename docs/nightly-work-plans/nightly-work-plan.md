@@ -67,6 +67,10 @@ I have already started editing an exiting int-033 to make it much closer to the 
 
 <!--Agent: write the progress on the task below-->
 
+1. [x] Restored INT-016 to the actual planner/coder contract: added the required `inspect_media(renders/render_e45_a45.png)` planner step, aligned the coder transcript with `python script.py`, and fixed the benchmark geometry so validation/simulation can reach `submit_for_review(compound)`.
+2. [x] Verified `tests/integration/architecture_p1/test_dataset_export.py::test_dataset_export_solution_row_round_trip` passes on a fresh integration run after the INT-016 fixture fixes.
+3. [ ] The broader `integration_p1` sweep was not rerun after the targeted INT-016 fix; the last full sweep still had separate failures in `INT-186` and `INT-042`, which need a follow-up pass.
+
 1. [x] Repaired `INT-186` so the forced worker-light outage waits for the coder invoke boundary instead of firing during the planner's validation submission.
 
 2. [x] Verified the live `integration_p1` run now passes through `test_int_186_system_failed_tool_retry_cap_and_terminal_metadata` after the timing fix.
