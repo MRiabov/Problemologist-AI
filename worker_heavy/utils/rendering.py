@@ -33,7 +33,6 @@ from shared.workers.schema import (
 from worker_heavy.utils.build123d_rendering import (
     PREVIEW_BACKEND_NAME,
     export_preview_scene_bundle,
-    render_preview_bundle,
 )
 
 logger = structlog.get_logger(__name__)
@@ -87,6 +86,8 @@ def build_render_manifest(
     resolved_revision = revision
     if not resolved_revision:
         resolved_revision = os.getenv("REPO_REVISION")
+    if not resolved_revision:
+        resolved_revision = repo_revision(Path.cwd())
     if not resolved_revision and workspace_root is not None:
         resolved_revision = repo_revision(workspace_root)
     if not resolved_revision:
@@ -111,6 +112,100 @@ def build_render_manifest(
         environment_version=environment_version,
         preview_evidence_paths=preview_evidence_paths,
         artifacts=artifacts,
+    )
+
+
+def _render_group_key(render_path: str) -> tuple[str, str]:
+    filename = Path(render_path).name
+    stem = Path(render_path).stem
+    if filename.endswith("_depth.png"):
+        return stem.removesuffix("_depth"), "depth"
+    if filename.endswith("_segmentation.png"):
+        return stem.removesuffix("_segmentation"), "segmentation"
+    if filename.endswith(".mp4"):
+        return stem, "unknown"
+    return stem, "rgb"
+
+
+def _infer_render_artifact_metadata(
+    render_path: str,
+    *,
+    existing: RenderArtifactMetadata | None = None,
+) -> RenderArtifactMetadata:
+    group_key, modality = _render_group_key(render_path)
+    rel_path = Path(render_path)
+    render_dir = rel_path.parent
+    metadata = RenderArtifactMetadata(
+        modality=modality,
+        group_key=group_key,
+        siblings=RenderSiblingPaths(
+            rgb=str(render_dir / f"{group_key}.png"),
+            depth=str(render_dir / f"{group_key}_depth.png"),
+            segmentation=str(render_dir / f"{group_key}_segmentation.png"),
+        ),
+    )
+
+    if modality == "depth":
+        metadata.depth_interpretation = (
+            existing.depth_interpretation
+            if existing and existing.depth_interpretation
+            else "Brighter pixels are nearer. Values are normalized per image "
+            "from the build123d/VTK preview renderer."
+        )
+    elif modality == "segmentation" and existing and existing.segmentation_legend:
+        metadata.segmentation_legend = list(existing.segmentation_legend)
+    elif modality == "segmentation" and existing and not existing.segmentation_legend:
+        metadata.segmentation_legend = []
+
+    if existing is not None:
+        if existing.depth_min_m is not None:
+            metadata.depth_min_m = existing.depth_min_m
+        if existing.depth_max_m is not None:
+            metadata.depth_max_m = existing.depth_max_m
+        if existing.depth_interpretation and modality != "depth":
+            metadata.depth_interpretation = existing.depth_interpretation
+        if existing.segmentation_legend and modality != "segmentation":
+            metadata.segmentation_legend = list(existing.segmentation_legend)
+
+    return metadata
+
+
+def normalize_render_manifest(
+    *,
+    render_paths: list[str],
+    workspace_root: Path | None = None,
+    existing_manifest: RenderManifest | None = None,
+    episode_id: str | None = None,
+    worker_session_id: str | None = None,
+    revision: str | None = None,
+    environment_version: str | None = None,
+    preview_evidence_paths: list[str] | None = None,
+) -> RenderManifest:
+    existing_artifacts = dict(existing_manifest.artifacts) if existing_manifest else {}
+    normalized_artifacts: dict[str, RenderArtifactMetadata] = {}
+    for render_path in render_paths:
+        suffix = Path(render_path).suffix.lower()
+        if suffix not in {".png", ".jpg", ".jpeg", ".mp4"}:
+            continue
+        normalized_artifacts[render_path] = _infer_render_artifact_metadata(
+            render_path, existing=existing_artifacts.get(render_path)
+        )
+
+    resolved_revision = revision
+    if not resolved_revision and existing_manifest is not None:
+        resolved_revision = existing_manifest.revision
+    resolved_environment_version = environment_version
+    if resolved_environment_version is None and existing_manifest is not None:
+        resolved_environment_version = existing_manifest.environment_version
+
+    return build_render_manifest(
+        normalized_artifacts,
+        workspace_root=workspace_root,
+        episode_id=episode_id,
+        worker_session_id=worker_session_id,
+        revision=resolved_revision,
+        environment_version=resolved_environment_version,
+        preview_evidence_paths=preview_evidence_paths,
     )
 
 
@@ -218,7 +313,6 @@ def prerender_24_views(
         output_dir = os.getenv("RENDERS_DIR", "./renders")
 
     output_path = Path(output_dir)
-    local_renderer = os.getenv("WORKER_RENDERER_LOCAL_RENDER") == "1"
     render_policy = load_agents_config().render
     logger.info(
         "prerender_24_views_start",
@@ -277,95 +371,56 @@ def prerender_24_views(
         )
 
         preview_start = time.time()
-        if local_renderer:
-            saved_paths, legend_by_path = render_preview_bundle(
-                component,
-                output_dir=output_path,
-                objectives=objectives,
-                smoke_test_mode=smoke_test_mode,
-                workspace_root=workspace_root,
-                rgb_axes=render_policy.rgb.axes,
-                rgb_edges=render_policy.rgb.edges,
-                depth_axes=render_policy.depth.axes,
-                depth_edges=render_policy.depth.edges,
-                segmentation_axes=render_policy.segmentation.axes,
-                segmentation_edges=render_policy.segmentation.edges,
-                include_rgb=render_policy.rgb.enabled,
-                include_depth=render_policy.depth.enabled,
-                include_segmentation=render_policy.segmentation.enabled,
-            )
-            manifest_artifacts, render_paths = _build_preview_artifacts(
-                saved_paths,
-                legend_by_path,
-                workspace_root=workspace_root,
-            )
-            manifest = build_render_manifest(
-                manifest_artifacts,
-                workspace_root=workspace_root,
-                episode_id=session_id,
-                worker_session_id=session_id,
-                revision=revision,
-                environment_version=environment_version,
-            )
+        bundle_base64 = export_preview_scene_bundle(
+            component,
+            objectives=objectives,
+            workspace_root=workspace_root,
+            smoke_test_mode=smoke_test_mode,
+        )
+        response = render_static_preview(
+            bundle_base64=bundle_base64,
+            script_path="preview_scene.json",
+            session_id=session_id or "renderer",
+            smoke_test_mode=smoke_test_mode,
+            particle_budget=particle_budget,
+        )
+        if not response.success:
+            raise RuntimeError(response.message or "renderer returned failure")
+        if response.artifacts is None:
+            raise RuntimeError("renderer returned no artifacts")
 
-            manifest_path = output_path / "render_manifest.json"
-            manifest_path.write_text(
-                manifest.model_dump_json(indent=2),
-                encoding="utf-8",
-            )
-        else:
-            bundle_base64 = export_preview_scene_bundle(
-                component,
-                objectives=objectives,
-                workspace_root=workspace_root,
-                smoke_test_mode=smoke_test_mode,
-            )
-            response = render_static_preview(
-                bundle_base64=bundle_base64,
-                script_path="preview_scene.json",
-                session_id=session_id or "renderer",
-                smoke_test_mode=smoke_test_mode,
-                particle_budget=particle_budget,
-            )
-            if not response.success:
-                raise RuntimeError(response.message or "renderer returned failure")
-            if response.artifacts is None:
-                raise RuntimeError("renderer returned no artifacts")
+        render_paths = materialize_render_artifacts(response.artifacts, workspace_root)
+        render_paths = [
+            path
+            for path in render_paths
+            if Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
+        ]
+        if not render_paths:
+            raise RuntimeError("renderer returned no preview image artifacts")
+        manifest_path = output_path / "render_manifest.json"
+        existing_manifest = None
+        if manifest_path.exists():
+            try:
+                existing_manifest = RenderManifest.model_validate_json(
+                    manifest_path.read_text(encoding="utf-8")
+                )
+            except Exception:
+                existing_manifest = None
 
-            render_paths = materialize_render_artifacts(
-                response.artifacts, workspace_root
-            )
-            render_paths = [
-                path
-                for path in render_paths
-                if Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
-            ]
-            if not render_paths:
-                raise RuntimeError("renderer returned no preview image artifacts")
-            manifest_path = output_path / "render_manifest.json"
-            # The renderer worker already materializes a rich render manifest when
-            # it can build one from preview scene metadata. Preserve that manifest
-            # instead of overwriting it with a synthetic RGB-only fallback, which
-            # would discard segmentation legends and modality-specific metadata.
-            if not manifest_path.exists():
-                manifest = build_render_manifest(
-                    {
-                        path: RenderArtifactMetadata(
-                            modality="unknown" if path.endswith(".mp4") else "rgb"
-                        )
-                        for path in render_paths
-                    },
-                    workspace_root=workspace_root,
-                    episode_id=session_id,
-                    worker_session_id=session_id,
-                    revision=revision,
-                    environment_version=environment_version,
-                )
-                manifest_path.write_text(
-                    manifest.model_dump_json(indent=2),
-                    encoding="utf-8",
-                )
-            saved_files = list(render_paths)
+        manifest = normalize_render_manifest(
+            render_paths=render_paths,
+            workspace_root=workspace_root,
+            existing_manifest=existing_manifest,
+            episode_id=session_id,
+            worker_session_id=session_id,
+            revision=revision,
+            environment_version=environment_version,
+        )
+        manifest_path.write_text(
+            manifest.model_dump_json(indent=2),
+            encoding="utf-8",
+        )
+        saved_files = list(render_paths)
 
         emit_event(
             {

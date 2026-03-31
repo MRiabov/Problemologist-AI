@@ -12,6 +12,7 @@ import structlog
 from fastapi import APIRouter, Header, HTTPException
 
 from shared.agents.config import load_agents_config
+from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition
 from shared.workers.bundling import extract_bundle_base64
 from shared.workers.loader import load_component_from_script
@@ -22,6 +23,7 @@ from shared.workers.schema import (
     PreviewDesignRequest,
     PreviewDesignResponse,
     RenderArtifactMetadata,
+    RenderManifest,
     RenderSiblingPaths,
     SegmentationLegendEntry,
     SimulationArtifacts,
@@ -29,12 +31,16 @@ from shared.workers.schema import (
 )
 from worker_heavy.utils.build123d_rendering import (
     PreviewScene,
+    render_preview_bundle,
     render_preview_scene,
     render_preview_scene_bundle,
 )
 from worker_heavy.utils.file_validation import validate_benchmark_definition_yaml
 from worker_heavy.utils.preview import preview_design
-from worker_heavy.utils.rendering import build_render_manifest, prerender_24_views
+from worker_heavy.utils.rendering import (
+    build_render_manifest,
+    normalize_render_manifest,
+)
 
 logger = structlog.get_logger(__name__)
 renderer_router = APIRouter()
@@ -145,7 +151,6 @@ def _collect_render_artifacts(
 ) -> SimulationArtifacts:
     normalized_render_paths: list[str] = []
     render_blobs_base64: dict[str, str] = {}
-    render_image_paths: list[str] = []
 
     for raw_path in render_paths:
         candidate = Path(raw_path)
@@ -168,23 +173,29 @@ def _collect_render_artifacts(
         render_blobs_base64[rel_key] = base64.b64encode(
             render_path.read_bytes()
         ).decode("ascii")
-        if suffix in {".png", ".jpg", ".jpeg"}:
-            render_image_paths.append(rel_key)
 
     render_manifest_path = root / "renders" / "render_manifest.json"
+    existing_manifest = None
     if render_manifest_path.exists():
-        render_blobs_base64[str(Path("renders") / "render_manifest.json")] = (
-            base64.b64encode(render_manifest_path.read_bytes()).decode("ascii")
+        with contextlib.suppress(Exception):
+            existing_manifest = RenderManifest.model_validate_json(
+                render_manifest_path.read_text(encoding="utf-8")
+            )
+
+    if normalized_render_paths:
+        resolved_revision = (
+            os.environ.get("REPO_REVISION")
+            or repo_revision(Path.cwd())
+            or repo_revision(root)
+            or repo_revision(Path(__file__).resolve().parents[2])
         )
-    elif render_image_paths:
-        synthesized_manifest = build_render_manifest(
-            {
-                path: RenderArtifactMetadata(modality="rgb")
-                for path in sorted(dict.fromkeys(render_image_paths))
-            },
+        synthesized_manifest = normalize_render_manifest(
+            render_paths=normalized_render_paths,
             workspace_root=root,
+            existing_manifest=existing_manifest,
             episode_id=session_id,
             worker_session_id=session_id,
+            revision=resolved_revision,
         )
         render_blobs_base64[str(Path("renders") / "render_manifest.json")] = (
             base64.b64encode(
@@ -429,14 +440,27 @@ async def api_static_preview(
                             script_content=request.script_content,
                         )
                         saved_paths, _legend_by_path = await asyncio.to_thread(
-                            prerender_24_views,
+                            render_preview_bundle,
                             component,
                             output_dir=renders_dir,
                             objectives=objectives,
-                            backend_type=request.backend,
-                            session_id=x_session_id,
                             smoke_test_mode=bool(request.smoke_test_mode),
-                            particle_budget=request.particle_budget,
+                            workspace_root=root,
+                            rgb_axes=render_policy.rgb.axes,
+                            rgb_edges=render_policy.rgb.edges,
+                            depth_axes=render_policy.depth.axes,
+                            depth_edges=render_policy.depth.edges,
+                            segmentation_axes=render_policy.segmentation.axes,
+                            segmentation_edges=render_policy.segmentation.edges,
+                            include_rgb=render_policy.rgb.enabled,
+                            include_depth=render_policy.depth.enabled,
+                            include_segmentation=render_policy.segmentation.enabled,
+                        )
+                        _build_preview_manifest(
+                            root=root,
+                            saved_paths=saved_paths,
+                            legend_by_path=_legend_by_path,
+                            session_id=x_session_id,
                         )
 
                 events = collect_and_cleanup_events(root, session_id=x_session_id)

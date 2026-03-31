@@ -51,16 +51,28 @@ def commit_all(path: Path, message: str) -> str | None:
 
 def repo_revision(path: Path) -> str | None:
     """Return the current git HEAD commit for a repository root."""
-    try:
-        revision = (
-            subprocess.check_output(
-                ["git", "-C", str(path), "rev-parse", "--verify", "HEAD"],
-                text=True,
-                stderr=subprocess.DEVNULL,
+    candidates = []
+    candidate = path if path.is_dir() else path.parent
+    candidates.append(candidate)
+    candidates.extend(candidate.parents)
+
+    seen: set[Path] = set()
+    for repo_root in candidates:
+        if repo_root in seen:
+            continue
+        seen.add(repo_root)
+        try:
+            revision = (
+                subprocess.check_output(
+                    ["git", "-C", str(repo_root), "rev-parse", "--verify", "HEAD"],
+                    text=True,
+                    stderr=subprocess.DEVNULL,
+                )
+                .strip()
+                .lower()
             )
-            .strip()
-            .lower()
-        )
-    except Exception:
-        return None
-    return revision or None
+        except Exception:
+            continue
+        if revision:
+            return revision
+    return None

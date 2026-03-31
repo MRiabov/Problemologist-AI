@@ -44,7 +44,7 @@ from shared.simulation.schemas import (
     get_default_simulator_backend,
 )
 from shared.wire_utils import calculate_path_length, check_wire_clearance
-from shared.workers.schema import RenderArtifactMetadata
+from shared.workers.schema import RenderManifest
 from shared.workers.workbench_models import ManufacturingConfig
 from worker_heavy.simulation.factory import (
     close_all_session_backends,
@@ -56,7 +56,10 @@ from worker_heavy.utils.build123d_rendering import (
     PREVIEW_BACKEND_NAME,
     export_preview_scene_bundle,
 )
-from worker_heavy.utils.rendering import build_render_manifest, prerender_24_views
+from worker_heavy.utils.rendering import (
+    normalize_render_manifest,
+    prerender_24_views,
+)
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
 from .dfm import (
@@ -1578,7 +1581,11 @@ def simulate(
         status_msg = metrics.fail_reason or (
             "Goal achieved." if metrics.success else "Simulation stable."
         )
-        runtime_revision = repo_revision(Path(__file__).resolve().parents[2])
+        runtime_revision = (
+            os.environ.get("REPO_REVISION")
+            or repo_revision(Path.cwd())
+            or repo_revision(Path(__file__).resolve().parents[2])
+        )
 
         try:
             isolated_script_path = working_dir / "script.py"
@@ -1924,23 +1931,31 @@ def validate(
                 session_id=session_id,
                 render_paths=render_paths,
             )
-        runtime_revision = repo_revision(Path(__file__).resolve().parents[2])
+        runtime_revision = (
+            os.environ.get("REPO_REVISION")
+            or repo_revision(Path.cwd())
+            or repo_revision(Path(__file__).resolve().parents[2])
+        )
 
-        manifest_artifacts: dict[str, RenderArtifactMetadata] = {}
-        for render_path in render_paths:
-            suffix = Path(render_path).suffix.lower()
-            manifest_artifacts[render_path] = RenderArtifactMetadata(
-                modality="unknown" if suffix == ".mp4" else "rgb"
-            )
         if render_paths:
-            manifest = build_render_manifest(
-                manifest_artifacts,
+            manifest_path = renders_dir / "render_manifest.json"
+            existing_manifest = None
+            if manifest_path.exists():
+                with contextlib.suppress(Exception):
+                    existing_manifest = RenderManifest.model_validate_json(
+                        manifest_path.read_text(encoding="utf-8")
+                    )
+
+            manifest = normalize_render_manifest(
+                render_paths=render_paths,
                 workspace_root=working_root,
+                existing_manifest=existing_manifest,
                 episode_id=session_id,
                 worker_session_id=session_id,
                 revision=runtime_revision,
+                environment_version=None,
             )
-            (renders_dir / "render_manifest.json").write_text(
+            manifest_path.write_text(
                 manifest.model_dump_json(indent=2),
                 encoding="utf-8",
             )
