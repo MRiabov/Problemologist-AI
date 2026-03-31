@@ -36,6 +36,7 @@ from shared.workers.schema import (
     VerificationRequest,
 )
 from shared.workers.workbench_models import WorkbenchResult
+from worker_heavy.config import settings
 from worker_heavy.runtime.simulation_runner import (
     cleanup_simulation_executor,
     run_simulation_in_isolated_process,
@@ -198,12 +199,21 @@ def heavy_busy_context() -> dict[str, str]:
     return dict(_HEAVY_BUSY_CONTEXT)
 
 
-def _busy_detail() -> dict[str, Any]:
-    return {
+def heavy_busy_payload() -> dict[str, Any]:
+    payload: dict[str, Any] = {
         "code": "WORKER_BUSY",
         "message": "Heavy worker already has an active job",
         "active_job": heavy_busy_context(),
     }
+    if settings.is_integration_test:
+        active_job = payload.get("active_job")
+        if isinstance(active_job, dict) and active_job.get("session_id"):
+            payload["busy_session_id"] = active_job["session_id"]
+    return payload
+
+
+def _busy_detail() -> dict[str, Any]:
+    return heavy_busy_payload()
 
 
 @contextlib.asynccontextmanager

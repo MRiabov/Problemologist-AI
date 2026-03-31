@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from shared.logging import configure_logging, log_marker_middleware
 from worker_heavy.api.routes import (
-    heavy_busy_context,
+    heavy_busy_payload,
     heavy_router,
     is_heavy_busy,
 )
@@ -73,12 +73,7 @@ async def ready_check():
     """Readiness endpoint for external admission/routing."""
     if is_heavy_busy():
         return JSONResponse(
-            status_code=503,
-            content={
-                "status": "busy",
-                "code": "WORKER_BUSY",
-                "active_job": heavy_busy_context(),
-            },
+            status_code=503, content={"status": "busy", **heavy_busy_payload()}
         )
     return {"status": "ready"}
 
