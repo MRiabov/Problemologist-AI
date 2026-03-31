@@ -1,7 +1,8 @@
 transcript:
 - node: engineer_planner
   steps:
-  - thought: Create deterministic planner artifacts for full engineering-loop coverage while leaving benchmark_definition.yaml unchanged.
+  - thought: Create deterministic planner artifacts for full engineering-loop coverage
+      while leaving benchmark_definition.yaml unchanged.
     tool_name: write_file
     tool_args:
       path: plan.md
@@ -60,14 +61,14 @@ transcript:
       goal zone.
     tool_name: write_file
     tool_args:
-      path: script.py
+      path: solution_script.py
       overwrite: true
-      content_file: INT-033/engineer_coder/entry_01/01__script.py
+      content_file: INT-033/engineer_coder/entry_01/01__solution_script.py
     expected_observation: success
   - thought: Run the authored script through validation, simulation, and review handoff.
     tool_name: execute_command
     tool_args:
-      command: python script.py
+      command: python solution_script.py
     expected_observation: 'True'
   - finished: true
     journal: INT-033 coder output generated.

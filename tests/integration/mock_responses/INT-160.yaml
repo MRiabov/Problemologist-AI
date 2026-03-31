@@ -75,32 +75,31 @@ transcript:
   - finished: true
     review:
       decision: APPROVED
-      reason: >-
-        APPROVED: the latest revision renders show a clear path to the goal, and
-        inspect_media(path) was used on the current revision bundle.
+      reason: 'APPROVED: the latest revision renders show a clear path to the goal,
+        and inspect_media(path) was used on the current revision bundle.'
       required_fixes: []
       checklist:
         latest_revision_verified: true
-        review_manifest_revision: "latest"
+        review_manifest_revision: latest
         render_count: 2
-        render_paths: "renders/cad_preview.png, renders/simulation_preview.png"
+        render_paths: renders/cad_preview.png, renders/simulation_preview.png
         inspected_render_count: 2
         visual_inspection_min_images: 1
         visual_inspection_satisfied: true
         deterministic_error_count: 0
-        deterministic_refusal_reason: "none"
+        deterministic_refusal_reason: none
 - node: benchmark_coder
   steps:
   - thought: Implementing an import-safe benchmark script.
     tool_name: write_file
     tool_args:
-      path: script.py
+      path: benchmark_script.py
       overwrite: true
-      content_file: INT-005/benchmark_coder/entry_01/01__script.py
+      content_file: INT-005/benchmark_coder/entry_01/01__benchmark_script.py
     expected_observation: success
   - tool_name: execute_command
     tool_args:
-      command: python script.py
+      command: python benchmark_script.py
     expected_observation: 'True'
   - thought: Inspect the benchmark render before finishing the coder step.
     tool_name: inspect_media
@@ -159,7 +158,8 @@ transcript:
     summary: INT-160 engineer planner artifacts generated and submitted.
 - node: electronics_planner
   steps:
-  - thought: No electronics changes are needed for INT-160; inspect the render and submit the handoff.
+  - thought: No electronics changes are needed for INT-160; inspect the render and
+      submit the handoff.
     tool_name: inspect_media
     tool_args:
       path: renders/render_e45_a45.png
@@ -184,9 +184,9 @@ transcript:
   steps:
   - tool_name: write_file
     tool_args:
-      path: script.py
+      path: solution_script.py
       overwrite: true
-      content_file: INT-005/engineer_coder/entry_01/01__script.py
+      content_file: INT-005/engineer_coder/entry_01/01__solution_script.py
     expected_observation: success
   - tool_name: write_file
     tool_args:

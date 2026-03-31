@@ -1,7 +1,8 @@
 transcript:
 - node: engineer_planner
   steps:
-  - thought: Create deterministic planner artifacts for full engineering-loop coverage while keeping benchmark-owned context aligned.
+  - thought: Create deterministic planner artifacts for full engineering-loop coverage
+      while keeping benchmark-owned context aligned.
     tool_name: write_file
     tool_args:
       path: plan.md
@@ -66,9 +67,9 @@ transcript:
       goal zone.
     tool_name: write_file
     tool_args:
-      path: script.py
+      path: solution_script.py
       overwrite: true
-      content_file: INT-205/engineer_coder/entry_01/01__script.py
+      content_file: INT-205/engineer_coder/entry_01/01__solution_script.py
     expected_observation: success
   - tool_name: write_file
     tool_args:

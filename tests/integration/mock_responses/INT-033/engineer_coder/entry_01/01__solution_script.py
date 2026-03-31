@@ -76,7 +76,7 @@ def _seed_execution_review_handoff() -> None:
         success=True,
         message="Validation completed",
         timestamp=seed_ts,
-        script_path="script.py",
+        script_path="solution_script.py",
         script_sha256=script_sha256,
         verification_result=MultiRunResult(
             num_scenes=1,
@@ -107,7 +107,7 @@ def _seed_execution_review_handoff() -> None:
         benchmark_worker_session_id=benchmark_review.benchmark_worker_session_id,
         benchmark_revision=revision,
         solution_revision=revision,
-        script_path="script.py",
+        script_path="solution_script.py",
         script_sha256=script_sha256,
         validation_success=True,
         validation_timestamp=seed_ts,

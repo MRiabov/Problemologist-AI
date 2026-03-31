@@ -42,13 +42,13 @@ transcript:
   - thought: Implementing basic geometry.
     tool_name: write_file
     tool_args:
-      path: script.py
+      path: benchmark_script.py
       overwrite: true
-      content_file: INT-142/benchmark_coder/entry_01/01__script.py
+      content_file: INT-142/benchmark_coder/entry_01/01__benchmark_script.py
     expected_observation: success
   - tool_name: execute_command
     tool_args:
-      command: python script.py
+      command: python benchmark_script.py
     expected_observation: 'True'
   - finished: true
     journal: Mechanical implementation completed.

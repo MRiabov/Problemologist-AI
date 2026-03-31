@@ -46,9 +46,9 @@ transcript:
   steps:
   - tool_name: write_file
     tool_args:
-      path: script.py
+      path: solution_script.py
       overwrite: true
-      content_file: INT-115/engineer_coder/entry_01/01__script.py
+      content_file: INT-115/engineer_coder/entry_01/01__solution_script.py
     expected_observation: success
   - finished: true
     journal: test-trace coder completed.

@@ -50,9 +50,9 @@ transcript:
   - thought: Implement a minimal script that yields a fast successful run.
     tool_name: write_file
     tool_args:
-      path: script.py
+      path: solution_script.py
       overwrite: true
-      content_file: INT-042/engineer_coder/entry_01/01__script.py
+      content_file: INT-042/engineer_coder/entry_01/01__solution_script.py
     expected_observation: success
   - finished: true
     journal: INT-042 coder output generated.

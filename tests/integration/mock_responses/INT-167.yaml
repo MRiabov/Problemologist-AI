@@ -45,13 +45,13 @@ transcript:
   - thought: Creating GLB for proxy verification.
     tool_name: write_file
     tool_args:
-      path: script.py
+      path: benchmark_script.py
       overwrite: true
-      content_file: INT-167/benchmark_coder/entry_01/01__script.py
+      content_file: INT-167/benchmark_coder/entry_01/01__benchmark_script.py
     expected_observation: success
   - tool_name: execute_command
     tool_args:
-      command: python script.py
+      command: python benchmark_script.py
     expected_observation: 'True'
   - finished: true
     journal: Created proxy CAD GLB.
@@ -104,13 +104,15 @@ transcript:
   - thought: Creating GLB for proxy verification.
     tool_name: execute_command
     tool_args:
-      command: from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b = Box(10,10,10); b.label = 'part1'; export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')
+      command: from build123d import *; import trimesh; import os; os.makedirs('assets',
+        exist_ok=True); b = Box(10,10,10); b.label = 'part1'; export_stl(b, 'assets/box.stl');
+        trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')
     expected_observation: success
   - tool_name: write_file
     tool_args:
-      path: script.py
+      path: solution_script.py
       overwrite: true
-      content_file: INT-167/engineer_coder/entry_01/02__script.py
+      content_file: INT-167/engineer_coder/entry_01/02__solution_script.py
     expected_observation: success
   - finished: true
     journal: Created proxy CAD GLB.
