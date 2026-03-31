@@ -450,9 +450,7 @@ def test_run_evals_codex_env_supports_repo_root_imports(tmp_path):
 
 
 @pytest.mark.integration_p0
-def test_run_evals_codex_vtk_preview_renders_headlessly(
-    tmp_path, monkeypatch
-):
+def test_run_evals_codex_vtk_preview_renders_headlessly(tmp_path, monkeypatch):
     monkeypatch.delenv("DISPLAY", raising=False)
     monkeypatch.delenv("XAUTHORITY", raising=False)
 
@@ -1360,7 +1358,7 @@ def test_validate_eval_seed_accepts_curated_rows_and_preserves_redundancy_metada
 
 
 @pytest.mark.integration_p0
-def test_validate_eval_seed_rejects_blank_render_seed_for_engineer_coder():
+def test_validate_eval_seed_accepts_refreshed_render_seed_for_engineer_coder():
     completed = subprocess.run(
         [
             sys.executable,
@@ -1385,9 +1383,9 @@ def test_validate_eval_seed_rejects_blank_render_seed_for_engineer_coder():
         part for part in (completed.stdout, completed.stderr) if part
     )
 
-    assert completed.returncode != 0, combined_output
-    assert "FAIL engineer_coder ec-001:" in combined_output, combined_output
-    assert "black/empty" in combined_output, combined_output
+    assert completed.returncode == 0, combined_output
+    assert "PASS engineer_coder ec-001:" in completed.stdout, completed.stdout
+    assert "black/empty" not in combined_output, combined_output
 
 
 @pytest.mark.integration_p0

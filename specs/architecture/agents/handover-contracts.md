@@ -152,8 +152,19 @@ The benchmark-owned environment, benchmark input objects, benchmark objective ma
 Benchmark-owned authored labels are part of that read-only contract too: `moved_object.label` and any top-level build123d object label in the benchmark handoff must be non-empty and stable, and runtime must not invent fallback labels when one is missing.
 
 Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
+Treat that preview as one static render bundle under `renders/`: each of the 24 views persists RGB, depth, and segmentation siblings, so the bundle is 72 files total but one conceptual input surface. The exact role-level render consumption policy stays config-driven in `config/agents_config.yaml`.
 
 These renders are not only passive assets in storage. Reviewer and other vision-using nodes must inspect them through the dedicated media-inspection tool (`inspect_media(...)`) when visual evidence is required. Merely listing files in `renders/` or reading text artifacts that mention render paths is not treated as image review.
+
+#### Render input contract
+
+- Benchmark Planner: render media are not a mandatory node-entry input.
+- Benchmark Plan Reviewer: render media are not a mandatory node-entry input; if latest-revision render assets already exist, visual inspection still follows the role policy in `config/agents_config.yaml`.
+- Benchmark Coder: render media are not a mandatory node-entry input.
+- Benchmark Reviewer: receives the latest benchmark render evidence for the approved revision, which includes the full static 24-view bundle and the latest simulation video when benchmark-owned motion exists.
+- Engineering Planner: receives the same latest benchmark full static render bundle as read-only context.
+- Engineering Coder: receives the same latest benchmark full static render bundle, and the latest simulation video when benchmark-owned motion exists, as read-only context.
+- Engineering Execution Reviewer: receives the same full static render bundle plus the latest simulation video evidence when present, and must inspect the required media before approval.
 
 The source of truth for which roles must perform visual inspection is `config/agents_config.yaml` under each role's `visual_inspection` policy. Current required roles in engineering/benchmark handoff flow are:
 

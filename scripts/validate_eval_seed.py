@@ -22,12 +22,19 @@ _STACK_PROFILE_NAME = (
 )
 apply_stack_profile_env(_STACK_PROFILE_NAME, env=os.environ, root=ROOT)
 
+from scripts.internal.eval_seed_renders import (  # noqa: E402
+    update_seed_artifact_renders,
+)
+
 from controller.clients.worker import WorkerClient  # noqa: E402
 from evals.logic.curation import load_dataset_curation_manifest  # noqa: E402
 from evals.logic.models import EvalDatasetItem  # noqa: E402
 from evals.logic.specs import AGENT_SPECS  # noqa: E402
 from evals.logic.workspace import (  # noqa: E402
     preflight_seeded_entry_contract as _preflight_seeded_entry_contract,
+)
+from evals.logic.workspace import (  # noqa: E402
+    resolve_seed_artifact_dir as _resolve_seed_artifact_dir,
 )
 from evals.logic.workspace import (  # noqa: E402
     seed_eval_workspace as _seed_eval_workspace,
@@ -135,6 +142,16 @@ def _parse_args() -> argparse.Namespace:
         help=(
             "Repair deterministic seed-manifest drift before validation "
             "(default: enabled)."
+        ),
+    )
+    parser.add_argument(
+        "--update-renders",
+        dest="update_renders",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "Regenerate deterministic seed render bundles before validation "
+            "(default: disabled)."
         ),
     )
     parser.add_argument(
@@ -298,12 +315,17 @@ async def _validate_item(
     item: EvalDatasetItem,
     *,
     update_manifests: bool,
+    update_renders: bool,
     errors_only: bool = False,
 ) -> tuple[bool, str]:
     session_id = _build_session_id(agent, item.id)
     spec = AGENT_SPECS[agent]
     item_logger = QUIET_LOGGER if errors_only else logger
     try:
+        if update_renders and item.seed_artifact_dir is not None:
+            artifact_dir = _resolve_seed_artifact_dir(item, root=ROOT)
+            if artifact_dir is not None:
+                update_seed_artifact_renders(artifact_dir)
         await _seed_eval_workspace(
             item=item,
             session_id=session_id,
@@ -401,6 +423,7 @@ async def _async_main(args: argparse.Namespace) -> int:
                     agent,
                     item,
                     update_manifests=args.update_manifests,
+                    update_renders=args.update_renders,
                     errors_only=args.errors_only,
                 )
                 if not ok:
@@ -421,6 +444,7 @@ async def _async_main(args: argparse.Namespace) -> int:
                         agent,
                         item,
                         update_manifests=args.update_manifests,
+                        update_renders=args.update_renders,
                         errors_only=args.errors_only,
                     )
                     return agent, item, ok, detail

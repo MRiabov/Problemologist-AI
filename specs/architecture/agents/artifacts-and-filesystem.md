@@ -39,13 +39,13 @@ The agent-specific workspace surface is role-scoped.
 Representative examples:
 
 - Engineering Planner:
-  - read: `skills/**`, `utils/**`, `benchmark_definition.yaml`, `plan.md`, `todo.md`, `journal.md`
+  - read: `skills/**`, `utils/**`, `benchmark_definition.yaml`, `plan.md`, `todo.md`, `journal.md`, `renders/**`
   - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml`, `benchmark_definition.yaml`
 - Engineering Coder:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
   - write: `script.py`, additional `*.py` implementation files, `todo.md`, `journal.md`, `renders/**`, `plan_refusal.md`
 - Benchmark Planner:
-  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `journal.md`
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `journal.md`, `renders/**`
   - write: `plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`
 - Benchmark Coder:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `reviews/**`, `renders/**`

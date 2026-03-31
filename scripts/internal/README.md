@@ -19,6 +19,8 @@ Current modules:
 
 - `integration_runner.py`: integration-test orchestration primitives
   (parallel readiness checks + safe pytest subprocess execution).
+- `eval_seed_renders.py`: deterministic seed render regeneration helpers used
+  by `scripts/validate_eval_seed.py --update-renders`.
 
 Examples:
 
