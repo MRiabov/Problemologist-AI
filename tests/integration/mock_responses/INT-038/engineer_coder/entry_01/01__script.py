@@ -1,8 +1,9 @@
 # ruff: noqa
 from build123d import *  # noqa: F403, F405
 
-from shared.models.schemas import PartMetadata
+from shared.models.schemas import CompoundMetadata, PartMetadata
 from shared.workers.workbench_models import ManufacturingMethod
+from utils.submission import simulate, submit_for_review, validate
 
 
 def build():
@@ -14,4 +15,18 @@ def build():
         fixed=True,
         manufacturing_method=ManufacturingMethod.THREE_DP,
     )
-    return p
+    scene = Compound(children=[p])
+    scene.label = "obj_scene"
+    scene.metadata = CompoundMetadata(fixed=False)
+    return scene
+
+
+result = build()
+validate_ok, validate_message = validate(result)
+print(validate_ok)
+print(validate_message)
+sim_result = simulate(result)
+print(sim_result.success)
+print(sim_result.message)
+if validate_ok and sim_result.success:
+    print(submit_for_review(result))
