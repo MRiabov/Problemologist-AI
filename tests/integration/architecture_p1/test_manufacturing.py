@@ -452,8 +452,8 @@ async def test_validate_and_price_round_trips_cots_provenance():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
-async def test_validate_and_price_rejects_missing_manufacturing_config():
-    """The pricing script must fail closed when the workspace config is missing."""
+async def test_validate_and_price_uses_repo_config_when_workspace_config_missing():
+    """The pricing script must fall back to the repository config when missing."""
     session_id = f"INT-035-{uuid.uuid4().hex[:8]}"
     headers = {"X-Session-ID": session_id}
 
@@ -523,5 +523,5 @@ totals:
         )
         assert exec_resp.status_code == 200, exec_resp.text
         exec_data = ExecuteResponse.model_validate(exec_resp.json())
-        assert exec_data.exit_code != 0
-        assert "manufacturing_config.yaml invalid" in exec_data.stderr
+        assert exec_data.exit_code == 0, exec_data.stdout + exec_data.stderr
+        assert "validated and updated" in exec_data.stdout
