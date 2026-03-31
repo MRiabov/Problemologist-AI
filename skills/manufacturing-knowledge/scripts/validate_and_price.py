@@ -123,6 +123,8 @@ def main():
         estimation = AssemblyDefinition(**data)
 
         config_path = Path("manufacturing_config.yaml")
+        if not config_path.exists():
+            raise FileNotFoundError(f"Config file not found: {config_path}")
         config = load_planner_manufacturing_config(config_path=config_path)
         data["totals"]["estimated_unit_cost_usd"] = calculate_declared_assembly_cost(
             estimation, config
