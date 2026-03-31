@@ -65,6 +65,31 @@ uv run python scripts/experiments/syntax/probe_build123d_construction_signature.
 - `build123d_part.solids_count`, `faces_count`, `edges_count`, and `wires_count` are the coarse invariants available for fallback comparison.
 - The intended conclusion is whether the runtime should compare authored construction metadata first and use coarse geometric invariants only as a fallback.
 
+# Renderer Launchability Probe
+
+This experiment checks whether the renderer can actually complete a minimal `Render()`
+call under the current VTK/EGL/OSMesa configuration.
+
+1. Does a minimal offscreen VTK scene survive a render call in a subprocess?
+2. Does the build123d preview renderer survive the same launch path?
+3. Which render window class is selected in each scenario?
+
+## Run
+
+Inspect the launchability matrix:
+
+```bash
+uv run python scripts/experiments/syntax/probe_renderer_launchability.py
+```
+
+## Interpretation
+
+- `scenario.returncode=0` means that launch path survived `Render()` and returned
+  a structured report.
+- `scenario.returncode=139` means the subprocess segfaulted during render.
+- `window_class` tells you whether VTK selected `vtkEGLRenderWindow`,
+  `vtkOSOpenGLRenderWindow`, or the fallback `vtkRenderWindow`.
+
 # Eval Display Environment Probe
 
 This companion experiment records the environment behavior that affected recent

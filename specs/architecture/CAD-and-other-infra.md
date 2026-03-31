@@ -76,6 +76,8 @@ The project needs to render the models in images (for preview) and for rendering
 
 All CAD and simulation render jobs are executed by the dedicated headless `worker-renderer` service. The renderer worker owns the graphics backend stack and runs the VTK, EGL, or other render dependencies in its own container; physics workers only supply scene state, camera policy, and artifact metadata.
 
+The renderer worker does not inherit a host X server as its normal execution path. EGL remains the desired headless default, but the current native EGL render probes segfault for reasons that are not yet isolated, so the current deployment falls back to an OSMesa-backed VTK window class for headless reliability.
+
 The rendering backend is not a single global choice. We split rendering by purpose:
 
 1. Static validation preview renders use build123d/VTK by default inside the renderer worker.

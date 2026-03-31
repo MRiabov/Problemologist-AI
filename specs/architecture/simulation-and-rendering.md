@@ -21,6 +21,20 @@ The physics backends do not own render process state. They supply scene state, c
 The render worker is containerized in every environment, including development, so the graphics stack stays isolated from simulation and from the controller process. That is intentional even when the other workers are launched as bare FastAPI processes during local development: the renderer is the one worker that must not inherit host Wayland/X11 state or ambient EGL quirks.
 The renderer worker is the only service that owns VTK, EGL, OpenGL, and related graphics backend dependencies.
 
+### Headless backend selection
+
+The renderer worker selects its VTK OpenGL window class explicitly rather than relying on whatever the host process happens to expose.
+
+The runtime rules are:
+
+1. `VTK_DEFAULT_OPENGL_WINDOW` is part of the renderer worker contract and is honored by the render bootstrap.
+2. EGL remains the desired headless default, but the current native EGL smoke tests segfault for reasons that are not yet isolated.
+3. The current renderer deployment therefore falls back to `vtkOSOpenGLRenderWindow` for reliability in headless Linux environments.
+4. The renderer worker does not depend on Xvfb as its normal launch path.
+5. A native `Render()` segfault is a backend/runtime failure, not a valid render completion.
+
+The practical consequence is that the renderer image must contain the required Mesa/VTK runtime pieces for the selected backend, and the machine or container must be checked against a real render probe rather than package presence alone.
+
 ## Genesis for simulation
 
 While this platform has notable downsides for future use, we pick Genesis because it supports fluid interaction and Finite Element analysis; being fast enough to work.

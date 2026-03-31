@@ -34,7 +34,7 @@ In the future we may well refactor to run on distributed nodes, perhaps even IPv
 - Temporal worker service (`controller-worker` in compose): durable execution for long-running workflows/retries and heavy-task queue consumption/dispatch.
 - `worker-light` (FastAPI): session filesystem, git, linting, runtime execution, static asset serving.
 - `worker-heavy` (FastAPI single-flight executor): simulation, validation coordination, manufacturability analysis, review handover.
-- `worker-renderer` (FastAPI single-flight executor): headless rendering for static preview, selection snapshots, and simulation videos. Unlike `worker-light` and `worker-heavy`, it stays in the containerized renderer deployment in development, integration, eval, and production because the graphics stack must not depend on the host display session.
+- `worker-renderer` (FastAPI single-flight executor): headless rendering for static preview, selection snapshots, and simulation videos. Unlike `worker-light` and `worker-heavy`, it stays in the containerized renderer deployment in development, integration, eval, and production because the graphics stack must not depend on the host display session. EGL remains the desired default, but the current native EGL render probes segfault for reasons that are not yet isolated, so the current renderer image falls back to an OSMesa-backed VTK window class.
 - Shared dependencies: `temporal`, `postgres`, `minio`.
 
 The split is intentional: keep fast, high-throughput operations on light infra while isolating heavy physics/render workloads onto dedicated nodes.
