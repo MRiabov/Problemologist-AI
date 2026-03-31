@@ -37,8 +37,8 @@ from shared.models.schemas import (
     EpisodeMetadata,
     TraceMetadata,
 )
-from shared.workers.schema import RenderManifest, ReviewManifest
 from shared.script_contracts import BENCHMARK_SCRIPT_PATH, SOLUTION_SCRIPT_PATH
+from shared.workers.schema import RenderManifest, ReviewManifest
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 

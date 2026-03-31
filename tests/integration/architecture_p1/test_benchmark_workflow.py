@@ -148,6 +148,9 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert any(p.endswith("benchmark_definition.yaml") for p in artifact_paths), (
             f"benchmark_definition.yaml missing. Artifacts: {artifact_paths}"
         )
+        assert any(p.endswith("benchmark_script.py") for p in artifact_paths), (
+            f"benchmark_script.py missing. Artifacts: {artifact_paths}"
+        )
         benchmark_definition_paths = [
             p for p in artifact_paths if p.endswith("benchmark_definition.yaml")
         ]

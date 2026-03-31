@@ -128,7 +128,8 @@ agents:
         - skills/**
         - utils/**
         - reviews/**
-        - script.py
+        - benchmark_script.py
+        - solution_script.py
         - '**/*.py'
         - .manifests/**
     tools:
@@ -162,7 +163,8 @@ agents:
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
         - assembly_definition.yaml
-        - script.py
+        - benchmark_script.py
+        - solution_script.py
         - '**/*.py'
         - reviews/**
         - renders/**
@@ -170,7 +172,7 @@ agents:
         - .manifests/**
       write:
         allow:
-        - script.py
+        - solution_script.py
         - '**/*.py'
         - todo.md
         - journal.md
@@ -209,7 +211,7 @@ agents:
         - journal.md
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
-        - script.py
+        - benchmark_script.py
         - '**/*.py'
         - plan_refusal.md
         - reviews/**
@@ -222,7 +224,7 @@ agents:
         - .manifests/**
       write:
         allow:
-        - script.py
+        - benchmark_script.py
         - '**/*.py'
         - todo.md
         - journal.md
@@ -268,7 +270,7 @@ agents:
         - benchmark_assembly_definition.yaml
         - assembly_definition.yaml
         - plan_refusal.md
-        - script.py
+        - solution_script.py
         - '**/*.py'
         - simulation_result.json
         - validation_results.json
@@ -315,7 +317,7 @@ agents:
         - benchmark_assembly_definition.yaml
         - assembly_definition.yaml
         - plan_refusal.md
-        - script.py
+        - solution_script.py
         - '**/*.py'
         - simulation_result.json
         - validation_results.json
@@ -378,7 +380,7 @@ agents:
         - skills/**
         - utils/**
         - reviews/**
-        - script.py
+        - solution_script.py
         - '**/*.py'
         - .manifests/**
     tools:
@@ -447,7 +449,7 @@ agents:
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
         - plan_refusal.md
-        - script.py
+        - benchmark_script.py
         - '**/*.py'
         - simulation_result.json
         - validation_results.json

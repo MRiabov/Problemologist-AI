@@ -300,6 +300,7 @@ def simulate(compound: Compound, **kwargs) -> BenchmarkToolResponse:
 
         if "output_dir" in kwargs and kwargs["output_dir"] is not None:
             kwargs = {**kwargs, "output_dir": Path(kwargs["output_dir"])}
+        kwargs = {**kwargs, "script_path": script_path}
         return real_simulate(compound, **kwargs)
 
     controller_payload = {
@@ -337,6 +338,7 @@ def validate(compound: Compound, **kwargs) -> tuple[bool, str | None]:
 
         if "output_dir" in kwargs and kwargs["output_dir"] is not None:
             kwargs = {**kwargs, "output_dir": Path(kwargs["output_dir"])}
+        kwargs = {**kwargs, "script_path": script_path}
         return real_validate(compound, **kwargs)
 
     controller_payload = {

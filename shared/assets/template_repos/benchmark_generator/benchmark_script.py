@@ -57,11 +57,19 @@ def _build_moved_object(moved: dict):
 _moved_object_contract = _load_moved_object()
 _moved_object = _build_moved_object(_moved_object_contract)
 
-# Add authored benchmark fixtures to this children list.
-# Every top-level child you add here must have a unique label, and that label
-# must not be `environment`, start with `zone_`, or start with
-# `benchmark_moved_object__` because the simulator reserves those names for the
-# scene root and generated objective bodies.
-result = Compound(children=[_moved_object])
-result.label = "benchmark_environment"
-result.metadata = CompoundMetadata()
+
+def objectives_geometry() -> Compound:
+    """Return the benchmark objective geometry for this workspace."""
+
+    # Add authored benchmark fixtures to this children list.
+    # Every top-level child you add here must have a unique label, and that label
+    # must not be `environment`, start with `zone_`, or start with
+    # `benchmark_moved_object__` because the simulator reserves those names for the
+    # scene root and generated objective bodies.
+    environment = Compound(children=[_moved_object])
+    environment.label = "benchmark_environment"
+    environment.metadata = CompoundMetadata()
+    return environment
+
+
+result = objectives_geometry()

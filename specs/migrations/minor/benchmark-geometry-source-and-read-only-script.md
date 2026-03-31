@@ -219,22 +219,22 @@ Use this checklist to track the migration from spec edits through runtime gates,
 
 ### Templates and workspace materialization
 
-- [ ] Rename the shared engineer starter from `shared/agent_templates/common/script.py` to `shared/agent_templates/common/solution_script.py`.
-- [ ] Create or update `shared/assets/template_repos/benchmark_generator/benchmark_script.py` as the benchmark-owned visible geometry script.
+- [x] Rename the shared engineer starter from `shared/agent_templates/common/script.py` to `shared/agent_templates/common/solution_script.py`.
+- [x] Create or update `shared/assets/template_repos/benchmark_generator/benchmark_script.py` as the benchmark-owned visible geometry script.
 - [ ] Ensure benchmark planner workspaces do not receive `benchmark_script.py` before benchmark plan approval.
-- [ ] Ensure benchmark coder and benchmark reviewer workspaces do receive `benchmark_script.py` as read-only geometry context after plan approval.
-- [ ] Ensure engineering workspaces receive `benchmark_script.py` as read-only context when they need to preview or reason about benchmark geometry.
-- [ ] Ensure engineering workspaces use `solution_script.py` as the writable authored implementation source.
-- [ ] Update prompt generation in `evals/logic/codex_workspace.py` and related helpers so the prompt text names `solution_script.py` and conditionally names `benchmark_script.py`.
-- [ ] Update any submission helper, reviewer helper, or workspace bootstrapper that still assumes a bare `script.py` is the authored source file.
+- [x] Ensure benchmark coder and benchmark reviewer workspaces do receive `benchmark_script.py` as read-only geometry context after plan approval.
+- [x] Ensure engineering workspaces receive `benchmark_script.py` as read-only context when they need to preview or reason about benchmark geometry.
+- [x] Ensure engineering workspaces use `solution_script.py` as the writable authored implementation source.
+- [x] Update prompt generation in `evals/logic/codex_workspace.py` and related helpers so the prompt text names `solution_script.py` and conditionally names `benchmark_script.py`.
+- [x] Update any submission helper, reviewer helper, or workspace bootstrapper that still assumes a bare `script.py` is the authored source file.
 - [ ] Make sure `objectives_geometry()` is available from the benchmark script and returns the geometry object directly from Python source.
 - [ ] Keep mesh-backed benchmark geometry inline in Python only; do not introduce a separate mesh-file contract or a new authoring pipeline.
 
 ### Validation gates
 
-- [ ] Make `scripts/validate_eval_seed.py` fail closed when a benchmark row claims geometry but does not include `benchmark_script.py`.
-- [ ] Make `controller/agent/node_entry_validation.py` enforce the same missing-geometry failure for seeded-entry preflight.
-- [ ] Preserve the existing seed-validation flow so the migration changes the contract, not the existence of the gate.
+- [x] Make `scripts/validate_eval_seed.py` fail closed when a benchmark row claims geometry but does not include `benchmark_script.py`.
+- [x] Make `controller/agent/node_entry_validation.py` enforce the same missing-geometry failure for seeded-entry preflight.
+- [x] Preserve the existing seed-validation flow so the migration changes the contract, not the existence of the gate.
 - [ ] Verify benchmark plan review still blocks missing or contradictory geometry, motion, or material metadata.
 - [ ] Verify benchmark coder entry still blocks if the benchmark handoff is incomplete or the benchmark geometry source is missing.
 - [ ] Verify reviewer entry still uses the latest-revision manifest and fails closed on stale or missing artifacts.
@@ -243,18 +243,18 @@ Use this checklist to track the migration from spec edits through runtime gates,
 
 ### Seed and fixture updates
 
-- [ ] Add `benchmark_script.py` to every benchmark-backed seed row that claims visible geometry.
+- [x] Add `benchmark_script.py` to every benchmark-backed seed row that claims visible geometry.
 - [ ] Populate `objectives_geometry()` in every benchmark script that needs to render or inspect objective geometry.
-- [ ] Keep `solution_script.py` as the only authored engineer source in engineer seed artifacts.
-- [ ] Rename any seed artifacts or seed JSON metadata that still refer to bare `script.py` as the authored source.
+- [x] Keep `solution_script.py` as the only authored engineer source in engineer seed artifacts.
+- [x] Rename any seed artifacts or seed JSON metadata that still refer to bare `script.py` as the authored source.
 - [ ] Remove any seed rows that are YAML-only but still claim benchmark geometry.
 - [ ] Confirm that benchmark seeds remain readable, measurable, and renderable from the visible source file.
 - [ ] Confirm that the seeded workspace copies match the new file-name contract without aliasing `result.py` or bare `script.py`.
 
 ### Integration tests and fixtures to update
 
-- [ ] Update [tests/integration/architecture_p0/test_shared_agent_templates.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_shared_agent_templates.py).
-- [ ] Update [tests/integration/architecture_p0/test_codex_runner_mode.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_codex_runner_mode.py).
+- [x] Update [tests/integration/architecture_p0/test_shared_agent_templates.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_shared_agent_templates.py).
+- [x] Update [tests/integration/architecture_p0/test_codex_runner_mode.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_codex_runner_mode.py).
 - [ ] Update [tests/integration/architecture_p0/test_codex_session_trace_capture.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_codex_session_trace_capture.py).
 - [ ] Update [tests/integration/architecture_p0/test_int_008_objectives_validation.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_int_008_objectives_validation.py).
 - [ ] Update [tests/integration/architecture_p0/test_int_018_multipart_dfm_gate.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_int_018_multipart_dfm_gate.py).

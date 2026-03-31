@@ -51,8 +51,8 @@ from shared.agents.config import load_agents_config
 from shared.enums import AgentName, TraceType
 from shared.git_utils import repo_revision
 from shared.models.schemas import CodeReference, ReviewResult, TraceMetadata
-from shared.script_contracts import authored_script_path_for_agent
 from shared.observability.schemas import LlmMediaAttachedEvent
+from shared.script_contracts import authored_script_path_for_agent
 from shared.workers.filesystem.policy import VisualInspectionPolicy
 from shared.workers.schema import MediaInspectionResult, RenderManifest
 
@@ -1258,9 +1258,7 @@ class BaseNode:
                         messages.append({"role": "system", "content": submit_reminder})
                         continue
                     if self._requires_script_artifact(node_type):
-                        script_exists = workspace_file_exists_sync(
-                            authored_script_path
-                        )
+                        script_exists = workspace_file_exists_sync(authored_script_path)
                         refusal_exists = workspace_file_exists_sync("plan_refusal.md")
                         script_changed = True
                         if script_exists and initial_script_sha256:

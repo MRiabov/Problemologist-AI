@@ -24,13 +24,26 @@ def test_int_190_benchmark_coder_filesystem_scope_matches_workspace_contract():
         "journal.md",
         "benchmark_definition.yaml",
         "benchmark_assembly_definition.yaml",
-        "script.py",
+        "benchmark_script.py",
         "validation_results.json",
         "simulation_result.json",
         "scene.json",
         "renders/**",
     }:
         assert required in read_allow, f"benchmark_coder missing read scope {required}"
+
+    assert "benchmark_script.py" in write_allow
+    assert "script.py" not in read_allow
+    assert "script.py" not in write_allow
+
+    engineer_role_cfg = cfg["agents"]["engineer_coder"]["filesystem_permissions"]
+    engineer_read_allow = set(engineer_role_cfg["read"]["allow"])
+    engineer_write_allow = set(engineer_role_cfg["write"]["allow"])
+    assert "solution_script.py" in engineer_read_allow
+    assert "benchmark_script.py" in engineer_read_allow
+    assert "solution_script.py" in engineer_write_allow
+    assert "script.py" not in engineer_read_allow
+    assert "script.py" not in engineer_write_allow
 
     for required in {"/", "."}:
         assert required in read_allow, (

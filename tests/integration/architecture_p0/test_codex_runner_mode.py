@@ -596,7 +596,7 @@ def test_run_evals_codex_submit_helper_forces_headless_rendering_env(tmp_path):
     assert payload["MUJOCO_GL"] == "egl"
     assert payload["PYOPENGL_PLATFORM"] == "egl"
     assert payload["PYVISTA_OFF_SCREEN"] == "true"
-    assert payload["VTK_DEFAULT_OPENGL_RENDERER"] == "EGL"
+    assert payload["VTK_DEFAULT_OPENGL_WINDOW"] == "vtkEGLRenderWindow"
     assert payload["PYGLET_HEADLESS"] == "1"
     assert str(ROOT) in (payload["PYTHONPATH"] or "")
 
@@ -642,7 +642,7 @@ def build() -> Compound:
 
 result = build()
 """
-    workspace_script_path = workspace_dir / "script.py"
+    workspace_script_path = workspace_dir / "solution_script.py"
     workspace_script_path.write_text(workspace_script, encoding="utf-8")
 
     benchmark_definition = BenchmarkDefinition(
@@ -709,11 +709,14 @@ result = build()
         codex_home_root=codex_home_root,
         session_id=session_id,
     )
+    env["WORKER_RENDERER_URL"] = os.getenv(
+        "WORKER_RENDERER_URL", "http://127.0.0.1:18003"
+    )
     env.pop("DISPLAY", None)
     env.pop("XAUTHORITY", None)
 
     script_run = subprocess.run(
-        [env["PYTHON_BIN"], "script.py"],
+        [env["PYTHON_BIN"], "solution_script.py"],
         cwd=workspace_dir,
         capture_output=True,
         text=True,
@@ -728,7 +731,7 @@ result = build()
         import os
         from pathlib import Path
 
-        from script import result
+        from solution_script import result
         from shared.workers.persistence import record_validation_result
         from utils.submission import validate
 
@@ -737,6 +740,7 @@ result = build()
             Path.cwd(),
             ok,
             message,
+            script_path="solution_script.py",
             session_id=os.environ.get("SESSION_ID"),
         )
         print(f"VALIDATE_OK={ok}")
@@ -1069,6 +1073,7 @@ async def test_codex_materialized_planner_workspace_submits(
                 "todo.md",
                 "benchmark_definition.yaml",
                 "benchmark_assembly_definition.yaml",
+                "benchmark_script.py",
                 "journal.md",
                 "scripts/submit_for_review.sh",
                 "scripts/submit_for_review.py",
@@ -1095,6 +1100,7 @@ async def test_codex_materialized_planner_workspace_submits(
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
+                "benchmark_script.py",
                 "assembly_definition.yaml",
                 "benchmark_assembly_definition.yaml",
                 "journal.md",

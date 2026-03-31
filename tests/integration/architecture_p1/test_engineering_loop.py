@@ -376,7 +376,8 @@ async def test_engineering_full_loop():
             "benchmark_definition.yaml",
             "benchmark_assembly_definition.yaml",
             "manufacturing_config.yaml",
-            "script.py",
+            "benchmark_script.py",
+            "solution_script.py",
             "validation_results.json",
             "simulation_result.json",
             ".manifests/benchmark_plan_review_manifest.json",
@@ -399,6 +400,12 @@ async def test_engineering_full_loop():
             and Path(path).suffix in {".png", ".jpg", ".jpeg"}
             for path in artifact_paths
         ), f"Expected render images in engineer artifacts. Artifacts: {artifact_paths}"
+        assert any(path.endswith("benchmark_script.py") for path in artifact_paths), (
+            f"Expected benchmark_script.py in engineer artifacts. Artifacts: {artifact_paths}"
+        )
+        assert any(path.endswith("solution_script.py") for path in artifact_paths), (
+            f"Expected solution_script.py in engineer artifacts. Artifacts: {artifact_paths}"
+        )
 
         tool_traces = [
             trace for trace in traces if trace.trace_type == TraceType.TOOL_START
@@ -432,7 +439,7 @@ async def test_engineering_full_loop():
             validation_result_text
         )
         assert validation_result.success is True
-        assert validation_result.script_path == "script.py"
+        assert validation_result.script_path == "solution_script.py"
         assert validation_result.script_sha256 is not None
         script_text = await _read_episode_asset_text(
             client, engineer_episode_id, validation_result.script_path
@@ -495,7 +502,7 @@ async def test_engineering_full_loop():
         assert execution_manifest.revision == repo_git_revision()
         assert execution_manifest.benchmark_revision == repo_git_revision()
         assert execution_manifest.solution_revision == repo_git_revision()
-        assert execution_manifest.script_path == "script.py"
+        assert execution_manifest.script_path == "solution_script.py"
         assert execution_manifest.validation_success is True
         assert execution_manifest.simulation_success is True
         assert execution_manifest.goal_reached is True
