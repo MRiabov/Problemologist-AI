@@ -3,7 +3,7 @@
   "reviewer_stage": "electronics_reviewer",
   "timestamp": "2026-03-10T10:00:00Z",
   "session_id": "seed-erv-002",
-  "revision": "c6fd47bbcefecd84371a8f8dfc44ad17e4bce7b5",
+  "revision": "97b0d6e52c6bbd34bcdd0d8a225da7273e92058d",
   "script_path": "script.py",
   "script_sha256": "19435a786642a1d2a47090c396d8b28af7b2552f45b98126f720788b86c4f152",
   "validation_success": true,
