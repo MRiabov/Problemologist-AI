@@ -32,6 +32,8 @@ from tests.integration.agent.helpers import (
 
 CONTROLLER_URL = "http://127.0.0.1:18000"
 
+pytestmark = pytest.mark.xdist_group(name="physics_sims")
+
 
 def _has_review_artifacts(
     episode: EpisodeResponse, *, required_checklist_pairs: tuple[tuple[str, str], ...]

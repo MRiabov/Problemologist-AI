@@ -853,6 +853,7 @@ Just some text here, no list or table.
 
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors("todo_md_invalid")
+@pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.asyncio
 async def test_int_007_todo_integrity(
     session_id, base_headers, valid_plan, valid_objectives, valid_cost, minimal_script
@@ -904,6 +905,7 @@ async def test_int_007_todo_integrity(
         "benchmark_definition_yaml_validation_error",
     ]
 )
+@pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.asyncio
 async def test_int_008_objectives_validation(
     session_id,

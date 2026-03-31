@@ -26,6 +26,8 @@ from tests.integration.agent.helpers import (
 
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 
+pytestmark = pytest.mark.xdist_group(name="physics_sims")
+
 
 async def _wait_for_worker_light_health(timeout_s: float = 30.0) -> None:
     deadline = asyncio.get_event_loop().time() + timeout_s

@@ -22,6 +22,8 @@ from tests.integration.agent.helpers import repo_git_revision, wait_for_benchmar
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://127.0.0.1:18000"
 
+pytestmark = pytest.mark.xdist_group(name="physics_sims")
+
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio

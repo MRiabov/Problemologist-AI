@@ -114,6 +114,7 @@ async def test_int_024_runtime_execute_masks_host_session_root_as_workspace():
 
 
 @pytest.mark.integration_p0
+@pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.asyncio
 async def test_int_024_runtime_execute_reaches_benchmark_validate_toolchain():
     """
@@ -412,6 +413,7 @@ print(f"VALIDATE_MESSAGE={message}")
 
 
 @pytest.mark.integration_p0
+@pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.asyncio
 async def test_int_024_runtime_validate_rejects_translated_top_level_parts():
     """
@@ -523,6 +525,7 @@ print(f"VALIDATE_MESSAGE={message}")
         "top_level_build123d_label_missing",
     ]
 )
+@pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.asyncio
 async def test_int_024_runtime_validate_rejects_blank_top_level_labels():
     """
@@ -581,6 +584,7 @@ print(f"VALIDATE_MESSAGE={message}")
 
 
 @pytest.mark.integration_p0
+@pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.asyncio
 async def test_int_024_runtime_validate_reports_resolved_build_zone_bounds():
     """

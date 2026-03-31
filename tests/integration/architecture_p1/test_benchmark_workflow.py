@@ -36,6 +36,8 @@ from tests.integration.agent.helpers import (
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://127.0.0.1:18000"
 
+pytestmark = pytest.mark.xdist_group(name="physics_sims")
+
 
 async def _wait_for_planned_or_failed_episode(
     client: AsyncClient, episode_id: str

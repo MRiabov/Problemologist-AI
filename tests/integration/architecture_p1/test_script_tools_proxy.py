@@ -29,7 +29,7 @@ CONTROLLER_URL = "http://127.0.0.1:18000"
 WORKER_LIGHT_URL = "http://127.0.0.1:18001"
 WORKER_HEAVY_URL = "http://127.0.0.1:18002"
 
-pytestmark = pytest.mark.xdist_group(name="integration_shared_serial")
+pytestmark = pytest.mark.xdist_group(name="physics_sims")
 
 _BUSY_SLEEP_SECONDS = 8
 

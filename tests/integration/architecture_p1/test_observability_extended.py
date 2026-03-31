@@ -19,6 +19,8 @@ S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "minioadmin")
 S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "minioadmin")
 ASSET_BUCKET = os.getenv("ASSET_S3_BUCKET", "problemologist")
 
+pytestmark = pytest.mark.xdist_group(name="physics_sims")
+
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio

@@ -16,6 +16,8 @@ from tests.integration.agent.helpers import seed_benchmark_assembly_definition
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
+pytestmark = pytest.mark.xdist_group(name="physics_sims")
+
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio

@@ -25,6 +25,8 @@ from shared.workers.schema import (
 )
 from tests.integration.backend_utils import skip_unless_genesis
 
+pytestmark = pytest.mark.xdist_group(name="physics_sims")
+
 # Constants
 WORKER_LIGHT_URL = os.getenv(
     "WORKER_LIGHT_URL", os.getenv("WORKER_URL", "http://127.0.0.1:18001")

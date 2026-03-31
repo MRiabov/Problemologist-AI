@@ -35,6 +35,8 @@ REPO_MANUFACTURING_CONFIG = Path(
     "worker_heavy/workbenches/manufacturing_config.yaml"
 ).read_text(encoding="utf-8")
 
+pytestmark = pytest.mark.xdist_group(name="physics_sims")
+
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio

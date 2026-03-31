@@ -79,6 +79,7 @@ async def test_int_064_cots_metadata():
 
 
 @pytest.mark.integration_p1
+@pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.asyncio
 async def test_int_064_session_workspace_copies_parts_db_catalog():
     """INT-064: session workspaces must receive a usable catalog snapshot."""
@@ -128,6 +129,7 @@ async def test_int_065_skills_safety():
 
 
 @pytest.mark.integration_p1
+@pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.asyncio
 async def test_int_066_fluid_electronics_coupling():
     """INT-066: Fluid-on-electronics failure coupling."""
@@ -255,6 +257,7 @@ fluids:
 
 
 @pytest.mark.integration_p1
+@pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.asyncio
 async def test_int_067_068_steerability():
     """INT-067 & INT-068: Steerability payload and code references."""
@@ -301,6 +304,7 @@ async def test_int_067_068_steerability():
 
 
 @pytest.mark.integration_p1
+@pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.asyncio
 async def test_int_069_frontend_contract():
     """INT-069: Frontend delivery visibility contract."""
