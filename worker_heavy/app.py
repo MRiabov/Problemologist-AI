@@ -6,15 +6,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from shared.logging import configure_logging, log_marker_middleware
+from shared.rendering import configure_headless_vtk_egl
+
+configure_logging("worker-heavy")
+configure_headless_vtk_egl()
 from worker_heavy.api.routes import (
     heavy_busy_payload,
     heavy_router,
     is_heavy_busy,
 )
 from worker_heavy.runtime.simulation_runner import shutdown_simulation_executor
-
-# Configure structured logging
-configure_logging("worker-heavy")
 
 logger = structlog.get_logger(__name__)
 

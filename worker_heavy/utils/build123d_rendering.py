@@ -11,10 +11,21 @@ from pathlib import Path
 
 import numpy as np
 import structlog
-import vtk
 from build123d import Compound
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field
+
+from shared.models.schemas import BenchmarkDefinition
+from shared.models.simulation import RendererCapabilities, RenderMode
+from shared.rendering import configure_headless_vtk_egl, render_preview
+from shared.simulation.backends import RendererBackend
+from shared.workers.bundling import bundle_directory_base64
+from shared.workers.schema import SegmentationLegendEntry
+from worker_heavy.simulation.builder import CommonAssemblyTraverser, MeshProcessor
+from worker_heavy.workbenches.config import load_config, load_merged_config
+
+configure_headless_vtk_egl()
+import vtk
 from vtk.util.numpy_support import vtk_to_numpy
 from vtkmodules.vtkCommonTransforms import vtkTransform
 from vtkmodules.vtkFiltersCore import vtkFeatureEdges
@@ -27,16 +38,6 @@ from vtkmodules.vtkRenderingCore import (
     vtkRenderWindow,
     vtkWindowToImageFilter,
 )
-
-from shared.models.schemas import BenchmarkDefinition
-from shared.models.simulation import RendererCapabilities, RenderMode
-from shared.rendering import render_preview
-from shared.simulation.backends import RendererBackend
-from shared.workers.bundling import bundle_directory_base64
-from shared.workers.schema import SegmentationLegendEntry
-from worker_heavy.simulation.builder import CommonAssemblyTraverser, MeshProcessor
-from worker_heavy.utils.vtk_display import ensure_headless_vtk_display
-from worker_heavy.workbenches.config import load_config, load_merged_config
 
 logger = structlog.get_logger(__name__)
 
@@ -625,7 +626,7 @@ def _build_renderer(
     edge_color: tuple[float, float, float],
     background: tuple[float, float, float],
 ) -> _RendererBundle:
-    ensure_headless_vtk_display()
+    configure_headless_vtk_egl()
     renderer = vtkRenderer()
     renderer.SetBackground(*background)
 

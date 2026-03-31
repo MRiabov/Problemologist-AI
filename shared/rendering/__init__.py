@@ -1,3 +1,4 @@
+from .headless import configure_headless_vtk_egl
 from .renderer_client import (
     bundle_workspace_base64,
     materialize_preview_response,
@@ -16,6 +17,7 @@ __all__ = [
     "bundle_workspace_base64",
     "materialize_preview_response",
     "materialize_render_artifacts",
+    "configure_headless_vtk_egl",
     "render_preview",
     "render_simulation_video",
     "render_simulation_video_bytes",

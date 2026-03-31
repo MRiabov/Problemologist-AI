@@ -15,8 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsm6 \
     curl \
     dnsutils \
-    xvfb \
-    xauth \
     libngspice0 \
     libvulkan1 \
     vulkan-tools \
@@ -38,6 +36,12 @@ ENV UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
 
 # Copy from the cache instead of linking since it's a separate volume
 ENV UV_LINK_MODE=copy
+ENV LIBGL_ALWAYS_SOFTWARE=1
+ENV MUJOCO_GL=egl
+ENV PYOPENGL_PLATFORM=egl
+ENV PYVISTA_OFF_SCREEN=true
+ENV VTK_DEFAULT_OPENGL_RENDERER=EGL
+ENV PYGLET_HEADLESS=1
 
 # Create non-root user
 RUN useradd -m agent
@@ -70,4 +74,4 @@ ENV PYTHONPATH=/app
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Entrypoint
-CMD ["xvfb-run", "-a", "uvicorn", "worker_heavy.app:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["/app/.venv/bin/uvicorn", "worker_heavy.app:app", "--host", "0.0.0.0", "--port", "8002"]

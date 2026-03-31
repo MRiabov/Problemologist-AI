@@ -14,7 +14,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsm6 \
     curl \
     dnsutils \
-    xvfb \
     libvulkan1 \
     vulkan-tools \
     libxcursor1 \
@@ -28,6 +27,11 @@ WORKDIR /app
 
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
+ENV LIBGL_ALWAYS_SOFTWARE=1
+ENV PYOPENGL_PLATFORM=egl
+ENV PYVISTA_OFF_SCREEN=true
+ENV VTK_DEFAULT_OPENGL_WINDOW=vtkEGLRenderWindow
+ENV PYGLET_HEADLESS=1
 
 RUN useradd -m agent
 RUN chown -R agent:agent /app
@@ -51,4 +55,4 @@ RUN --mount=type=cache,target=/home/agent/.cache/uv,uid=1000 \
 ENV PYTHONPATH=/app
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["/bin/sh", "-lc", "Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp -ac >/tmp/xvfb.log 2>&1 & export DISPLAY=:99; exec /app/.venv/bin/uvicorn worker_renderer.app:app --host 0.0.0.0 --port 8003"]
+CMD ["/app/.venv/bin/uvicorn", "worker_renderer.app:app", "--host", "0.0.0.0", "--port", "8003"]

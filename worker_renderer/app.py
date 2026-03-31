@@ -6,13 +6,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from shared.logging import configure_logging, log_marker_middleware
+from shared.rendering import configure_headless_vtk_egl
+
+configure_logging("worker-renderer")
+configure_headless_vtk_egl()
+
 from worker_renderer.api.routes import (
     is_renderer_busy,
     renderer_busy_context,
     renderer_router,
 )
-
-configure_logging("worker-renderer")
 
 logger = structlog.get_logger(__name__)
 
