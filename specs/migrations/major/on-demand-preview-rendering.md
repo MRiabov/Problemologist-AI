@@ -336,28 +336,28 @@ modality-aware instead of piggybacking on heavyweight validation paths.
 
 ### Workflow and routing
 
-- [ ] Add the worker-light-facing `preview(...)` helper to the public utils
+- [x] Add the worker-light-facing `preview(...)` helper to the public utils
   surface and keep the boundary geometry-only.
-- [ ] Add or update the controller preview entrypoint so preview requests flow
+- [x] Add or update the controller preview entrypoint so preview requests flow
   through controller orchestration instead of calling the renderer directly.
-- [ ] Add the Temporal workflow/activity path for preview and keep the live
+- [x] Add the Temporal workflow/activity path for preview and keep the live
   chain `worker-light -> controller -> Temporal -> worker-renderer`.
 - [ ] Persist preview workflow state, correlation metadata, and timeout/failure
   reasons so stalled renders fail closed instead of hanging or silently
   degrading.
-- [ ] Return the structured preview response only after the workflow has a
+- [x] Return the structured preview response only after the workflow has a
   resolved artifact path, manifest path, modality, and angle metadata.
 - [ ] Make the preview workflow accept a render request, persist the request
   context, and return only after the renderer has produced the artifact path and
   manifest entry.
-- [ ] Keep any heavy-worker preview bridge as a compatibility path during
+- [x] Keep any heavy-worker preview bridge as a compatibility path during
   rollout only; the default path must become worker-light driven.
 - [ ] Define timeout and failure behavior in the workflow so a stalled preview
   fails closed instead of silently hanging or falling back.
 
 ### Geometry composition
 
-- [ ] Export `objectives_geometry()` as the zero-argument benchmark geometry
+- [x] Export `objectives_geometry()` as the zero-argument benchmark geometry
   helper from the utils surface.
 - [ ] Keep benchmark previews composed at the call site from `build()` plus
   `objectives_geometry()`, not from hidden geometry injected inside the helper.
@@ -369,26 +369,26 @@ modality-aware instead of piggybacking on heavyweight validation paths.
 
 ### Modality and artifacts
 
-- [ ] Thread `rgb`, `depth`, and `segmentation` through the renderer request
+- [x] Thread `rgb`, `depth`, and `segmentation` through the renderer request
   schema and the manifest record for each render.
-- [ ] Update the renderer client, worker schema, and renderer route handlers so
+- [x] Update the renderer client, worker schema, and renderer route handlers so
   the modality enum is carried end to end without lossy conversion.
-- [ ] Preserve the existing preview file naming convention, including the angle
+- [x] Preserve the existing preview file naming convention, including the angle
   tags already used in render artifacts.
 - [ ] Keep the `render_e15_a45`-style angle family, plus a run-unique suffix or
   timestamp where repeated previews need disambiguation.
-- [ ] Keep `renders/render_manifest.json` synchronized with each preview write
+- [x] Keep `renders/render_manifest.json` synchronized with each preview write
   using atomic update behavior, not ad hoc agent edits.
 - [ ] Keep `renders/render_manifest.json` runtime-owned and read-only to agent
   roles, with no direct agent write path.
 - [ ] Keep benchmark, engineer, and final preview artifacts in their existing
   bucketed directories so workflow provenance stays visible.
-- [ ] Preserve the current image format policy for depth and segmentation
+- [x] Preserve the current image format policy for depth and segmentation
   previews.
 
 ### Prompts and permissions
 
-- [ ] Update `utils/__init__.py` and the `shared/utils/agent` export layer so
+- [x] Update `utils/__init__.py` and the `shared/utils/agent` export layer so
   `preview(...)` and `objectives_geometry()` are both importable from the agent
   surface.
 - [ ] Update `config/prompts.yaml` and `config/agents_config.yaml` so roles that
@@ -396,7 +396,7 @@ modality-aware instead of piggybacking on heavyweight validation paths.
   `preview_design(...)` guidance.
 - [ ] Update engineer and benchmark prompts, allowlists, and tool exports so
   the new helper is discoverable where live preview is needed.
-- [ ] Remove or demote any stale guidance that refers to `preview_design(...)`
+- [x] Remove or demote any stale guidance that refers to `preview_design(...)`
   or implies benchmark context is hidden inside the helper signature.
 - [ ] Keep `inspect_media(...)` as the review-time evidence path rather than a
   generation helper.
@@ -406,7 +406,7 @@ modality-aware instead of piggybacking on heavyweight validation paths.
 - [ ] Rerun or update `INT-024`, `INT-031`, `INT-032`, `INT-033`, `INT-034`,
   `INT-039`, `INT-188`, `INT-189`, `INT-190`, `INT-204`, `INT-207`, and
   `INT-208`.
-- [ ] Add a dedicated controller/Temporal preview-path integration test if no
+- [x] Add a dedicated controller/Temporal preview-path integration test if no
   existing INT already exercises the full worker-light -> controller ->
   Temporal -> renderer chain.
 - [ ] Confirm the benchmark validation and handoff tests still pass with the
