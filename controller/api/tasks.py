@@ -37,6 +37,7 @@ from shared.enums import (
     TerminalReason,
     TraceType,
 )
+from shared.script_contracts import authored_script_path_for_agent
 from shared.logging import get_logger
 from shared.models.schemas import EpisodeMetadata
 from shared.workers.schema import ReviewManifest
@@ -498,7 +499,10 @@ async def execute_agent_task(
                 }:
                     await seed_manufacturing_config(backend)
 
-                initial_script_content = await client.read_file_optional("script.py")
+                initial_script_path = authored_script_path_for_agent(agent_name)
+                initial_script_content = await client.read_file_optional(
+                    initial_script_path
+                )
                 initial_script_sha256 = (
                     hashlib.sha256(initial_script_content.encode("utf-8")).hexdigest()
                     if initial_script_content is not None

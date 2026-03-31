@@ -51,6 +51,7 @@ from shared.agents.config import load_agents_config
 from shared.enums import AgentName, TraceType
 from shared.git_utils import repo_revision
 from shared.models.schemas import CodeReference, ReviewResult, TraceMetadata
+from shared.script_contracts import authored_script_path_for_agent
 from shared.observability.schemas import LlmMediaAttachedEvent
 from shared.workers.filesystem.policy import VisualInspectionPolicy
 from shared.workers.schema import MediaInspectionResult, RenderManifest
@@ -1090,6 +1091,7 @@ class BaseNode:
         initial_script_sha256 = (
             str(inputs.get("initial_script_sha256") or "").strip() or None
         )
+        authored_script_path = authored_script_path_for_agent(node_type)
 
         def workspace_file_exists_sync(path: str) -> bool:
             future = asyncio.run_coroutine_threadsafe(
@@ -1256,12 +1258,14 @@ class BaseNode:
                         messages.append({"role": "system", "content": submit_reminder})
                         continue
                     if self._requires_script_artifact(node_type):
-                        script_exists = workspace_file_exists_sync("script.py")
+                        script_exists = workspace_file_exists_sync(
+                            authored_script_path
+                        )
                         refusal_exists = workspace_file_exists_sync("plan_refusal.md")
                         script_changed = True
                         if script_exists and initial_script_sha256:
                             current_script_sha256 = workspace_file_sha256_sync(
-                                "script.py"
+                                authored_script_path
                             )
                             script_changed = (
                                 current_script_sha256 is not None
@@ -1269,7 +1273,7 @@ class BaseNode:
                             )
                         if not script_exists and not refusal_exists:
                             finish_reminder = (
-                                "Write script.py before finishing. "
+                                f"Write {authored_script_path} before finishing. "
                                 "If the plan is genuinely infeasible, write "
                                 "plan_refusal.md with evidence instead."
                             )
@@ -1286,7 +1290,7 @@ class BaseNode:
                             continue
                         if not script_changed and not refusal_exists:
                             finish_reminder = (
-                                "Modify script.py before finishing. The current "
+                                f"Modify {authored_script_path} before finishing. The current "
                                 "file still matches the seeded starter. If the "
                                 "plan is genuinely infeasible, write "
                                 "plan_refusal.md with evidence instead."

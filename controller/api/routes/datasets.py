@@ -38,6 +38,7 @@ from shared.models.schemas import (
     TraceMetadata,
 )
 from shared.workers.schema import RenderManifest, ReviewManifest
+from shared.script_contracts import BENCHMARK_SCRIPT_PATH, SOLUTION_SCRIPT_PATH
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 
@@ -55,6 +56,8 @@ _ALLOWED_EXACT_FILES = {
     "todo.md",
     "journal.md",
     "script.py",
+    SOLUTION_SCRIPT_PATH,
+    BENCHMARK_SCRIPT_PATH,
     "assembly_definition.yaml",
     "benchmark_definition.yaml",
     "benchmark_assembly_definition.yaml",
@@ -241,7 +244,7 @@ def _missing_required_artifacts(
             "plan.md",
             "todo.md",
             "journal.md",
-            "script.py",
+            BENCHMARK_SCRIPT_PATH,
             "benchmark_definition.yaml",
             "benchmark_assembly_definition.yaml",
             "validation_results.json",
@@ -260,7 +263,7 @@ def _missing_required_artifacts(
             "plan.md",
             "todo.md",
             "journal.md",
-            "script.py",
+            SOLUTION_SCRIPT_PATH,
             "assembly_definition.yaml",
             "benchmark_definition.yaml",
             "benchmark_assembly_definition.yaml",

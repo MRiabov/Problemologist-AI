@@ -413,7 +413,15 @@ async def _build_episode_replay_response(
             )
             or _asset_looks_like_review_manifest(path)
             or path.startswith("reviews/")
-            or path in {"plan.md", "todo.md", "journal.md", "script.py"}
+            or path
+            in {
+                "plan.md",
+                "todo.md",
+                "journal.md",
+                "script.py",
+                "solution_script.py",
+                "benchmark_script.py",
+            }
         ):
             continue
 
