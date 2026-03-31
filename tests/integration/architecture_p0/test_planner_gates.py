@@ -473,6 +473,7 @@ async def test_int_005_mandatory_artifacts_gate(
 
 
 @pytest.mark.integration_p0
+@pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.asyncio
 async def test_int_005_engineer_planner_flow_emits_submit_plan_trace():
     """INT-005: Engineer planner must emit explicit submit_plan TOOL_START before completion."""
@@ -527,6 +528,7 @@ async def test_int_005_engineer_planner_flow_emits_submit_plan_trace():
 
 
 @pytest.mark.integration_p0
+@pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.asyncio
 async def test_int_113_electronics_planner_flow_emits_submit_plan_trace():
     """INT-113: Electronics planner must emit explicit submit_plan TOOL_START before completion."""
@@ -1241,6 +1243,7 @@ async def test_int_015_engineer_handover_immutability(
 
 
 @pytest.mark.integration_p0
+@pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.allow_backend_errors(regexes=["environment_attachment_contract_invalid"])
 @pytest.mark.asyncio
 async def test_int_018_submit_handoff_rejects_forbidden_environment_drilling(
