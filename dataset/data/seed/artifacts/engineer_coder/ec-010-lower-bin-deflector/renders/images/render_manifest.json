@@ -2,38 +2,1402 @@
   "version": "1.0",
   "episode_id": "ec-010-lower-bin-deflector",
   "worker_session_id": "ec-010-lower-bin-deflector",
-  "revision": "51568fa4532bff7ef5039b68fe183adc51ea42cb",
+  "revision": "2e5fc8de5485f633333a1b1897f644e45b705201",
   "environment_version": "1.0",
   "preview_evidence_paths": [
-    "renders/images/context_view_01.png",
-    "renders/images/context_view_02.png"
+    "renders/images/render_e15_a0.png",
+    "renders/images/render_e15_a0_depth.png",
+    "renders/images/render_e15_a0_segmentation.png",
+    "renders/images/render_e15_a45.png",
+    "renders/images/render_e15_a45_depth.png",
+    "renders/images/render_e15_a45_segmentation.png",
+    "renders/images/render_e15_a90.png",
+    "renders/images/render_e15_a90_depth.png",
+    "renders/images/render_e15_a90_segmentation.png",
+    "renders/images/render_e15_a135.png",
+    "renders/images/render_e15_a135_depth.png",
+    "renders/images/render_e15_a135_segmentation.png",
+    "renders/images/render_e15_a180.png",
+    "renders/images/render_e15_a180_depth.png",
+    "renders/images/render_e15_a180_segmentation.png",
+    "renders/images/render_e15_a225.png",
+    "renders/images/render_e15_a225_depth.png",
+    "renders/images/render_e15_a225_segmentation.png",
+    "renders/images/render_e15_a270.png",
+    "renders/images/render_e15_a270_depth.png",
+    "renders/images/render_e15_a270_segmentation.png",
+    "renders/images/render_e15_a315.png",
+    "renders/images/render_e15_a315_depth.png",
+    "renders/images/render_e15_a315_segmentation.png",
+    "renders/images/render_e45_a0.png",
+    "renders/images/render_e45_a0_depth.png",
+    "renders/images/render_e45_a0_segmentation.png",
+    "renders/images/render_e45_a45.png",
+    "renders/images/render_e45_a45_depth.png",
+    "renders/images/render_e45_a45_segmentation.png",
+    "renders/images/render_e45_a90.png",
+    "renders/images/render_e45_a90_depth.png",
+    "renders/images/render_e45_a90_segmentation.png",
+    "renders/images/render_e45_a135.png",
+    "renders/images/render_e45_a135_depth.png",
+    "renders/images/render_e45_a135_segmentation.png",
+    "renders/images/render_e45_a180.png",
+    "renders/images/render_e45_a180_depth.png",
+    "renders/images/render_e45_a180_segmentation.png",
+    "renders/images/render_e45_a225.png",
+    "renders/images/render_e45_a225_depth.png",
+    "renders/images/render_e45_a225_segmentation.png",
+    "renders/images/render_e45_a270.png",
+    "renders/images/render_e45_a270_depth.png",
+    "renders/images/render_e45_a270_segmentation.png",
+    "renders/images/render_e45_a315.png",
+    "renders/images/render_e45_a315_depth.png",
+    "renders/images/render_e45_a315_segmentation.png",
+    "renders/images/render_e75_a0.png",
+    "renders/images/render_e75_a0_depth.png",
+    "renders/images/render_e75_a0_segmentation.png",
+    "renders/images/render_e75_a45.png",
+    "renders/images/render_e75_a45_depth.png",
+    "renders/images/render_e75_a45_segmentation.png",
+    "renders/images/render_e75_a90.png",
+    "renders/images/render_e75_a90_depth.png",
+    "renders/images/render_e75_a90_segmentation.png",
+    "renders/images/render_e75_a135.png",
+    "renders/images/render_e75_a135_depth.png",
+    "renders/images/render_e75_a135_segmentation.png",
+    "renders/images/render_e75_a180.png",
+    "renders/images/render_e75_a180_depth.png",
+    "renders/images/render_e75_a180_segmentation.png",
+    "renders/images/render_e75_a225.png",
+    "renders/images/render_e75_a225_depth.png",
+    "renders/images/render_e75_a225_segmentation.png",
+    "renders/images/render_e75_a270.png",
+    "renders/images/render_e75_a270_depth.png",
+    "renders/images/render_e75_a270_segmentation.png",
+    "renders/images/render_e75_a315.png",
+    "renders/images/render_e75_a315_depth.png",
+    "renders/images/render_e75_a315_segmentation.png"
   ],
   "artifacts": {
-    "renders/images/context_view_01.png": {
+    "renders/images/render_e15_a0.png": {
       "modality": "rgb",
-      "group_key": "context",
+      "group_key": "render_e15_a0",
       "siblings": {
-        "rgb": "renders/images/context_view_01.png",
-        "depth": null,
-        "segmentation": null
+        "rgb": "renders/images/render_e15_a0.png",
+        "depth": "renders/images/render_e15_a0_depth.png",
+        "segmentation": "renders/images/render_e15_a0_segmentation.png"
       },
       "depth_min_m": null,
       "depth_max_m": null,
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/images/context_view_02.png": {
-      "modality": "rgb",
-      "group_key": "context",
+    "renders/images/render_e15_a0_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a0",
       "siblings": {
-        "rgb": "renders/images/context_view_02.png",
-        "depth": null,
-        "segmentation": null
+        "rgb": "renders/images/render_e15_a0.png",
+        "depth": "renders/images/render_e15_a0_depth.png",
+        "segmentation": "renders/images/render_e15_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a0_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a0",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a0.png",
+        "depth": "renders/images/render_e15_a0_depth.png",
+        "segmentation": "renders/images/render_e15_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e15_a45.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a45.png",
+        "depth": "renders/images/render_e15_a45_depth.png",
+        "segmentation": "renders/images/render_e15_a45_segmentation.png"
       },
       "depth_min_m": null,
       "depth_max_m": null,
       "depth_interpretation": null,
       "segmentation_legend": []
+    },
+    "renders/images/render_e15_a45_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a45.png",
+        "depth": "renders/images/render_e15_a45_depth.png",
+        "segmentation": "renders/images/render_e15_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a45_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a45.png",
+        "depth": "renders/images/render_e15_a45_depth.png",
+        "segmentation": "renders/images/render_e15_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e15_a90.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a90.png",
+        "depth": "renders/images/render_e15_a90_depth.png",
+        "segmentation": "renders/images/render_e15_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a90_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a90.png",
+        "depth": "renders/images/render_e15_a90_depth.png",
+        "segmentation": "renders/images/render_e15_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a90_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a90.png",
+        "depth": "renders/images/render_e15_a90_depth.png",
+        "segmentation": "renders/images/render_e15_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e15_a135.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a135.png",
+        "depth": "renders/images/render_e15_a135_depth.png",
+        "segmentation": "renders/images/render_e15_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a135_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a135.png",
+        "depth": "renders/images/render_e15_a135_depth.png",
+        "segmentation": "renders/images/render_e15_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a135_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a135.png",
+        "depth": "renders/images/render_e15_a135_depth.png",
+        "segmentation": "renders/images/render_e15_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e15_a180.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a180.png",
+        "depth": "renders/images/render_e15_a180_depth.png",
+        "segmentation": "renders/images/render_e15_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a180_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a180.png",
+        "depth": "renders/images/render_e15_a180_depth.png",
+        "segmentation": "renders/images/render_e15_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a180_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a180.png",
+        "depth": "renders/images/render_e15_a180_depth.png",
+        "segmentation": "renders/images/render_e15_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e15_a225.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a225.png",
+        "depth": "renders/images/render_e15_a225_depth.png",
+        "segmentation": "renders/images/render_e15_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a225_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a225.png",
+        "depth": "renders/images/render_e15_a225_depth.png",
+        "segmentation": "renders/images/render_e15_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a225_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a225.png",
+        "depth": "renders/images/render_e15_a225_depth.png",
+        "segmentation": "renders/images/render_e15_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e15_a270.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a270.png",
+        "depth": "renders/images/render_e15_a270_depth.png",
+        "segmentation": "renders/images/render_e15_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a270_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a270.png",
+        "depth": "renders/images/render_e15_a270_depth.png",
+        "segmentation": "renders/images/render_e15_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a270_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a270.png",
+        "depth": "renders/images/render_e15_a270_depth.png",
+        "segmentation": "renders/images/render_e15_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e15_a315.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a315.png",
+        "depth": "renders/images/render_e15_a315_depth.png",
+        "segmentation": "renders/images/render_e15_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a315_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a315.png",
+        "depth": "renders/images/render_e15_a315_depth.png",
+        "segmentation": "renders/images/render_e15_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a315_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a315.png",
+        "depth": "renders/images/render_e15_a315_depth.png",
+        "segmentation": "renders/images/render_e15_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e45_a0.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a0",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a0.png",
+        "depth": "renders/images/render_e45_a0_depth.png",
+        "segmentation": "renders/images/render_e45_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a0_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a0",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a0.png",
+        "depth": "renders/images/render_e45_a0_depth.png",
+        "segmentation": "renders/images/render_e45_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a0_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a0",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a0.png",
+        "depth": "renders/images/render_e45_a0_depth.png",
+        "segmentation": "renders/images/render_e45_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e45_a45.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a45.png",
+        "depth": "renders/images/render_e45_a45_depth.png",
+        "segmentation": "renders/images/render_e45_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a45_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a45.png",
+        "depth": "renders/images/render_e45_a45_depth.png",
+        "segmentation": "renders/images/render_e45_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a45_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a45.png",
+        "depth": "renders/images/render_e45_a45_depth.png",
+        "segmentation": "renders/images/render_e45_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e45_a90.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a90.png",
+        "depth": "renders/images/render_e45_a90_depth.png",
+        "segmentation": "renders/images/render_e45_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a90_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a90.png",
+        "depth": "renders/images/render_e45_a90_depth.png",
+        "segmentation": "renders/images/render_e45_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a90_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a90.png",
+        "depth": "renders/images/render_e45_a90_depth.png",
+        "segmentation": "renders/images/render_e45_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e45_a135.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a135.png",
+        "depth": "renders/images/render_e45_a135_depth.png",
+        "segmentation": "renders/images/render_e45_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a135_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a135.png",
+        "depth": "renders/images/render_e45_a135_depth.png",
+        "segmentation": "renders/images/render_e45_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a135_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a135.png",
+        "depth": "renders/images/render_e45_a135_depth.png",
+        "segmentation": "renders/images/render_e45_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e45_a180.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a180.png",
+        "depth": "renders/images/render_e45_a180_depth.png",
+        "segmentation": "renders/images/render_e45_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a180_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a180.png",
+        "depth": "renders/images/render_e45_a180_depth.png",
+        "segmentation": "renders/images/render_e45_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a180_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a180.png",
+        "depth": "renders/images/render_e45_a180_depth.png",
+        "segmentation": "renders/images/render_e45_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e45_a225.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a225.png",
+        "depth": "renders/images/render_e45_a225_depth.png",
+        "segmentation": "renders/images/render_e45_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a225_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a225.png",
+        "depth": "renders/images/render_e45_a225_depth.png",
+        "segmentation": "renders/images/render_e45_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a225_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a225.png",
+        "depth": "renders/images/render_e45_a225_depth.png",
+        "segmentation": "renders/images/render_e45_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e45_a270.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a270.png",
+        "depth": "renders/images/render_e45_a270_depth.png",
+        "segmentation": "renders/images/render_e45_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a270_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a270.png",
+        "depth": "renders/images/render_e45_a270_depth.png",
+        "segmentation": "renders/images/render_e45_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a270_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a270.png",
+        "depth": "renders/images/render_e45_a270_depth.png",
+        "segmentation": "renders/images/render_e45_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e45_a315.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a315.png",
+        "depth": "renders/images/render_e45_a315_depth.png",
+        "segmentation": "renders/images/render_e45_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a315_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a315.png",
+        "depth": "renders/images/render_e45_a315_depth.png",
+        "segmentation": "renders/images/render_e45_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a315_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a315.png",
+        "depth": "renders/images/render_e45_a315_depth.png",
+        "segmentation": "renders/images/render_e45_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e75_a0.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a0",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a0.png",
+        "depth": "renders/images/render_e75_a0_depth.png",
+        "segmentation": "renders/images/render_e75_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a0_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a0",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a0.png",
+        "depth": "renders/images/render_e75_a0_depth.png",
+        "segmentation": "renders/images/render_e75_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a0_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a0",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a0.png",
+        "depth": "renders/images/render_e75_a0_depth.png",
+        "segmentation": "renders/images/render_e75_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e75_a45.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a45.png",
+        "depth": "renders/images/render_e75_a45_depth.png",
+        "segmentation": "renders/images/render_e75_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a45_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a45.png",
+        "depth": "renders/images/render_e75_a45_depth.png",
+        "segmentation": "renders/images/render_e75_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a45_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a45.png",
+        "depth": "renders/images/render_e75_a45_depth.png",
+        "segmentation": "renders/images/render_e75_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e75_a90.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a90.png",
+        "depth": "renders/images/render_e75_a90_depth.png",
+        "segmentation": "renders/images/render_e75_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a90_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a90.png",
+        "depth": "renders/images/render_e75_a90_depth.png",
+        "segmentation": "renders/images/render_e75_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a90_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a90.png",
+        "depth": "renders/images/render_e75_a90_depth.png",
+        "segmentation": "renders/images/render_e75_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e75_a135.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a135.png",
+        "depth": "renders/images/render_e75_a135_depth.png",
+        "segmentation": "renders/images/render_e75_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a135_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a135.png",
+        "depth": "renders/images/render_e75_a135_depth.png",
+        "segmentation": "renders/images/render_e75_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a135_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a135.png",
+        "depth": "renders/images/render_e75_a135_depth.png",
+        "segmentation": "renders/images/render_e75_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e75_a180.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a180.png",
+        "depth": "renders/images/render_e75_a180_depth.png",
+        "segmentation": "renders/images/render_e75_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a180_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a180.png",
+        "depth": "renders/images/render_e75_a180_depth.png",
+        "segmentation": "renders/images/render_e75_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a180_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a180.png",
+        "depth": "renders/images/render_e75_a180_depth.png",
+        "segmentation": "renders/images/render_e75_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e75_a225.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a225.png",
+        "depth": "renders/images/render_e75_a225_depth.png",
+        "segmentation": "renders/images/render_e75_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a225_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a225.png",
+        "depth": "renders/images/render_e75_a225_depth.png",
+        "segmentation": "renders/images/render_e75_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a225_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a225.png",
+        "depth": "renders/images/render_e75_a225_depth.png",
+        "segmentation": "renders/images/render_e75_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e75_a270.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a270.png",
+        "depth": "renders/images/render_e75_a270_depth.png",
+        "segmentation": "renders/images/render_e75_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a270_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a270.png",
+        "depth": "renders/images/render_e75_a270_depth.png",
+        "segmentation": "renders/images/render_e75_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a270_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a270.png",
+        "depth": "renders/images/render_e75_a270_depth.png",
+        "segmentation": "renders/images/render_e75_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
+    },
+    "renders/images/render_e75_a315.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a315.png",
+        "depth": "renders/images/render_e75_a315_depth.png",
+        "segmentation": "renders/images/render_e75_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a315_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a315.png",
+        "depth": "renders/images/render_e75_a315_depth.png",
+        "segmentation": "renders/images/render_e75_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a315_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a315.png",
+        "depth": "renders/images/render_e75_a315_depth.png",
+        "segmentation": "renders/images/render_e75_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        }
+      ]
     }
   }
 }

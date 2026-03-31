@@ -2,38 +2,3202 @@
   "version": "1.0",
   "episode_id": "eer-001-sideways-transfer",
   "worker_session_id": "eer-001-sideways-transfer",
-  "revision": "51568fa4532bff7ef5039b68fe183adc51ea42cb",
+  "revision": "2e5fc8de5485f633333a1b1897f644e45b705201",
   "environment_version": "integration-test",
   "preview_evidence_paths": [
-    "renders/images/context_view_01.png",
-    "renders/images/context_view_02.png"
+    "renders/images/render_e15_a0.png",
+    "renders/images/render_e15_a0_depth.png",
+    "renders/images/render_e15_a0_segmentation.png",
+    "renders/images/render_e15_a45.png",
+    "renders/images/render_e15_a45_depth.png",
+    "renders/images/render_e15_a45_segmentation.png",
+    "renders/images/render_e15_a90.png",
+    "renders/images/render_e15_a90_depth.png",
+    "renders/images/render_e15_a90_segmentation.png",
+    "renders/images/render_e15_a135.png",
+    "renders/images/render_e15_a135_depth.png",
+    "renders/images/render_e15_a135_segmentation.png",
+    "renders/images/render_e15_a180.png",
+    "renders/images/render_e15_a180_depth.png",
+    "renders/images/render_e15_a180_segmentation.png",
+    "renders/images/render_e15_a225.png",
+    "renders/images/render_e15_a225_depth.png",
+    "renders/images/render_e15_a225_segmentation.png",
+    "renders/images/render_e15_a270.png",
+    "renders/images/render_e15_a270_depth.png",
+    "renders/images/render_e15_a270_segmentation.png",
+    "renders/images/render_e15_a315.png",
+    "renders/images/render_e15_a315_depth.png",
+    "renders/images/render_e15_a315_segmentation.png",
+    "renders/images/render_e45_a0.png",
+    "renders/images/render_e45_a0_depth.png",
+    "renders/images/render_e45_a0_segmentation.png",
+    "renders/images/render_e45_a45.png",
+    "renders/images/render_e45_a45_depth.png",
+    "renders/images/render_e45_a45_segmentation.png",
+    "renders/images/render_e45_a90.png",
+    "renders/images/render_e45_a90_depth.png",
+    "renders/images/render_e45_a90_segmentation.png",
+    "renders/images/render_e45_a135.png",
+    "renders/images/render_e45_a135_depth.png",
+    "renders/images/render_e45_a135_segmentation.png",
+    "renders/images/render_e45_a180.png",
+    "renders/images/render_e45_a180_depth.png",
+    "renders/images/render_e45_a180_segmentation.png",
+    "renders/images/render_e45_a225.png",
+    "renders/images/render_e45_a225_depth.png",
+    "renders/images/render_e45_a225_segmentation.png",
+    "renders/images/render_e45_a270.png",
+    "renders/images/render_e45_a270_depth.png",
+    "renders/images/render_e45_a270_segmentation.png",
+    "renders/images/render_e45_a315.png",
+    "renders/images/render_e45_a315_depth.png",
+    "renders/images/render_e45_a315_segmentation.png",
+    "renders/images/render_e75_a0.png",
+    "renders/images/render_e75_a0_depth.png",
+    "renders/images/render_e75_a0_segmentation.png",
+    "renders/images/render_e75_a45.png",
+    "renders/images/render_e75_a45_depth.png",
+    "renders/images/render_e75_a45_segmentation.png",
+    "renders/images/render_e75_a90.png",
+    "renders/images/render_e75_a90_depth.png",
+    "renders/images/render_e75_a90_segmentation.png",
+    "renders/images/render_e75_a135.png",
+    "renders/images/render_e75_a135_depth.png",
+    "renders/images/render_e75_a135_segmentation.png",
+    "renders/images/render_e75_a180.png",
+    "renders/images/render_e75_a180_depth.png",
+    "renders/images/render_e75_a180_segmentation.png",
+    "renders/images/render_e75_a225.png",
+    "renders/images/render_e75_a225_depth.png",
+    "renders/images/render_e75_a225_segmentation.png",
+    "renders/images/render_e75_a270.png",
+    "renders/images/render_e75_a270_depth.png",
+    "renders/images/render_e75_a270_segmentation.png",
+    "renders/images/render_e75_a315.png",
+    "renders/images/render_e75_a315_depth.png",
+    "renders/images/render_e75_a315_segmentation.png"
   ],
   "artifacts": {
-    "renders/images/context_view_01.png": {
+    "renders/images/render_e15_a0.png": {
       "modality": "rgb",
-      "group_key": "context",
+      "group_key": "render_e15_a0",
       "siblings": {
-        "rgb": "renders/images/context_view_01.png",
-        "depth": null,
-        "segmentation": null
+        "rgb": "renders/images/render_e15_a0.png",
+        "depth": "renders/images/render_e15_a0_depth.png",
+        "segmentation": "renders/images/render_e15_a0_segmentation.png"
       },
       "depth_min_m": null,
       "depth_max_m": null,
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/images/context_view_02.png": {
-      "modality": "rgb",
-      "group_key": "context",
+    "renders/images/render_e15_a0_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a0",
       "siblings": {
-        "rgb": "renders/images/context_view_02.png",
-        "depth": null,
-        "segmentation": null
+        "rgb": "renders/images/render_e15_a0.png",
+        "depth": "renders/images/render_e15_a0_depth.png",
+        "segmentation": "renders/images/render_e15_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a0_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a0",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a0.png",
+        "depth": "renders/images/render_e15_a0_depth.png",
+        "segmentation": "renders/images/render_e15_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e15_a45.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a45.png",
+        "depth": "renders/images/render_e15_a45_depth.png",
+        "segmentation": "renders/images/render_e15_a45_segmentation.png"
       },
       "depth_min_m": null,
       "depth_max_m": null,
       "depth_interpretation": null,
       "segmentation_legend": []
+    },
+    "renders/images/render_e15_a45_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a45.png",
+        "depth": "renders/images/render_e15_a45_depth.png",
+        "segmentation": "renders/images/render_e15_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a45_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a45.png",
+        "depth": "renders/images/render_e15_a45_depth.png",
+        "segmentation": "renders/images/render_e15_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e15_a90.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a90.png",
+        "depth": "renders/images/render_e15_a90_depth.png",
+        "segmentation": "renders/images/render_e15_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a90_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a90.png",
+        "depth": "renders/images/render_e15_a90_depth.png",
+        "segmentation": "renders/images/render_e15_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a90_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a90.png",
+        "depth": "renders/images/render_e15_a90_depth.png",
+        "segmentation": "renders/images/render_e15_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e15_a135.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a135.png",
+        "depth": "renders/images/render_e15_a135_depth.png",
+        "segmentation": "renders/images/render_e15_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a135_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a135.png",
+        "depth": "renders/images/render_e15_a135_depth.png",
+        "segmentation": "renders/images/render_e15_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a135_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a135.png",
+        "depth": "renders/images/render_e15_a135_depth.png",
+        "segmentation": "renders/images/render_e15_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e15_a180.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a180.png",
+        "depth": "renders/images/render_e15_a180_depth.png",
+        "segmentation": "renders/images/render_e15_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a180_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a180.png",
+        "depth": "renders/images/render_e15_a180_depth.png",
+        "segmentation": "renders/images/render_e15_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a180_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a180.png",
+        "depth": "renders/images/render_e15_a180_depth.png",
+        "segmentation": "renders/images/render_e15_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e15_a225.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a225.png",
+        "depth": "renders/images/render_e15_a225_depth.png",
+        "segmentation": "renders/images/render_e15_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a225_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a225.png",
+        "depth": "renders/images/render_e15_a225_depth.png",
+        "segmentation": "renders/images/render_e15_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a225_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a225.png",
+        "depth": "renders/images/render_e15_a225_depth.png",
+        "segmentation": "renders/images/render_e15_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e15_a270.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a270.png",
+        "depth": "renders/images/render_e15_a270_depth.png",
+        "segmentation": "renders/images/render_e15_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a270_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a270.png",
+        "depth": "renders/images/render_e15_a270_depth.png",
+        "segmentation": "renders/images/render_e15_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a270_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a270.png",
+        "depth": "renders/images/render_e15_a270_depth.png",
+        "segmentation": "renders/images/render_e15_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e15_a315.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a315.png",
+        "depth": "renders/images/render_e15_a315_depth.png",
+        "segmentation": "renders/images/render_e15_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a315_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a315.png",
+        "depth": "renders/images/render_e15_a315_depth.png",
+        "segmentation": "renders/images/render_e15_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e15_a315_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e15_a315.png",
+        "depth": "renders/images/render_e15_a315_depth.png",
+        "segmentation": "renders/images/render_e15_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e45_a0.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a0",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a0.png",
+        "depth": "renders/images/render_e45_a0_depth.png",
+        "segmentation": "renders/images/render_e45_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a0_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a0",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a0.png",
+        "depth": "renders/images/render_e45_a0_depth.png",
+        "segmentation": "renders/images/render_e45_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a0_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a0",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a0.png",
+        "depth": "renders/images/render_e45_a0_depth.png",
+        "segmentation": "renders/images/render_e45_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e45_a45.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a45.png",
+        "depth": "renders/images/render_e45_a45_depth.png",
+        "segmentation": "renders/images/render_e45_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a45_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a45.png",
+        "depth": "renders/images/render_e45_a45_depth.png",
+        "segmentation": "renders/images/render_e45_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a45_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a45.png",
+        "depth": "renders/images/render_e45_a45_depth.png",
+        "segmentation": "renders/images/render_e45_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e45_a90.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a90.png",
+        "depth": "renders/images/render_e45_a90_depth.png",
+        "segmentation": "renders/images/render_e45_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a90_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a90.png",
+        "depth": "renders/images/render_e45_a90_depth.png",
+        "segmentation": "renders/images/render_e45_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a90_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a90.png",
+        "depth": "renders/images/render_e45_a90_depth.png",
+        "segmentation": "renders/images/render_e45_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e45_a135.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a135.png",
+        "depth": "renders/images/render_e45_a135_depth.png",
+        "segmentation": "renders/images/render_e45_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a135_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a135.png",
+        "depth": "renders/images/render_e45_a135_depth.png",
+        "segmentation": "renders/images/render_e45_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a135_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a135.png",
+        "depth": "renders/images/render_e45_a135_depth.png",
+        "segmentation": "renders/images/render_e45_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e45_a180.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a180.png",
+        "depth": "renders/images/render_e45_a180_depth.png",
+        "segmentation": "renders/images/render_e45_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a180_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a180.png",
+        "depth": "renders/images/render_e45_a180_depth.png",
+        "segmentation": "renders/images/render_e45_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a180_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a180.png",
+        "depth": "renders/images/render_e45_a180_depth.png",
+        "segmentation": "renders/images/render_e45_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e45_a225.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a225.png",
+        "depth": "renders/images/render_e45_a225_depth.png",
+        "segmentation": "renders/images/render_e45_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a225_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a225.png",
+        "depth": "renders/images/render_e45_a225_depth.png",
+        "segmentation": "renders/images/render_e45_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a225_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a225.png",
+        "depth": "renders/images/render_e45_a225_depth.png",
+        "segmentation": "renders/images/render_e45_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e45_a270.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a270.png",
+        "depth": "renders/images/render_e45_a270_depth.png",
+        "segmentation": "renders/images/render_e45_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a270_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a270.png",
+        "depth": "renders/images/render_e45_a270_depth.png",
+        "segmentation": "renders/images/render_e45_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a270_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a270.png",
+        "depth": "renders/images/render_e45_a270_depth.png",
+        "segmentation": "renders/images/render_e45_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e45_a315.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a315.png",
+        "depth": "renders/images/render_e45_a315_depth.png",
+        "segmentation": "renders/images/render_e45_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a315_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a315.png",
+        "depth": "renders/images/render_e45_a315_depth.png",
+        "segmentation": "renders/images/render_e45_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e45_a315_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e45_a315.png",
+        "depth": "renders/images/render_e45_a315_depth.png",
+        "segmentation": "renders/images/render_e45_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e75_a0.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a0",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a0.png",
+        "depth": "renders/images/render_e75_a0_depth.png",
+        "segmentation": "renders/images/render_e75_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a0_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a0",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a0.png",
+        "depth": "renders/images/render_e75_a0_depth.png",
+        "segmentation": "renders/images/render_e75_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a0_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a0",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a0.png",
+        "depth": "renders/images/render_e75_a0_depth.png",
+        "segmentation": "renders/images/render_e75_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e75_a45.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a45.png",
+        "depth": "renders/images/render_e75_a45_depth.png",
+        "segmentation": "renders/images/render_e75_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a45_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a45.png",
+        "depth": "renders/images/render_e75_a45_depth.png",
+        "segmentation": "renders/images/render_e75_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a45_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a45",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a45.png",
+        "depth": "renders/images/render_e75_a45_depth.png",
+        "segmentation": "renders/images/render_e75_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e75_a90.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a90.png",
+        "depth": "renders/images/render_e75_a90_depth.png",
+        "segmentation": "renders/images/render_e75_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a90_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a90.png",
+        "depth": "renders/images/render_e75_a90_depth.png",
+        "segmentation": "renders/images/render_e75_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a90_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a90",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a90.png",
+        "depth": "renders/images/render_e75_a90_depth.png",
+        "segmentation": "renders/images/render_e75_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e75_a135.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a135.png",
+        "depth": "renders/images/render_e75_a135_depth.png",
+        "segmentation": "renders/images/render_e75_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a135_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a135.png",
+        "depth": "renders/images/render_e75_a135_depth.png",
+        "segmentation": "renders/images/render_e75_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a135_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a135",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a135.png",
+        "depth": "renders/images/render_e75_a135_depth.png",
+        "segmentation": "renders/images/render_e75_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e75_a180.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a180.png",
+        "depth": "renders/images/render_e75_a180_depth.png",
+        "segmentation": "renders/images/render_e75_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a180_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a180.png",
+        "depth": "renders/images/render_e75_a180_depth.png",
+        "segmentation": "renders/images/render_e75_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a180_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a180",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a180.png",
+        "depth": "renders/images/render_e75_a180_depth.png",
+        "segmentation": "renders/images/render_e75_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e75_a225.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a225.png",
+        "depth": "renders/images/render_e75_a225_depth.png",
+        "segmentation": "renders/images/render_e75_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a225_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a225.png",
+        "depth": "renders/images/render_e75_a225_depth.png",
+        "segmentation": "renders/images/render_e75_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a225_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a225",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a225.png",
+        "depth": "renders/images/render_e75_a225_depth.png",
+        "segmentation": "renders/images/render_e75_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e75_a270.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a270.png",
+        "depth": "renders/images/render_e75_a270_depth.png",
+        "segmentation": "renders/images/render_e75_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a270_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a270.png",
+        "depth": "renders/images/render_e75_a270_depth.png",
+        "segmentation": "renders/images/render_e75_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a270_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a270",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a270.png",
+        "depth": "renders/images/render_e75_a270_depth.png",
+        "segmentation": "renders/images/render_e75_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/images/render_e75_a315.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a315.png",
+        "depth": "renders/images/render_e75_a315_depth.png",
+        "segmentation": "renders/images/render_e75_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a315_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a315.png",
+        "depth": "renders/images/render_e75_a315_depth.png",
+        "segmentation": "renders/images/render_e75_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Brighter pixels are nearer. Values are normalized per image from the software preview renderer.",
+      "segmentation_legend": []
+    },
+    "renders/images/render_e75_a315_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a315",
+      "siblings": {
+        "rgb": "renders/images/render_e75_a315.png",
+        "depth": "renders/images/render_e75_a315_depth.png",
+        "segmentation": "renders/images/render_e75_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "ServoMotor_DS3218",
+          "instance_name": "ServoMotor_DS3218",
+          "semantic_label": "ServoMotor_DS3218",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "ServoMotor_DS3218",
+          "geom_name": "ServoMotor_DS3218",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
     }
   }
 }

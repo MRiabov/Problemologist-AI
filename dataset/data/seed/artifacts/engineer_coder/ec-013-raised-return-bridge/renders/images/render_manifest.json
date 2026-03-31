@@ -2,7 +2,7 @@
   "version": "1.0",
   "episode_id": "ec-013-raised-return-bridge",
   "worker_session_id": "ec-013-raised-return-bridge",
-  "revision": "51568fa4532bff7ef5039b68fe183adc51ea42cb",
+  "revision": "2e5fc8de5485f633333a1b1897f644e45b705201",
   "environment_version": "1.0",
   "preview_evidence_paths": [
     "renders/images/render_e15_a0.png",
