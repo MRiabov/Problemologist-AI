@@ -4,7 +4,7 @@
   "timestamp": "2026-03-11T12:00:00Z",
   "session_id": "seed-eer-012-sideways-transfer-fake-cots",
   "revision": "2e5fc8de5485f633333a1b1897f644e45b705201",
-  "script_path": "script.py",
+  "script_path": "solution_script.py",
   "script_sha256": "013fbff40ed7c9100f7f45a8cc44a7a0c2fe7e0aa13b4bac029b3aedc6bd4ae0",
   "validation_success": true,
   "validation_timestamp": 1710151320,
@@ -17,7 +17,7 @@
     "renders/images/context_view_02.png"
   ],
   "mjcf_path": "solution.xml",
-  "cad_path": "script.py",
+  "cad_path": "solution_script.py",
   "objectives_path": "benchmark_definition.yaml",
   "assembly_definition_path": "assembly_definition.yaml"
 }

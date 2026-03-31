@@ -4,7 +4,7 @@
   "timestamp": "2026-03-11T12:00:00Z",
   "session_id": "seed-eer-008-lift-platform-handoff",
   "revision": "2e5fc8de5485f633333a1b1897f644e45b705201",
-  "script_path": "script.py",
+  "script_path": "solution_script.py",
   "script_sha256": "a01c87c402e1f9b5446f89cab5998921929222f3a7e95768f72bb92ccb9236cc",
   "validation_success": true,
   "validation_timestamp": 1710152160,
@@ -17,7 +17,7 @@
     "renders/images/context_view_02.png"
   ],
   "mjcf_path": "solution.xml",
-  "cad_path": "script.py",
+  "cad_path": "solution_script.py",
   "objectives_path": "benchmark_definition.yaml",
   "assembly_definition_path": "assembly_definition.yaml"
 }

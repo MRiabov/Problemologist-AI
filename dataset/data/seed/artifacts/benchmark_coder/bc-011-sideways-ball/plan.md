@@ -25,5 +25,5 @@ Test lateral transfer over 1 meter distance. The benchmark should move a 40 mm r
 
 - Use Build123d primitives.
 - Ensure every part has `PartMetadata` or `CompoundMetadata`.
-- Keep `script.py` import-safe with no `__main__` block and no in-module review submission call.
+- Keep `benchmark_script.py` import-safe with no `__main__` block and no in-module review submission call.
 - Run validate/simulate/review submission only from external shell self-check commands.

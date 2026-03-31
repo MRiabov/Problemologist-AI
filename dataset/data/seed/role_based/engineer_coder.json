@@ -1,100 +1,100 @@
 [
   {
     "id": "ec-001",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the motorized sideways-transfer mechanism in `script.py`. Keep planner-owned files semantically consistent, preserve the single-motor and wiring-corridor assumptions from the reviewed package, and update `todo.md` and `journal.md` as you work unless you need to refuse the plan with evidence. Start by reading `ec001_run_hints.md` in the workspace for the last useful `ec-001` run notes before you make geometry changes.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the motorized sideways-transfer mechanism in `solution_script.py`. Keep planner-owned files semantically consistent, preserve the single-motor and wiring-corridor assumptions from the reviewed package, and update `todo.md` and `journal.md` as you work unless you need to refuse the plan with evidence. Start by reading `ec001_run_hints.md` in the workspace for the last useful `ec-001` run notes before you make geometry changes.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-001-sideways-transfer",
-    "expected_criteria": "Engineer coder starts from a reviewed planner package, implements a manufacturable single-motor sideways-transfer solution in `script.py`, and preserves planner consistency while updating execution progress.",
+    "expected_criteria": "Engineer coder starts from a reviewed planner package, implements a manufacturable single-motor sideways-transfer solution in `solution_script.py`, and preserves planner consistency while updating execution progress.",
     "complexity_level": 0
   },
   {
     "id": "ec-002",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the gap-bridge solution in `script.py`. Respect the seeded build-zone and gap constraints, keep the reviewed planner files coherent, and only diverge from the plan when the workspace evidence justifies it.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the gap-bridge solution in `solution_script.py`. Respect the seeded build-zone and gap constraints, keep the reviewed planner files coherent, and only diverge from the plan when the workspace evidence justifies it.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-002-gap-bridge",
-    "expected_criteria": "Engineer coder begins with planner-reviewed artifacts, implements the bridge package in `script.py`, and updates execution artifacts without breaking the planner contract.",
+    "expected_criteria": "Engineer coder begins with planner-reviewed artifacts, implements the bridge package in `solution_script.py`, and updates execution artifacts without breaking the planner contract.",
     "complexity_level": 0
   },
   {
     "id": "ec-003",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the timed-gate metering solution in `script.py`. Keep the planner-owned artifacts aligned with the reviewed plan, preserve the seeded single-motor and wiring-corridor assumptions around the gate keep-out, and update `todo.md` and `journal.md` as execution progresses.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the timed-gate metering solution in `solution_script.py`. Keep the planner-owned artifacts aligned with the reviewed plan, preserve the seeded single-motor and wiring-corridor assumptions around the gate keep-out, and update `todo.md` and `journal.md` as execution progresses.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-003-timed-gate-chute",
-    "expected_criteria": "Engineer coder starts from a reviewed timed-gate handoff package, implements a gate-compatible single-motor metering assembly in `script.py`, and preserves the seeded planning contract while progressing execution.",
+    "expected_criteria": "Engineer coder starts from a reviewed timed-gate handoff package, implements a gate-compatible single-motor metering assembly in `solution_script.py`, and preserves the seeded planning contract while progressing execution.",
     "complexity_level": 1
   },
   {
     "id": "ec-004",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the raised-shelf lift solution in `script.py`. Preserve the reviewed planner files, keep the motorized lift geometry inside the build zone, and update `todo.md` and `journal.md` while maintaining the seeded cost, weight, and single-DOF assumptions.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the raised-shelf lift solution in `solution_script.py`. Preserve the reviewed planner files, keep the motorized lift geometry inside the build zone, and update `todo.md` and `journal.md` while maintaining the seeded cost, weight, and single-DOF assumptions.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-004-raised-shelf-lift",
-    "expected_criteria": "Engineer coder starts from a reviewed raised-shelf handoff package, implements a single-motor shelf-lift solution in `script.py`, and preserves the seeded planning contract while progressing execution.",
+    "expected_criteria": "Engineer coder starts from a reviewed raised-shelf handoff package, implements a single-motor shelf-lift solution in `solution_script.py`, and preserves the seeded planning contract while progressing execution.",
     "complexity_level": 1
   },
   {
     "id": "ec-005",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the around-obstacle route for the central-forbid benchmark in `script.py`. Keep the reviewed planner artifacts coherent, preserve the planned passive routing strategy, and update `todo.md` and `journal.md` as execution progresses.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the around-obstacle route for the central-forbid benchmark in `solution_script.py`. Keep the reviewed planner artifacts coherent, preserve the planned passive routing strategy, and update `todo.md` and `journal.md` as execution progresses.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-005-central-forbid-route",
-    "expected_criteria": "Engineer coder begins from a reviewed around-obstacle handoff package, implements the routed transport path in `script.py`, and preserves the planner contract and clearance assumptions.",
+    "expected_criteria": "Engineer coder begins from a reviewed around-obstacle handoff package, implements the routed transport path in `solution_script.py`, and preserves the planner contract and clearance assumptions.",
     "complexity_level": 0
   },
   {
     "id": "ec-006",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the freestanding no-drill transfer in `script.py`. Respect the no-attachment constraint from the reviewed package, keep the planner files semantically consistent, and update `todo.md` and `journal.md` during implementation.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the freestanding no-drill transfer in `solution_script.py`. Respect the no-attachment constraint from the reviewed package, keep the planner files semantically consistent, and update `todo.md` and `journal.md` during implementation.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-006-no-drill-transfer",
-    "expected_criteria": "Engineer coder starts from a reviewed freestanding handoff package, implements the no-drill transfer solution in `script.py`, and preserves the seeded planner contract while updating execution progress.",
+    "expected_criteria": "Engineer coder starts from a reviewed freestanding handoff package, implements the no-drill transfer solution in `solution_script.py`, and preserves the seeded planner contract while updating execution progress.",
     "complexity_level": 0
   },
   {
     "id": "ec-007",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the low-friction cube guide in `script.py`. Preserve the reviewed planner artifacts, keep the guide geometry matched to the low-friction slip assumptions, and update `todo.md` and `journal.md` as execution progresses.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the low-friction cube guide in `solution_script.py`. Preserve the reviewed planner artifacts, keep the guide geometry matched to the low-friction slip assumptions, and update `todo.md` and `journal.md` as execution progresses.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-007-low-friction-cube",
-    "expected_criteria": "Engineer coder begins from a reviewed low-friction cube package, implements the guide geometry in `script.py`, and preserves the planner contract and seeded routing assumptions.",
+    "expected_criteria": "Engineer coder begins from a reviewed low-friction cube package, implements the guide geometry in `solution_script.py`, and preserves the planner contract and seeded routing assumptions.",
     "complexity_level": 0
   },
   {
     "id": "ec-008",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the lift-platform handoff guide in `script.py`. Keep the reviewed planner files coherent, preserve the passive handoff strategy around the moving benchmark platform, and update `todo.md` and `journal.md` while the implementation progresses.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the lift-platform handoff guide in `solution_script.py`. Keep the reviewed planner files coherent, preserve the passive handoff strategy around the moving benchmark platform, and update `todo.md` and `journal.md` while the implementation progresses.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-008-lift-platform-handoff",
-    "expected_criteria": "Engineer coder starts from a reviewed lift-platform handoff package, implements the passive catch-and-guide assembly in `script.py`, and preserves the planner contract and platform-clearance assumptions.",
+    "expected_criteria": "Engineer coder starts from a reviewed lift-platform handoff package, implements the passive catch-and-guide assembly in `solution_script.py`, and preserves the planner contract and platform-clearance assumptions.",
     "complexity_level": 1
   },
   {
     "id": "ec-009",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the narrow-goal funnel solution in `script.py`. Preserve the reviewed planner files, keep the precision-guidance geometry consistent with the seeded tolerance assumptions, and update `todo.md` and `journal.md` during execution.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the narrow-goal funnel solution in `solution_script.py`. Preserve the reviewed planner files, keep the precision-guidance geometry consistent with the seeded tolerance assumptions, and update `todo.md` and `journal.md` during execution.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-009-narrow-goal-funnel",
-    "expected_criteria": "Engineer coder begins from a reviewed narrow-goal handoff package, implements the precision funnel in `script.py`, and preserves the planner contract and seeded budget assumptions.",
+    "expected_criteria": "Engineer coder begins from a reviewed narrow-goal handoff package, implements the precision funnel in `solution_script.py`, and preserves the planner contract and seeded budget assumptions.",
     "complexity_level": 1
   },
   {
     "id": "ec-010",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the lower-bin deflector in `script.py`. Keep the reviewed planner artifacts aligned with the passive drop-redirection strategy, respect the dead-zone keepout, and update `todo.md` and `journal.md` as execution progresses.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the lower-bin deflector in `solution_script.py`. Keep the reviewed planner artifacts aligned with the passive drop-redirection strategy, respect the dead-zone keepout, and update `todo.md` and `journal.md` as execution progresses.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-010-lower-bin-deflector",
-    "expected_criteria": "Engineer coder starts from a reviewed lower-bin handoff package, implements the passive deflector assembly in `script.py`, and preserves the seeded planner contract and dead-zone constraints.",
+    "expected_criteria": "Engineer coder starts from a reviewed lower-bin handoff package, implements the passive deflector assembly in `solution_script.py`, and preserves the seeded planner contract and dead-zone constraints.",
     "complexity_level": 0
   },
   {
     "id": "ec-011",
-    "task": "Use the seeded reviewed handoff package in the workspace to finish the single-motor diverter-gate implementation in `script.py` and complete the electromechanical updates required by the plan. Keep the design on one 12V DC supply with at most 2.0A available, route both power and return wires through the left-wall cable corridor, update `assembly_definition.yaml`, and preserve the reviewed planner artifacts while you update `todo.md` and `journal.md`.",
+    "task": "Use the seeded reviewed handoff package in the workspace to finish the single-motor diverter-gate implementation in `solution_script.py` and complete the electromechanical updates required by the plan. Keep the design on one 12V DC supply with at most 2.0A available, route both power and return wires through the left-wall cable corridor, update `assembly_definition.yaml`, and preserve the reviewed planner artifacts while you update `todo.md` and `journal.md`.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-011-diverter-gate-wiring",
     "expected_criteria": "Engineer coder starts from a reviewed diverter-gate handoff package, completes the electromechanical implementation in the workspace files, adds a valid single-motor power path, and preserves the seeded routing and supply constraints.",
     "complexity_level": 1
   },
   {
     "id": "ec-012",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the dual-stage return-gate mechanism in `script.py`. Keep the two motorized gate stages, relay, and switch inside the rear-left service corridor, preserve the dead-zone clearance and the reviewed planner files, and update `todo.md` and `journal.md` while you work.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the dual-stage return-gate mechanism in `solution_script.py`. Keep the two motorized gate stages, relay, and switch inside the rear-left service corridor, preserve the dead-zone clearance and the reviewed planner files, and update `todo.md` and `journal.md` while you work.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-012-dual-stage-return-gate",
-    "expected_criteria": "Engineer coder starts from a reviewed dual-stage return-gate handoff package, implements the two-stage motorized redirector in `script.py`, and preserves the planner budget, wiring corridor, and dead-zone constraints.",
+    "expected_criteria": "Engineer coder starts from a reviewed dual-stage return-gate handoff package, implements the two-stage motorized redirector in `solution_script.py`, and preserves the planner budget, wiring corridor, and dead-zone constraints.",
     "complexity_level": 2
   },
   {
     "id": "ec-013",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the raised-return bridge in `script.py`. Keep the lift frame, guide rail, motor mount, relay, and switch aligned with the shelf-height goal, preserve the reviewed planner artifacts, and update `todo.md` and `journal.md` as you progress.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the raised-return bridge in `solution_script.py`. Keep the lift frame, guide rail, motor mount, relay, and switch aligned with the shelf-height goal, preserve the reviewed planner artifacts, and update `todo.md` and `journal.md` as you progress.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-013-raised-return-bridge",
-    "expected_criteria": "Engineer coder starts from a reviewed raised-return-bridge handoff package, implements the incline lift and upper tray in `script.py`, and preserves the planner budget, guide-rail alignment, and left-side wiring corridor.",
+    "expected_criteria": "Engineer coder starts from a reviewed raised-return-bridge handoff package, implements the incline lift and upper tray in `solution_script.py`, and preserves the planner budget, guide-rail alignment, and left-side wiring corridor.",
     "complexity_level": 2
   },
   {
     "id": "ec-014",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the timed diverter latch in `script.py`. Keep the diverter gate, latch leaf, motor mounts, and control box clear of the moving benchmark guard arm, preserve the reviewed planner artifacts, and update `todo.md` and `journal.md` while you work.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the timed diverter latch in `solution_script.py`. Keep the diverter gate, latch leaf, motor mounts, and control box clear of the moving benchmark guard arm, preserve the reviewed planner artifacts, and update `todo.md` and `journal.md` while you work.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-014-timed-diverter-latch",
-    "expected_criteria": "Engineer coder starts from a reviewed timed-diverter handoff package, implements the diverter and latch assembly in `script.py`, and preserves the benchmark guard-arm sweep clearance plus the rear-left wire corridor.",
+    "expected_criteria": "Engineer coder starts from a reviewed timed-diverter handoff package, implements the diverter and latch assembly in `solution_script.py`, and preserves the benchmark guard-arm sweep clearance plus the rear-left wire corridor.",
     "complexity_level": 2
   }
 ]
