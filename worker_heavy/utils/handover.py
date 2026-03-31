@@ -197,6 +197,9 @@ def submit_for_review(
     reviewer_stage: ReviewerStage = "engineering_execution_reviewer",
     episode_id: str | None = None,
     script_path: str | Path = "script.py",
+    benchmark_episode_id: str | None = None,
+    benchmark_worker_session_id: str | None = None,
+    benchmark_revision: str | None = None,
 ):
     """
     Standardized handover from Coder to Reviewer.
@@ -522,6 +525,18 @@ def submit_for_review(
             "Prior simulation is stale for current script revision. Re-run simulate."
         )
 
+    resolved_session_id = session_id or os.getenv("SESSION_ID", "default")
+    resolved_episode_id = (
+        episode_id
+        or os.getenv("EPISODE_ID")
+        or _derived_episode_id(resolved_session_id)
+    )
+    revision = _latest_git_revision(cwd)
+    if not revision:
+        raise ValueError(
+            "Unable to determine current repository git revision for review manifest."
+        )
+
     # 4. Persist artifacts
     render_paths: list[str] = []
     for raw_render_path in simulation_result.render_paths:
@@ -558,18 +573,59 @@ def submit_for_review(
     rendered_assembly_definition_path = renders_dir / assembly_definition_name
     shutil.copy(cost_path, rendered_assembly_definition_path)
 
-    revision = _latest_git_revision(cwd)
-    if not revision:
-        raise ValueError(
-            "Unable to determine current repository git revision for review manifest."
-        )
-    resolved_session_id = session_id or os.getenv("SESSION_ID", "default")
-    resolved_episode_id = (
-        episode_id
-        or os.getenv("EPISODE_ID")
-        or _derived_episode_id(resolved_session_id)
-    )
-
+    benchmark_review_manifest: ReviewManifest | None = None
+    if normalized_stage == "engineering_execution_reviewer":
+        benchmark_manifest_path = manifests_dir / "benchmark_review_manifest.json"
+        if benchmark_manifest_path.exists():
+            try:
+                benchmark_review_manifest = ReviewManifest.model_validate_json(
+                    benchmark_manifest_path.read_text(encoding="utf-8")
+                )
+            except Exception as exc:
+                raise ValueError(
+                    f"benchmark_review_manifest.json is invalid: {exc}"
+                ) from exc
+        else:
+            fallback_benchmark_episode_id = benchmark_episode_id or resolved_episode_id
+            fallback_benchmark_worker_session_id = (
+                benchmark_worker_session_id or resolved_session_id
+            )
+            fallback_benchmark_revision = benchmark_revision or revision
+            benchmark_review_manifest = ReviewManifest(
+                status="ready_for_review",
+                reviewer_stage="benchmark_reviewer",
+                timestamp=os.getenv("TIMESTAMP"),
+                session_id=fallback_benchmark_worker_session_id,
+                revision=fallback_benchmark_revision,
+                episode_id=fallback_benchmark_episode_id,
+                worker_session_id=fallback_benchmark_worker_session_id,
+                benchmark_episode_id=fallback_benchmark_episode_id,
+                benchmark_worker_session_id=fallback_benchmark_worker_session_id,
+                benchmark_revision=fallback_benchmark_revision,
+                solution_revision=fallback_benchmark_revision,
+                environment_version=estimation.version,
+                preview_evidence_paths=render_paths,
+                script_path=str(script_path.relative_to(cwd)),
+                script_sha256=script_sha256,
+                validation_success=validation_record.success,
+                validation_timestamp=validation_record.timestamp,
+                simulation_success=simulation_result.success,
+                simulation_summary=simulation_result.summary,
+                simulation_timestamp=simulation_results_path.stat().st_mtime,
+                goal_reached=_goal_reached(simulation_result.summary),
+                renders=render_paths,
+                benchmark_attachment_policy_summary=_benchmark_attachment_policy_summary(
+                    benchmark_definition
+                ),
+                mjcf_path=None,
+                cad_path=None,
+                objectives_path=None,
+                assembly_definition_path=None,
+            )
+            benchmark_manifest_path.write_text(
+                benchmark_review_manifest.model_dump_json(indent=2),
+                encoding="utf-8",
+            )
     # 5. Create reviewer-stage manifest
     stage_to_manifest = {
         "benchmark_reviewer": "benchmark_review_manifest.json",
@@ -587,13 +643,35 @@ def submit_for_review(
         episode_id=resolved_episode_id,
         worker_session_id=resolved_session_id,
         benchmark_episode_id=(
-            resolved_episode_id if normalized_stage == "benchmark_reviewer" else None
+            resolved_episode_id
+            if normalized_stage == "benchmark_reviewer"
+            else (
+                benchmark_review_manifest.benchmark_episode_id
+                or benchmark_review_manifest.episode_id
+                if benchmark_review_manifest is not None
+                else benchmark_episode_id
+            )
         ),
         benchmark_worker_session_id=(
-            resolved_session_id if normalized_stage == "benchmark_reviewer" else None
+            resolved_session_id
+            if normalized_stage == "benchmark_reviewer"
+            else (
+                benchmark_review_manifest.benchmark_worker_session_id
+                or benchmark_review_manifest.worker_session_id
+                if benchmark_review_manifest is not None
+                else benchmark_worker_session_id
+            )
         ),
         benchmark_revision=(
-            revision if normalized_stage == "benchmark_reviewer" else None
+            revision
+            if normalized_stage == "benchmark_reviewer"
+            else (
+                benchmark_review_manifest.benchmark_revision
+                or benchmark_review_manifest.solution_revision
+                or benchmark_review_manifest.revision
+                if benchmark_review_manifest is not None
+                else (benchmark_revision or revision)
+            )
         ),
         solution_revision=revision,
         environment_version=estimation.version,

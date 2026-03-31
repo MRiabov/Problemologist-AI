@@ -20,7 +20,7 @@ from controller.observability.middleware_helper import (
     record_simulation_result,
 )
 from controller.persistence.db import get_sessionmaker
-from controller.persistence.models import Asset
+from controller.persistence.models import Asset, Episode
 from controller.workflows.execution import ScriptExecutionWorkflow
 from controller.workflows.heavy import (
     HeavyPreviewWorkflow,
@@ -30,7 +30,9 @@ from controller.workflows.heavy import (
     HeavyVerifyWorkflow,
 )
 from shared.agents.config import resolve_agents_config_path
+from shared.git_utils import repo_revision
 from shared.enums import AgentName, ManufacturingMethod
+from shared.models.schemas import EpisodeMetadata
 from shared.observability.schemas import (
     EditFileToolEvent,
     GrepToolEvent,
@@ -139,6 +141,50 @@ class RemoteFilesystemMiddleware:
                 error=str(error),
             )
             raise error
+
+    async def _resolve_engineer_benchmark_context(self) -> dict[str, str] | None:
+        """Recover benchmark lineage from controller state for engineer handovers."""
+        try:
+            episode_uuid = uuid.UUID(str(self.episode_id))
+        except Exception:
+            return None
+
+        session_factory = get_sessionmaker()
+        async with session_factory() as db:
+            episode = await db.get(Episode, episode_uuid)
+            if episode is None:
+                return None
+
+            metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
+            benchmark_episode_id = (metadata.benchmark_id or "").strip()
+            if not benchmark_episode_id:
+                return None
+
+            benchmark_worker_session_id = benchmark_episode_id
+            try:
+                benchmark_uuid = uuid.UUID(benchmark_episode_id)
+            except Exception:
+                benchmark_uuid = None
+
+            if benchmark_uuid is not None:
+                benchmark_episode = await db.get(Episode, benchmark_uuid)
+                if benchmark_episode is not None:
+                    benchmark_metadata = EpisodeMetadata.model_validate(
+                        benchmark_episode.metadata_vars or {}
+                    )
+                    benchmark_worker_session_id = (
+                        benchmark_metadata.worker_session_id or ""
+                    ).strip() or benchmark_episode_id
+
+        benchmark_revision = repo_revision(Path(__file__).resolve().parents[2])
+        if not benchmark_revision:
+            return None
+
+        return {
+            "benchmark_episode_id": benchmark_episode_id,
+            "benchmark_worker_session_id": benchmark_worker_session_id,
+            "benchmark_revision": benchmark_revision,
+        }
 
     def _check_perm(self, action: Literal["read", "write"], path: str | Path) -> None:
         """Check if action is allowed by policy."""
@@ -953,6 +999,9 @@ class RemoteFilesystemMiddleware:
 
         bundle = await self.client.bundle_session()
         workflow_id = _bundle_workflow_id("sub", self.client.session_id, bundle)
+        benchmark_context: dict[str, str] | None = None
+        if effective_stage == "engineering_execution_reviewer":
+            benchmark_context = await self._resolve_engineer_benchmark_context()
         res = await self._execute_or_use_existing_workflow(
             HeavySubmitWorkflow.run,
             workflow_id,
@@ -962,6 +1011,21 @@ class RemoteFilesystemMiddleware:
                 reviewer_stage=effective_stage or "engineering_execution_reviewer",
                 session_id=self.client.session_id,
                 episode_id=self.episode_id,
+                benchmark_episode_id=(
+                    benchmark_context["benchmark_episode_id"]
+                    if benchmark_context is not None
+                    else None
+                ),
+                benchmark_worker_session_id=(
+                    benchmark_context["benchmark_worker_session_id"]
+                    if benchmark_context is not None
+                    else None
+                ),
+                benchmark_revision=(
+                    benchmark_context["benchmark_revision"]
+                    if benchmark_context is not None
+                    else None
+                ),
             ),
         )
 

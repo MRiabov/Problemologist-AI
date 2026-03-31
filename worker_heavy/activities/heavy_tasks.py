@@ -322,6 +322,11 @@ async def submit_for_review_activity(
                 session_id=session_id,
                 reviewer_stage=reviewer_stage,
                 episode_id=getattr(params, "episode_id", None),
+                benchmark_episode_id=getattr(params, "benchmark_episode_id", None),
+                benchmark_worker_session_id=getattr(
+                    params, "benchmark_worker_session_id", None
+                ),
+                benchmark_revision=getattr(params, "benchmark_revision", None),
             )
         except ValueError as exc:
             success = False

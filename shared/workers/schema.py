@@ -229,6 +229,9 @@ class BenchmarkToolRequest(BaseModel):
         default=None,
         description="Reviewer stage when calling /benchmark/submit.",
     )
+    benchmark_episode_id: StrictStr | None = None
+    benchmark_worker_session_id: StrictStr | None = None
+    benchmark_revision: StrictStr | None = None
     episode_id: StrictStr | None = None
 
     @field_validator("backend", mode="before")
@@ -601,6 +604,9 @@ class HeavySubmitParams(BaseModel):
     reviewer_stage: ReviewerStage
     session_id: str
     episode_id: str | None = None
+    benchmark_episode_id: str | None = None
+    benchmark_worker_session_id: str | None = None
+    benchmark_revision: str | None = None
 
 
 class HeavyValidationResponse(BaseModel):
