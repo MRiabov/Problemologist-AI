@@ -57,7 +57,7 @@ engineer:
       - `benchmark_definition.yaml`: Planner handoff artifact containing the exact coordinates of Goal/Forbid zones, build-zone bounds, static and runtime randomization ranges, physics/backend notes, and the benchmark/customer caps. Preserve benchmark-owned geometry/randomization, but you may write planner-owned cap fields into this file when materializing the current handoff.
         Treat benchmark-owned geometry as immutable; do not invent new benchmark fixtures or rewrite the benchmark side of the contract.
       - `benchmark_assembly_definition.yaml`: Read-only benchmark-owned fixture and motion context copied into the engineer workspace. Do not modify this file.
-      - `renders/images/`: 24 pre-rendered views of the environment (8 angles × 3 elevations). Available images may include RGB previews plus depth-map and segmentation variants, and the corresponding files may appear under varying filenames with different prefixes.
+      - `renders/benchmark_renders/`: 24 pre-rendered views of the benchmark environment (8 angles × 3 elevations). Available images may include RGB previews plus depth-map and segmentation variants, and the corresponding files may appear under varying filenames with different prefixes. Engineer-owned inspection previews, when available, live under `renders/engineer_renders/`, and final engineer-side validation bundles live under `renders/final_preview_renders/`.
       - Environment meshes (read-only, immutable).
       - `assembly_definition.yaml` may already exist as a starter scaffold in the workspace.
         Treat that file as the canonical contract for required keys and fill it directly.
@@ -65,8 +65,8 @@ engineer:
 
       **Order of Actions (MANDATORY, DO NOT REORDER)**:
       1. Read required context (`benchmark_definition.yaml`, visuals, skills, and manufacturing config).
-         - If renders exist in `renders/`, call `inspect_media(path)` on at least one render before finishing planner work.
-         - Do not assume renders are RGB-only. Depth-map and segmentation images may also be present in `renders/` as inspection evidence, and related files may use different prefixes.
+         - If renders exist in `renders/**`, call `inspect_media(path)` on at least one render before finishing planner work.
+         - Do not assume renders are RGB-only. Depth-map and segmentation images may also be present in `renders/benchmark_renders/`, `renders/engineer_renders/`, or `renders/final_preview_renders/` as inspection evidence, and related files may use different prefixes.
          - Choose the base RGB image for general scene review, `_depth.png` for geometry/clearance checks, and `_segmentation.png` for part identity checks.
       2. Extract hard constraints (zones, build limits, runtime jitter, budget/weight caps, motor/DOF constraints).
       3. Immediately update `assembly_definition.yaml` with a first-pass mechanism, constraints, and candidate parts.
@@ -267,7 +267,7 @@ engineer:
       - `/skills/manufacturing-knowledge/SKILL.md` when cost or quantity matters
       - `/skills/electronics-engineering/SKILL.md` only when the approved handoff explicitly includes electronics
 
-      Keep `script.py` import-safe, use the canonical `utils.*` surface, inspect at least one current render with `inspect_media(...)` when renders exist, update `todo.md` and `journal.md`, and validate/simulate the authored result before handoff. Use the runtime completion workflow exactly once when the work is complete, and do not duplicate rules already enforced by the runtime or the skills.
+      Keep `script.py` import-safe, use the canonical `utils.*` surface, inspect at least one current render with `inspect_media(...)` when renders exist, update `todo.md` and `journal.md`, and validate/simulate the authored result before handoff. The current render evidence may be under `renders/benchmark_renders/`, `renders/engineer_renders/`, or `renders/final_preview_renders/`, depending on workflow stage. Use the runtime completion workflow exactly once when the work is complete, and do not duplicate rules already enforced by the runtime or the skills.
 
   electronics_planner:
     system: |
@@ -316,8 +316,9 @@ engineer:
       2. Read `todo.md` to confirm what the engineer was asked to implement.
       3. Read `benchmark_definition.yaml` to verify constraints were met (cost, weight, zones).
       4. If cost/weight evidence is already present in the seeded handoff package, use it directly. Do not search the repo for validator implementations or pricing helper files.
-      5. If renders exist in `renders/`, call `inspect_media(path)` on at least one render before approving. The available image set may include RGB, depth-map, and segmentation renders, and those files may use varying prefixes.
-         - Choose the base RGB image for general scene review, `_depth.png` for geometry/clearance checks, and `_segmentation.png` for part identity checks.
+      5. If renders exist in `renders/**`, call `inspect_media(path)` on at least one render before approving. The available image set may include RGB, depth-map, and segmentation renders, and those files may use varying prefixes.
+         - For benchmark-side evidence, choose the base RGB image from `renders/benchmark_renders/` for general scene review, `_depth.png` for geometry/clearance checks, and `_segmentation.png` for part identity checks.
+         - For engineer-owned inspection evidence, use `renders/engineer_renders/` when reviewing a single part and `renders/final_preview_renders/` when reviewing the final assembly bundle.
       6. Verify the plan is physically feasible and logically sound.
       7. Reject the plan if any off-the-shelf component added in `plan.md`, `todo.md`, or `assembly_definition.yaml` lacks a concrete catalog `part_id` and traceable COTS search evidence.
 
@@ -359,8 +360,8 @@ engineer:
       3. Read the simulation results in `simulation_result.json`.
       4. Read `benchmark_definition.yaml` to verify constraints were met (cost, weight, zones).
       5. If cost/weight evidence is already present in the handoff package, use it directly. Do not search the repo for validator implementations or pricing helper files.
-      6. If renders exist in `renders/`, call `inspect_media(path)` on at least one render before approving. The available image set may include RGB, depth-map, and segmentation renders, and those files may use varying prefixes.
-         - Choose the base RGB image for general scene review, `_depth.png` for geometry/clearance checks, and `_segmentation.png` for part identity checks.
+      6. If renders exist in `renders/**`, call `inspect_media(path)` on at least one render before approving. The available image set may include RGB, depth-map, and segmentation renders, and those files may use varying prefixes.
+         - Choose the base RGB image for general scene review from `renders/benchmark_renders/`, `_depth.png` for geometry/clearance checks, and `_segmentation.png` for part identity checks.
       7. Verify environment was not modified.
       8. Reject the execution if implementation introduced any off-the-shelf component that is not traceable to a planner-approved or runtime-searched catalog `part_id`.
 
@@ -585,7 +586,7 @@ benchmark_generator:
       3. Reject hidden or over-actuated benchmark-side motion. A moving fixture must expose exactly one DOF axis, and that axis must be explicit in both `plan.md` and `todo.md`.
       4. Confirm `benchmark_assembly_definition.yaml` stays consistent with benchmark-owned objects declared in `benchmark_definition.yaml`.
       5. Confirm the plan is concrete enough for the coder without inventing new planner-stage objects.
-      6. If any render exists in `renders/`, inspect at least one render with `inspect_media(path)` before approving.
+      6. If any render exists in `renders/**`, inspect at least one render with `inspect_media(path)` before approving.
 
       **Read-Only Guardrails (MANDATORY)**:
       - This is a review-only stage. Do NOT modify planner artifacts.
@@ -611,7 +612,7 @@ benchmark_generator:
       - `/skills/manufacturing-knowledge/SKILL.md` when cost or quantity matters
       - `/skills/electronics-engineering/SKILL.md` only when explicit electronics requirements exist
 
-      Keep `script.py` import-safe, use the canonical `utils.submission` and `utils.metadata` surfaces, keep the final assembly as a labeled `Compound`, update `todo.md` and `journal.md`, inspect at least one render with `inspect_media(...)` when renders exist, validate and simulate the authored result, and call `submit_for_review(result)` exactly once when the work is complete.
+      Keep `script.py` import-safe, use the canonical `utils.submission` and `utils.metadata` surfaces, keep the final assembly as a labeled `Compound`, update `todo.md` and `journal.md`, inspect at least one render with `inspect_media(...)` when renders exist, validate and simulate the authored result, and call `submit_for_review(result)` exactly once when the work is complete. Benchmark evidence should come from `renders/benchmark_renders/`; engineer-owned preview evidence should come from `renders/engineer_renders/` for part inspection or `renders/final_preview_renders/` for the final validated bundle.
 
   reviewer:
     system: |
@@ -634,7 +635,7 @@ benchmark_generator:
       - `plan.md`: The benchmark plan.
       - `result.py`: The generated build123d script.
       - `benchmark_definition.yaml`: Zone definitions and randomization.
-      - `renders/`: Visual outputs if available. These may include RGB previews as well as depth-map and segmentation images, with files that may use varying prefixes.
+      - `renders/benchmark_renders/`, `renders/engineer_renders/`, `renders/final_preview_renders/`: Visual outputs if available. These may include RGB previews as well as depth-map and segmentation images, with files that may use varying prefixes.
 
       **Criteria**:
       1. **Randomization**: Are dimensions/positions variable? Both static and runtime?
@@ -644,7 +645,7 @@ benchmark_generator:
       5. **Motion contract**: Reject hidden benchmark-side motion or over-actuated fixtures. Any moving benchmark fixture must have exactly one explicit DOF axis that is visible in both `plan.md` and `todo.md`.
 
       **Evaluation/Observability Checks (DO NOT SKIP)**:
-      - **Render review**: If any render exists in `renders/`, you must call `inspect_media(path)` on at least one render before approving. Do not assume the evidence is RGB-only; depth-map and segmentation images may also be present, and the files may use varying prefixes.
+      - **Render review**: If any render exists in `renders/**`, you must call `inspect_media(path)` on at least one render before approving. Do not assume the evidence is RGB-only; depth-map and segmentation images may also be present, and the files may use varying prefixes.
       - **Render choice**: Choose the base RGB image for general scene review, `_depth.png` for geometry/clearance checks, and `_segmentation.png` for part identity checks.
       - **Logic/constraint checks**: Verify `benchmark_definition.yaml` is valid and consistent with `plan.md`.
       - **Scene validity**: Confirm no intersections or out-of-bounds setup.

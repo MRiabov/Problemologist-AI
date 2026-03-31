@@ -40,6 +40,8 @@ from worker_heavy.utils.preview import preview_design
 from worker_heavy.utils.rendering import (
     build_render_manifest,
     normalize_render_manifest,
+    select_single_preview_render_subdir,
+    select_static_preview_render_subdir,
 )
 
 logger = structlog.get_logger(__name__)
@@ -213,6 +215,7 @@ def _build_preview_manifest(
     root: Path,
     saved_paths: list[str],
     legend_by_path: dict[str, list[SegmentationLegendEntry]],
+    depth_ranges_by_path: dict[str, tuple[float, float]] | None,
     session_id: str | None,
 ) -> Path:
     artifacts: dict[str, RenderArtifactMetadata] = {}
@@ -225,6 +228,9 @@ def _build_preview_manifest(
         stem = Path(rel_path).stem
         if filename.endswith("_depth.png"):
             group_key = stem.removesuffix("_depth")
+            depth_range = None
+            if depth_ranges_by_path is not None:
+                depth_range = depth_ranges_by_path.get(rel_path)
             artifacts[rel_path] = RenderArtifactMetadata(
                 modality="depth",
                 group_key=group_key,
@@ -234,9 +240,13 @@ def _build_preview_manifest(
                     segmentation=str(render_dir / f"{group_key}_segmentation.png"),
                 ),
                 depth_interpretation=(
-                    "Brighter pixels are nearer. Values are normalized per image "
-                    "from the build123d/VTK preview renderer."
+                    "Camera-space depth in meters. False-color pixels are scaled "
+                    "from the build123d/VTK preview renderer's linear depth "
+                    "buffer; see depth_min_m and depth_max_m for the metric "
+                    "range."
                 ),
+                depth_min_m=depth_range[0] if depth_range is not None else None,
+                depth_max_m=depth_range[1] if depth_range is not None else None,
             )
         elif filename.endswith("_segmentation.png"):
             group_key = stem.removesuffix("_segmentation")
@@ -337,7 +347,9 @@ async def api_preview(
                         root, session_id=x_session_id
                     )
 
-                    renders_dir = root / "renders"
+                    renders_dir = (
+                        root / "renders" / select_single_preview_render_subdir(root)
+                    )
                     renders_dir.mkdir(parents=True, exist_ok=True)
                     scene = _load_preview_scene(root)
                     if scene is not None:
@@ -408,14 +420,17 @@ async def api_static_preview(
                         root, session_id=x_session_id
                     )
 
-                    renders_dir = root / "renders"
+                    renders_dir = (
+                        root / "renders" / select_static_preview_render_subdir(root)
+                    )
                     renders_dir.mkdir(parents=True, exist_ok=True)
                     scene = _load_preview_scene(root)
                     if scene is not None:
-                        saved_paths, legend_by_path = await asyncio.to_thread(
+                        render_result = await asyncio.to_thread(
                             render_preview_scene_bundle,
                             scene,
                             output_dir=renders_dir,
+                            workspace_root=root,
                             smoke_test_mode=bool(request.smoke_test_mode),
                             include_rgb=render_policy.rgb.enabled,
                             include_depth=render_policy.depth.enabled,
@@ -429,8 +444,9 @@ async def api_static_preview(
                         )
                         _build_preview_manifest(
                             root=root,
-                            saved_paths=saved_paths,
-                            legend_by_path=legend_by_path,
+                            saved_paths=render_result.saved_paths,
+                            legend_by_path=render_result.legend_by_path,
+                            depth_ranges_by_path=render_result.depth_ranges_by_path,
                             session_id=x_session_id,
                         )
                     else:
@@ -439,7 +455,7 @@ async def api_static_preview(
                             session_root=root,
                             script_content=request.script_content,
                         )
-                        saved_paths, _legend_by_path = await asyncio.to_thread(
+                        render_result = await asyncio.to_thread(
                             render_preview_bundle,
                             component,
                             output_dir=renders_dir,
@@ -458,8 +474,9 @@ async def api_static_preview(
                         )
                         _build_preview_manifest(
                             root=root,
-                            saved_paths=saved_paths,
-                            legend_by_path=_legend_by_path,
+                            saved_paths=render_result.saved_paths,
+                            legend_by_path=render_result.legend_by_path,
+                            depth_ranges_by_path=render_result.depth_ranges_by_path,
                             session_id=x_session_id,
                         )
 
@@ -468,7 +485,7 @@ async def api_static_preview(
                     success=True,
                     message="Static preview generated successfully",
                     artifacts=_collect_render_artifacts(
-                        root, saved_paths, session_id=x_session_id
+                        root, render_result.saved_paths, session_id=x_session_id
                     ),
                     events=events,
                 )

@@ -646,8 +646,10 @@ async def seed_current_revision_render_preview(
                     segmentation=f"{render_base}_segmentation.png",
                 ),
                 depth_interpretation=(
-                    "Brighter pixels are nearer. Values are normalized per image "
-                    "from the build123d/VTK preview renderer."
+                    "Camera-space depth in meters. False-color pixels are scaled "
+                    "from the build123d/VTK preview renderer's linear depth "
+                    "buffer; see depth_min_m and depth_max_m for the metric "
+                    "range."
                 ),
             ),
             f"{render_base}_segmentation.png": RenderArtifactMetadata(

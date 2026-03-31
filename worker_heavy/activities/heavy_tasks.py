@@ -87,7 +87,7 @@ def _collect_submission_artifacts(
     render_blobs_base64: dict[str, str] = {}
     renders_dir = root / "renders"
     if renders_dir.exists():
-        for render_path in sorted(renders_dir.iterdir()):
+        for render_path in sorted(renders_dir.rglob("*")):
             if not render_path.is_file():
                 continue
             if render_path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".mp4"}:

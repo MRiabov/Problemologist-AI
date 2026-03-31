@@ -98,6 +98,13 @@ class _CameraState:
     fov: float | None = None
 
 
+@dataclass
+class PreviewRenderResult:
+    saved_paths: list[str]
+    legend_by_path: dict[str, list[SegmentationLegendEntry]]
+    depth_ranges_by_path: dict[str, tuple[float, float]]
+
+
 def _rgba_from_hex(color: str, alpha: float = 1.0) -> tuple[float, float, float, float]:
     color = color.lstrip("#")
     if len(color) != 6:
@@ -129,10 +136,10 @@ def _material_color_rgba(
 
 def _zone_color(zone_type: str) -> tuple[float, float, float, float]:
     if zone_type == "goal":
-        return (0.20, 0.72, 0.34, 0.35)
+        return (0.20, 0.72, 0.34, 0.22)
     if zone_type == "build":
-        return (0.55, 0.55, 0.55, 0.22)
-    return (0.83, 0.20, 0.20, 0.32)
+        return (0.55, 0.55, 0.55, 0.14)
+    return (0.83, 0.20, 0.20, 0.20)
 
 
 def _unique_color(index: int) -> tuple[int, int, int]:
@@ -199,6 +206,45 @@ def _depth_buffer_to_uint8(depth_buffer: np.ndarray) -> np.ndarray:
         normalized = 1.0 - np.clip(normalized, 0.0, 1.0)
     depth_render[finite_mask] = (normalized[finite_mask] * 255.0).astype(np.uint8)
     return depth_render
+
+
+def _depth_buffer_to_display_rgb(
+    depth_buffer: np.ndarray,
+) -> tuple[np.ndarray, tuple[float, float] | None]:
+    finite_mask = np.isfinite(depth_buffer)
+    depth_render = np.zeros(depth_buffer.shape + (3,), dtype=np.uint8)
+    if not finite_mask.any():
+        return depth_render, None
+
+    depth_min = float(depth_buffer[finite_mask].min())
+    depth_max = float(depth_buffer[finite_mask].max())
+    if np.isclose(depth_min, depth_max):
+        normalized = np.ones(depth_buffer.shape, dtype=np.float32)
+    else:
+        normalized = (depth_buffer - depth_min) / (depth_max - depth_min)
+    normalized = np.clip(normalized, 0.0, 1.0)
+    # Use a simple depth colormap so the artifact is clearly distinguishable
+    # from the RGB preview while still encoding camera-space depth.
+    t = 1.0 - normalized
+    red = np.interp(
+        t[finite_mask],
+        [0.0, 0.35, 0.70, 1.0],
+        [0.03, 0.00, 0.95, 1.00],
+    )
+    green = np.interp(
+        t[finite_mask],
+        [0.0, 0.35, 0.70, 1.0],
+        [0.06, 0.50, 0.84, 1.00],
+    )
+    blue = np.interp(
+        t[finite_mask],
+        [0.0, 0.35, 0.70, 1.0],
+        [0.20, 0.95, 0.25, 1.00],
+    )
+    depth_render[finite_mask, 0] = (red * 255.0).astype(np.uint8)
+    depth_render[finite_mask, 1] = (green * 255.0).astype(np.uint8)
+    depth_render[finite_mask, 2] = (blue * 255.0).astype(np.uint8)
+    return depth_render, (depth_min, depth_max)
 
 
 def _composite_non_black(
@@ -657,8 +703,6 @@ def _build_renderer(
     configure_headless_vtk_egl()
     renderer = vtkRenderer()
     renderer.SetBackground(*background)
-    # Depth peeling keeps translucent objective zones from collapsing into
-    # obvious polygon seams when rendered off-screen through EGL.
     if hasattr(renderer, "SetUseDepthPeeling"):
         renderer.SetUseDepthPeeling(True)
     if hasattr(renderer, "SetMaximumNumberOfPeels"):
@@ -813,6 +857,7 @@ def render_preview_scene_bundle(
     scene: PreviewScene,
     *,
     output_dir: Path,
+    workspace_root: Path | None = None,
     smoke_test_mode: bool = False,
     width: int = 640,
     height: int = 480,
@@ -825,11 +870,17 @@ def render_preview_scene_bundle(
     depth_edges: bool = True,
     segmentation_axes: bool = True,
     segmentation_edges: bool = True,
-) -> tuple[list[str], dict[str, list[SegmentationLegendEntry]]]:
+) -> PreviewRenderResult:
     """Render the standard preview bundle from a pre-built mesh scene."""
     saved_paths: list[str] = []
     legend_entries = _preview_segmentation_legend(scene)
     legend_by_path: dict[str, list[SegmentationLegendEntry]] = {}
+    depth_ranges_by_path: dict[str, tuple[float, float]] = {}
+    relative_root = workspace_root or (
+        output_dir.parent.parent
+        if output_dir.parent.name == "renders"
+        else output_dir.parent
+    )
 
     center = scene.center
     distance = _preview_camera_distance(scene, width=width, height=height)
@@ -945,7 +996,11 @@ def render_preview_scene_bundle(
                 )
                 if depth_buffer is None:
                     raise RuntimeError("depth rendering was disabled for render")
-                depth_render = _depth_buffer_to_uint8(depth_buffer)
+                depth_render, depth_range = _depth_buffer_to_display_rgb(depth_buffer)
+                if depth_range is not None:
+                    depth_ranges_by_path[str(depth_path.relative_to(relative_root))] = (
+                        depth_range
+                    )
                 if depth_overlay_bundle is not None:
                     depth_overlay, _ = _render_view(
                         depth_overlay_bundle,
@@ -976,24 +1031,28 @@ def render_preview_scene_bundle(
 
             if rgb_image is not None:
                 Image.fromarray(rgb_image).save(rgb_path, "PNG")
-                saved_paths.append(str(rgb_path.relative_to(output_dir.parent)))
+                saved_paths.append(str(rgb_path.relative_to(relative_root)))
 
             if depth_image is not None:
                 if depth_image.ndim == 2:
                     Image.fromarray(depth_image, mode="L").save(depth_path, "PNG")
                 else:
                     Image.fromarray(depth_image, mode="RGB").save(depth_path, "PNG")
-                saved_paths.append(str(depth_path.relative_to(output_dir.parent)))
+                saved_paths.append(str(depth_path.relative_to(relative_root)))
 
             if seg_image is not None:
                 Image.fromarray(seg_image, mode="RGB").save(segmentation_path, "PNG")
                 rel_segmentation_path = str(
-                    segmentation_path.relative_to(output_dir.parent)
+                    segmentation_path.relative_to(relative_root)
                 )
                 saved_paths.append(rel_segmentation_path)
                 legend_by_path[rel_segmentation_path] = legend_entries
 
-    return saved_paths, legend_by_path
+    return PreviewRenderResult(
+        saved_paths=saved_paths,
+        legend_by_path=legend_by_path,
+        depth_ranges_by_path=depth_ranges_by_path,
+    )
 
 
 def _configure_camera(
@@ -1576,7 +1635,7 @@ def render_preview_bundle(
     include_segmentation: bool = True,
     width: int = 640,
     height: int = 480,
-) -> tuple[list[str], dict[str, list[SegmentationLegendEntry]]]:
+) -> PreviewRenderResult:
     """
     Render the standard preview bundle through build123d/VTK.
 
@@ -1601,6 +1660,7 @@ def render_preview_bundle(
         return render_preview_scene_bundle(
             scene,
             output_dir=output_dir,
+            workspace_root=workspace_root,
             smoke_test_mode=smoke_test_mode,
             width=width,
             height=height,

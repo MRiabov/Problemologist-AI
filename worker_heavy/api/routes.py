@@ -45,6 +45,7 @@ from worker_heavy.runtime.simulation_runner import (
 from worker_heavy.simulation.factory import close_all_session_backends
 from worker_heavy.utils import renderer_client, submit_for_review
 from worker_heavy.utils.file_validation import validate_benchmark_definition_yaml
+from worker_heavy.utils.rendering import select_single_preview_render_subdir
 from worker_heavy.utils.topology import analyze_component
 from worker_heavy.utils.verification import run_verification_job
 
@@ -565,8 +566,13 @@ async def api_preview(
                 )
                 if not response.success:
                     raise RuntimeError(response.message)
+                preview_renders_dir = (
+                    workspace_root
+                    / "renders"
+                    / select_single_preview_render_subdir(workspace_root)
+                )
                 image_path = renderer_client.materialize_preview_response(
-                    response, root / "renders"
+                    response, preview_renders_dir
                 )
                 if image_path is None:
                     raise RuntimeError("renderer returned no preview image")
@@ -711,7 +717,7 @@ async def api_submit(
                         "ascii"
                     )
                 if renders_dir.exists():
-                    for render_path in sorted(renders_dir.iterdir()):
+                    for render_path in sorted(renders_dir.rglob("*")):
                         if not render_path.is_file():
                             continue
                         if render_path.suffix.lower() not in {

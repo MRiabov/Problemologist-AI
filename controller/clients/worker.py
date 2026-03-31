@@ -3,6 +3,7 @@ import base64
 import contextlib
 import os
 import uuid
+from pathlib import Path
 from typing import Any, Literal, cast
 
 import httpx
@@ -37,10 +38,25 @@ from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
 
 logger = structlog.get_logger(__name__)
 
+_STATIC_PREVIEW_BUNDLES = {
+    "benchmark_renders",
+    "engineer_renders",
+    "final_preview_renders",
+}
+
 
 def _default_smoke_test_mode() -> bool:
     return resolve_default_smoke_test_mode(
         integration_enabled=settings.is_integration_test
+    )
+
+
+def _is_static_preview_bundle_path(path: str) -> bool:
+    parts = Path(path).parts
+    return (
+        len(parts) >= 2
+        and parts[0] == "renders"
+        and parts[1] in _STATIC_PREVIEW_BUNDLES
     )
 
 
@@ -537,7 +553,7 @@ class WorkerClient:
                     base64.b64decode(incoming_manifest_json).decode("utf-8")
                 )
                 incoming_manifest_is_preview = any(
-                    "preview" in path
+                    _is_static_preview_bundle_path(path)
                     for path in (
                         list(incoming_manifest.artifacts.keys())
                         + list(incoming_manifest.preview_evidence_paths)
@@ -555,7 +571,7 @@ class WorkerClient:
                         current_manifest_json
                     )
                     current_manifest_is_preview = any(
-                        "preview" in path
+                        _is_static_preview_bundle_path(path)
                         for path in (
                             list(current_manifest.artifacts.keys())
                             + list(current_manifest.preview_evidence_paths)

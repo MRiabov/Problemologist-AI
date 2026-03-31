@@ -59,6 +59,7 @@ from worker_heavy.utils.build123d_rendering import (
 from worker_heavy.utils.rendering import (
     normalize_render_manifest,
     prerender_24_views,
+    select_static_preview_render_subdir,
 )
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
@@ -303,7 +304,7 @@ def _prerender_24_views_isolated(
 
         component = load_component_from_script(
             script_path=script_path,
-            session_root=output_dir.parent,
+            session_root=working_dir,
             script_content=script_content,
         )
 
@@ -315,6 +316,7 @@ def _prerender_24_views_isolated(
         render_paths = prerender_24_views(
             component,
             output_dir=str(output_dir),
+            workspace_root=working_dir,
             objectives=objectives,
             backend_type=backend_type,
             session_id=session_id,
@@ -1319,7 +1321,9 @@ def simulate(
         exists=working_dir.exists(),
         files=list(working_dir.iterdir()) if working_dir.exists() else [],
     )
-    renders_dir = working_dir / "renders"
+    renders_dir = (
+        working_dir / "renders" / select_static_preview_render_subdir(working_dir)
+    )
     renders_dir.mkdir(parents=True, exist_ok=True)
 
     objectives = None
@@ -1638,6 +1642,7 @@ def simulate(
                 render_paths = prerender_24_views(
                     component,
                     output_dir=str(renders_dir),
+                    workspace_root=working_dir,
                     backend_type=backend_type,
                     session_id=session_id,
                     scene_path=str(scene_path),
@@ -1926,7 +1931,9 @@ def validate(
 
     try:
         working_root = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
-        renders_dir = working_root / "renders"
+        renders_dir = (
+            working_root / "renders" / select_static_preview_render_subdir(working_root)
+        )
         renders_dir.mkdir(parents=True, exist_ok=True)
 
         emit_event(
@@ -1971,7 +1978,7 @@ def validate(
         )
 
         if render_paths:
-            manifest_path = renders_dir / "render_manifest.json"
+            manifest_path = working_root / "renders" / "render_manifest.json"
             existing_manifest = None
             if manifest_path.exists():
                 with contextlib.suppress(Exception):

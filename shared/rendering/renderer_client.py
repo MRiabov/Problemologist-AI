@@ -190,7 +190,6 @@ def materialize_render_artifacts(
         render_paths.append(str(Path(rel_path)))
     if not render_paths:
         render_paths = [
-            str(Path(default_subdir) / Path(path).name)
-            for path in getattr(artifacts, "render_paths", [])
+            str(Path(path)) for path in getattr(artifacts, "render_paths", [])
         ]
     return render_paths

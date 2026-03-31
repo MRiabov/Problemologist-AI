@@ -10,17 +10,23 @@ from shared.logging import configure_logging, log_marker_middleware
 from shared.rendering import configure_headless_vtk_egl
 
 configure_logging("worker-renderer")
-os.environ.setdefault("PYOPENGL_PLATFORM", "osmesa")
-os.environ.setdefault("VTK_DEFAULT_OPENGL_WINDOW", "vtkOSOpenGLRenderWindow")
+# Force the renderer process onto the OSMesa path even if the image or host
+# environment was built with EGL defaults.
+os.environ["PYOPENGL_PLATFORM"] = "osmesa"
+os.environ["VTK_DEFAULT_OPENGL_WINDOW"] = "vtkOSOpenGLRenderWindow"
 configure_headless_vtk_egl()
+logger = structlog.get_logger(__name__)
+logger.info(
+    "renderer_bootstrap_headless_env",
+    pyopengl_platform=os.environ.get("PYOPENGL_PLATFORM"),
+    vtk_default_open_gl_window=os.environ.get("VTK_DEFAULT_OPENGL_WINDOW"),
+)
 
 from worker_renderer.api.routes import (
     is_renderer_busy,
     renderer_busy_context,
     renderer_router,
 )
-
-logger = structlog.get_logger(__name__)
 
 
 @asynccontextmanager

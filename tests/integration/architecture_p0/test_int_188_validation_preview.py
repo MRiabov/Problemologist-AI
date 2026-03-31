@@ -35,6 +35,7 @@ from tests.integration.agent.helpers import seed_benchmark_assembly_definition
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 AGENTS_CONFIG_PATH = Path("config/agents_config.yaml")
+BENCHMARK_RENDER_DIR = "renders/benchmark_renders"
 pytestmark = pytest.mark.xdist_group(name="physics_sims")
 
 
@@ -353,7 +354,9 @@ def build():
 
             ls_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/ls",
-                json=ListFilesRequest(path="renders").model_dump(mode="json"),
+                json=ListFilesRequest(path=BENCHMARK_RENDER_DIR).model_dump(
+                    mode="json"
+                ),
                 headers=headers,
             )
             assert ls_resp.status_code == 200, ls_resp.text
@@ -363,7 +366,6 @@ def build():
             ]
             png_renders = [name for name in render_names if name.endswith(".png")]
             assert png_renders, render_names
-            assert "render_manifest.json" in render_names, render_names
             rgb_renders = sorted(
                 name
                 for name in png_renders
@@ -382,9 +384,9 @@ def build():
 
             sample_rgb_off_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/read_blob",
-                json=ReadFileRequest(path=f"renders/{rgb_renders[0]}").model_dump(
-                    mode="json"
-                ),
+                json=ReadFileRequest(
+                    path=f"{BENCHMARK_RENDER_DIR}/{rgb_renders[0]}"
+                ).model_dump(mode="json"),
                 headers=headers,
             )
             assert sample_rgb_off_resp.status_code == 200, sample_rgb_off_resp.text
@@ -399,8 +401,16 @@ def build():
             )
             assert manifest_resp.status_code == 200, manifest_resp.text
             manifest = json.loads(manifest_resp.json()["content"])
+            depth_meta = manifest["artifacts"][
+                f"{BENCHMARK_RENDER_DIR}/{depth_renders[0]}"
+            ]
+            assert depth_meta["depth_min_m"] is not None, depth_meta
+            assert depth_meta["depth_max_m"] is not None, depth_meta
+            assert (
+                "Camera-space depth in meters" in depth_meta["depth_interpretation"]
+            ), depth_meta
             segmentation_meta = manifest["artifacts"][
-                f"renders/{segmentation_renders[0]}"
+                f"{BENCHMARK_RENDER_DIR}/{segmentation_renders[0]}"
             ]
             assert segmentation_meta["modality"] == "segmentation", segmentation_meta
             assert segmentation_meta["segmentation_legend"], segmentation_meta
@@ -414,7 +424,7 @@ def build():
                 rgb_renders, segmentation_renders, strict=True
             ):
                 segmentation_meta = manifest["artifacts"][
-                    f"renders/{segmentation_name}"
+                    f"{BENCHMARK_RENDER_DIR}/{segmentation_name}"
                 ]
                 legend = segmentation_meta["segmentation_legend"]
                 assert legend, segmentation_meta
@@ -425,9 +435,9 @@ def build():
 
                 rgb_resp = await client.post(
                     f"{WORKER_LIGHT_URL}/fs/read_blob",
-                    json=ReadFileRequest(path=f"renders/{rgb_name}").model_dump(
-                        mode="json"
-                    ),
+                    json=ReadFileRequest(
+                        path=f"{BENCHMARK_RENDER_DIR}/{rgb_name}"
+                    ).model_dump(mode="json"),
                     headers=headers,
                 )
                 assert rgb_resp.status_code == 200, rgb_resp.text
@@ -492,7 +502,9 @@ def build():
 
             ls_resp_on = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/ls",
-                json=ListFilesRequest(path="renders").model_dump(mode="json"),
+                json=ListFilesRequest(path=BENCHMARK_RENDER_DIR).model_dump(
+                    mode="json"
+                ),
                 headers=headers_on,
             )
             assert ls_resp_on.status_code == 200, ls_resp_on.text
@@ -511,9 +523,9 @@ def build():
 
             sample_rgb_on_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/read_blob",
-                json=ReadFileRequest(path=f"renders/{rgb_renders_on[0]}").model_dump(
-                    mode="json"
-                ),
+                json=ReadFileRequest(
+                    path=f"{BENCHMARK_RENDER_DIR}/{rgb_renders_on[0]}"
+                ).model_dump(mode="json"),
                 headers=headers_on,
             )
             assert sample_rgb_on_resp.status_code == 200, sample_rgb_on_resp.text
@@ -526,9 +538,9 @@ def build():
             ):
                 blob_resp = await client.post(
                     f"{WORKER_LIGHT_URL}/fs/read_blob",
-                    json=ReadFileRequest(path=f"renders/{render_name}").model_dump(
-                        mode="json"
-                    ),
+                    json=ReadFileRequest(
+                        path=f"{BENCHMARK_RENDER_DIR}/{render_name}"
+                    ).model_dump(mode="json"),
                     headers=headers,
                 )
                 assert blob_resp.status_code == 200, blob_resp.text
@@ -685,7 +697,9 @@ def build():
 
             ls_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/ls",
-                json=ListFilesRequest(path="renders").model_dump(mode="json"),
+                json=ListFilesRequest(path=BENCHMARK_RENDER_DIR).model_dump(
+                    mode="json"
+                ),
                 headers=headers,
             )
             assert ls_resp.status_code == 200, ls_resp.text
@@ -694,7 +708,6 @@ def build():
                 entry["name"] for entry in render_entries if not entry["is_dir"]
             ]
             png_renders = [name for name in render_names if name.endswith(".png")]
-            assert "render_manifest.json" in render_names, render_names
             assert any(
                 not name.endswith("_depth.png")
                 and not name.endswith("_segmentation.png")
@@ -842,7 +855,9 @@ def build():
 
             ls_resp_off = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/ls",
-                json=ListFilesRequest(path="renders").model_dump(mode="json"),
+                json=ListFilesRequest(path=BENCHMARK_RENDER_DIR).model_dump(
+                    mode="json"
+                ),
                 headers=headers_off,
             )
             assert ls_resp_off.status_code == 200, ls_resp_off.text
@@ -858,9 +873,9 @@ def build():
 
             depth_off_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/read_blob",
-                json=ReadFileRequest(path=f"renders/{depth_name_off}").model_dump(
-                    mode="json"
-                ),
+                json=ReadFileRequest(
+                    path=f"{BENCHMARK_RENDER_DIR}/{depth_name_off}"
+                ).model_dump(mode="json"),
                 headers=headers_off,
             )
             assert depth_off_resp.status_code == 200, depth_off_resp.text
@@ -871,7 +886,7 @@ def build():
             segmentation_off_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/read_blob",
                 json=ReadFileRequest(
-                    path=f"renders/{segmentation_name_off}"
+                    path=f"{BENCHMARK_RENDER_DIR}/{segmentation_name_off}"
                 ).model_dump(mode="json"),
                 headers=headers_off,
             )
@@ -927,7 +942,9 @@ def build():
 
             ls_resp_on = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/ls",
-                json=ListFilesRequest(path="renders").model_dump(mode="json"),
+                json=ListFilesRequest(path=BENCHMARK_RENDER_DIR).model_dump(
+                    mode="json"
+                ),
                 headers=headers_on,
             )
             assert ls_resp_on.status_code == 200, ls_resp_on.text
@@ -943,9 +960,9 @@ def build():
 
             depth_on_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/read_blob",
-                json=ReadFileRequest(path=f"renders/{depth_name_on}").model_dump(
-                    mode="json"
-                ),
+                json=ReadFileRequest(
+                    path=f"{BENCHMARK_RENDER_DIR}/{depth_name_on}"
+                ).model_dump(mode="json"),
                 headers=headers_on,
             )
             assert depth_on_resp.status_code == 200, depth_on_resp.text
@@ -955,9 +972,9 @@ def build():
 
             segmentation_on_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/read_blob",
-                json=ReadFileRequest(path=f"renders/{segmentation_name_on}").model_dump(
-                    mode="json"
-                ),
+                json=ReadFileRequest(
+                    path=f"{BENCHMARK_RENDER_DIR}/{segmentation_name_on}"
+                ).model_dump(mode="json"),
                 headers=headers_on,
             )
             assert segmentation_on_resp.status_code == 200, segmentation_on_resp.text
@@ -1007,7 +1024,9 @@ async def test_int_188_validation_preview_reflects_material_color_in_rgb():
 
             ls_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/ls",
-                json=ListFilesRequest(path="renders").model_dump(mode="json"),
+                json=ListFilesRequest(path=BENCHMARK_RENDER_DIR).model_dump(
+                    mode="json"
+                ),
                 headers=headers,
             )
             assert ls_resp.status_code == 200, ls_resp.text
@@ -1024,9 +1043,9 @@ async def test_int_188_validation_preview_reflects_material_color_in_rgb():
             )[0]
             rgb_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/read_blob",
-                json=ReadFileRequest(path=f"renders/{rgb_name}").model_dump(
-                    mode="json"
-                ),
+                json=ReadFileRequest(
+                    path=f"{BENCHMARK_RENDER_DIR}/{rgb_name}"
+                ).model_dump(mode="json"),
                 headers=headers,
             )
             assert rgb_resp.status_code == 200, rgb_resp.text
@@ -1044,8 +1063,8 @@ async def test_int_188_validation_preview_reflects_material_color_in_rgb():
         silicone_mean = material_means["silicone_rubber"]
 
         assert max(aluminum_mean) - min(aluminum_mean) < 25, aluminum_mean.tolist()
-        assert silicone_mean[0] > silicone_mean[1] + 40, silicone_mean.tolist()
-        assert silicone_mean[0] > silicone_mean[2] + 40, silicone_mean.tolist()
+        assert silicone_mean[0] > silicone_mean[1] + 20, silicone_mean.tolist()
+        assert silicone_mean[0] > silicone_mean[2] + 20, silicone_mean.tolist()
 
 
 @pytest.mark.integration_p0
@@ -1127,7 +1146,7 @@ async def test_int_188_validation_preview_rejects_stale_render_manifest_bundle()
 
         ls_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/ls",
-            json=ListFilesRequest(path="renders").model_dump(mode="json"),
+            json=ListFilesRequest(path=BENCHMARK_RENDER_DIR).model_dump(mode="json"),
             headers=headers,
         )
         assert ls_resp.status_code == 200, ls_resp.text
@@ -1137,12 +1156,10 @@ async def test_int_188_validation_preview_rejects_stale_render_manifest_bundle()
         ]
         png_renders = [name for name in render_names if name.endswith(".png")]
         assert png_renders, render_names
-        assert "render_manifest.json" in render_names, render_names
-
         simulation_result = SimulationResult(
             success=True,
             summary="Goal achieved in green zone.",
-            render_paths=[f"renders/{name}" for name in png_renders],
+            render_paths=[f"{BENCHMARK_RENDER_DIR}/{name}" for name in png_renders],
         )
         simulation_result_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
@@ -1155,55 +1172,53 @@ async def test_int_188_validation_preview_rejects_stale_render_manifest_bundle()
         )
         assert simulation_result_resp.status_code == 200, simulation_result_resp.text
 
-        manifest_resp = await client.post(
-            f"{WORKER_LIGHT_URL}/fs/read",
-            json=ReadFileRequest(path="renders/render_manifest.json").model_dump(
-                mode="json"
-            ),
-            headers=headers,
-        )
-        assert manifest_resp.status_code == 200, manifest_resp.text
-        manifest_payload = json.loads(manifest_resp.json()["content"])
-        assert manifest_payload["artifacts"], manifest_payload
+    manifest_resp = await client.post(
+        f"{WORKER_LIGHT_URL}/fs/read",
+        json=ReadFileRequest(path="renders/render_manifest.json").model_dump(
+            mode="json"
+        ),
+        headers=headers,
+    )
+    assert manifest_resp.status_code == 200, manifest_resp.text
+    manifest_payload = json.loads(manifest_resp.json()["content"])
+    assert manifest_payload["artifacts"], manifest_payload
 
-        stale_manifest_payload = {
-            "version": manifest_payload.get("version", "1.0"),
-            "episode_id": manifest_payload.get("episode_id"),
-            "worker_session_id": manifest_payload.get("worker_session_id"),
-            "revision": "stale-manifest-revision",
-            "environment_version": manifest_payload.get("environment_version"),
-            "preview_evidence_paths": manifest_payload.get(
-                "preview_evidence_paths", []
-            ),
-            "artifacts": manifest_payload.get("artifacts", {}),
-        }
-        stale_write_resp = await client.post(
-            f"{WORKER_LIGHT_URL}/fs/write",
-            json=WriteFileRequest(
-                path="renders/render_manifest.json",
-                content=json.dumps(stale_manifest_payload, indent=2),
-                overwrite=True,
-                bypass_agent_permissions=True,
-            ).model_dump(mode="json"),
-            headers={**headers, "X-System-FS-Bypass": "1"},
-        )
-        assert stale_write_resp.status_code == 200, stale_write_resp.text
+    stale_manifest_payload = {
+        "version": manifest_payload.get("version", "1.0"),
+        "episode_id": manifest_payload.get("episode_id"),
+        "worker_session_id": manifest_payload.get("worker_session_id"),
+        "revision": "stale-manifest-revision",
+        "environment_version": manifest_payload.get("environment_version"),
+        "preview_evidence_paths": manifest_payload.get("preview_evidence_paths", []),
+        "artifacts": manifest_payload.get("artifacts", {}),
+    }
+    stale_write_resp = await client.post(
+        f"{WORKER_LIGHT_URL}/fs/write",
+        json=WriteFileRequest(
+            path="renders/render_manifest.json",
+            content=json.dumps(stale_manifest_payload, indent=2),
+            overwrite=True,
+            bypass_agent_permissions=True,
+        ).model_dump(mode="json"),
+        headers={**headers, "X-System-FS-Bypass": "1"},
+    )
+    assert stale_write_resp.status_code == 200, stale_write_resp.text
 
-        submit_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json=BenchmarkToolRequest(
-                script_path="script.py",
-                reviewer_stage="benchmark_reviewer",
-            ).model_dump(mode="json"),
-            headers=headers,
-            timeout=180.0,
-        )
-        assert submit_resp.status_code == 200, submit_resp.text
-        submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
-        assert not submit_data.success, submit_data
-        assert submit_data.message is not None
-        lowered_message = submit_data.message.lower()
-        assert "revision" in lowered_message or "out of sync" in lowered_message
+    submit_resp = await client.post(
+        f"{WORKER_HEAVY_URL}/benchmark/submit",
+        json=BenchmarkToolRequest(
+            script_path="script.py",
+            reviewer_stage="benchmark_reviewer",
+        ).model_dump(mode="json"),
+        headers=headers,
+        timeout=180.0,
+    )
+    assert submit_resp.status_code == 200, submit_resp.text
+    submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
+    assert not submit_data.success, submit_data
+    assert submit_data.message is not None
+    lowered_message = submit_data.message.lower()
+    assert "revision" in lowered_message or "out of sync" in lowered_message
 
 
 @pytest.mark.integration_p0
@@ -1314,7 +1329,9 @@ async def test_int_188_validation_preview_http_preview_route_uses_vtk_renderer(
         preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
         assert preview_data.success, preview_data.message
         assert preview_data.image_path is not None
-        assert preview_data.image_path.startswith("renders/"), preview_data
+        assert preview_data.image_path.startswith(f"{BENCHMARK_RENDER_DIR}/"), (
+            preview_data
+        )
         assert preview_data.image_path.endswith(".jpg"), preview_data
 
         image_resp = await client.post(

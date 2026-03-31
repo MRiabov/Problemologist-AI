@@ -149,8 +149,9 @@ def _infer_render_artifact_metadata(
         metadata.depth_interpretation = (
             existing.depth_interpretation
             if existing and existing.depth_interpretation
-            else "Brighter pixels are nearer. Values are normalized per image "
-            "from the build123d/VTK preview renderer."
+            else "Camera-space depth in meters. False-color pixels are scaled "
+            "from the build123d/VTK preview renderer's linear depth buffer; "
+            "see depth_min_m and depth_max_m for the metric range."
         )
     elif modality == "segmentation" and existing and existing.segmentation_legend:
         metadata.segmentation_legend = list(existing.segmentation_legend)
@@ -209,6 +210,33 @@ def normalize_render_manifest(
     )
 
 
+def _workspace_root_from_render_dir(render_dir: Path) -> Path:
+    parent = render_dir.parent
+    if parent.name == "renders":
+        return parent.parent
+    return parent
+
+
+def select_single_preview_render_subdir(workspace_root: Path) -> str:
+    """Choose the single-view preview bundle directory for the active workspace."""
+
+    return (
+        "engineer_renders"
+        if (workspace_root / "assembly_definition.yaml").exists()
+        else "benchmark_renders"
+    )
+
+
+def select_static_preview_render_subdir(workspace_root: Path) -> str:
+    """Choose the 24-view static preview bundle directory for the workspace."""
+
+    return (
+        "final_preview_renders"
+        if (workspace_root / "assembly_definition.yaml").exists()
+        else "benchmark_renders"
+    )
+
+
 def _build_preview_artifacts(
     saved_paths: list[str],
     legend_by_path: dict[str, list],
@@ -234,8 +262,10 @@ def _build_preview_artifacts(
                     segmentation=str(render_dir / f"{group_key}_segmentation.png"),
                 ),
                 depth_interpretation=(
-                    "Brighter pixels are nearer. Values are normalized per image "
-                    "from the build123d/VTK preview renderer."
+                    "Camera-space depth in meters. False-color pixels are scaled "
+                    "from the build123d/VTK preview renderer's linear depth "
+                    "buffer; see depth_min_m and depth_max_m for the metric "
+                    "range."
                 ),
             )
             continue
@@ -285,6 +315,7 @@ def _workspace_relative_render_paths(
 def prerender_24_views(
     component: Compound,
     output_dir: str | None = None,
+    workspace_root: Path | None = None,
     objectives: BenchmarkDefinition | None = None,
     backend_type: SimulatorBackendType | None = None,
     session_id: str | None = None,
@@ -313,6 +344,9 @@ def prerender_24_views(
         output_dir = os.getenv("RENDERS_DIR", "./renders")
 
     output_path = Path(output_dir)
+    resolved_workspace_root = workspace_root or _workspace_root_from_render_dir(
+        output_path
+    )
     render_policy = load_agents_config().render
     logger.info(
         "prerender_24_views_start",
@@ -358,8 +392,6 @@ def prerender_24_views(
     saved_files = []
 
     try:
-        workspace_root = output_path.parent
-
         emit_event(
             {
                 "event_type": "validation_preview_backend_selected",
@@ -374,7 +406,7 @@ def prerender_24_views(
         bundle_base64 = export_preview_scene_bundle(
             component,
             objectives=objectives,
-            workspace_root=workspace_root,
+            workspace_root=resolved_workspace_root,
             smoke_test_mode=smoke_test_mode,
         )
         response = render_static_preview(
@@ -389,7 +421,9 @@ def prerender_24_views(
         if response.artifacts is None:
             raise RuntimeError("renderer returned no artifacts")
 
-        render_paths = materialize_render_artifacts(response.artifacts, workspace_root)
+        render_paths = materialize_render_artifacts(
+            response.artifacts, resolved_workspace_root
+        )
         render_paths = [
             path
             for path in render_paths
@@ -397,7 +431,7 @@ def prerender_24_views(
         ]
         if not render_paths:
             raise RuntimeError("renderer returned no preview image artifacts")
-        manifest_path = output_path / "render_manifest.json"
+        manifest_path = resolved_workspace_root / "renders" / "render_manifest.json"
         existing_manifest = None
         if manifest_path.exists():
             try:
@@ -409,7 +443,7 @@ def prerender_24_views(
 
         manifest = normalize_render_manifest(
             render_paths=render_paths,
-            workspace_root=workspace_root,
+            workspace_root=resolved_workspace_root,
             existing_manifest=existing_manifest,
             episode_id=session_id,
             worker_session_id=session_id,

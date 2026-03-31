@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import shutil
 import sys
-import tempfile
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -19,6 +19,10 @@ if str(ROOT) not in sys.path:
 
 from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition, CompoundMetadata, PartMetadata
+from shared.rendering.renderer_client import (
+    materialize_render_artifacts,
+    render_static_preview,
+)
 from shared.workers.loader import load_component_from_script
 from shared.workers.schema import (
     RenderArtifactMetadata,
@@ -31,7 +35,7 @@ from worker_heavy.utils.build123d_rendering import (
     _unique_color,
     _zone_color,
     camera_position_from_orbit,
-    collect_preview_scene,
+    export_preview_scene_bundle,
 )
 
 _NO_RENDER_ROLE = {
@@ -106,6 +110,7 @@ class _WorldTriangle:
 class _ProjectedTriangle:
     points: tuple[tuple[float, float], tuple[float, float], tuple[float, float]]
     depth: float
+    vertex_depths: tuple[float, float, float]
     triangle: _WorldTriangle
 
 
@@ -327,7 +332,12 @@ def _project_triangle(
         depths.append(z)
 
     depth = float(sum(depths) / len(depths))
-    return _ProjectedTriangle(points=tuple(projected), depth=depth, triangle=triangle)
+    return _ProjectedTriangle(
+        points=tuple(projected),
+        depth=depth,
+        vertex_depths=(depths[0], depths[1], depths[2]),
+        triangle=triangle,
+    )
 
 
 def _normalize_depth(depth: float, depth_min: float, depth_max: float) -> float:
@@ -356,6 +366,63 @@ def _draw_axes_overlay(image: Image.Image, *, color: tuple[int, int, int, int]) 
     )
 
 
+def _triangle_edge(
+    ax: float, ay: float, bx: float, by: float, px: float, py: float
+) -> float:
+    return (px - ax) * (by - ay) - (py - ay) * (bx - ax)
+
+
+def _rasterize_projected_depth(
+    projected_triangles: list[_ProjectedTriangle], *, width: int, height: int
+) -> np.ndarray:
+    depth_buffer = np.full((height, width), np.inf, dtype=np.float32)
+    if not projected_triangles:
+        return depth_buffer
+
+    for projected in sorted(
+        projected_triangles, key=lambda item: item.depth, reverse=True
+    ):
+        points = projected.points
+        xs = [point[0] for point in points]
+        ys = [point[1] for point in points]
+        min_x = max(0, int(math.floor(min(xs))))
+        max_x = min(width - 1, int(math.ceil(max(xs))))
+        min_y = max(0, int(math.floor(min(ys))))
+        max_y = min(height - 1, int(math.ceil(max(ys))))
+        if min_x > max_x or min_y > max_y:
+            continue
+
+        (x0, y0), (x1, y1), (x2, y2) = points
+        area = _triangle_edge(x0, y0, x1, y1, x2, y2)
+        if abs(area) < 1e-9:
+            continue
+
+        z0, z1, z2 = projected.vertex_depths
+        inv_z0 = 1.0 / max(z0, 1e-9)
+        inv_z1 = 1.0 / max(z1, 1e-9)
+        inv_z2 = 1.0 / max(z2, 1e-9)
+        sample_offset = 0.5
+
+        for py in range(min_y, max_y + 1):
+            sample_y = py + sample_offset
+            for px in range(min_x, max_x + 1):
+                sample_x = px + sample_offset
+                w0 = _triangle_edge(x1, y1, x2, y2, sample_x, sample_y) / area
+                w1 = _triangle_edge(x2, y2, x0, y0, sample_x, sample_y) / area
+                w2 = 1.0 - w0 - w1
+                if w0 < -1e-6 or w1 < -1e-6 or w2 < -1e-6:
+                    continue
+
+                denom = (w0 * inv_z0) + (w1 * inv_z1) + (w2 * inv_z2)
+                if denom <= 1e-9:
+                    continue
+                depth = float(1.0 / denom)
+                if depth < depth_buffer[py, px]:
+                    depth_buffer[py, px] = depth
+
+    return depth_buffer
+
+
 def _render_projected_triangles(
     projected_triangles: list[_ProjectedTriangle],
     *,
@@ -365,8 +432,6 @@ def _render_projected_triangles(
 ) -> Image.Image:
     if modality == "rgb":
         image = Image.new("RGBA", (width, height), _BACKGROUND_RGB)
-    elif modality == "depth":
-        image = Image.new("RGBA", (width, height), _DEPTH_BACKGROUND_RGB)
     else:
         image = Image.new("RGBA", (width, height), _SEGMENTATION_BACKGROUND_RGB)
 
@@ -376,6 +441,29 @@ def _render_projected_triangles(
         return image
 
     draw = ImageDraw.Draw(image, "RGBA")
+    if modality == "depth":
+        depth_buffer = _rasterize_projected_depth(
+            projected_triangles, width=width, height=height
+        )
+        finite_mask = np.isfinite(depth_buffer)
+        if not finite_mask.any():
+            return Image.new("RGBA", (width, height), _DEPTH_BACKGROUND_RGB)
+
+        depth_min = float(depth_buffer[finite_mask].min())
+        depth_max = float(depth_buffer[finite_mask].max())
+        if math.isclose(depth_min, depth_max):
+            normalized = np.ones_like(depth_buffer, dtype=np.float32)
+        else:
+            normalized = (depth_buffer - depth_min) / (depth_max - depth_min)
+        normalized = np.clip(normalized, 0.0, 1.0)
+        brightness = np.zeros_like(depth_buffer, dtype=np.uint8)
+        brightness[finite_mask] = ((1.0 - normalized[finite_mask]) * 255.0).astype(
+            np.uint8
+        )
+        rgb = np.repeat(brightness[:, :, np.newaxis], 3, axis=2)
+        alpha = np.where(finite_mask[:, :, np.newaxis], 255, 0).astype(np.uint8)
+        return Image.fromarray(np.dstack([rgb, alpha]), mode="RGBA")
+
     depths = [tri.depth for tri in projected_triangles]
     depth_min = min(depths)
     depth_max = max(depths)
@@ -404,12 +492,6 @@ def _render_projected_triangles(
                     int(round(fill_src[3] * 255.0)),
                 )
             draw.polygon(points, fill=rgba, outline=_EDGE_COLOR)
-            continue
-
-        if modality == "depth":
-            normalized = _normalize_depth(projected.depth, depth_min, depth_max)
-            brightness = int(round(255.0 * (1.0 - normalized)))
-            draw.polygon(points, fill=(brightness, brightness, brightness, 255))
             continue
 
         if triangle.include_in_segmentation:
@@ -584,42 +666,25 @@ def update_seed_artifact_renders(artifact_dir: Path) -> list[str]:
     definition = _load_benchmark_definition(artifact_dir)
     component = _load_preview_component(artifact_dir, definition, role_name)
 
-    existing_manifest = None
-    manifest_path = images_dir / "render_manifest.json"
-    if manifest_path.exists():
-        try:
-            existing_manifest = RenderManifest.model_validate_json(
-                manifest_path.read_text(encoding="utf-8")
-            )
-        except Exception:
-            existing_manifest = None
-
     if images_dir.exists():
         shutil.rmtree(images_dir)
-    images_dir.mkdir(parents=True, exist_ok=True)
+    bundle_base64 = export_preview_scene_bundle(
+        component,
+        objectives=definition,
+        workspace_root=artifact_dir,
+        smoke_test_mode=False,
+    )
+    response = render_static_preview(
+        bundle_base64=bundle_base64,
+        script_path="preview_scene.json",
+        session_id=f"seed-renders-{artifact_dir.name}-{uuid.uuid4().hex[:8]}",
+        smoke_test_mode=False,
+    )
+    if not response.success or response.artifacts is None:
+        raise RuntimeError(response.message or "seed render failed")
 
-    with tempfile.TemporaryDirectory() as mesh_tmpdir:
-        mesh_root = Path(mesh_tmpdir) / "meshes"
-        mesh_root.mkdir(parents=True, exist_ok=True)
+    rendered_paths = materialize_render_artifacts(
+        response.artifacts, artifact_dir, default_subdir="renders"
+    )
 
-        scene = collect_preview_scene(
-            component,
-            objectives=definition,
-            workspace_root=artifact_dir,
-            smoke_test_mode=False,
-            mesh_root=mesh_root,
-        )
-
-        rendered_paths = _render_context_views(scene, images_dir)
-        manifest = _manifest_for_render_paths(
-            artifact_dir=artifact_dir,
-            render_paths=rendered_paths,
-            scene=scene,
-            existing_manifest=existing_manifest,
-        )
-        manifest_path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
-
-    return [
-        str(path.relative_to(artifact_dir)).replace("\\", "/")
-        for path in rendered_paths
-    ]
+    return rendered_paths
