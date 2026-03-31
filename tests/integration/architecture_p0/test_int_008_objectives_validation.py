@@ -938,7 +938,7 @@ environment_drill_operations:
     quantity: 1
 final_assembly: []
 totals:
-  estimated_unit_cost_usd: 10.0
+  estimated_unit_cost_usd: 1.5
   estimated_weight_g: 100.0
   estimate_confidence: "medium"
 dfm_suggestions: []
