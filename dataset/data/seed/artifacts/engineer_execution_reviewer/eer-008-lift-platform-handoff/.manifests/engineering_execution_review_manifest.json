@@ -3,7 +3,7 @@
   "reviewer_stage": "engineering_execution_reviewer",
   "timestamp": "2026-03-11T12:00:00Z",
   "session_id": "seed-eer-008-lift-platform-handoff",
-  "revision": "d8eaaefc8a25e07665708fac029c4d024fb30936",
+  "revision": "ee8a3288c64e5a12ee3520b2ab33fac674c9d2d1",
   "script_path": "script.py",
   "script_sha256": "a01c87c402e1f9b5446f89cab5998921929222f3a7e95768f72bb92ccb9236cc",
   "validation_success": true,

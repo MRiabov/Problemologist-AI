@@ -3,7 +3,7 @@
   "reviewer_stage": "engineering_execution_reviewer",
   "timestamp": "2026-03-11T12:00:00Z",
   "session_id": "seed-eer-002-gap-bridge",
-  "revision": "d8eaaefc8a25e07665708fac029c4d024fb30936",
+  "revision": "ee8a3288c64e5a12ee3520b2ab33fac674c9d2d1",
   "script_path": "script.py",
   "script_sha256": "c91fe51882375b5f5279d2e073495b016f09f2934f4d638566a723b4ae1583b6",
   "validation_success": true,

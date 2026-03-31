@@ -1,8 +1,8 @@
 {
   "version": "1.0",
-  "episode_id": null,
-  "worker_session_id": null,
-  "revision": "d8eaaefc8a25e07665708fac029c4d024fb30936",
+  "episode_id": "eer-005-central-forbid-route",
+  "worker_session_id": "eer-005-central-forbid-route",
+  "revision": "ee8a3288c64e5a12ee3520b2ab33fac674c9d2d1",
   "environment_version": "integration-test",
   "preview_evidence_paths": [
     "renders/images/context_view_01.png",
@@ -10,10 +10,30 @@
   ],
   "artifacts": {
     "renders/images/context_view_01.png": {
-      "modality": "rgb"
+      "modality": "rgb",
+      "group_key": "context",
+      "siblings": {
+        "rgb": "renders/images/context_view_01.png",
+        "depth": null,
+        "segmentation": null
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
     },
     "renders/images/context_view_02.png": {
-      "modality": "rgb"
+      "modality": "rgb",
+      "group_key": "context",
+      "siblings": {
+        "rgb": "renders/images/context_view_02.png",
+        "depth": null,
+        "segmentation": null
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
     }
   }
 }
