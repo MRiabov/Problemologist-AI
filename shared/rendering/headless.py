@@ -62,4 +62,8 @@ def create_headless_vtk_render_window() -> Any:
 
     window = _headless_vtk_render_window_class()()
     window.SetOffScreenRendering(True)
+    # Translucent preview zones rely on alpha-capable framebuffers; without this
+    # VTK can flatten semi-transparent actors into unstable triangle artifacts.
+    if hasattr(window, "SetAlphaBitPlanes"):
+        window.SetAlphaBitPlanes(1)
     return window

@@ -25,9 +25,10 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from worker_heavy.utils.vtk_display import ensure_headless_vtk_display
+
 from evals.logic.codex_workspace import build_codex_env
 from shared.enums import AgentName
-from worker_heavy.utils.vtk_display import ensure_headless_vtk_display
 
 
 def _current_env_snapshot() -> dict[str, Any]:

@@ -775,7 +775,7 @@ async def test_engineer_execution_reviewer_handover_accepts_preview_evidence_pat
 
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         session_id = f"INT-074-{uuid.uuid4().hex[:8]}"
-        render_path = "renders/context_view_01.png"
+        render_path = "renders/render_e15_a0.png"
         script_content = "print('preview evidence check')\n"
 
         await seed_benchmark_assembly_definition(
@@ -822,6 +822,7 @@ async def test_engineer_execution_reviewer_handover_accepts_preview_evidence_pat
             )
             assert resp.status_code == 200, resp.text
 
+        render_base = Path(render_path).with_suffix("")
         review_manifest_json = ReviewManifest(
             status="ready_for_review",
             reviewer_stage="engineering_execution_reviewer",
@@ -835,8 +836,16 @@ async def test_engineer_execution_reviewer_handover_accepts_preview_evidence_pat
             simulation_timestamp=0.0,
             goal_reached=True,
             revision=repo_git_revision(),
-            renders=[render_path],
-            preview_evidence_paths=[render_path],
+            renders=[
+                render_path,
+                f"{render_base}_depth.png",
+                f"{render_base}_segmentation.png",
+            ],
+            preview_evidence_paths=[
+                render_path,
+                f"{render_base}_depth.png",
+                f"{render_base}_segmentation.png",
+            ],
             mjcf_path="renders/scene.xml",
             cad_path="renders/model.step",
             objectives_path="renders/benchmark_definition.yaml",
@@ -1121,7 +1130,7 @@ async def test_engineer_execution_reviewer_handover_accepts_png_preview_evidence
 
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         session_id = f"INT-074-{uuid.uuid4().hex[:8]}"
-        render_path = "renders/context_view_01.png"
+        render_path = "renders/render_e15_a0.png"
         script_content = "print('preview evidence check')\n"
 
         await seed_benchmark_assembly_definition(
@@ -1168,6 +1177,7 @@ async def test_engineer_execution_reviewer_handover_accepts_png_preview_evidence
             )
             assert resp.status_code == 200, resp.text
 
+        render_base = Path(render_path).with_suffix("")
         review_manifest_json = ReviewManifest(
             status="ready_for_review",
             reviewer_stage="engineering_execution_reviewer",
@@ -1181,8 +1191,16 @@ async def test_engineer_execution_reviewer_handover_accepts_png_preview_evidence
             simulation_timestamp=0.0,
             goal_reached=True,
             revision=repo_git_revision(),
-            renders=[render_path],
-            preview_evidence_paths=[render_path],
+            renders=[
+                render_path,
+                f"{render_base}_depth.png",
+                f"{render_base}_segmentation.png",
+            ],
+            preview_evidence_paths=[
+                render_path,
+                f"{render_base}_depth.png",
+                f"{render_base}_segmentation.png",
+            ],
             mjcf_path="renders/scene.xml",
             cad_path="renders/model.step",
             objectives_path="renders/benchmark_definition.yaml",

@@ -657,6 +657,14 @@ def _build_renderer(
     configure_headless_vtk_egl()
     renderer = vtkRenderer()
     renderer.SetBackground(*background)
+    # Depth peeling keeps translucent objective zones from collapsing into
+    # obvious polygon seams when rendered off-screen through EGL.
+    if hasattr(renderer, "SetUseDepthPeeling"):
+        renderer.SetUseDepthPeeling(True)
+    if hasattr(renderer, "SetMaximumNumberOfPeels"):
+        renderer.SetMaximumNumberOfPeels(100)
+    if hasattr(renderer, "SetOcclusionRatio"):
+        renderer.SetOcclusionRatio(0.1)
 
     for entity in scene.entities:
         _add_entity_actors(
@@ -674,6 +682,8 @@ def _build_renderer(
 
     render_window = create_headless_vtk_render_window()
     render_window.AddRenderer(renderer)
+    if hasattr(render_window, "SetAlphaBitPlanes"):
+        render_window.SetAlphaBitPlanes(1)
     render_window.SetSize(width, height)
     render_window.SetMultiSamples(0)
     return _RendererBundle(renderer=renderer, window=render_window)

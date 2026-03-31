@@ -1,18 +1,21 @@
 from __future__ import annotations
 
+import math
 import shutil
 import sys
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
+import trimesh
 import yaml
-from PIL import Image
+from build123d import Align, Box, Compound, Cylinder, Location, Sphere
+from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-
-from build123d import Align, Box, Compound, Cylinder, Location, Sphere
 
 from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition, CompoundMetadata, PartMetadata
@@ -21,41 +24,89 @@ from shared.workers.schema import (
     RenderArtifactMetadata,
     RenderManifest,
     RenderSiblingPaths,
+    SegmentationLegendEntry,
 )
+from worker_heavy.utils.build123d_rendering import (
+    _preview_camera_distance,
+    _unique_color,
+    _zone_color,
+    camera_position_from_orbit,
+    collect_preview_scene,
+)
+
+_NO_RENDER_ROLE = {
+    "benchmark_plan_reviewer",
+    "benchmark_coder",
+    "engineer_planner",
+    "engineer_plan_reviewer",
+}
 
 _RENDER_ROLE_WITH_SCRIPT = {
     "benchmark_reviewer",
     "engineer_execution_reviewer",
 }
+
 _RENDER_ROLE_WITH_DEFINITION_PREVIEW = {
-    "engineer_planner",
-    "engineer_plan_reviewer",
     "engineer_coder",
 }
-_NO_RENDER_ROLE = {
-    "benchmark_plan_reviewer",
-    "benchmark_coder",
-}
 
-_CONTEXT_VIEW_ANGLES = (
-    ("context_view_01", -35.0, 45.0),
-    ("context_view_02", -35.0, 135.0),
+_VIEW_ORBITS = (
+    (-15.0, 0.0),
+    (-15.0, 45.0),
+    (-15.0, 90.0),
+    (-15.0, 135.0),
+    (-15.0, 180.0),
+    (-15.0, 225.0),
+    (-15.0, 270.0),
+    (-15.0, 315.0),
+    (-45.0, 0.0),
+    (-45.0, 45.0),
+    (-45.0, 90.0),
+    (-45.0, 135.0),
+    (-45.0, 180.0),
+    (-45.0, 225.0),
+    (-45.0, 270.0),
+    (-45.0, 315.0),
+    (-75.0, 0.0),
+    (-75.0, 45.0),
+    (-75.0, 90.0),
+    (-75.0, 135.0),
+    (-75.0, 180.0),
+    (-75.0, 225.0),
+    (-75.0, 270.0),
+    (-75.0, 315.0),
 )
 
+_IMAGE_SIZE = (640, 480)
+_VIEW_ANGLE_DEG = 30.0
+_EDGE_COLOR = (24, 24, 24, 255)
+_BACKGROUND_RGB = (248, 248, 250, 255)
+_DEPTH_BACKGROUND_RGB = (0, 0, 0, 255)
+_SEGMENTATION_BACKGROUND_RGB = (0, 0, 0, 255)
 
-def _patch_ambient_vtk_renderer() -> None:
-    """Force build123d preview imports to use the ambient display path."""
-    from vtkmodules.vtkRenderingCore import vtkRenderWindow
 
-    import shared.rendering as shared_rendering
+@dataclass(frozen=True)
+class _WorldTriangle:
+    vertices: np.ndarray
+    entity_label: str
+    semantic_label: str
+    instance_id: str
+    instance_name: str
+    object_type: str
+    object_id: int
+    body_name: str | None
+    geom_name: str | None
+    color_rgba: tuple[float, float, float, float] | None
+    segmentation_color_rgb: tuple[int, int, int] | None
+    include_in_segmentation: bool
+    zone_type: str | None
 
-    def _create_render_window() -> vtkRenderWindow:
-        window = vtkRenderWindow()
-        window.SetOffScreenRendering(True)
-        return window
 
-    shared_rendering.configure_headless_vtk_egl = lambda: None
-    shared_rendering.create_headless_vtk_render_window = _create_render_window
+@dataclass(frozen=True)
+class _ProjectedTriangle:
+    points: tuple[tuple[float, float], tuple[float, float], tuple[float, float]]
+    depth: float
+    triangle: _WorldTriangle
 
 
 def _load_benchmark_definition(artifact_dir: Path) -> BenchmarkDefinition:
@@ -64,6 +115,13 @@ def _load_benchmark_definition(artifact_dir: Path) -> BenchmarkDefinition:
         raise FileNotFoundError(f"benchmark_definition.yaml missing in {artifact_dir}")
     data = yaml.safe_load(definition_path.read_text(encoding="utf-8")) or {}
     return BenchmarkDefinition.model_validate(data)
+
+
+def _load_benchmark_assembly_definition(artifact_dir: Path) -> dict[str, object]:
+    assembly_path = artifact_dir / "benchmark_assembly_definition.yaml"
+    if not assembly_path.exists():
+        return {}
+    return yaml.safe_load(assembly_path.read_text(encoding="utf-8")) or {}
 
 
 def _build_moved_object_component(definition: BenchmarkDefinition) -> Compound:
@@ -111,27 +169,313 @@ def _role_name_for_artifact(artifact_dir: Path) -> str:
     return artifact_dir.parent.name
 
 
-def _render_context_views(scene, output_dir: Path) -> list[Path]:
-    from worker_heavy.utils.build123d_rendering import render_preview_scene
+def _latest_revision() -> str:
+    revision = repo_revision(ROOT)
+    if not revision:
+        raise RuntimeError("Unable to determine repository revision for seed renders")
+    return revision
 
+
+def _materialize_mesh(mesh: trimesh.Trimesh | trimesh.Scene) -> trimesh.Trimesh:
+    if isinstance(mesh, trimesh.Trimesh):
+        return mesh.copy()
+    if isinstance(mesh, trimesh.Scene):
+        geometries = [geom.copy() for geom in mesh.geometry.values()]
+        if not geometries:
+            raise ValueError("scene contained no geometry")
+        return trimesh.util.concatenate(geometries)
+    raise TypeError(f"Unsupported mesh type: {type(mesh)!r}")
+
+
+def _transform_matrix(entity) -> np.ndarray:
+    matrix = trimesh.transformations.euler_matrix(
+        math.radians(float(entity.euler[0])),
+        math.radians(float(entity.euler[1])),
+        math.radians(float(entity.euler[2])),
+        axes="sxyz",
+    )
+    matrix[:3, 3] = np.asarray(entity.pos, dtype=np.float64)
+    return matrix
+
+
+def _triangles_for_entity(entity) -> list[_WorldTriangle]:
+    if entity.box_size is not None:
+        mesh = trimesh.creation.box(
+            extents=np.asarray(entity.box_size, dtype=np.float64) * 2.0
+        )
+        mesh.apply_transform(_transform_matrix(entity))
+        color_rgba = entity.color_rgba
+        segmentation_color = entity.segmentation_color_rgb
+        return [
+            _WorldTriangle(
+                vertices=np.asarray(mesh.vertices[face], dtype=np.float64),
+                entity_label=entity.label,
+                semantic_label=entity.semantic_label,
+                instance_id=entity.instance_id,
+                instance_name=entity.instance_name,
+                object_type=entity.object_type,
+                object_id=entity.object_id,
+                body_name=entity.body_name,
+                geom_name=entity.geom_name,
+                color_rgba=color_rgba,
+                segmentation_color_rgb=segmentation_color,
+                include_in_segmentation=entity.include_in_segmentation,
+                zone_type=entity.zone_type,
+            )
+            for face in mesh.faces
+        ]
+
+    triangles: list[_WorldTriangle] = []
+    if not entity.mesh_paths:
+        return triangles
+
+    transform = _transform_matrix(entity)
+    for mesh_path in entity.mesh_paths:
+        loaded = _materialize_mesh(trimesh.load(mesh_path, process=False))
+        loaded.apply_transform(transform)
+        for face in loaded.faces:
+            triangles.append(
+                _WorldTriangle(
+                    vertices=np.asarray(loaded.vertices[face], dtype=np.float64),
+                    entity_label=entity.label,
+                    semantic_label=entity.semantic_label,
+                    instance_id=entity.instance_id,
+                    instance_name=entity.instance_name,
+                    object_type=entity.object_type,
+                    object_id=entity.object_id,
+                    body_name=entity.body_name,
+                    geom_name=entity.geom_name,
+                    color_rgba=entity.color_rgba,
+                    segmentation_color_rgb=entity.segmentation_color_rgb,
+                    include_in_segmentation=entity.include_in_segmentation,
+                    zone_type=entity.zone_type,
+                )
+            )
+    return triangles
+
+
+def _build_world_triangles(scene) -> list[_WorldTriangle]:
+    triangles: list[_WorldTriangle] = []
+    for entity in scene.entities:
+        triangles.extend(_triangles_for_entity(entity))
+    return triangles
+
+
+def _camera_basis(
+    camera_position: tuple[float, float, float],
+    lookat: tuple[float, float, float],
+    up: tuple[float, float, float],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    cam = np.asarray(camera_position, dtype=np.float64)
+    target = np.asarray(lookat, dtype=np.float64)
+    up_vec = np.asarray(up, dtype=np.float64)
+
+    forward = target - cam
+    forward_norm = np.linalg.norm(forward)
+    if forward_norm < 1e-9:
+        forward = np.array([0.0, 0.0, 1.0], dtype=np.float64)
+    else:
+        forward = forward / forward_norm
+
+    up_norm = np.linalg.norm(up_vec)
+    if up_norm < 1e-9:
+        up_vec = np.array([0.0, 0.0, 1.0], dtype=np.float64)
+    else:
+        up_vec = up_vec / up_norm
+
+    right = np.cross(forward, up_vec)
+    right_norm = np.linalg.norm(right)
+    if right_norm < 1e-9:
+        right = np.array([1.0, 0.0, 0.0], dtype=np.float64)
+    else:
+        right = right / right_norm
+
+    true_up = np.cross(right, forward)
+    true_up_norm = np.linalg.norm(true_up)
+    if true_up_norm < 1e-9:
+        true_up = np.array([0.0, 1.0, 0.0], dtype=np.float64)
+    else:
+        true_up = true_up / true_up_norm
+
+    return right, true_up, forward
+
+
+def _project_triangle(
+    triangle: _WorldTriangle,
+    *,
+    camera_position: tuple[float, float, float],
+    basis: tuple[np.ndarray, np.ndarray, np.ndarray],
+    focal_length: float,
+    width: int,
+    height: int,
+) -> _ProjectedTriangle | None:
+    cam = np.asarray(camera_position, dtype=np.float64)
+    right, up_vec, forward = basis
+    projected: list[tuple[float, float]] = []
+    depths: list[float] = []
+
+    for vertex in triangle.vertices:
+        relative = vertex - cam
+        x = float(np.dot(relative, right))
+        y = float(np.dot(relative, up_vec))
+        z = float(np.dot(relative, forward))
+        if z <= 1e-6:
+            return None
+        screen_x = (width / 2.0) + (focal_length * (x / z))
+        screen_y = (height / 2.0) - (focal_length * (y / z))
+        projected.append((screen_x, screen_y))
+        depths.append(z)
+
+    depth = float(sum(depths) / len(depths))
+    return _ProjectedTriangle(points=tuple(projected), depth=depth, triangle=triangle)
+
+
+def _normalize_depth(depth: float, depth_min: float, depth_max: float) -> float:
+    if depth_max <= depth_min + 1e-9:
+        return 0.0
+    return max(0.0, min(1.0, (depth - depth_min) / (depth_max - depth_min)))
+
+
+def _draw_axes_overlay(image: Image.Image, *, color: tuple[int, int, int, int]) -> None:
+    draw = ImageDraw.Draw(image, "RGBA")
+    w, h = image.size
+    origin = (28, h - 28)
+    draw.line([origin, (origin[0] + 30, origin[1])], fill=(230, 60, 60, 200), width=3)
+    draw.line([origin, (origin[0], origin[1] - 30)], fill=(60, 190, 90, 200), width=3)
+    draw.line(
+        [origin, (origin[0] - 22, origin[1] - 18)],
+        fill=(75, 120, 230, 200),
+        width=3,
+    )
+    draw.ellipse(
+        [
+            (origin[0] - 2, origin[1] - 2),
+            (origin[0] + 2, origin[1] + 2),
+        ],
+        fill=color,
+    )
+
+
+def _render_projected_triangles(
+    projected_triangles: list[_ProjectedTriangle],
+    *,
+    modality: str,
+    width: int,
+    height: int,
+) -> Image.Image:
+    if modality == "rgb":
+        image = Image.new("RGBA", (width, height), _BACKGROUND_RGB)
+    elif modality == "depth":
+        image = Image.new("RGBA", (width, height), _DEPTH_BACKGROUND_RGB)
+    else:
+        image = Image.new("RGBA", (width, height), _SEGMENTATION_BACKGROUND_RGB)
+
+    if not projected_triangles:
+        if modality == "rgb":
+            _draw_axes_overlay(image, color=(35, 35, 35, 255))
+        return image
+
+    draw = ImageDraw.Draw(image, "RGBA")
+    depths = [tri.depth for tri in projected_triangles]
+    depth_min = min(depths)
+    depth_max = max(depths)
+
+    for projected in sorted(
+        projected_triangles, key=lambda item: item.depth, reverse=True
+    ):
+        triangle = projected.triangle
+        points = projected.points
+
+        if modality == "rgb":
+            if triangle.object_type == "zone" and triangle.zone_type:
+                fill = _zone_color(triangle.zone_type)
+                rgba = (
+                    int(round(fill[0] * 255.0)),
+                    int(round(fill[1] * 255.0)),
+                    int(round(fill[2] * 255.0)),
+                    int(round(fill[3] * 255.0)),
+                )
+            else:
+                fill_src = triangle.color_rgba or (0.62, 0.67, 0.73, 1.0)
+                rgba = (
+                    int(round(fill_src[0] * 255.0)),
+                    int(round(fill_src[1] * 255.0)),
+                    int(round(fill_src[2] * 255.0)),
+                    int(round(fill_src[3] * 255.0)),
+                )
+            draw.polygon(points, fill=rgba, outline=_EDGE_COLOR)
+            continue
+
+        if modality == "depth":
+            normalized = _normalize_depth(projected.depth, depth_min, depth_max)
+            brightness = int(round(255.0 * (1.0 - normalized)))
+            draw.polygon(points, fill=(brightness, brightness, brightness, 255))
+            continue
+
+        if triangle.include_in_segmentation:
+            color = triangle.segmentation_color_rgb or _unique_color(triangle.object_id)
+            draw.polygon(points, fill=(*color, 255))
+
+    if modality == "rgb":
+        _draw_axes_overlay(image, color=(35, 35, 35, 255))
+    return image
+
+
+def _render_context_views(scene, output_dir: Path) -> list[Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
+    world_triangles = _build_world_triangles(scene)
     rendered_paths: list[Path] = []
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        temp_root = Path(tmpdir)
-        for stem, pitch, yaw in _CONTEXT_VIEW_ANGLES:
-            jpg_path = render_preview_scene(
-                scene,
-                pitch=pitch,
-                yaw=yaw,
-                output_dir=temp_root,
-                width=640,
-                height=480,
+    camera_distance = _preview_camera_distance(
+        scene, width=_IMAGE_SIZE[0], height=_IMAGE_SIZE[1]
+    )
+    focal_length = (_IMAGE_SIZE[1] / 2.0) / math.tan(
+        math.radians(_VIEW_ANGLE_DEG) / 2.0
+    )
+
+    for index, (pitch, yaw) in enumerate(_VIEW_ORBITS, start=1):
+        camera_position = camera_position_from_orbit(
+            scene.center, camera_distance, pitch, yaw
+        )
+        basis = _camera_basis(camera_position, scene.center, (0.0, 0.0, 1.0))
+        projected_triangles = []
+        for triangle in world_triangles:
+            projected = _project_triangle(
+                triangle,
+                camera_position=camera_position,
+                basis=basis,
+                focal_length=focal_length,
+                width=_IMAGE_SIZE[0],
+                height=_IMAGE_SIZE[1],
             )
-            png_path = output_dir / f"{stem}.png"
-            with Image.open(jpg_path) as image:
-                image.save(png_path, format="PNG")
-            rendered_paths.append(png_path)
+            if projected is not None:
+                projected_triangles.append(projected)
+
+        stem = f"render_e{int(abs(pitch))}_a{int(yaw)}"
+        rgb_path = output_dir / f"{stem}.png"
+        depth_path = output_dir / f"{stem}_depth.png"
+        segmentation_path = output_dir / f"{stem}_segmentation.png"
+
+        _render_projected_triangles(
+            projected_triangles,
+            modality="rgb",
+            width=_IMAGE_SIZE[0],
+            height=_IMAGE_SIZE[1],
+        ).save(rgb_path, format="PNG")
+        _render_projected_triangles(
+            projected_triangles,
+            modality="depth",
+            width=_IMAGE_SIZE[0],
+            height=_IMAGE_SIZE[1],
+        ).save(depth_path, format="PNG")
+        _render_projected_triangles(
+            projected_triangles,
+            modality="segmentation",
+            width=_IMAGE_SIZE[0],
+            height=_IMAGE_SIZE[1],
+        ).save(segmentation_path, format="PNG")
+
+        rendered_paths.extend([rgb_path, depth_path, segmentation_path])
 
     return rendered_paths
 
@@ -140,25 +484,17 @@ def _manifest_for_render_paths(
     *,
     artifact_dir: Path,
     render_paths: list[Path],
+    scene,
     existing_manifest: RenderManifest | None,
 ) -> RenderManifest:
-    revision = repo_revision(ROOT)
-    if not revision:
-        raise RuntimeError("Unable to determine repository revision for seed renders")
+    revision = _latest_revision()
 
     environment_version = None
     if existing_manifest is not None and existing_manifest.environment_version:
         environment_version = existing_manifest.environment_version
     elif (artifact_dir / "benchmark_assembly_definition.yaml").exists():
         try:
-            assembly = (
-                yaml.safe_load(
-                    (artifact_dir / "benchmark_assembly_definition.yaml").read_text(
-                        encoding="utf-8"
-                    )
-                )
-                or {}
-            )
+            assembly = _load_benchmark_assembly_definition(artifact_dir)
             environment_version = str(assembly.get("version") or "").strip() or None
         except Exception:
             environment_version = None
@@ -168,14 +504,58 @@ def _manifest_for_render_paths(
     render_rel_paths = [
         str(path.relative_to(artifact_dir)).replace("\\", "/") for path in render_paths
     ]
-    artifacts = {
-        rel_path: RenderArtifactMetadata(
-            modality="rgb",
-            group_key="context",
-            siblings=RenderSiblingPaths(rgb=rel_path),
+    artifacts: dict[str, RenderArtifactMetadata] = {}
+    legend_entries: list[SegmentationLegendEntry] = []
+
+    for entity in scene.entities:
+        if not entity.include_in_segmentation:
+            continue
+        color = entity.segmentation_color_rgb or _unique_color(entity.object_id)
+        legend_entries.append(
+            SegmentationLegendEntry(
+                instance_id=entity.instance_id,
+                instance_name=entity.instance_name,
+                semantic_label=entity.semantic_label,
+                object_type=entity.object_type,
+                object_id=entity.object_id,
+                body_name=entity.body_name,
+                geom_name=entity.geom_name,
+                color_rgb=color,
+                color_hex="#" + "".join(f"{channel:02x}" for channel in color),
+            )
         )
-        for rel_path in render_rel_paths
-    }
+
+    for rel_path in render_rel_paths:
+        path = Path(rel_path)
+        stem = path.stem
+        if rel_path.endswith("_depth.png"):
+            group_key = stem.removesuffix("_depth")
+            modality = "depth"
+        elif rel_path.endswith("_segmentation.png"):
+            group_key = stem.removesuffix("_segmentation")
+            modality = "segmentation"
+        else:
+            group_key = stem
+            modality = "rgb"
+
+        siblings = RenderSiblingPaths(
+            rgb=str(path.parent / f"{group_key}.png"),
+            depth=str(path.parent / f"{group_key}_depth.png"),
+            segmentation=str(path.parent / f"{group_key}_segmentation.png"),
+        )
+        artifact = RenderArtifactMetadata(
+            modality=modality,
+            group_key=group_key,
+            siblings=siblings,
+        )
+        if modality == "depth":
+            artifact.depth_interpretation = (
+                "Brighter pixels are nearer. Values are normalized per image "
+                "from the software preview renderer."
+            )
+        elif modality == "segmentation":
+            artifact.segmentation_legend = list(legend_entries)
+        artifacts[rel_path] = artifact
 
     return RenderManifest(
         episode_id=artifact_dir.name,
@@ -218,9 +598,6 @@ def update_seed_artifact_renders(artifact_dir: Path) -> list[str]:
         shutil.rmtree(images_dir)
     images_dir.mkdir(parents=True, exist_ok=True)
 
-    _patch_ambient_vtk_renderer()
-    from worker_heavy.utils.build123d_rendering import collect_preview_scene
-
     with tempfile.TemporaryDirectory() as mesh_tmpdir:
         mesh_root = Path(mesh_tmpdir) / "meshes"
         mesh_root.mkdir(parents=True, exist_ok=True)
@@ -237,6 +614,7 @@ def update_seed_artifact_renders(artifact_dir: Path) -> list[str]:
         manifest = _manifest_for_render_paths(
             artifact_dir=artifact_dir,
             render_paths=rendered_paths,
+            scene=scene,
             existing_manifest=existing_manifest,
         )
         manifest_path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")

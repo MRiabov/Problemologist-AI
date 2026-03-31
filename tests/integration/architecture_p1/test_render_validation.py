@@ -27,7 +27,7 @@ async def test_render_validation_rejects_black_rgb_seed():
     worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
     try:
         await worker.upload_file(
-            "renders/images/context_view_01.png",
+            "renders/images/render_e15_a0.png",
             _png_bytes((0, 0, 0)),
             bypass_agent_permissions=True,
         )
@@ -51,7 +51,7 @@ async def test_render_validation_rejects_black_rgb_seed_for_engineer_coder():
     worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
     try:
         await worker.upload_file(
-            "renders/images/context_view_01.png",
+            "renders/images/render_e15_a0.png",
             _png_bytes((0, 0, 0)),
             bypass_agent_permissions=True,
         )
@@ -75,7 +75,7 @@ async def test_render_validation_allows_visible_rgb_seed():
     worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
     try:
         await worker.upload_file(
-            "renders/images/context_view_01.png",
+            "renders/images/render_e15_a0.png",
             _png_bytes((0, 255, 0)),
         )
 

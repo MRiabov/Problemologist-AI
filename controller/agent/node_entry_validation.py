@@ -78,6 +78,7 @@ REASON_POLICY_INVALID = "policy_invalid"
 REASON_NO_PREVIOUS_NODE = "no_previous_node"
 REASON_CUSTOM_CHECK_FAILED = "custom_check_failed"
 
+
 class ValidationGraph(StrEnum):
     ENGINEER = "engineer"
     BENCHMARK = "benchmark"
@@ -991,7 +992,7 @@ async def validate_seeded_workspace_handoff_artifacts(
                     artifact_path="benchmark_assembly_definition.yaml",
                 )
                 for message in handover_errors
-                )
+            )
 
     render_error = await validate_render_images_non_black(worker_client)
     if render_error is not None:

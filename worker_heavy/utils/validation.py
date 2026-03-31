@@ -133,6 +133,38 @@ def _finite_float(value: float, default: float = 0.0) -> float:
     return f if math.isfinite(f) else default
 
 
+def _shape_volume(shape: Any) -> float:
+    """Return a numeric volume for a build123d shape or shape list."""
+    if shape is None:
+        return 0.0
+
+    volume = getattr(shape, "volume", None)
+    if volume is not None:
+        try:
+            return float(volume)
+        except (TypeError, ValueError):
+            pass
+
+    if isinstance(shape, (str, bytes, dict)):
+        return 0.0
+
+    try:
+        iterator = iter(shape)
+    except TypeError:
+        return 0.0
+
+    total = 0.0
+    for item in iterator:
+        item_volume = getattr(item, "volume", None)
+        if item_volume is None:
+            continue
+        try:
+            total += float(item_volume)
+        except (TypeError, ValueError):
+            continue
+    return total
+
+
 def _sanitize_stress_summaries(
     summaries: list[StressSummary],
 ) -> list[StressSummary]:
@@ -1733,12 +1765,13 @@ def validate(
         for i in range(len(solids)):
             for j in range(i + 1, len(solids)):
                 intersection = solids[i].intersect(solids[j])
-                if intersection and intersection.volume > 0.1:
+                intersection_volume = _shape_volume(intersection)
+                if intersection_volume > 0.1:
                     label_i = getattr(solids[i], "label", None) or f"solid_{i}"
                     label_j = getattr(solids[j], "label", None) or f"solid_{j}"
                     msg = (
                         f"Geometric intersection detected between {label_i} and "
-                        f"{label_j} (volume: {intersection.volume:.2f})"
+                        f"{label_j} (volume: {intersection_volume:.2f})"
                     )
                     return (False, msg)
 
