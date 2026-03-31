@@ -32,12 +32,12 @@ from controller.observability.middleware_helper import record_events
 from controller.observability.tracing import record_worker_events
 from shared.enums import AgentName, ReviewDecision, SessionStatus
 from shared.models.schemas import ReviewResult
-from shared.script_contracts import BENCHMARK_SCRIPT_PATH
 from shared.models.simulation import SimulationResult
 from shared.observability.schemas import (
     ConversationLengthExceededEvent,
     ReviewDecisionEvent,
 )
+from shared.script_contracts import BENCHMARK_SCRIPT_PATH
 from shared.simulation.schemas import (
     RandomizationStrategy,
     SimulatorBackendType,
@@ -1063,6 +1063,7 @@ class BenchmarkPlanReviewerSignature(dspy.Signature):
     Review the benchmark planning handoff before coding begins.
     Inspect plan.md, todo.md, benchmark_definition.yaml, benchmark_assembly_definition.yaml,
     and the latest-revision solvability evidence before deciding.
+    `benchmark_script.py` is not available to Benchmark Planner before approval.
     Reject plans that reference nonexistent objects, hide benchmark-side motion,
     rely on impossible or unsupported geometry, leave the goal obstructed or
     unreachable, omit reviewer-visible motion bounds/controller facts, or
@@ -1595,9 +1596,7 @@ class BenchmarkCoderNode(BaseNode):
 
         if not state.current_script or not state.current_script.strip():
             state.session.status = SessionStatus.REJECTED
-            state.review_feedback = (
-                f"Coder handoff blocked: {SCRIPT_FILE} is missing after coder execution."
-            )
+            state.review_feedback = f"Coder handoff blocked: {SCRIPT_FILE} is missing after coder execution."
             state.session.validation_logs.append(
                 f"reviewer_submission: missing {SCRIPT_FILE} after coder execution"
             )
@@ -1940,6 +1939,7 @@ async def summarizer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorS
 class BenchmarkReviewerSignature(dspy.Signature):
     """
     Agentic review of the generated benchmark.
+    You must use the provided tools to read `benchmark_script.py`.
     Reject hidden benchmark-side motion, unsupported motion, over-actuated
     fixtures, missing bounds/controller facts, or any final scene that does not
     clearly match the planner's explicit motion contract.

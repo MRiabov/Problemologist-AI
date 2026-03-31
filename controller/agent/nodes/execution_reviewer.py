@@ -16,11 +16,11 @@ from controller.observability.tracing import record_worker_events
 from shared.enums import AgentName, ReviewDecision
 from shared.models.schemas import ReviewResult
 from shared.models.simulation import SimulationResult
-from shared.script_contracts import SOLUTION_SCRIPT_PATH
 from shared.observability.schemas import (
     ExcessiveDofDetectedEvent,
     ReviewDecisionEvent,
 )
+from shared.script_contracts import SOLUTION_SCRIPT_PATH
 from shared.type_checking import type_check
 
 from ..review_handover import validate_reviewer_handover
@@ -38,6 +38,7 @@ logger = structlog.get_logger(__name__)
 class ExecutionReviewerSignature(dspy.Signature):
     """
     Engineer Execution Reviewer node: Evaluates the implementation based on simulation and workbench reports.
+    You must use the provided tools to read `solution_script.py`.
     You must use the provided tools to read 'simulation_result.json' and 'workbench_report.md'.
     You also receive benchmark-owned read-only benchmark_assembly_definition.yaml handoff context copied into this workspace.
     When done, return the final ReviewResult.

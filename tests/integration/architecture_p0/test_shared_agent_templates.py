@@ -13,7 +13,7 @@ def test_common_agent_templates_match_worker_light_starters():
         ".admin/clear_env.py",
         "journal.md",
         "manufacturing_config.yaml",
-        "script.py",
+        "solution_script.py",
         "todo.md",
     }
 
@@ -21,16 +21,19 @@ def test_common_agent_templates_match_worker_light_starters():
     assert templates[".admin/clear_env.py"] == (
         worker_light_root / ".admin/clear_env.py"
     ).read_text(encoding="utf-8")
-    assert templates["script.py"] == (worker_light_root / "script.py").read_text(
-        encoding="utf-8"
-    )
+    assert templates["solution_script.py"] == (
+        worker_light_root / "solution_script.py"
+    ).read_text(encoding="utf-8")
     assert templates["todo.md"] == (worker_light_root / "todo.md").read_text(
         encoding="utf-8"
     )
     assert templates["journal.md"] == (worker_light_root / "journal.md").read_text(
         encoding="utf-8"
     )
-    assert load_template_text("common/script.py") == templates["script.py"]
+    assert (
+        load_template_text("common/solution_script.py")
+        == templates["solution_script.py"]
+    )
 
 
 @pytest.mark.integration_p0
@@ -44,9 +47,9 @@ def test_template_file_expands_from_shared_agent_templates(tmp_path: Path):
             "  steps:\n"
             "  - tool_name: write_file\n"
             "    tool_args:\n"
-            "      path: script.py\n"
+            "      path: solution_script.py\n"
             "      overwrite: true\n"
-            "      template_file: common/script.py\n"
+            "      template_file: common/solution_script.py\n"
             "    expected_observation: success\n"
         ),
         encoding="utf-8",
@@ -55,5 +58,5 @@ def test_template_file_expands_from_shared_agent_templates(tmp_path: Path):
     scenarios = load_integration_mock_scenarios(scenario_dir)
     step = scenarios["INT-999"]["transcript"][0]["steps"][0]
     assert step["tool_args"]["content"] == (
-        Path("worker_light/agent_files/script.py").read_text(encoding="utf-8")
+        Path("worker_light/agent_files/solution_script.py").read_text(encoding="utf-8")
     )

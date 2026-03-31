@@ -23,13 +23,14 @@ from controller.agent.handover_constants import (
     BENCHMARK_PLANNER_HANDOFF_ARTIFACTS,
     BENCHMARK_REVIEWER_HANDOVER_CHECK,
     ELECTRONICS_REVIEWER_HANDOVER_CHECK,
-    ENGINEER_BENCHMARK_SOURCE_ARTIFACTS,
+    ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS,
     ENGINEER_BENCHMARK_HANDOVER_CHECK,
+    ENGINEER_BENCHMARK_SOURCE_ARTIFACTS,
     ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
-    ENGINEERING_EXECUTION_REVIEWER_HANDOFF_ARTIFACTS,
     ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
     ENGINEER_PLANNER_HANDOFF_ARTIFACTS,
     ENGINEERING_EXECUTION_REVIEW_MANIFEST,
+    ENGINEERING_EXECUTION_REVIEWER_HANDOFF_ARTIFACTS,
     ENGINEERING_PLAN_REVIEW_MANIFEST,
     SCHEMA_BACKED_HANDOFF_PATHS,
 )
@@ -51,12 +52,12 @@ from shared.models.schemas import (
     BenchmarkDefinition,
     EpisodeMetadata,
 )
+from shared.models.simulation import SimulationResult
 from shared.script_contracts import (
     BENCHMARK_SCRIPT_PATH,
     SOLUTION_SCRIPT_PATH,
     authored_script_path_for_reviewer_stage,
 )
-from shared.models.simulation import SimulationResult
 from shared.simulation.schemas import CustomObjectives
 from shared.workers.markdown_validator import validate_todo_md
 from shared.workers.schema import (
@@ -630,7 +631,7 @@ async def _materialize_reviewer_handover(
         except Exception:
             existing_handover_error = "unknown reviewer handover validation error"
         else:
-        if existing_handover_error is None:
+            if existing_handover_error is None:
                 return None
 
     async def _run_with_transient_busy_retry(operation_name: str, coro_factory):
