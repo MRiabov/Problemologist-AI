@@ -22,15 +22,21 @@ This migration sits on top of the existing split architecture in
 
 ## Resolved Decisions
 
-- The preview helper returns a small structured response, not a bare `Path`.
-- The helper emits start/finish status text so long renders are visible to the
+- The preview helper is async and returns a small structured job ack, not a
+  bare `Path` or a final render bundle.
+- The helper emits queued/start/view-ready/finish status text while the
+  renderer worker materializes files, so long renders remain observable to the
   caller.
-- The current angle-based render naming family stays in use, for example
-  `render_e15_a45`, with a run-unique suffix or timestamp when repeated runs
-  need disambiguation.
+- The helper accepts modality booleans (`rgb`, `depth`, `segmentation`) and
+  normalizes scalar camera inputs into view lists before dispatch.
+- Zip-paired multi-view requests are supported, with the preview job capped at
+  64 rendered views per call.
+- The current angle-based render naming family stays in use, augmented with a
+  request-scoped view index when repeated poses or multi-view bundles need
+  disambiguation.
 - `renders/render_manifest.json` remains the assumed companion artifact and is
-  runtime-owned, read-only to agents, and rewritten atomically as preview
-  outputs are added.
+  runtime-owned, read-only to agents, rewritten atomically, and keyed by view
+  index plus pose metadata as preview outputs are added.
 - `preview_design(...)` is not kept as a long-term alias; `preview(...)`
   replaces it.
 - The helper lives in `utils` as an export layer.
@@ -47,12 +53,12 @@ This migration sits on top of the existing split architecture in
 
 - The current system already has the rendering primitives, but they are split
   across validation, preview, and renderer-worker code paths.
-- Single-view inspection is useful for engineer coder, benchmark coder, planner,
-  and reviewer flows when a full preview bundle is unnecessary.
+- Multi-view inspection is useful for engineer coder, benchmark coder, planner,
+  and reviewer flows when a full legacy validation bundle is unnecessary.
 - The current controller-side preview path still routes through the heavy-worker
   Temporal path, which is too expensive for interactive inspection.
-- The existing preview helpers are RGB-first and do not expose an explicit
-  modality selector.
+- The existing preview helpers are RGB-first and do not expose explicit
+  modality booleans or multi-view normalization.
 
 ## Current-State Evidence
 
@@ -97,39 +103,54 @@ The refactor should make the preview path explicit, direct, and cheap:
 
 1. Introduce a canonical `preview(...)` helper on the authoring/runtime surface
    that accepts a live `Part | Compound`.
-2. Support explicit camera control with `orbit_pitch` and `orbit_yaw`.
-3. Support an explicit preview modality selector.
-4. Make the worker-light runtime the direct orchestration boundary for preview
-   requests.
-5. Keep the renderer worker as the only process that touches VTK/OpenGL and
+2. Support explicit camera control with `orbit_pitch` and `orbit_yaw`, using
+   scalar-or-list inputs that normalize into view bundles.
+3. Support explicit preview modality booleans instead of a single modality
+   selector.
+4. Cap each preview call at 64 rendered views and pair camera inputs by index.
+5. Make the worker-light runtime the direct orchestration boundary for preview
+   requests and stream queued/view-ready/completed status over the existing
+   websocket control path.
+6. Keep the renderer worker as the only process that touches VTK/OpenGL and
    writes the actual image artifacts.
-6. Remove validation-time 24-view bundle generation from the default contract.
-7. Keep on-demand preview separate from simulation render provenance.
+7. Retire the legacy 24-view validation bundle entirely; validation evidence is
+   geometry/objective validation only.
+8. Keep on-demand preview separate from simulation render provenance.
 
 ### Proposed signature
 
 ```py
-preview(
+async def preview(
     component: Part | Compound,
-    orbit_pitch: float = 45,
-    orbit_yaw: float = 45,
-    rendering_type: RenderingType | Literal["rgb", "depth", "segmentation"],
-)
+    orbit_pitch: float | list[float] = 45.0,
+    orbit_yaw: float | list[float] = 45.0,
+    rgb: bool = True,
+    depth: bool = True,
+    segmentation: bool = False,
+) -> PreviewJobAck
 ```
 
 ### Desired semantics
 
-- `rendering_type="rgb"` should preserve the normal inspection preview.
-- `rendering_type="depth"` should produce a depth artifact that remains
-  modality-aware and non-lossy.
-- `rendering_type="segmentation"` should produce a segmentation artifact and
-  preserve legend metadata.
-- The helper should return a structured result with at least the artifact path
-  and user-facing status text.
+- `rgb`, `depth`, and `segmentation` are preview payload choices, not
+  simulation artifact modes.
+- At least one modality boolean must be enabled; the all-false request is
+  rejected.
+- Scalar `orbit_pitch` / `orbit_yaw` inputs are wrapped into single-item view
+  lists at the tool boundary.
+- When one camera list has length 1 and the other has length N, the singleton
+  broadcasts to the longer list; when both lists are longer than one, their
+  lengths must match and are paired by index.
+- The helper caps each request at 64 rendered views, counting views rather
+  than output files.
+- The helper returns a structured job ack immediately and streams queued,
+  running, and view-ready status while the renderer worker materializes the
+  files.
 - The helper should persist under the workflow-specific preview bundle
   directory, not flatten everything into a single root-level render folder.
-- The helper should keep a stable orbit-angle naming convention so repeated
-  runs remain visually and textually easy to distinguish in the workspace.
+- The helper should keep a stable orbit-angle naming convention plus a
+  request-scoped view index so repeated runs remain visually and textually easy
+  to distinguish in the workspace.
 - The helper should orbit around the component centroid.
 
 ## API Contract Notes
@@ -138,14 +159,15 @@ This refactor should not reuse `shared.models.simulation.RenderMode` for the new
 preview selector.
 
 - `RenderMode` already means `static_preview` versus `simulation_video`.
-- The new preview tool needs its own modality enum, because `rgb`, `depth`, and
-  `segmentation` are preview payload choices, not simulation artifact modes.
+- The new preview tool needs explicit modality booleans because `rgb`, `depth`,
+  and `segmentation` are preview payload choices, not simulation artifact modes.
 
 The preview request/response shape should stay small and deterministic:
 
-- input: live component, `orbit_pitch`, `orbit_yaw`, modality, optional workspace/output
-  hints,
-- output: persisted artifact path, plus manifest-backed modality metadata.
+- input: live component, `orbit_pitch`, `orbit_yaw`, modality booleans, optional
+  workspace/output hints,
+- output: structured job ack, then manifest-backed modality and view metadata
+  once the renderer worker resolves each view.
 
 <!-- Warning: the implementation previously used `pitch` / `yaw` naming instead of `orbit_pitch` / `orbit_yaw`, so updating the names is due. -->
 
@@ -156,29 +178,38 @@ Current preview flow:
 1. Agent or script code requests preview.
 2. Worker-light is the direct authoring/runtime entrypoint for the preview
    helper.
-3. The helper calls the controller boundary.
+3. The helper normalizes the request into a preview job and opens the existing
+   websocket control path for queue and progress updates.
 4. The controller routes through Temporal.
 5. Temporal dispatches the renderer job.
 6. `worker_renderer/api/routes.py:/benchmark/preview` loads or reconstructs the
-   scene and renders it.
-7. The preview artifact is written back to the session workspace.
+   scene and renders each requested view.
+7. The renderer worker streams view-ready updates as each requested render
+   completes, and the materialized artifacts are written back to the session
+   workspace.
 
 Target on-demand flow:
 
 1. Agent or script code requests preview.
 2. Worker-light owns the authoring/runtime helper.
-3. Worker-light passes through the controller orchestration boundary.
+3. Worker-light normalizes scalar inputs into view bundles, submits the job
+   through the controller orchestration boundary, and returns a structured job
+   ack immediately.
 4. Controller + Temporal dispatch the render job to `worker-renderer`.
-5. The renderer worker emits the selected modality only.
-6. The caller receives the structured response and inspects the artifact path
-   through the existing media path.
+5. The renderer worker emits the selected modality set only, may fan out the
+   requested views internally within the admitted job, and streams view-ready
+   notifications as it goes.
+6. The caller later inspects the materialized artifact paths through the
+   existing media path.
 
 ## Why This Is a Major Refactor
 
 - It changes the agent-facing utility surface, not just a backend route.
-- It introduces a new modality dimension to preview requests.
+- It introduces a new modality dimension and a new multi-view normalization
+  model to preview requests.
 - It moves the default preview control path off `worker-heavy`.
-- It affects worker schemas, controller proxies, prompt allowlists, and tests.
+- It affects worker schemas, websocket status delivery, controller proxies,
+  prompt allowlists, and tests.
 - It creates a new separation between preview evidence and simulation evidence.
 
 ## Non-Goals
@@ -187,6 +218,7 @@ Target on-demand flow:
 - Do not send raw geometry objects over HTTP.
 - Do not collapse preview into simulation provenance.
 - Do not route preview generation back through `/benchmark/validate`.
+- Do not reintroduce a default validation-time preview bundle.
 - Do not add a generic render queue.
 - Do not change simulation semantics.
 
@@ -229,21 +261,35 @@ Target on-demand flow:
 
 ### Phase 2: Make modality explicit
 
-- Add a preview-specific modality enum with `rgb`, `depth`, and
-  `segmentation`.
-- Extend the renderer request schema so the caller asks for one modality
-  explicitly.
-- Persist modality-specific artifact metadata in `renders/render_manifest.json`.
+- Replace the single preview modality selector with `rgb`, `depth`, and
+  `segmentation` booleans.
+- Extend the renderer request schema and manifest so modality-specific artifact
+  metadata is persisted per view.
 - Keep depth and segmentation outputs PNG-based so the data is not lossy.
 
-### Phase 3: Move orchestration to worker-light
+### Phase 3: Normalize multi-view camera requests
+
+- Accept scalar-or-list `orbit_pitch` and `orbit_yaw` inputs.
+- Normalize scalar camera inputs to single-item lists at the tool boundary.
+- Zip-pair the camera lists by index and broadcast singleton lists across the
+  longer side.
+- Enforce the 64-view cap before the request reaches the renderer worker.
+
+### Phase 4: Stream preview status
+
+- Stream queued, running, and view-ready status over the existing websocket
+  control path.
+- Keep the structured preview job ack small and immediate.
+- Preserve the final manifest as the durable ledger for the materialized views.
+
+### Phase 5: Move orchestration to worker-light
 
 - Worker-light should become the direct orchestration boundary for preview.
 - The heavy worker should stop being the default preview hop.
 - Any controller proxy that still exists during rollout should be a compatibility
   bridge, not the primary path.
 
-### Phase 4: Update role prompts and allowlists
+### Phase 6: Update role prompts and allowlists
 
 - Expose the new preview helper in the engineer and benchmark tool prompts.
 - Add it to any role allowlists that need live inspection of a component or
@@ -258,6 +304,8 @@ Target on-demand flow:
 
 - The main risk is geometry serialization drift between the live `Part | Compound`
   and the staged renderer bundle.
+- The next highest risk is a mismatch between the view-normalization rule and
+  the manifest view index, which would make streamed renders hard to correlate.
 - Depth and segmentation artifacts need stronger fidelity guarantees than the
   current JPEG-first single-view helper.
 - A partial migration could leave both the heavy-worker preview path and the
@@ -281,7 +329,7 @@ context comes from the benchmark geometry source contract defined in
   a `Compound(children=[...])`, or an equivalent composed component, before
   calling `preview(...)`.
 - This keeps the public helper singular while still rendering the benchmark
-  assembly and objectives together in the same frame.
+  assembly and objectives together in the same view bundle.
 
 ## Test Impact
 
@@ -320,14 +368,20 @@ affected are:
   directly exercises the worker-light preview path that is being introduced.
 - INT-208 - renderer worker direct preview contract; this becomes the canonical
   smoke test for the new `/benchmark/preview` helper path.
+- INT-214 - multi-view preview normalization contract; this covers zip pairing,
+  scalar normalization, and the 64-view cap.
+- INT-215 - preview websocket streaming contract; this covers queued and
+  view-ready status propagation while files materialize.
 
 ## Rollout Order
 
 1. Add the canonical helper and export it from the script/runtime surface.
-2. Thread the modality selector through the renderer request schema.
-3. Make the worker-light orchestration path the default for preview.
-4. Update prompts, allowlists, and role guidance.
-5. Remove or demote the heavy-worker preview bridge only after the new path is
+2. Replace the single modality selector with modality booleans.
+3. Normalize multi-view camera requests and enforce the 64-view cap.
+4. Add websocket streaming for queued and view-ready preview status.
+5. Make the worker-light orchestration path the default for preview.
+6. Update prompts, allowlists, and role guidance.
+7. Remove or demote the heavy-worker preview bridge only after the new path is
    stable.
 
 ## Assessment
@@ -336,8 +390,9 @@ This is a real major refactor, but it is not a rewrite.
 
 The rendering engine already exists. The scene-bundling machinery already
 exists. The renderer worker already exists. The missing piece is a clean,
-worker-light-facing preview contract that makes live inspection explicit and
-modality-aware instead of piggybacking on heavyweight validation paths.
+worker-light-facing preview contract that makes live inspection explicit,
+multi-view capable, and modality-aware instead of piggybacking on heavyweight
+validation paths.
 
 ## Migration Checklist
 
