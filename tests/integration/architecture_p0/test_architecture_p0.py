@@ -1,11 +1,15 @@
 import asyncio
 import io
 import os
+import tempfile
 import time
 import uuid
 from pathlib import Path
 
+import boto3
+import cv2
 import httpx
+import numpy as np
 import pytest
 import yaml
 from PIL import Image
@@ -48,6 +52,11 @@ WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 WORKER_RENDERER_URL = os.getenv("WORKER_RENDERER_URL", "http://127.0.0.1:18003")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+AGENTS_CONFIG_PATH = Path("config/agents_config.yaml")
+S3_ENDPOINT = os.getenv("S3_ENDPOINT", "http://127.0.0.1:19000")
+S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "minioadmin")
+S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "minioadmin")
+ASSET_BUCKET = os.getenv("ASSET_S3_BUCKET", "problemologist")
 
 
 def _default_benchmark_parts():
@@ -61,6 +70,35 @@ def _default_benchmark_parts():
             },
         }
     ]
+
+
+def _video_resolution() -> tuple[int, int]:
+    render_cfg = yaml.safe_load(AGENTS_CONFIG_PATH.read_text(encoding="utf-8"))[
+        "render"
+    ]
+    video_cfg = render_cfg["video_resolution"]
+    return video_cfg["width"], video_cfg["height"]
+
+
+def _s3_client():
+    return boto3.client(
+        "s3",
+        endpoint_url=S3_ENDPOINT,
+        aws_access_key_id=S3_ACCESS_KEY,
+        aws_secret_access_key=S3_SECRET_KEY,
+        region_name="us-east-1",
+    )
+
+
+def _read_first_video_frame(video_bytes: bytes) -> np.ndarray:
+    with tempfile.NamedTemporaryFile(suffix=".mp4") as tmp:
+        tmp.write(video_bytes)
+        tmp.flush()
+        capture = cv2.VideoCapture(tmp.name)
+        ok, frame_bgr = capture.read()
+        capture.release()
+    assert ok and frame_bgr is not None, "Failed to decode first frame from video"
+    return cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
 
 
 async def get_bundle(client: httpx.AsyncClient, session_id: str) -> str:
@@ -305,6 +343,24 @@ async def _assert_simulation_video_contract(
     assert not any(
         path.endswith(".mp4") for path in data.artifacts.render_blobs_base64
     ), data.artifacts.render_blobs_base64
+
+    video_path = next(
+        (path for path in render_paths if path.endswith(".mp4")),
+        None,
+    )
+    assert video_path is not None, render_paths
+
+    object_store_key = data.artifacts.object_store_keys[video_path]
+    video_bytes = (
+        _s3_client()
+        .get_object(
+            Bucket=ASSET_BUCKET,
+            Key=object_store_key,
+        )["Body"]
+        .read()
+    )
+    frame_rgb = _read_first_video_frame(video_bytes)
+    assert frame_rgb.shape[:2] == _video_resolution()[::-1], frame_rgb.shape
 
 
 @pytest.mark.integration_p0

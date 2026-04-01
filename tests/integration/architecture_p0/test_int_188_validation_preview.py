@@ -209,6 +209,14 @@ def _set_render_modalities(
     return original
 
 
+def _image_resolution() -> tuple[int, int]:
+    render_cfg = yaml.safe_load(AGENTS_CONFIG_PATH.read_text(encoding="utf-8"))[
+        "render"
+    ]
+    image_cfg = render_cfg["image_resolution"]
+    return image_cfg["width"], image_cfg["height"]
+
+
 async def _write_benchmark_submit_inputs(
     client: httpx.AsyncClient,
     headers: dict[str, str],
@@ -1332,7 +1340,7 @@ async def test_int_188_validation_preview_http_preview_route_uses_vtk_renderer(
         assert preview_data.image_path.startswith(f"{BENCHMARK_RENDER_DIR}/"), (
             preview_data
         )
-        assert preview_data.image_path.endswith(".jpg"), preview_data
+        assert preview_data.image_path.endswith(".png"), preview_data
 
         image_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/read_blob",
@@ -1341,5 +1349,5 @@ async def test_int_188_validation_preview_http_preview_route_uses_vtk_renderer(
         )
         assert image_resp.status_code == 200, image_resp.text
         image = Image.open(io.BytesIO(image_resp.content)).convert("RGB")
-        assert image.size == (640, 480), image.size
+        assert image.size == _image_resolution(), image.size
         assert np.array(image).std() > 0.0
