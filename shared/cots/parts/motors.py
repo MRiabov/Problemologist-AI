@@ -113,6 +113,7 @@ class ServoMotor(COTSPart):
             data=data,
             children=[body, shaft, cable_exit],
             label=label or f"motor_{variant}",
+            **kwargs,
         )
         self.motor_variant = variant
         self.catalog_part_id = catalog_part_id
