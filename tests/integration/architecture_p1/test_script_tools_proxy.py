@@ -6,6 +6,7 @@ import uuid
 import httpx
 import pytest
 import yaml
+from websockets.asyncio.client import connect as websocket_connect
 
 from controller.api.schemas import AgentRunRequest, EpisodeCreateResponse
 from shared.enums import AgentName
@@ -165,6 +166,43 @@ print(f"PREVIEW_YAW={response.yaw}")
 """
 
 
+def _multi_view_preview_probe_script() -> str:
+    return """
+from solution_script import result
+from utils import preview
+
+
+valid = preview(
+    result,
+    orbit_pitch=[-35.0, -15.0],
+    orbit_yaw=[45.0, 60.0],
+    rendering_type="depth",
+)
+print(f"MULTI_SUCCESS={valid.success}")
+print(f"MULTI_VIEW_COUNT={valid.view_count}")
+print(f"MULTI_VIEW_SPECS={len(valid.view_specs)}")
+print(f"MULTI_ARTIFACT_PATH={valid.artifact_path}")
+
+mismatch = preview(
+    result,
+    orbit_pitch=[-35.0, -15.0],
+    orbit_yaw=[45.0, 60.0, 75.0],
+    rendering_type="depth",
+)
+print(f"MISMATCH_SUCCESS={mismatch.success}")
+print(f"MISMATCH_MESSAGE={mismatch.message}")
+
+over_cap = preview(
+    result,
+    orbit_pitch=list(range(65)),
+    orbit_yaw=list(range(65)),
+    rendering_type="depth",
+)
+print(f"CAP_SUCCESS={over_cap.success}")
+print(f"CAP_MESSAGE={over_cap.message}")
+"""
+
+
 async def _write_session_workspace(
     client: httpx.AsyncClient, session_id: str, script_path: str
 ) -> None:
@@ -265,6 +303,41 @@ async def _write_preview_workspace(client: httpx.AsyncClient, session_id: str) -
         headers=headers,
     )
     assert probe_resp.status_code == 200, probe_resp.text
+
+
+async def _collect_preview_status_phases(
+    websocket, *, required_phases: set[str], timeout_s: float = 60.0
+) -> list[str]:
+    phases: list[str] = []
+    deadline = asyncio.get_running_loop().time() + timeout_s
+
+    while asyncio.get_running_loop().time() < deadline:
+        remaining = deadline - asyncio.get_running_loop().time()
+        if remaining <= 0:
+            break
+        try:
+            raw_message = await asyncio.wait_for(
+                websocket.recv(), timeout=min(remaining, 5.0)
+            )
+        except asyncio.TimeoutError:
+            if required_phases.issubset(set(phases)):
+                break
+            continue
+        payload = (
+            json.loads(raw_message) if isinstance(raw_message, str) else raw_message
+        )
+        if not isinstance(payload, dict):
+            continue
+        if payload.get("type") != "status_update":
+            continue
+        metadata_vars = payload.get("metadata_vars") or {}
+        phase = metadata_vars.get("preview_phase")
+        if isinstance(phase, str):
+            phases.append(phase)
+            if required_phases.issubset(set(phases)):
+                break
+
+    return phases
 
 
 @pytest.mark.integration_p1
@@ -621,6 +694,141 @@ async def test_int_213_controller_preview_route_materializes_depth_artifact_via_
         manifest = RenderManifest.model_validate_json(manifest_content)
         assert manifest.worker_session_id == session_id
         assert preview_data.artifact_path in manifest.artifacts
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_int_214_utils_preview_normalizes_multi_view_requests_and_rejects_invalid_lengths():
+    """INT-214: preview helper must zip-pair views, cap at 64, and preserve view indexes."""
+    session_id = f"INT-214-{uuid.uuid4().hex[:8]}"
+
+    async with httpx.AsyncClient(timeout=1000.0) as client:
+        await _write_preview_workspace(client, session_id)
+
+        exec_write_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="multi_view_preview.py",
+                content=_multi_view_preview_probe_script(),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+        assert exec_write_resp.status_code == 200, exec_write_resp.text
+
+        exec_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/runtime/execute",
+            json=ExecuteRequest(
+                code="python multi_view_preview.py",
+                timeout=180,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=240.0,
+        )
+        assert exec_resp.status_code == 200, exec_resp.text
+        exec_data = ExecuteResponse.model_validate(exec_resp.json())
+        assert exec_data.exit_code == 0, exec_data.stderr
+        assert "MULTI_SUCCESS=True" in exec_data.stdout, exec_data.stdout
+        assert "MULTI_VIEW_COUNT=2" in exec_data.stdout, exec_data.stdout
+        assert "MULTI_VIEW_SPECS=2" in exec_data.stdout, exec_data.stdout
+        assert "MISMATCH_SUCCESS=False" in exec_data.stdout, exec_data.stdout
+        assert "CAP_SUCCESS=False" in exec_data.stdout, exec_data.stdout
+
+        artifact_line = next(
+            line
+            for line in exec_data.stdout.splitlines()
+            if line.startswith("MULTI_ARTIFACT_PATH=")
+        )
+        artifact_path = artifact_line.split("=", 1)[1]
+        assert artifact_path.startswith("renders/"), artifact_path
+        assert (
+            "/benchmark_renders/" in artifact_path
+            or "/engineer_renders/" in artifact_path
+        ), artifact_path
+        assert artifact_path.endswith("_depth.png"), artifact_path
+
+        manifest_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/read",
+            json=ReadFileRequest(path="renders/render_manifest.json").model_dump(
+                mode="json"
+            ),
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+        assert manifest_resp.status_code == 200, manifest_resp.text
+        manifest = RenderManifest.model_validate_json(manifest_resp.json()["content"])
+        assert manifest.worker_session_id == session_id
+        assert len(manifest.preview_evidence_paths) == 2, (
+            manifest.preview_evidence_paths
+        )
+        view_indices = sorted(
+            metadata.view_index
+            for metadata in manifest.artifacts.values()
+            if metadata.view_index is not None
+        )
+        assert view_indices == [0, 1], view_indices
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_int_215_preview_websocket_stream_exposes_queued_running_and_view_ready_statuses():
+    """INT-215: preview status should stream through the episode websocket."""
+    session_id = f"INT-215-{uuid.uuid4().hex[:8]}"
+
+    async with httpx.AsyncClient(timeout=1000.0) as client:
+        await _write_preview_workspace(client, session_id)
+
+        create_episode_resp = await client.post(
+            f"{CONTROLLER_URL}/api/test/episodes",
+            json=AgentRunRequest(
+                task="INT-215 preview status stream",
+                session_id=session_id,
+                agent_name=AgentName.ENGINEER_CODER,
+            ).model_dump(mode="json"),
+            timeout=120.0,
+        )
+        assert create_episode_resp.status_code == 201, create_episode_resp.text
+        episode = EpisodeCreateResponse.model_validate(create_episode_resp.json())
+        episode_id = str(episode.episode_id)
+
+        bundle_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/bundle",
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+        assert bundle_resp.status_code == 200, bundle_resp.text
+        bundle_base64 = base64.b64encode(bundle_resp.content).decode("ascii")
+
+        ws_url = f"ws://127.0.0.1:18000/api/episodes/{episode_id}/ws"
+        async with websocket_connect(ws_url, open_timeout=10.0) as websocket:
+            preview_task = asyncio.create_task(
+                client.post(
+                    f"{CONTROLLER_URL}/api/script-tools/preview",
+                    json={
+                        "script_path": "solution_script.py",
+                        "agent_role": AgentName.ENGINEER_CODER.value,
+                        "bundle_base64": bundle_base64,
+                        "orbit_pitch": -35.0,
+                        "orbit_yaw": 45.0,
+                        "rendering_type": "depth",
+                        "episode_id": episode_id,
+                    },
+                    headers={"X-Session-ID": session_id},
+                    timeout=180.0,
+                )
+            )
+            required_phases = {"queued", "running", "view_ready"}
+            phases = await _collect_preview_status_phases(
+                websocket, required_phases=required_phases, timeout_s=120.0
+            )
+            preview_resp = await preview_task
+        assert preview_resp.status_code == 200, preview_resp.text
+        preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
+        assert preview_data.success, preview_data.message
+        assert preview_data.manifest_path == "renders/render_manifest.json"
+
+        assert required_phases.issubset(set(phases)), phases
 
 
 @pytest.mark.integration_p1

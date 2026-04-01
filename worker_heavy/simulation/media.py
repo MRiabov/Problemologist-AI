@@ -1,14 +1,15 @@
 from pathlib import Path
 
+import numpy as np
 import structlog
 
 from shared.models.simulation import (
     RendererCapabilities,
     SimulationRenderProvenance,
 )
+from shared.rendering import render_simulation_video_artifact
 from shared.simulation.backends import RendererBackend
 from shared.simulation.schemas import SimulatorBackendType
-from worker_heavy.utils.rendering import VideoRenderer
 
 logger = structlog.get_logger(__name__)
 
@@ -24,13 +25,13 @@ class MediaRecorder:
         capture_interval: int = 15,
         session_id: str | None = None,
     ):
-        self.video_renderer = (
-            VideoRenderer(video_path, session_id=session_id) if video_path else None
-        )
+        self.video_path = video_path
+        self.frames: list[np.ndarray] = []
         self.capture_interval = capture_interval
         self.session_id = session_id
         self.backend_type = backend_type
         self.render_provenance: SimulationRenderProvenance | None = None
+        self._capture_disabled = False
 
     def _ensure_render_provenance(
         self, backend: RendererBackend
@@ -52,9 +53,13 @@ class MediaRecorder:
 
     def update(self, step_idx: int, backend: RendererBackend):
         """Capture a frame if at the right interval."""
-        if not self.video_renderer or step_idx % self.capture_interval != 0:
+        if (
+            self.video_path is None
+            or self._capture_disabled
+            or step_idx % self.capture_interval != 0
+        ):
             return
-        if step_idx == 0 and self.video_renderer.frames:
+        if step_idx == 0 and self.frames:
             return
 
         try:
@@ -110,8 +115,7 @@ class MediaRecorder:
                         raise last_error from fallback_error
                     raise fallback_error
 
-            particles = backend.get_particle_positions()
-            self.video_renderer.add_frame(frame, particles=particles)
+            self.frames.append(frame)
             render_provenance.captured_frame_count += 1
         except Exception as e:
             # T024: Skip rendering if display is not available (e.g. CI without GPU)
@@ -119,12 +123,12 @@ class MediaRecorder:
                 logger.warning("camera_render_failed_skipping_video", error=str(e))
                 if self.render_provenance is not None:
                     self.render_provenance.render_error = str(e)
-                self.video_renderer = None  # Stop attempting to render video
+                self._capture_disabled = True
             elif "Unknown MuJoCo camera" in str(e):
                 logger.warning("camera_render_failed_skipping_video", error=str(e))
                 if self.render_provenance is not None:
                     self.render_provenance.render_error = str(e)
-                self.video_renderer = None
+                self._capture_disabled = True
             else:
                 if self.render_provenance is not None:
                     self.render_provenance.render_error = str(e)
@@ -132,6 +136,20 @@ class MediaRecorder:
 
     def save(self) -> str | None:
         """Finalize and save the video."""
-        if self.video_renderer:
-            return self.video_renderer.save()
+        if self.video_path is not None and self.frames:
+            rendered = render_simulation_video_artifact(
+                self.frames,
+                output_name=self.video_path.name,
+                fps=30,
+                session_id=self.session_id or "simulation",
+            )
+            self.video_path.parent.mkdir(parents=True, exist_ok=True)
+            self.video_path.write_bytes(rendered.video_bytes)
+            logger.info(
+                "video_render_complete",
+                path=str(self.video_path),
+                session_id=self.session_id,
+                object_store_key=rendered.object_store_key,
+            )
+            return rendered.object_store_key
         return None

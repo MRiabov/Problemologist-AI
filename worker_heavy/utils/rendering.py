@@ -3,12 +3,7 @@ import time
 import uuid
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-
-# import mujoco  # Moved to lazy imports where needed
-import numpy as np
 import structlog
-import trimesh
 from build123d import Compound
 
 from shared.agents.config import load_agents_config
@@ -17,10 +12,8 @@ from shared.models.schemas import BenchmarkDefinition
 from shared.observability.events import emit_event
 from shared.rendering import (
     materialize_render_artifacts,
-    render_simulation_video_artifact,
     render_static_preview,
 )
-from shared.simulation.backends import StressField
 from shared.simulation.schemas import (
     SimulatorBackendType,
     get_default_simulator_backend,
@@ -327,7 +320,7 @@ def prerender_24_views(
     """
     from shared.rendering import export_preview_scene_bundle
     from worker_heavy.config import settings
-    from worker_heavy.utils.build123d_rendering import PREVIEW_BACKEND_NAME
+    from worker_renderer.utils.build123d_rendering import PREVIEW_BACKEND_NAME
 
     if smoke_test_mode is None:
         smoke_test_mode = settings.smoke_test_mode
@@ -485,107 +478,3 @@ def prerender_24_views(
             session_id=session_id,
         )
         raise
-
-
-def render_stress_heatmap(
-    stress_field: StressField,
-    output_path: Path,
-    mesh_path: Path | None = None,
-    width: int = 800,
-    height: int = 600,
-) -> Path:
-    """
-    Renders a stress heatmap using PyVista (if available) or Matplotlib.
-    For MVP, we use Matplotlib scatter if no mesh is provided, or trimesh if it is.
-    """
-    try:
-        nodes = stress_field.nodes
-        stresses = stress_field.stress
-
-        if mesh_path and mesh_path.exists():
-            # Use trimesh for 3D visualization if available
-            mesh = trimesh.load(str(mesh_path))
-            # Map stresses to vertices (simple nearest neighbor or interpolation)
-            # For Genesis, stress is often per-node already.
-
-            # Simple colormap mapping
-            norm = plt.Normalize(vmin=stresses.min(), vmax=stresses.max())
-            cmap = plt.get_cmap("jet")
-            colors = cmap(norm(stresses))[:, :3] * 255  # RGB
-
-            # If node count matches vertex count, apply directly
-            if len(stresses) == len(mesh.vertices):
-                mesh.visual.vertex_colors = colors.astype(np.uint8)
-
-            scene = mesh.scene()
-            data = scene.save_image(resolution=(width, height))
-            with output_path.open("wb") as f:
-                f.write(data)
-        else:
-            # Fallback to matplotlib 2D projection or simple scatter
-            fig = plt.figure(figsize=(width / 100, height / 100))
-            ax = fig.add_subplot(111, projection="3d")
-            p = ax.scatter(
-                nodes[:, 0], nodes[:, 1], nodes[:, 2], c=stresses, cmap="jet"
-            )
-            fig.colorbar(p, label="von Mises Stress (Pa)")
-            plt.savefig(output_path)
-            plt.close(fig)
-
-        return output_path
-    except Exception as e:
-        logger.warning("render_stress_heatmap_failed", error=str(e))
-        raise RuntimeError(f"render_stress_heatmap_failed: {e}") from e
-
-
-class VideoRenderer:
-    """Handles video generation for simulations."""
-
-    def __init__(
-        self,
-        output_path: Path,
-        width: int = 640,
-        height: int = 480,
-        fps: int = 30,
-        session_id: str | None = None,
-    ):
-        self.output_path = output_path
-        self.width = width
-        self.height = height
-        self.fps = fps
-        self.session_id = session_id
-        self.frames = []
-
-    def add_frame(self, frame: np.ndarray, particles: np.ndarray | None = None):
-        """Adds a frame to the video. Optionally overlays particles."""
-        if particles is not None:
-            # Simple particle overlay logic for the simulation video
-            # In Genesis, this is usually handled by the backend's internal renderer
-            pass
-        self.frames.append(frame)
-
-    def save(self) -> str | None:
-        """Delegates MP4 encoding to the dedicated renderer worker."""
-        if not self.frames:
-            logger.warning("video_render_no_frames", session_id=self.session_id)
-            raise ValueError(
-                "deprecated functionality removed: video rendering without captured frames"
-            )
-
-        rendered = render_simulation_video_artifact(
-            self.frames,
-            output_name=self.output_path.name,
-            fps=self.fps,
-            session_id=self.session_id or "simulation",
-            width=self.width,
-            height=self.height,
-        )
-        self.output_path.parent.mkdir(parents=True, exist_ok=True)
-        self.output_path.write_bytes(rendered.video_bytes)
-        logger.info(
-            "video_render_complete",
-            path=str(self.output_path),
-            session_id=self.session_id,
-            object_store_key=rendered.object_store_key,
-        )
-        return rendered.object_store_key

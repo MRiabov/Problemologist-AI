@@ -21,7 +21,11 @@ from fastapi import (
 from fastapi.encoders import jsonable_encoder
 
 from shared.enums import ResponseStatus
-from shared.rendering import materialize_preview_response, render_preview
+from shared.rendering import (
+    materialize_preview_response,
+    render_preview,
+    select_single_preview_render_subdir,
+)
 from shared.workers.filesystem.router import (
     WritePermissionError,
     create_filesystem_router,
@@ -57,7 +61,6 @@ from shared.workers.schema import (
     WorkerLightRpcResponse,
     WriteFileRequest,
 )
-from worker_heavy.utils.rendering import select_single_preview_render_subdir
 from worker_light.runtime.executor import RuntimeConfig, run_command_async
 from worker_light.utils.assets import get_media_type, validate_asset_source
 from worker_light.utils.git import (

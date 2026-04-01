@@ -32,7 +32,7 @@ from shared.workers.schema import (
     RenderSiblingPaths,
     SegmentationLegendEntry,
 )
-from worker_heavy.utils.build123d_rendering import (
+from worker_renderer.utils.build123d_rendering import (
     _preview_camera_distance,
     _unique_color,
     _zone_color,

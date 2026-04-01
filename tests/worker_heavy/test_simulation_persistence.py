@@ -21,6 +21,9 @@ def mock_simulation_dependencies():
         patch("worker_heavy.utils.validation.get_simulation_builder") as mock_builder,
         patch("worker_heavy.simulation.loop.SimulationLoop") as mock_loop_cls,
         patch("worker_heavy.utils.validation.prerender_24_views") as mock_render,
+        patch(
+            "worker_heavy.utils.validation.render_stress_heatmap_artifact"
+        ) as mock_heatmap,
         patch("worker_heavy.utils.validation.calculate_assembly_totals") as mock_totals,
         patch("worker_heavy.utils.validation.validate_and_price"),
     ):
@@ -32,6 +35,8 @@ def mock_simulation_dependencies():
 
         # Mock loop
         mock_loop = mock_loop_cls.return_value
+        mock_loop.render_provenance = None
+        mock_loop.render_object_store_key = None
 
         stress_summary = StressSummary(
             part_label="part1",
@@ -57,6 +62,7 @@ def mock_simulation_dependencies():
 
         # Mock render
         mock_render.return_value = ["render.png"]
+        mock_heatmap.return_value = MagicMock(image_bytes=b"heatmap-bytes")
 
         # Mock totals
         mock_totals.return_value = (10.0, 5.0)
@@ -70,6 +76,7 @@ def test_simulation_persistence(tmp_path, mock_simulation_dependencies):
 
     # Create a dummy component
     component = Box(10, 10, 10)
+    component.label = "part1"
 
     # 1. Run simulation
     # We pass output_dir=tmp_path
@@ -91,8 +98,8 @@ def test_simulation_persistence(tmp_path, mock_simulation_dependencies):
 
     report = get_stress_report("part1")
     assert report is not None
-    assert report["part_label"] == "part1"
-    assert report["max_von_mises_pa"] == 100.0
+    assert report.part_label == "part1"
+    assert report.max_von_mises_pa == 100.0
 
     # 4. Call preview_stress
     # It needs to find simulation result to proceed (it logs warning and returns [] if not found)

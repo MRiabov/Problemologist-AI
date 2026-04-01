@@ -124,7 +124,7 @@ CHILD_CODE = dedent(
 
     elif mode == "build123d":
         from build123d import Box
-        from worker_heavy.utils.build123d_rendering import (
+        from worker_renderer.utils.build123d_rendering import (
             PreviewEntity,
             PreviewScene,
             render_preview_scene,

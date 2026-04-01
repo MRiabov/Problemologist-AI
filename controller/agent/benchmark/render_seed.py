@@ -9,8 +9,8 @@ import yaml
 
 from controller.observability.middleware_helper import broadcast_file_update
 from shared.models.schemas import AssemblyDefinition
+from shared.rendering import build_render_manifest
 from shared.workers.schema import RenderArtifactMetadata
-from worker_heavy.utils.rendering import build_render_manifest
 
 logger = structlog.get_logger(__name__)
 

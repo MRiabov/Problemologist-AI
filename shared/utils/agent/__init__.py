@@ -19,6 +19,7 @@ from shared.rendering import (
     export_preview_scene_bundle,
     materialize_preview_response,
     render_preview,
+    select_single_preview_render_subdir,
 )
 from shared.script_contracts import authored_script_path_for_agent
 from shared.simulation.schemas import get_default_simulator_backend
@@ -32,7 +33,6 @@ from shared.workers.schema import (
     PreviewDesignResponse,
     PreviewRenderingType,
 )
-from worker_heavy.utils.rendering import select_single_preview_render_subdir
 
 logger = structlog.get_logger(__name__)
 SCRIPT_IMPORT_MODE_ENV = "PROBLEMOLOGIST_SCRIPT_IMPORT_MODE"

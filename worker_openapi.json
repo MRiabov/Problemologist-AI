@@ -2150,7 +2150,7 @@
           "script_path": {
             "type": "string",
             "title": "Script Path",
-            "description": "Path to the build script.",
+            "description": "Path to the authored build script.",
             "default": "script.py"
           }
         },
@@ -2343,7 +2343,7 @@
           "script_path": {
             "type": "string",
             "title": "Script Path",
-            "description": "Path to the authored script. The runtime accepts either build() or a module-level final assembly such as `result = ...`.",
+            "description": "Path to the authored script. The runtime expects a build() function in benchmark_script.py or solution_script.py.",
             "default": "script.py"
           },
           "script_content": {
@@ -2384,9 +2384,7 @@
             ],
             "title": "Pitch",
             "description": "Camera elevation angle in degrees (negative = looking down). Scalar inputs are normalized to single-item view lists.",
-            "default": 45.0,
-            "ge": -90.0,
-            "le": 90.0
+            "default": 45.0
           },
           "yaw": {
             "anyOf": [
@@ -2402,9 +2400,7 @@
             ],
             "title": "Yaw",
             "description": "Camera azimuth angle in degrees (clockwise from front). Scalar inputs are normalized to single-item view lists.",
-            "default": 45.0,
-            "ge": 0.0,
-            "lt": 360.0
+            "default": 45.0
           },
           "rgb": {
             "anyOf": [
@@ -2801,7 +2797,7 @@
           "script_path": {
             "type": "string",
             "title": "Script Path",
-            "description": "Path to the authored script. The runtime accepts either build() or a module-level final assembly such as `result = ...`.",
+            "description": "Path to the authored script. The runtime expects a build() function in benchmark_script.py or solution_script.py.",
             "default": "script.py"
           },
           "script_content": {
@@ -2908,7 +2904,7 @@
           "script_path": {
             "type": "string",
             "title": "Script Path",
-            "description": "Path to the authored script. The runtime accepts either build() or a module-level final assembly such as `result = ...`.",
+            "description": "Path to the authored script. The runtime expects a build() function in benchmark_script.py or solution_script.py.",
             "default": "script.py"
           },
           "script_content": {
@@ -3775,7 +3771,7 @@
           "script_path": {
             "type": "string",
             "title": "Script Path",
-            "description": "Path to the authored script. The runtime accepts either build() or a module-level final assembly such as `result = ...`.",
+            "description": "Path to the authored script. The runtime expects a build() function in benchmark_script.py or solution_script.py.",
             "default": "script.py"
           },
           "script_content": {

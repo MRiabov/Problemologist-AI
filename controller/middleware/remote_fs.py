@@ -3,6 +3,7 @@ import base64
 import json
 import uuid
 from contextlib import suppress
+from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Literal
@@ -31,7 +32,7 @@ from controller.workflows.heavy import (
 )
 from controller.workflows.preview import PreviewWorkflow
 from shared.agents.config import resolve_agents_config_path
-from shared.enums import AgentName, ManufacturingMethod
+from shared.enums import AgentName, EpisodeStatus, ManufacturingMethod
 from shared.observability.schemas import (
     EditFileToolEvent,
     GrepToolEvent,
@@ -890,7 +891,50 @@ class RemoteFilesystemMiddleware:
         """Trigger design preview through the Temporal-backed preview workflow."""
         p_str = str(script_path)
 
+        async def _broadcast_preview_phase(
+            preview_phase: str,
+            *,
+            response: PreviewDesignResponse | None = None,
+        ) -> None:
+            try:
+                from controller.api.manager import manager
+                from controller.utils import resolve_episode_id
+
+                episode_uuid = resolve_episode_id(self.episode_id)
+            except Exception:
+                return
+
+            metadata_vars: dict[str, Any] = {
+                "preview_phase": preview_phase,
+                "script_path": p_str,
+                "session_id": self.client.session_id,
+            }
+            if response is not None:
+                metadata_vars.update(
+                    {
+                        "artifact_path": response.artifact_path,
+                        "manifest_path": response.manifest_path,
+                        "rendering_type": (
+                            response.rendering_type.value
+                            if response.rendering_type is not None
+                            else None
+                        ),
+                        "view_count": response.view_count,
+                    }
+                )
+
+            await manager.broadcast(
+                episode_uuid,
+                {
+                    "type": "status_update",
+                    "status": EpisodeStatus.RUNNING,
+                    "metadata_vars": metadata_vars,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+            )
+
         self._require_temporal_for_heavy_operation("preview")
+        await _broadcast_preview_phase("queued")
 
         if bundle_base64 is not None:
             bundle = base64.b64decode(bundle_base64)
@@ -917,12 +961,15 @@ class RemoteFilesystemMiddleware:
             else str(self.agent_role),
         )
         workflow_id = _preview_workflow_id(self.client.session_id, bundle, request)
-        return await self._execute_or_use_existing_workflow(
+        await _broadcast_preview_phase("running")
+        result = await self._execute_or_use_existing_workflow(
             PreviewWorkflow.run,
             workflow_id,
             request,
             result_type=PreviewDesignResponse,
         )
+        await _broadcast_preview_phase("view_ready", response=result)
+        return result
 
     async def validate(
         self, script_path: str | Path

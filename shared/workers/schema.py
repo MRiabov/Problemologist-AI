@@ -19,6 +19,7 @@ from shared.models.simulation import (
     FluidMetricResult,
     MultiRunResult,
     SimulationFailure,
+    StressFieldData,
     StressSummary,
 )
 from shared.observability.schemas import BaseEvent
@@ -34,6 +35,40 @@ ReviewerStage: TypeAlias = Literal[
     "engineering_execution_reviewer",
     "electronics_reviewer",
 ]
+
+
+def _validate_preview_camera_value(
+    value: float | list[float],
+    *,
+    field_name: str,
+) -> float | list[float]:
+    if field_name == "orbit_pitch":
+        lower_bound = -90.0
+        upper_bound = 90.0
+        upper_inclusive = True
+    else:
+        lower_bound = 0.0
+        upper_bound = 360.0
+        upper_inclusive = False
+
+    values = value if isinstance(value, list) else [value]
+    if not values:
+        raise ValueError(f"{field_name} must contain at least one value")
+
+    for item in values:
+        if (
+            item < lower_bound
+            or item > upper_bound
+            or (not upper_inclusive and item == upper_bound)
+        ):
+            if upper_inclusive:
+                raise ValueError(
+                    f"{field_name} values must be between {lower_bound} and {upper_bound} degrees"
+                )
+            raise ValueError(
+                f"{field_name} values must be between {lower_bound} degrees and less than {upper_bound} degrees"
+            )
+    return value
 
 
 class PreviewRenderingType(StrEnum):
@@ -223,8 +258,8 @@ class BenchmarkToolRequest(BaseModel):
     script_path: StrictStr = Field(
         default="script.py",
         description=(
-            "Path to the authored script. The runtime accepts either "
-            "build() or a module-level final assembly such as `result = ...`."
+            "Path to the authored script. The runtime expects a build() "
+            "function in benchmark_script.py or solution_script.py."
         ),
     )
     script_content: StrictStr | None = Field(
@@ -521,8 +556,8 @@ class PreviewDesignRequest(BaseModel):
     script_path: StrictStr = Field(
         default="script.py",
         description=(
-            "Path to the authored script. The runtime accepts either "
-            "build() or a module-level final assembly such as `result = ...`."
+            "Path to the authored script. The runtime expects a build() "
+            "function in benchmark_script.py or solution_script.py."
         ),
     )
     script_content: StrictStr | None = Field(
@@ -535,8 +570,6 @@ class PreviewDesignRequest(BaseModel):
     )
     orbit_pitch: float | list[float] = Field(
         default=45.0,
-        ge=-90.0,
-        le=90.0,
         description=(
             "Camera elevation angle in degrees (negative = looking down). "
             "Scalar inputs are normalized to single-item view lists."
@@ -545,8 +578,6 @@ class PreviewDesignRequest(BaseModel):
     )
     orbit_yaw: float | list[float] = Field(
         default=45.0,
-        ge=0.0,
-        lt=360.0,
         description=(
             "Camera azimuth angle in degrees (clockwise from front). "
             "Scalar inputs are normalized to single-item view lists."
@@ -594,6 +625,13 @@ class PreviewDesignRequest(BaseModel):
     @classmethod
     def validate_smoke_test_mode(cls, value: bool | None) -> bool | None:
         return ensure_smoke_test_mode_allowed(value)
+
+    @field_validator("orbit_pitch", "orbit_yaw", mode="after")
+    @classmethod
+    def validate_preview_camera_range(
+        cls, value: float | list[float], info
+    ) -> float | list[float]:
+        return _validate_preview_camera_value(value, field_name=str(info.field_name))
 
 
 class PreviewDesignResponse(BaseModel):
@@ -693,6 +731,13 @@ class HeavyPreviewParams(BaseModel):
     segmentation: bool | None = None
     rendering_type: PreviewRenderingType | None = None
 
+    @field_validator("orbit_pitch", "orbit_yaw", mode="after")
+    @classmethod
+    def validate_preview_camera_range(
+        cls, value: float | list[float], info
+    ) -> float | list[float]:
+        return _validate_preview_camera_value(value, field_name=str(info.field_name))
+
 
 class SimulationVideoRequest(BaseModel):
     """Request to encode simulation frames into a video artifact."""
@@ -701,6 +746,18 @@ class SimulationVideoRequest(BaseModel):
     frame_paths: list[StrictStr] = Field(default_factory=list)
     output_name: StrictStr = "simulation.mp4"
     fps: StrictInt = Field(default=30, ge=1, le=240)
+    session_id: StrictStr | None = None
+
+
+class StressHeatmapRequest(BaseModel):
+    """Request to render a stress heatmap artifact."""
+
+    bundle_base64: StrictStr
+    stress_field: StressFieldData
+    output_name: StrictStr = "stress_heatmap.png"
+    mesh_path: StrictStr | None = None
+    width: StrictInt = Field(default=800, ge=1)
+    height: StrictInt = Field(default=600, ge=1)
     session_id: StrictStr | None = None
 
 
@@ -757,7 +814,8 @@ class InspectTopologyRequest(BaseModel):
 
     target_id: StrictStr = Field(..., description="Target ID (e.g. face_0, part_1).")
     script_path: StrictStr = Field(
-        default="script.py", description="Path to the build script."
+        default="script.py",
+        description="Path to the authored build script.",
     )
 
 

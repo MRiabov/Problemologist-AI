@@ -34,11 +34,17 @@ from shared.models.schemas import (
 from shared.models.simulation import (
     SimulationFailure,
     SimulationResult,
+    StressFieldData,
     StressSummary,
 )
 from shared.observability.events import emit_event
 from shared.observability.schemas import LogicFailureEvent, WireRoutingEvent
-from shared.simulation.backends import StressField
+from shared.observability.storage import S3Client, S3Config
+from shared.rendering import (
+    normalize_render_manifest,
+    render_stress_heatmap_artifact,
+    select_static_preview_render_subdir,
+)
 from shared.simulation.schemas import (
     SimulatorBackendType,
     get_default_simulator_backend,
@@ -52,11 +58,7 @@ from worker_heavy.simulation.factory import (
 )
 from worker_heavy.simulation.naming import MOVED_OBJECT_SCENE_PREFIX
 from worker_heavy.utils import renderer_client
-from worker_heavy.utils.rendering import (
-    normalize_render_manifest,
-    prerender_24_views,
-    select_static_preview_render_subdir,
-)
+from worker_heavy.utils.rendering import prerender_24_views
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
 from .dfm import (
@@ -204,6 +206,45 @@ def _workspace_relative_render_paths(
     return normalized
 
 
+def _simulation_video_s3_client() -> S3Client | None:
+    access_key = os.getenv("S3_ACCESS_KEY", os.getenv("AWS_ACCESS_KEY_ID"))
+    secret_key = os.getenv("S3_SECRET_KEY", os.getenv("AWS_SECRET_ACCESS_KEY"))
+    if not access_key or not secret_key:
+        return None
+
+    return S3Client(
+        S3Config(
+            endpoint_url=os.getenv("S3_ENDPOINT"),
+            access_key_id=access_key,
+            secret_access_key=secret_key,
+            bucket_name=os.getenv("ASSET_S3_BUCKET", "problemologist"),
+            region_name=os.getenv("AWS_REGION", "us-east-1"),
+        )
+    )
+
+
+def _register_simulation_video_object_store_key(
+    *,
+    video_path: Path,
+    working_dir: Path,
+    render_object_store_keys: dict[str, str],
+    session_id: str | None,
+) -> None:
+    rel_key = str(video_path.relative_to(working_dir))
+    client = _simulation_video_s3_client()
+    if client is None:
+        logger.info(
+            "simulation_video_object_store_skipped",
+            session_id=session_id,
+            rel_path=rel_key,
+            reason="storage_unavailable",
+        )
+        return
+
+    object_key = client.upload_file(video_path, rel_key)
+    render_object_store_keys[rel_key] = object_key
+
+
 def _prerender_24_views_isolated(
     *,
     working_dir: Path,
@@ -276,6 +317,7 @@ def _prerender_24_views_isolated(
         from worker_heavy.utils.rendering import prerender_24_views
 
         script_path = Path(sys.argv[1])
+        working_dir = script_path.parent
         output_dir = Path(sys.argv[2])
         render_paths_file = Path(sys.argv[3])
         backend_value = sys.argv[4]
@@ -787,16 +829,11 @@ def preview_stress(
     stress_renders_dir.mkdir(parents=True, exist_ok=True)
     assets_dir = working_dir / "assets"
 
-    import numpy as np
-
-    from .rendering import render_stress_heatmap
-
     render_paths = []
     for part_label, field_data in res.stress_fields.items():
         # T019: Use attribute access for StressFieldData model (WP2)
         nodes = getattr(field_data, "nodes", None) or field_data["nodes"]
         stress = getattr(field_data, "stress", None) or field_data["stress"]
-        field = StressField(nodes=np.array(nodes), stress=np.array(stress))
         out_path = stress_renders_dir / f"stress_{part_label}.png"
 
         # Use the exported mesh for better VLM visibility if available
@@ -804,7 +841,13 @@ def preview_stress(
         if not mesh_path.exists():
             mesh_path = None
 
-        render_stress_heatmap(field, out_path, mesh_path=mesh_path)
+        rendered = render_stress_heatmap_artifact(
+            StressFieldData(nodes=nodes, stress=stress),
+            output_name=out_path.name,
+            session_id=session_id or "simulation",
+            mesh_path=mesh_path,
+        )
+        out_path.write_bytes(rendered.image_bytes)
         render_paths.append(str(out_path))
 
     return render_paths
@@ -1566,6 +1609,13 @@ def simulate(
             render_object_store_keys[str(video_path.relative_to(working_dir))] = (
                 loop.render_object_store_key
             )
+        elif video_path.exists():
+            _register_simulation_video_object_store_key(
+                video_path=video_path,
+                working_dir=working_dir,
+                render_object_store_keys=render_object_store_keys,
+                session_id=session_id,
+            )
 
         # WP2: T017: GPU OOM Retry Logic
         if metrics.fail_reason and "out of memory" in metrics.fail_reason.lower():
@@ -1611,6 +1661,13 @@ def simulate(
             if loop.render_object_store_key:
                 render_object_store_keys[str(video_path.relative_to(working_dir))] = (
                     loop.render_object_store_key
+                )
+            elif video_path.exists():
+                _register_simulation_video_object_store_key(
+                    video_path=video_path,
+                    working_dir=working_dir,
+                    render_object_store_keys=render_object_store_keys,
+                    session_id=session_id,
                 )
 
         # Release the physics backend before starting the VTK preview pass.
@@ -1944,7 +2001,7 @@ def validate(
         renders_dir.mkdir(parents=True, exist_ok=True)
 
         from shared.rendering import export_preview_scene_bundle
-        from worker_heavy.utils.build123d_rendering import PREVIEW_BACKEND_NAME
+        from worker_renderer.utils.build123d_rendering import PREVIEW_BACKEND_NAME
 
         emit_event(
             {

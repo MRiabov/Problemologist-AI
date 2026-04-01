@@ -20,6 +20,7 @@ from shared.enums import (
 from shared.models.simulation import (
     SimulationFailure,
 )
+from shared.rendering import select_single_preview_render_subdir
 from shared.workers.loader import load_component_from_script
 from shared.workers.persistence import (
     collect_and_cleanup_events,
@@ -45,7 +46,6 @@ from worker_heavy.runtime.simulation_runner import (
 from worker_heavy.simulation.factory import close_all_session_backends
 from worker_heavy.utils import renderer_client, submit_for_review
 from worker_heavy.utils.file_validation import validate_benchmark_definition_yaml
-from worker_heavy.utils.rendering import select_single_preview_render_subdir
 from worker_heavy.utils.topology import analyze_component
 from worker_heavy.utils.verification import run_verification_job
 
@@ -328,6 +328,7 @@ async def api_simulate(
                 events = _collect_events(fs_router, root=root, session_id=x_session_id)
                 artifacts = SimulationArtifacts(
                     render_paths=_normalize_render_paths(root, result.render_paths),
+                    object_store_keys=dict(result.render_object_store_keys),
                     mjcf_content=result.mjcf_content,
                     stress_summaries=result.stress_summaries,
                     fluid_metrics=result.fluid_metrics,
@@ -347,6 +348,8 @@ async def api_simulate(
                         continue
                     suffix = render_path.suffix.lower()
                     if suffix not in {".png", ".jpg", ".jpeg", ".mp4"}:
+                        continue
+                    if rel_path in artifacts.object_store_keys and suffix == ".mp4":
                         continue
                     render_blobs_base64[rel_path] = base64.b64encode(
                         render_path.read_bytes()

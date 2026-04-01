@@ -12,9 +12,9 @@ from shared.rendering import (
     export_preview_scene_bundle,
     materialize_preview_response,
     render_preview,
+    select_single_preview_render_subdir,
 )
 from shared.workers.schema import PreviewDesignResponse, PreviewRenderingType
-from worker_heavy.utils.rendering import select_single_preview_render_subdir
 
 logger = structlog.get_logger(__name__)
 

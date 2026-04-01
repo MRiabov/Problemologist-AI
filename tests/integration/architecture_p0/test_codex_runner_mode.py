@@ -39,7 +39,7 @@ from shared.models.schemas import (
 )
 from shared.workers.schema import RenderManifest, ValidationResultRecord
 from tests.integration.agent.helpers import repo_git_revision
-from worker_heavy.utils.build123d_rendering import render_preview_view
+from worker_renderer.utils.build123d_rendering import render_preview_view
 
 ROOT = Path(__file__).resolve().parents[3]
 

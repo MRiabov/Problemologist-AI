@@ -1,20 +1,34 @@
 from __future__ import annotations
 
+from worker_renderer.utils.rendering import (
+    build_render_manifest,
+    normalize_render_manifest,
+    select_single_preview_render_subdir,
+    select_static_preview_render_subdir,
+)
+
 from .headless import configure_headless_vtk_egl, create_headless_vtk_render_window
 from .preview_scene import export_preview_scene_bundle
 
 __all__ = [
+    "build_render_manifest",
     "bundle_workspace_base64",
     "materialize_preview_response",
     "materialize_render_artifacts",
     "configure_headless_vtk_egl",
     "create_headless_vtk_render_window",
+    "normalize_render_manifest",
     "render_preview",
     "render_simulation_video_artifact",
     "render_simulation_video",
     "render_simulation_video_bytes",
     "RenderedSimulationVideo",
+    "RenderedStressHeatmap",
     "export_preview_scene_bundle",
+    "render_stress_heatmap",
+    "render_stress_heatmap_artifact",
+    "select_single_preview_render_subdir",
+    "select_static_preview_render_subdir",
     "render_static_preview",
     "renderer_base_url",
     "synthesize_placeholder_frames",
@@ -27,6 +41,11 @@ _LAZY_EXPORTS = {
     "materialize_render_artifacts": ("renderer_client", "materialize_render_artifacts"),
     "render_preview": ("renderer_client", "render_preview"),
     "render_static_preview": ("renderer_client", "render_static_preview"),
+    "render_stress_heatmap": ("renderer_client", "render_stress_heatmap"),
+    "render_stress_heatmap_artifact": (
+        "stress_heatmap",
+        "render_stress_heatmap_artifact",
+    ),
     "renderer_base_url": ("renderer_client", "renderer_base_url"),
     "render_simulation_video_artifact": (
         "simulation_video",
@@ -38,6 +57,7 @@ _LAZY_EXPORTS = {
         "render_simulation_video_bytes",
     ),
     "RenderedSimulationVideo": ("simulation_video", "RenderedSimulationVideo"),
+    "RenderedStressHeatmap": ("stress_heatmap", "RenderedStressHeatmap"),
     "synthesize_placeholder_frames": (
         "simulation_video",
         "synthesize_placeholder_frames",
@@ -53,6 +73,8 @@ def __getattr__(name: str):
 
     if module_name == "renderer_client":
         from . import renderer_client as module
+    elif module_name == "stress_heatmap":
+        from . import stress_heatmap as module
     else:
         from . import simulation_video as module
 
