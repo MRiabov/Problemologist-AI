@@ -179,7 +179,15 @@ def normalize_render_manifest(
     )
 
 
-def select_single_preview_render_subdir(workspace_root: Path) -> str:
+def _is_benchmark_role(agent_role: str | None) -> bool:
+    return bool(agent_role and agent_role.startswith("benchmark_"))
+
+
+def select_single_preview_render_subdir(
+    workspace_root: Path, *, agent_role: str | None = None
+) -> str:
+    if agent_role:
+        return "benchmark_renders" if _is_benchmark_role(agent_role) else "engineer_renders"
     return (
         "engineer_renders"
         if (workspace_root / "assembly_definition.yaml").exists()
@@ -187,7 +195,15 @@ def select_single_preview_render_subdir(workspace_root: Path) -> str:
     )
 
 
-def select_static_preview_render_subdir(workspace_root: Path) -> str:
+def select_static_preview_render_subdir(
+    workspace_root: Path, *, agent_role: str | None = None
+) -> str:
+    if agent_role:
+        return (
+            "benchmark_renders"
+            if _is_benchmark_role(agent_role)
+            else "final_preview_renders"
+        )
     return (
         "final_preview_renders"
         if (workspace_root / "assembly_definition.yaml").exists()

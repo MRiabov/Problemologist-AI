@@ -76,7 +76,7 @@ The project needs to render the models in images (for preview) and for rendering
 
 All CAD and simulation render jobs are executed by the dedicated headless `worker-renderer` service. The renderer worker owns the graphics backend stack and runs the VTK, EGL, or other render dependencies in its own container; physics workers only supply scene state, camera policy, and artifact metadata.
 
-The renderer worker does not inherit a host X server as its normal execution path. EGL remains the desired headless default, but the current native EGL render probes segfault for reasons that are not yet isolated, so the current deployment falls back to an OSMesa-backed VTK window class for headless reliability.
+The renderer worker does not inherit a host X server as its normal execution path. The active physics backend and the renderer each select their own OpenGL backend through explicit env vars, with the renderer defaulting to an OSMesa-backed VTK window class for headless reliability.
 
 The rendering backend is not a single global choice. We split rendering by purpose:
 
@@ -88,7 +88,7 @@ This split is intentional. Preview evidence does not require Genesis runtime fea
 
 Preview renders are context artifacts, not backend-authoritative proof of simulation behavior. Genesis-specific runtime behavior is still established through actual Genesis simulation runs where Genesis behavior is required.
 
-On-demand preview uses the worker-light-facing `preview(...)` helper instead of any validation-time render path. Benchmark callers compose `build()` output with objective overlays reconstructed through the public `utils.objectives_geometry()` helper from the `objectives` section of `benchmark_definition.yaml` before previewing benchmark context, while engineer callers preview their solution geometry directly. The helper is part of the exposed `utils` package, alongside `preview()` and `validate()`, so callers import it instead of defining benchmark-specific geometry logic in agent code. It accepts modality booleans and multi-view camera inputs, normalizes scalar values into view bundles, returns a job ack, and causes the renderer worker to persist workflow-specific preview artifacts under the existing render buckets without implying Genesis parity.
+On-demand preview uses the worker-light-facing `preview(...)` helper instead of any validation-time render path. Benchmark callers compose `build()` output with objective overlays reconstructed through the public `utils.objectives_geometry()` helper from the `objectives` section of `benchmark_definition.yaml` before previewing benchmark context, while engineer callers preview their solution geometry directly. The helper is part of the exposed `utils` package, alongside `preview()` and `validate()`, so callers import it instead of defining benchmark-specific geometry logic in agent code. It accepts modality booleans and multi-view camera inputs, normalizes scalar values into view bundles, returns a job ack, and causes the renderer worker to persist workflow-specific preview artifacts under the existing render buckets without implying Genesis parity. The canonical RGB preview filename rule is defined in [Simulation and Rendering](./simulation-and-rendering.md#render-profile-ownership): the part label prefixes the basename as `{part_name}_render_{angle_1}_{angle_2}.png`, so the default 45/45 orbit for `Part(Box(), label="test_part")` is `test_part_render_e45_a45.png`.
 
 #### Rendering views
 

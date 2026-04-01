@@ -293,11 +293,11 @@ async def preview_design_activity(params: HeavyPreviewParams) -> HeavyPreviewRes
     if response.image_path:
         filename = Path(response.image_path).name
     elif isinstance(pitch, list) and pitch and isinstance(yaw, list) and yaw:
-        filename = f"preview_pitch{int(pitch[0])}_yaw{int(yaw[0])}.jpg"
+        filename = f"preview_pitch{int(pitch[0])}_yaw{int(yaw[0])}.png"
     elif isinstance(pitch, list) and pitch:
-        filename = f"preview_pitch{int(pitch[0])}_yaw{int(yaw if isinstance(yaw, float) else yaw[0])}.jpg"
+        filename = f"preview_pitch{int(pitch[0])}_yaw{int(yaw if isinstance(yaw, float) else yaw[0])}.png"
     elif isinstance(yaw, list) and yaw:
-        filename = f"preview_pitch{int(pitch if isinstance(pitch, float) else pitch[0])}_yaw{int(yaw[0])}.jpg"
+        filename = f"preview_pitch{int(pitch if isinstance(pitch, float) else pitch[0])}_yaw{int(yaw[0])}.png"
     else:
         filename = None
 

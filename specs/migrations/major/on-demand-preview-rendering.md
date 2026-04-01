@@ -31,9 +31,9 @@ This migration sits on top of the existing split architecture in
   normalizes scalar camera inputs into view lists before dispatch.
 - Zip-paired multi-view requests are supported, with the preview job capped at
   64 rendered views per call.
-- The current angle-based render naming family stays in use, augmented with a
-  request-scoped view index when repeated poses or multi-view bundles need
-  disambiguation.
+- The current angle-based render naming family stays in use, with the rendered
+  component label prefixed into the basename and a request-scoped view index
+  added when repeated poses or multi-view bundles need disambiguation.
 - `renders/render_manifest.json` remains the assumed companion artifact and is
   runtime-owned, read-only to agents, rewritten atomically, and keyed by view
   index plus pose metadata as preview outputs are added.

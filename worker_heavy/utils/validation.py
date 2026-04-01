@@ -87,6 +87,10 @@ def _find_workspace_assembly_definition(
     return None
 
 
+def _preview_agent_role() -> str | None:
+    return os.getenv("AGENT_NAME") or None
+
+
 def _load_valid_benchmark_definition(
     content: str, *, session_id: str | None = None
 ) -> BenchmarkDefinition:
@@ -1361,7 +1365,11 @@ def simulate(
         files=list(working_dir.iterdir()) if working_dir.exists() else [],
     )
     renders_dir = (
-        working_dir / "renders" / select_static_preview_render_subdir(working_dir)
+        working_dir
+        / "renders"
+        / select_static_preview_render_subdir(
+            working_dir, agent_role=_preview_agent_role()
+        )
     )
     renders_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1996,7 +2004,11 @@ def validate(
     try:
         working_root = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
         renders_dir = (
-            working_root / "renders" / select_static_preview_render_subdir(working_root)
+            working_root
+            / "renders"
+            / select_static_preview_render_subdir(
+                working_root, agent_role=_preview_agent_role()
+            )
         )
         renders_dir.mkdir(parents=True, exist_ok=True)
 
@@ -2022,6 +2034,7 @@ def validate(
             ),
             script_path="preview_scene.json",
             session_id=session_id or "renderer",
+            agent_role=_preview_agent_role(),
             smoke_test_mode=smoke_test_mode,
             particle_budget=particle_budget,
         )

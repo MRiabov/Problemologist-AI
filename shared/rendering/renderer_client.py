@@ -74,6 +74,7 @@ def _post_json_with_busy_retry(
     payload: dict[str, Any],
     session_id: str | None,
     timeout: float,
+    extra_headers: dict[str, str] | None = None,
     attempts: int | None = None,
     initial_delay_s: float = 0.5,
     max_delay_s: float = 5.0,
@@ -86,9 +87,10 @@ def _post_json_with_busy_retry(
 
     while True:
         attempt += 1
-        with httpx.Client(
-            timeout=timeout, headers=_session_headers(session_id)
-        ) as client:
+        headers = _session_headers(session_id)
+        if extra_headers:
+            headers.update(extra_headers)
+        with httpx.Client(timeout=timeout, headers=headers) as client:
             response = client.post(url, json=payload)
             try:
                 response.raise_for_status()
@@ -127,6 +129,7 @@ def render_preview(
     segmentation: bool | None = None,
     rendering_type: PreviewRenderingType | None = None,
     session_id: str | None = None,
+    agent_role: str | None = None,
     script_content: str | None = None,
     smoke_test_mode: bool | None = None,
 ) -> PreviewDesignResponse:
@@ -147,6 +150,7 @@ def render_preview(
         url=url,
         payload=payload,
         session_id=session_id,
+        extra_headers={"x-agent-role": agent_role} if agent_role else None,
         timeout=60.0,
     )
     return PreviewDesignResponse.model_validate(data)
@@ -157,6 +161,7 @@ def render_static_preview(
     bundle_base64: str | None,
     script_path: str,
     session_id: str,
+    agent_role: str | None = None,
     smoke_test_mode: bool | None = None,
     particle_budget: int | None = None,
     script_content: str | None = None,
@@ -174,6 +179,7 @@ def render_static_preview(
         url=url,
         payload=payload,
         session_id=session_id,
+        extra_headers={"x-agent-role": agent_role} if agent_role else None,
         timeout=120.0,
     )
     return BenchmarkToolResponse.model_validate(data)
@@ -254,7 +260,7 @@ def materialize_preview_response(
                 first_materialized = target
 
     if response.image_bytes_base64:
-        image_name = Path(response.image_path or "preview.jpg").name
+        image_name = Path(response.image_path or "preview.png").name
         image_path = output_dir / image_name
         image_path.write_bytes(base64.b64decode(response.image_bytes_base64))
         if first_materialized is None:

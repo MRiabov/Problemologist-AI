@@ -174,6 +174,7 @@ async def api_preview(
     request: PreviewDesignRequest,
     fs_router=Depends(get_router),
     x_session_id: str = Header(...),
+    x_agent_role: str | None = Header(default=None),
 ):
     """Forward a preview request to the renderer worker and persist the result."""
     try:
@@ -182,6 +183,7 @@ async def api_preview(
             "worker_light_preview_started",
             session_id=x_session_id,
             script_path=request.script_path,
+            agent_role=x_agent_role,
             rendering_type=(
                 request.rendering_type.value if request.rendering_type else None
             ),
@@ -207,6 +209,7 @@ async def api_preview(
             segmentation=request.segmentation,
             rendering_type=request.rendering_type,
             session_id=x_session_id,
+            agent_role=x_agent_role,
             script_content=request.script_content,
             smoke_test_mode=request.smoke_test_mode,
         )
@@ -226,7 +229,9 @@ async def api_preview(
         preview_renders_dir = (
             workspace_root
             / "renders"
-            / select_single_preview_render_subdir(workspace_root)
+            / select_single_preview_render_subdir(
+                workspace_root, agent_role=x_agent_role
+            )
         )
         image_path = materialize_preview_response(response, preview_renders_dir)
         if image_path is None:

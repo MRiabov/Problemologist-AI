@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import tempfile
+import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import structlog
 import trimesh
@@ -10,6 +11,16 @@ from build123d import Compound, Solid, export_stl
 from pydantic import BaseModel, ConfigDict
 
 logger = structlog.get_logger(__name__)
+
+
+def normalize_preview_label(label: Any) -> str:
+    """Return a file-safe preview label stem without adding fallback numbering."""
+    text = "" if label is None else str(label).strip()
+    if not text:
+        return ""
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", text)
+    cleaned = re.sub(r"_+", "_", cleaned).strip("._-")
+    return cleaned
 
 
 class AssemblyPartData(BaseModel):
@@ -47,7 +58,11 @@ class CommonAssemblyTraverser:
 
     @staticmethod
     def traverse(
-        assembly: Compound, electronics: Any | None = None
+        assembly: Compound,
+        electronics: Any | None = None,
+        *,
+        allow_unnamed_labels: bool = False,
+        unnamed_label_factory: Callable[[], str] | None = None,
     ) -> list[AssemblyPartData]:
         children = getattr(assembly, "children", [])
         if not children:
@@ -56,18 +71,23 @@ class CommonAssemblyTraverser:
         parts_data = []
         for i, child in enumerate(children):
             raw_label = getattr(child, "label", None)
-            label = str(raw_label).strip() if raw_label is not None else ""
+            label = normalize_preview_label(raw_label)
             if not label:
-                logger.error(
-                    "top_level_build123d_label_missing",
-                    part_index=i,
-                    raw_label=raw_label,
-                    part_type=type(child).__name__,
-                )
-                raise ValueError(
-                    "Top-level build123d objects must have non-empty labels. "
-                    f"Offending part index: {i}."
-                )
+                if not allow_unnamed_labels:
+                    logger.error(
+                        "top_level_build123d_label_missing",
+                        part_index=i,
+                        raw_label=raw_label,
+                        part_type=type(child).__name__,
+                    )
+                    raise ValueError(
+                        "Top-level build123d objects must have non-empty labels. "
+                        f"Offending part index: {i}."
+                    )
+                if unnamed_label_factory is None:
+                    label = f"unnamed_{i + 1}"
+                else:
+                    label = unnamed_label_factory()
 
             pos, euler = CommonAssemblyTraverser._resolve_location(child)
             meta = CommonAssemblyTraverser._resolve_part_metadata(child)

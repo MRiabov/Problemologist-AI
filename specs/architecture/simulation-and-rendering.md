@@ -30,10 +30,11 @@ The renderer worker selects its VTK OpenGL window class explicitly rather than r
 The runtime rules are:
 
 1. `VTK_DEFAULT_OPENGL_WINDOW` is part of the renderer worker contract and is honored by the render bootstrap.
-2. EGL remains the desired headless default, but the current native EGL smoke tests segfault for reasons that are not yet isolated.
-3. The current renderer deployment therefore falls back to `vtkOSOpenGLRenderWindow` for reliability in headless Linux environments.
-4. The renderer worker does not depend on Xvfb as its normal launch path.
-5. A native `Render()` segfault is a backend/runtime failure, not a valid render completion.
+2. The active physics backend owns its own accepted GL backend list through `PROBLEMOLOGIST_PHYSICS_GL_BACKEND`; MuJoCo currently accepts EGL, while Genesis has a backend-specific list.
+3. The current renderer deployment defaults to OSMesa for reliability in headless Linux environments, with EGL still available as an explicit opt-in backend for environments that support it.
+4. `PROBLEMOLOGIST_RENDER_GL_BACKEND` selects the renderer backend, and the render bootstrap resolves that into the matching VTK window class.
+5. The renderer worker does not depend on Xvfb as its normal launch path.
+6. A native `Render()` segfault is a backend/runtime failure, not a valid render completion.
 
 The practical consequence is that the renderer image must contain the required Mesa/VTK runtime pieces for the selected backend, and the machine or container must be checked against a real render probe rather than package presence alone.
 
@@ -168,7 +169,7 @@ The rule is:
 2. The renderer backend exposes a typed capability record that states what artifact modes and view policies it supports.
 3. The runtime-selected simulation render choice is serialized in `simulation_result.json` so reviewers can replay the exact evidence path.
 4. Explicit build123d/VTK preview remains a separate preview contract, executed by the renderer worker, and continues to live in the preview manifest path.
-5. On-demand preview requests use the worker-light-facing `preview(...)` helper, normalize scalar/list camera inputs into zip-paired views, render a composed `Part | Compound` at the requested camera and modality set, stream queued/view-ready status over the websocket control path, and persist workflow-specific preview artifacts. They are separate from simulation evidence and from validation results.
+5. On-demand preview requests use the worker-light-facing `preview(...)` helper, normalize scalar/list camera inputs into zip-paired views, render a composed `Part | Compound` at the requested camera and modality set, stream queued/view-ready status over the websocket control path, and persist workflow-specific preview artifacts. The canonical RGB preview artifact stem is `{part_name}_render_{angle_1}_{angle_2}`, and the persisted file is `<stem>.png`; `part_name` comes from the rendered component label, so previewing `Part(Box(), label="test_part")` at the default 45/45 orbit uses the unchanged `e45_a45` angle family and produces `test_part_render_e45_a45.png`. They are separate from simulation evidence and from validation results.
 6. The render bundle path itself identifies whether the evidence belongs to benchmark input, engineer inspection, or final validation.
 7. If a backend cannot satisfy the selected render path, the failure should surface as a validation/runtime contract error rather than being hidden behind an unrelated global fallback.
 

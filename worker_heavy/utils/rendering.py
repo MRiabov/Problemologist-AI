@@ -206,8 +206,17 @@ def _workspace_root_from_render_dir(render_dir: Path) -> Path:
     return parent
 
 
-def select_single_preview_render_subdir(workspace_root: Path) -> str:
+def _is_benchmark_role(agent_role: str | None) -> bool:
+    return bool(agent_role and agent_role.startswith("benchmark_"))
+
+
+def select_single_preview_render_subdir(
+    workspace_root: Path, *, agent_role: str | None = None
+) -> str:
     """Choose the single-view preview bundle directory for the active workspace."""
+
+    if agent_role:
+        return "benchmark_renders" if _is_benchmark_role(agent_role) else "engineer_renders"
 
     return (
         "engineer_renders"
@@ -216,8 +225,17 @@ def select_single_preview_render_subdir(workspace_root: Path) -> str:
     )
 
 
-def select_static_preview_render_subdir(workspace_root: Path) -> str:
+def select_static_preview_render_subdir(
+    workspace_root: Path, *, agent_role: str | None = None
+) -> str:
     """Choose the 24-view static preview bundle directory for the workspace."""
+
+    if agent_role:
+        return (
+            "benchmark_renders"
+            if _is_benchmark_role(agent_role)
+            else "final_preview_renders"
+        )
 
     return (
         "final_preview_renders"
@@ -404,6 +422,7 @@ def prerender_24_views(
             bundle_base64=bundle_base64,
             script_path="preview_scene.json",
             session_id=session_id or "renderer",
+            agent_role=os.getenv("AGENT_NAME") or None,
             smoke_test_mode=smoke_test_mode,
             particle_budget=particle_budget,
         )

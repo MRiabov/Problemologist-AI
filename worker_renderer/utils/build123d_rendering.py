@@ -24,7 +24,11 @@ from shared.rendering import (
 from shared.simulation.backends import RendererBackend
 from shared.workers.bundling import bundle_directory_base64
 from shared.workers.schema import SegmentationLegendEntry
-from worker_renderer.utils.scene_builder import CommonAssemblyTraverser, MeshProcessor
+from worker_renderer.utils.scene_builder import (
+    CommonAssemblyTraverser,
+    MeshProcessor,
+    normalize_preview_label,
+)
 from worker_renderer.utils.workbench_config import load_config, load_merged_config
 
 configure_headless_rendering()
@@ -76,6 +80,7 @@ class PreviewScene(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    component_label: str | None = None
     entities: list[PreviewEntity] = Field(default_factory=list)
     bounds_min: tuple[float, float, float]
     bounds_max: tuple[float, float, float]
@@ -163,10 +168,36 @@ _RGB_AXES_COLOR = (0.12, 0.12, 0.12)
 _OVERLAY_AXES_COLOR = (0.94, 0.94, 0.94)
 _DEFAULT_PREVIEW_VIEW_ANGLE_DEG = 30.0
 _DEFAULT_PREVIEW_FRAMING_MARGIN = 1.25
+_UNNAMED_PREVIEW_LABEL_PREFIX = "unnamed"
 
 
 def _clamp(value: int, minimum: int, maximum: int) -> int:
     return max(minimum, min(maximum, value))
+
+
+def _resolve_component_preview_label(
+    raw_label: object | None, *, unnamed_label_factory
+) -> str:
+    normalized = normalize_preview_label(raw_label)
+    if normalized:
+        return normalized
+    return unnamed_label_factory()
+
+
+def _preview_render_stem(
+    label: str,
+    pitch: float,
+    yaw: float,
+    *,
+    view_index: int | None = None,
+    view_count: int = 1,
+) -> str:
+    base = f"{label}_render_e{abs(int(round(pitch)))}_a{int(round(yaw))}"
+    if view_count > 1:
+        if view_index is None:
+            raise ValueError("view_index is required for multi-view preview naming")
+        return f"{base}_v{view_index}"
+    return base
 
 
 def _scene_axis_tick_count(scene: PreviewScene) -> int:
@@ -448,7 +479,22 @@ def collect_preview_scene(
     """Materialize a renderable preview scene from a build123d assembly."""
 
     manufacturing_config = _load_manufacturing_config(workspace_root)
-    traversed_parts = CommonAssemblyTraverser.traverse(component)
+    unnamed_index = 1
+
+    def next_unnamed_label() -> str:
+        nonlocal unnamed_index
+        label = f"{_UNNAMED_PREVIEW_LABEL_PREFIX}_{unnamed_index}"
+        unnamed_index += 1
+        return label
+
+    component_label = _resolve_component_preview_label(
+        getattr(component, "label", None), unnamed_label_factory=next_unnamed_label
+    )
+    traversed_parts = CommonAssemblyTraverser.traverse(
+        component,
+        allow_unnamed_labels=True,
+        unnamed_label_factory=next_unnamed_label,
+    )
     objective_labels = _objective_zone_labels(objectives)
     render_entities: list[PreviewEntity] = []
 
@@ -593,6 +639,7 @@ def collect_preview_scene(
             sum((bounds_max[i] - bounds_min[i]) ** 2 for i in range(3))
         )
         return PreviewScene(
+            component_label=component_label,
             entities=render_entities,
             bounds_min=bounds_min,
             bounds_max=bounds_max,
@@ -847,8 +894,17 @@ def render_preview_scene(
     if output_dir is None:
         output_dir = Path("/tmp")
     output_dir.mkdir(parents=True, exist_ok=True)
-    image_path = output_dir / f"preview_pitch{int(pitch)}_yaw{int(yaw)}.jpg"
-    Image.fromarray(frame).save(image_path, "JPEG")
+    preview_label = (
+        normalize_preview_label(scene.component_label)
+        or (
+            normalize_preview_label(scene.entities[0].label)
+            if scene.entities
+            else ""
+        )
+        or f"{_UNNAMED_PREVIEW_LABEL_PREFIX}_1"
+    )
+    image_path = output_dir / f"{_preview_render_stem(preview_label, pitch, yaw)}.png"
+    Image.fromarray(frame).save(image_path, "PNG")
     return image_path
 
 
@@ -885,6 +941,15 @@ def render_preview_scene_bundle(
     distance = _preview_camera_distance(scene, width=width, height=height)
     angles = [0, 45, 90, 135, 180, 225, 270, 315]
     elevations = [-15, -45, -75]
+    preview_label = (
+        normalize_preview_label(scene.component_label)
+        or (
+            normalize_preview_label(scene.entities[0].label)
+            if scene.entities
+            else ""
+        )
+        or f"{_UNNAMED_PREVIEW_LABEL_PREFIX}_1"
+    )
     if smoke_test_mode:
         logger.info("smoke_test_mode_reducing_render_views")
         angles = [45]
@@ -895,7 +960,9 @@ def render_preview_scene_bundle(
             camera_position = camera_position_from_orbit(
                 center, distance, elevation, angle
             )
-            group_key = f"render_e{abs(elevation)}_a{angle}"
+            group_key = _preview_render_stem(
+                preview_label, elevation, angle
+            )
             rgb_path = output_dir / f"{group_key}.png"
             depth_path = output_dir / f"{group_key}_depth.png"
             segmentation_path = output_dir / f"{group_key}_segmentation.png"
@@ -1590,6 +1657,7 @@ def render_preview_view(
         orbit_pitch=pitch,
         orbit_yaw=yaw,
         session_id=os.getenv("SESSION_ID"),
+        agent_role=os.getenv("AGENT_NAME") or None,
     )
     if not response.success:
         raise RuntimeError(response.message or "build123d preview render failed")

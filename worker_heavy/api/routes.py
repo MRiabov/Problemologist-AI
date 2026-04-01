@@ -547,6 +547,7 @@ async def api_analyze(
 async def api_preview(
     request: PreviewDesignRequest,
     x_session_id: str = Header(...),
+    x_agent_role: str | None = Header(default=None),
     fs_router=Depends(get_router),
 ):
     """Render a preview of the CAD design from specified camera angles."""
@@ -557,6 +558,7 @@ async def api_preview(
                 "worker_heavy_preview_started",
                 session_id=x_session_id,
                 script_path=request.script_path,
+                agent_role=x_agent_role,
                 rendering_type=request.rendering_type.value,
                 orbit_pitch=request.orbit_pitch,
                 orbit_yaw=request.orbit_yaw,
@@ -574,6 +576,7 @@ async def api_preview(
                     orbit_yaw=request.orbit_yaw,
                     rendering_type=request.rendering_type,
                     session_id=x_session_id,
+                    agent_role=x_agent_role,
                     script_content=request.script_content,
                 )
                 if not response.success:
@@ -581,7 +584,9 @@ async def api_preview(
                 preview_renders_dir = (
                     workspace_root
                     / "renders"
-                    / select_single_preview_render_subdir(workspace_root)
+                    / select_single_preview_render_subdir(
+                        workspace_root, agent_role=x_agent_role
+                    )
                 )
                 image_path = renderer_client.materialize_preview_response(
                     response, preview_renders_dir

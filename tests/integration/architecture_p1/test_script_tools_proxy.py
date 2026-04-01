@@ -268,7 +268,12 @@ async def _write_session_workspace(
     assert assembly_resp.status_code == 200, assembly_resp.text
 
 
-async def _write_preview_workspace(client: httpx.AsyncClient, session_id: str) -> None:
+async def _write_preview_workspace(
+    client: httpx.AsyncClient,
+    session_id: str,
+    *,
+    include_assembly_definition: bool = True,
+) -> None:
     headers = {"X-Session-ID": session_id}
 
     solution_resp = await client.post(
@@ -282,16 +287,17 @@ async def _write_preview_workspace(client: httpx.AsyncClient, session_id: str) -
     )
     assert solution_resp.status_code == 200, solution_resp.text
 
-    assembly_resp = await client.post(
-        f"{WORKER_LIGHT_URL}/fs/write",
-        json=WriteFileRequest(
-            path="assembly_definition.yaml",
-            content="preview: true\n",
-            overwrite=True,
-        ).model_dump(mode="json"),
-        headers=headers,
-    )
-    assert assembly_resp.status_code == 200, assembly_resp.text
+    if include_assembly_definition:
+        assembly_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="assembly_definition.yaml",
+                content="preview: true\n",
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert assembly_resp.status_code == 200, assembly_resp.text
 
     probe_resp = await client.post(
         f"{WORKER_LIGHT_URL}/fs/write",
@@ -608,12 +614,8 @@ async def test_int_212_utils_preview_materializes_modality_manifest_and_depth_ar
             if line.startswith("PREVIEW_ARTIFACT_PATH=")
         )
         artifact_path = artifact_line.split("=", 1)[1]
-        assert artifact_path.startswith("renders/")
+        assert artifact_path.startswith("renders/engineer_renders/"), artifact_path
         assert artifact_path.endswith("_depth.png"), artifact_path
-        assert (
-            "/benchmark_renders/" in artifact_path
-            or "/engineer_renders/" in artifact_path
-        )
 
         manifest_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/read",
@@ -678,7 +680,7 @@ async def test_int_213_controller_preview_route_materializes_depth_artifact_via_
         assert preview_data.pitch == -35.0
         assert preview_data.yaw == 45.0
         assert preview_data.artifact_path is not None
-        assert preview_data.artifact_path.startswith("renders/")
+        assert preview_data.artifact_path.startswith("renders/engineer_renders/")
         assert preview_data.artifact_path.endswith("_depth.png")
 
         manifest_resp = await client.post(
@@ -741,11 +743,7 @@ async def test_int_214_utils_preview_normalizes_multi_view_requests_and_rejects_
             if line.startswith("MULTI_ARTIFACT_PATH=")
         )
         artifact_path = artifact_line.split("=", 1)[1]
-        assert artifact_path.startswith("renders/"), artifact_path
-        assert (
-            "/benchmark_renders/" in artifact_path
-            or "/engineer_renders/" in artifact_path
-        ), artifact_path
+        assert artifact_path.startswith("renders/engineer_renders/"), artifact_path
         assert artifact_path.endswith("_depth.png"), artifact_path
 
         manifest_resp = await client.post(
@@ -768,6 +766,63 @@ async def test_int_214_utils_preview_normalizes_multi_view_requests_and_rejects_
             if metadata.view_index is not None
         )
         assert view_indices == [0, 1], view_indices
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_int_215_engineer_preview_routes_to_engineer_bucket_without_assembly_definition():
+    """
+    INT-215: engineer preview routing must use the engineer bucket even when the
+    workspace does not contain assembly_definition.yaml.
+    """
+    session_id = f"INT-215-{uuid.uuid4().hex[:8]}"
+
+    async with httpx.AsyncClient(timeout=1000.0) as client:
+        await _write_preview_workspace(
+            client, session_id, include_assembly_definition=False
+        )
+
+        bundle_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/bundle",
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+        assert bundle_resp.status_code == 200, bundle_resp.text
+        bundle_base64 = base64.b64encode(bundle_resp.content).decode("ascii")
+
+        preview_resp = await client.post(
+            f"{CONTROLLER_URL}/api/script-tools/preview",
+            json={
+                "script_path": "solution_script.py",
+                "agent_role": AgentName.ENGINEER_CODER.value,
+                "bundle_base64": bundle_base64,
+                "orbit_pitch": -35.0,
+                "orbit_yaw": 45.0,
+                "rendering_type": "depth",
+                "episode_id": session_id,
+            },
+            headers={"X-Session-ID": session_id},
+            timeout=180.0,
+        )
+
+        assert preview_resp.status_code == 200, preview_resp.text
+        preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
+        assert preview_data.success, preview_data.message
+        assert preview_data.artifact_path is not None
+        assert preview_data.artifact_path.startswith("renders/engineer_renders/")
+        assert preview_data.artifact_path.endswith("_depth.png")
+
+        manifest_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/read",
+            json=ReadFileRequest(path="renders/render_manifest.json").model_dump(
+                mode="json"
+            ),
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+        assert manifest_resp.status_code == 200, manifest_resp.text
+        manifest = RenderManifest.model_validate_json(manifest_resp.json()["content"])
+        assert preview_data.artifact_path in manifest.artifacts
 
 
 @pytest.mark.integration_p1

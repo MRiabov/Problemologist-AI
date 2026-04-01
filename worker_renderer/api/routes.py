@@ -54,6 +54,7 @@ from worker_renderer.utils.build123d_rendering import (
     render_preview_scene_bundle,
 )
 from worker_renderer.utils.file_validation import validate_benchmark_definition_yaml
+from worker_renderer.utils.scene_builder import normalize_preview_label
 from worker_renderer.utils.rendering import (
     build_render_manifest,
     normalize_render_manifest,
@@ -83,6 +84,17 @@ def _busy_detail() -> dict[str, Any]:
         "message": "Renderer worker already has an active job",
         "active_job": renderer_busy_context(),
     }
+
+
+def _preview_scene_label(scene: PreviewScene) -> str:
+    label = normalize_preview_label(getattr(scene, "component_label", None))
+    if label:
+        return label
+    for entity in scene.entities:
+        label = normalize_preview_label(entity.label)
+        if label:
+            return label
+    return "unnamed_1"
 
 
 @contextlib.asynccontextmanager
@@ -296,9 +308,14 @@ def _write_text_atomic(path: Path, content: str) -> None:
 
 
 def _single_preview_group_key(
-    pitch: float, yaw: float, *, view_index: int | None = None, view_count: int = 1
+    label: str,
+    pitch: float,
+    yaw: float,
+    *,
+    view_index: int | None = None,
+    view_count: int = 1,
 ) -> str:
-    base = f"render_e{abs(int(round(pitch)))}_a{int(round(yaw))}"
+    base = f"{label}_render_e{abs(int(round(pitch)))}_a{int(round(yaw))}"
     if view_count > 1:
         if view_index is None:
             raise ValueError("view_index is required for multi-view preview naming")
@@ -308,6 +325,7 @@ def _single_preview_group_key(
 
 def _resolve_single_preview_group_key(
     output_dir: Path,
+    label: str,
     pitch: float,
     yaw: float,
     *,
@@ -315,10 +333,14 @@ def _resolve_single_preview_group_key(
     view_count: int = 1,
 ) -> str:
     base_key = _single_preview_group_key(
-        pitch, yaw, view_index=view_index, view_count=view_count
+        label,
+        pitch,
+        yaw,
+        view_index=view_index,
+        view_count=view_count,
     )
     candidate_paths = (
-        output_dir / f"{base_key}.jpg",
+        output_dir / f"{base_key}.png",
         output_dir / f"{base_key}_depth.png",
         output_dir / f"{base_key}_segmentation.png",
     )
@@ -376,7 +398,12 @@ def _render_single_preview(
     output_dir.mkdir(parents=True, exist_ok=True)
     artifacts: dict[str, RenderArtifactMetadata] = {}
     group_key = group_key or _resolve_single_preview_group_key(
-        output_dir, pitch, yaw, view_index=view_index, view_count=view_count
+        output_dir,
+        _preview_scene_label(scene),
+        pitch,
+        yaw,
+        view_index=view_index,
+        view_count=view_count,
     )
 
     if rendering_type == PreviewRenderingType.RGB:
@@ -403,8 +430,8 @@ def _render_single_preview(
         finally:
             del bundle
 
-        image_path = output_dir / f"{group_key}.jpg"
-        Image.fromarray(rgb_image).convert("RGB").save(image_path, "JPEG")
+        image_path = output_dir / f"{group_key}.png"
+        Image.fromarray(rgb_image).convert("RGB").save(image_path, "PNG")
         rel_path = str(image_path.relative_to(workspace_root))
         artifacts[rel_path] = RenderArtifactMetadata(
             modality="rgb",
@@ -488,7 +515,7 @@ def _render_single_preview(
             orbit_pitch=pitch,
             orbit_yaw=yaw,
             siblings=RenderSiblingPaths(
-                rgb=str((output_dir / f"{group_key}.jpg").relative_to(workspace_root)),
+                rgb=str((output_dir / f"{group_key}.png").relative_to(workspace_root)),
                 depth=str(image_path.relative_to(workspace_root)),
                 segmentation=str(
                     (output_dir / f"{group_key}_segmentation.png").relative_to(
@@ -563,12 +590,12 @@ def _render_single_preview(
         view_index=view_index,
         orbit_pitch=pitch,
         orbit_yaw=yaw,
-        siblings=RenderSiblingPaths(
-            rgb=str((output_dir / f"{group_key}.jpg").relative_to(workspace_root)),
-            depth=str(
-                (output_dir / f"{group_key}_depth.png").relative_to(workspace_root)
-            ),
-            segmentation=str(image_path.relative_to(workspace_root)),
+            siblings=RenderSiblingPaths(
+                rgb=str((output_dir / f"{group_key}.png").relative_to(workspace_root)),
+                depth=str(
+                    (output_dir / f"{group_key}_depth.png").relative_to(workspace_root)
+                ),
+                segmentation=str(image_path.relative_to(workspace_root)),
         ),
         segmentation_legend=_preview_segmentation_legend(scene),
     )
@@ -607,9 +634,9 @@ def _build_preview_manifest(
             / f"{stem.removesuffix('_depth').removesuffix('_segmentation')}.png"
         )
         rgb_sibling = (
-            rgb_candidate_jpg.name
-            if rgb_candidate_jpg.exists()
-            else rgb_candidate_png.name
+            rgb_candidate_png.name
+            if rgb_candidate_png.exists()
+            else rgb_candidate_jpg.name
         )
         if filename.endswith("_depth.png"):
             group_key = stem.removesuffix("_depth")
@@ -781,6 +808,7 @@ def _render_stress_heatmap(
 async def api_preview(
     request: PreviewDesignRequest,
     x_session_id: str = Header(default="renderer"),
+    x_agent_role: str | None = Header(default=None),
 ):
     """Render one or more inspection previews in a dedicated renderer process."""
     try:
@@ -792,7 +820,11 @@ async def api_preview(
                     )
 
                     renders_dir = (
-                        root / "renders" / select_single_preview_render_subdir(root)
+                        root
+                        / "renders"
+                        / select_single_preview_render_subdir(
+                            root, agent_role=x_agent_role
+                        )
                     )
                     render_policy = load_agents_config().render
                     if not any((request.rgb, request.depth, request.segmentation)):
@@ -855,6 +887,7 @@ async def api_preview(
                         for view_spec in view_specs:
                             group_key = _resolve_single_preview_group_key(
                                 renders_dir,
+                                _preview_scene_label(preview_scene),
                                 view_spec.orbit_pitch,
                                 view_spec.orbit_yaw,
                                 view_index=view_spec.view_index,
@@ -985,6 +1018,7 @@ async def api_preview(
 async def api_static_preview(
     request: BenchmarkToolRequest,
     x_session_id: str = Header(default="renderer"),
+    x_agent_role: str | None = Header(default=None),
 ):
     """Render the multi-view validation preview bundle in a dedicated process."""
     try:
@@ -1008,7 +1042,11 @@ async def api_static_preview(
                     )
 
                     renders_dir = (
-                        root / "renders" / select_static_preview_render_subdir(root)
+                        root
+                        / "renders"
+                        / select_static_preview_render_subdir(
+                            root, agent_role=x_agent_role
+                        )
                     )
                     renders_dir.mkdir(parents=True, exist_ok=True)
                     scene = _load_preview_scene(root)

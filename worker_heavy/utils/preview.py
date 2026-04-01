@@ -15,6 +15,7 @@ from shared.rendering import (
     select_single_preview_render_subdir,
 )
 from shared.workers.schema import PreviewDesignResponse, PreviewRenderingType
+from worker_renderer.utils.scene_builder import normalize_preview_label
 
 logger = structlog.get_logger(__name__)
 
@@ -56,6 +57,7 @@ def preview(
             else None
         ),
         session_id=session_id,
+        agent_role=os.getenv("AGENT_NAME") or None,
     )
     if not response.success:
         raise RuntimeError(response.message or "build123d preview render failed")
@@ -68,16 +70,23 @@ def preview(
         output_dir = (
             workspace_root
             / "renders"
-            / select_single_preview_render_subdir(workspace_root)
+            / select_single_preview_render_subdir(
+                workspace_root, agent_role=os.getenv("AGENT_NAME") or None
+            )
         )
     output_dir.mkdir(parents=True, exist_ok=True)
     materialized_path = materialize_preview_response(response, output_dir)
     if materialized_path is None:
         pitch_value = orbit_pitch[0] if isinstance(orbit_pitch, list) else orbit_pitch
         yaw_value = orbit_yaw[0] if isinstance(orbit_yaw, list) else orbit_yaw
+        component_label = normalize_preview_label(getattr(component, "label", None))
         image_name = Path(
             response.image_path
-            or f"preview_pitch{int(pitch_value)}_yaw{int(yaw_value)}.jpg"
+            or (
+                f"{component_label}_render_e{abs(int(round(pitch_value)))}_a{int(round(yaw_value))}.png"
+                if component_label
+                else f"unnamed_1_render_e{abs(int(round(pitch_value)))}_a{int(round(yaw_value))}.png"
+            )
         ).name
         materialized_path = output_dir / image_name
         materialized_path.write_bytes(base64.b64decode(image_bytes_base64))

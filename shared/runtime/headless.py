@@ -148,8 +148,12 @@ class HeadlessOpenGLConfig(BaseModel):
         target[_PHYSICS_BACKEND_ENV] = self.physics_gl_backend.value
         target[_LEGACY_PHYSICS_BACKEND_ENV] = self.physics_gl_backend.value
         target["MUJOCO_GL"] = self.physics_gl_backend.value
+        target["PYOPENGL_PLATFORM"] = self.physics_gl_backend.value
         if self.physics_gl_backend is HeadlessGLBackend.OSMESA:
             target["LIBGL_ALWAYS_SOFTWARE"] = "1"
+        else:
+            # EGL-backed MuJoCo must not inherit a software-only GL override.
+            target.pop("LIBGL_ALWAYS_SOFTWARE", None)
         target["PYGLET_HEADLESS"] = "1"
 
     def apply_rendering(self, env: MutableMapping[str, str] | None = None) -> None:

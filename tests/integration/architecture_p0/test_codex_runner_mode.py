@@ -16,6 +16,8 @@ import pytest
 import yaml
 from build123d import Box, BuildPart
 
+from controller.agent.prompt_manager import PromptManager
+from controller.prompts import load_prompts
 from evals.logic import runner
 from evals.logic.codex_session_trace import CodexSessionTraceArtifact
 from evals.logic.codex_workspace import (
@@ -38,8 +40,6 @@ from shared.models.schemas import (
     PlannerSubmissionResult,
 )
 from shared.workers.schema import RenderManifest, ValidationResultRecord
-from controller.agent.prompt_manager import PromptManager
-from controller.prompts import load_prompts
 from tests.integration.agent.helpers import repo_git_revision
 from worker_renderer.utils.build123d_rendering import render_preview_view
 
@@ -857,7 +857,9 @@ def test_materialize_seed_workspace_launches_codex_with_expected_sandbox_policy(
     assert workspace_dir.exists()
 
 
-def _build_codex_runtime_context_for_test(item: EvalDatasetItem, agent_name: AgentName) -> str:
+def _build_codex_runtime_context_for_test(
+    item: EvalDatasetItem, agent_name: AgentName
+) -> str:
     dataset_note = (
         f"Seed dataset: {item.seed_dataset}"
         if item.seed_dataset is not None
@@ -880,6 +882,7 @@ def _build_codex_runtime_context_for_test(item: EvalDatasetItem, agent_name: Age
             "- If you need a clean retry, run `python .admin/clear_env.py` to restore the seeded workspace in place.",
         ]
     )
+
 
 @pytest.mark.integration_p0
 def test_prompt_source_role_prompts_follow_runtime_order():
@@ -1502,12 +1505,14 @@ def test_validate_eval_seed_removes_preview_bundles_from_all_seed_artifacts():
     assert seed_artifact_dirs, "Expected seeded artifact directories to exist."
     for artifact_dir in seed_artifact_dirs:
         assert not any(
-            path.is_dir() and path.name == "renders" for path in artifact_dir.rglob("renders")
+            path.is_dir() and path.name == "renders"
+            for path in artifact_dir.rglob("renders")
         ), artifact_dir
         assert not any(
             path.name == "render_manifest.json"
             for path in artifact_dir.rglob("render_manifest.json")
         ), artifact_dir
+
 
 @pytest.mark.integration_p0
 def test_validate_eval_seed_can_filter_rows_by_complexity_level():
