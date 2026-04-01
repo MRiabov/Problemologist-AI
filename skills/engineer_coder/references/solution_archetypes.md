@@ -39,6 +39,7 @@ Drafting cues:
 - Keep support surfaces aligned with the intended motion direction.
 - Include enough lateral containment to survive jitter and bounce.
 - Avoid tiny ledges or gaps that only work on the nominal seed.
+- If the path is mirrored or drains the wrong way, fix handedness, slope sign, or datum orientation before widening capture or adding complexity.
 
 Typical failure modes:
 
@@ -46,12 +47,14 @@ Typical failure modes:
 - The object bounces out at the handoff.
 - The guide is technically valid but too narrow for jitter.
 - The path is continuous in concept but not in the actual placed geometry.
+- The path is mirrored relative to the intended goal direction.
 
 First response:
 
 - Increase capture margin.
 - Remove unsupported gaps.
 - Re-check the final placed envelope, not just the sketch.
+- Verify the first rendered motion before spending time on cosmetic cleanup.
 
 ## Actuated solutions
 
@@ -145,5 +148,6 @@ First response:
 - Prefer the first physically credible geometry over an elaborate speculative one.
 - Solve the nominal objective and runtime jitter together.
 - Reduce sensitivity before increasing complexity.
+- If the first simulation shows the object moving away from the goal, treat it as a directionality bug, not a robustness bug.
 - If a review or simulation failure recurs, promote the winning pattern into this file so the next run starts from a better prior.
 - Keep new patterns here concise enough to reuse, but specific enough to be actionable.

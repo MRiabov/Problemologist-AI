@@ -1,10 +1,10 @@
 ## 1. Solution Overview
 
-Mechanism with ServoMotor_SG90.
+Mechanism with ServoMotor_DS3218.
 
 ## 2. Parts List
 
-- ServoMotor_SG90 (Servo Motor)
+- ServoMotor_DS3218 (Servo Motor)
 
 ## 3. Assembly Strategy
 
@@ -12,7 +12,7 @@ Mechanism with ServoMotor_SG90.
 
 ## 4. Cost & Weight Budget
 
-- $20
+- $18.00
 
 ## 5. Risk Assessment
 

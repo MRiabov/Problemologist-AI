@@ -40,6 +40,7 @@ Use this skill as a router. Keep the main prompt lean and load only the referenc
 - Start from the dynamic requirement, not the static shape. The real success condition is "ball stays captured and reaches the goal," so judge the first design pass against motion, not just valid geometry.
 - Separate validation from effectiveness. Passing geometry validation is necessary, but it is not evidence of a working mechanism. Stop treating validation success as progress once simulation is still failing.
 - Inspect the first simulation frames or video as soon as direction is uncertain.
+- When the motion is reversed, verify slope sign, handedness, and datum orientation before changing capture width or seam cleanup.
 - Treat seed hints for direction, x-position, and capture span as hard constraints.
 - Change one variable at a time; validation success is necessary, but it is not proof that the mechanism works.
 

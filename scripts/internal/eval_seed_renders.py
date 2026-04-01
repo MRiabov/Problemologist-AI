@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from shared.agents import get_image_render_resolution
 from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition, CompoundMetadata, PartMetadata
 from shared.rendering import export_preview_scene_bundle
@@ -83,7 +84,10 @@ _VIEW_ORBITS = (
     (-75.0, 315.0),
 )
 
-_IMAGE_SIZE = (640, 480)
+_IMAGE_SIZE = (
+    get_image_render_resolution().width,
+    get_image_render_resolution().height,
+)
 _VIEW_ANGLE_DEG = 30.0
 _EDGE_COLOR = (24, 24, 24, 255)
 _BACKGROUND_RGB = (248, 248, 250, 255)

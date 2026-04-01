@@ -147,6 +147,14 @@ async def _wait_for_trace_name(
     ]
 
 
+async def _read_episode_asset_text(
+    client: AsyncClient, episode_id: str, path: str
+) -> str:
+    resp = await client.get(f"/episodes/{episode_id}/assets/{path}")
+    assert resp.status_code == 200, resp.text
+    return resp.text
+
+
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
 async def test_reviewer_evidence_completeness():
@@ -158,46 +166,36 @@ async def test_reviewer_evidence_completeness():
     - reviewer-specific persisted review filepath under `reviews/**`
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
-        session_id = f"INT-040-{uuid.uuid4().hex[:8]}"
-        await seed_benchmark_assembly_definition(client, session_id)
-        request = BenchmarkGenerateRequest(
-            prompt="Create a simple path planning benchmark with a wall and a goal.",
-            backend=SimulatorBackendType.GENESIS,
+        session_id = f"INT-034-{uuid.uuid4().hex[:8]}"
+        await seed_execution_reviewer_handover(
+            client,
+            session_id=session_id,
+            int_id="INT-034",
         )
-        resp = await client.post("/benchmark/generate", json=request.model_dump())
-        assert resp.status_code in [200, 202], resp.text
-        benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())
-        session_id = str(benchmark_resp.session_id)
-        episode_id = str(benchmark_resp.episode_id)
+        run_request = AgentRunRequest(
+            task="INT-034 reviewer evidence completeness",
+            session_id=session_id,
+            agent_name=AgentName.ENGINEER_EXECUTION_REVIEWER,
+            start_node=AgentName.ENGINEER_EXECUTION_REVIEWER,
+        )
+        run_resp = await client.post(
+            "/api/agent/run", json=run_request.model_dump(mode="json")
+        )
+        assert run_resp.status_code == 202, run_resp.text
+        episode_id = str(AgentRunResponse.model_validate(run_resp.json()).episode_id)
 
         ep_data = EpisodeResponse.model_validate(
-            await wait_for_benchmark_state(
+            await wait_for_episode_state(
                 client,
-                session_id,
+                episode_id,
                 timeout_s=180.0,
-                terminal_statuses=set(),
+                terminal_statuses={
+                    EpisodeStatus.COMPLETED,
+                    EpisodeStatus.FAILED,
+                    EpisodeStatus.CANCELLED,
+                },
                 predicate=lambda candidate: (
                     any(
-                        p.endswith("manifest.json")
-                        for p in [asset.s3_path for asset in (candidate.assets or [])]
-                    )
-                    and any(
-                        "reviews/" in p
-                        and (
-                            "benchmark-plan-review-decision-round-" in p
-                            or "benchmark-plan-review-comments-round-" in p
-                            or "benchmark-execution-review-decision-round-" in p
-                            or "benchmark-execution-review-comments-round-" in p
-                            or "engineering-plan-review-decision-round-" in p
-                            or "engineering-plan-review-comments-round-" in p
-                            or "engineering-execution-review-decision-round-" in p
-                            or "engineering-execution-review-comments-round-" in p
-                            or "electronics-review-decision-round-" in p
-                            or "electronics-review-comments-round-" in p
-                        )
-                        for p in [asset.s3_path for asset in (candidate.assets or [])]
-                    )
-                    and any(
                         _is_inspect_media_trace(trace)
                         for trace in (candidate.traces or [])
                     )
@@ -218,7 +216,7 @@ async def test_reviewer_evidence_completeness():
         )
 
         ep_resp = await client.get(f"/episodes/{episode_id}")
-        assert ep_resp.status_code == 200
+        assert ep_resp.status_code == 200, ep_resp.text
         ep_data = EpisodeResponse.model_validate(ep_resp.json())
         artifact_paths = [a.s3_path for a in (ep_data.assets or [])]
         traces = ep_data.traces or []
@@ -239,6 +237,13 @@ async def test_reviewer_evidence_completeness():
         assert any(
             p.endswith("renders/render_manifest.json") for p in artifact_paths
         ), f"render_manifest.json missing. Artifacts: {artifact_paths}"
+        assert any(p.endswith("solution_script.py") for p in artifact_paths), (
+            f"solution_script.py missing. Artifacts: {artifact_paths}"
+        )
+        solution_script_text = await _read_episode_asset_text(
+            client, episode_id, "solution_script.py"
+        )
+        assert 'ServoMotor.from_catalog_id("ServoMotor_DS3218"' in solution_script_text
 
         stage_review_paths = [
             p

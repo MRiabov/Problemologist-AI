@@ -105,7 +105,7 @@ Use this loop when a passive-transfer draft validates but the motion still fails
 
 1. Judge the draft by whether the object stays captured and reaches the goal, not just whether the geometry is valid.
 2. Inspect the first simulation frames or video immediately when direction is uncertain.
-3. If the object drifts the wrong way, fix slope direction before seam cleanup, cosmetics, or cost tuning.
+3. If the object drifts the wrong way, fix slope direction, handedness, or datum orientation before seam cleanup, cosmetics, or cost tuning.
 4. Preserve one continuous transport corridor from capture to goal; a flat funnel feeding a sloped lane is a bad handoff.
 5. Treat seed hints for direction, x-position, and corridor placement as hard constraints when they are explicit.
 6. Change one variable at a time. Do not mix placement, clearance, slope, and capture geometry changes in the same iteration.

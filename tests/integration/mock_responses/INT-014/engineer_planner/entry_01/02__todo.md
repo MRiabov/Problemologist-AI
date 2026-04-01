@@ -1,1 +1,1 @@
-- [ ] Design with ServoMotor_SG90
+- [ ] Design with ServoMotor_DS3218

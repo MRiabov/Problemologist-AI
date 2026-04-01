@@ -78,6 +78,8 @@ Signals:
 - Jitter-sensitive failure
 - Overdependence on a precise start position
 - Unstable motion or flakiness
+- Static validation passes, but the moving object exits the build zone or goes the wrong way
+- A mirrored or reversed transfer path in video despite a plausible static layout
 
 Likely causes:
 
@@ -85,9 +87,12 @@ Likely causes:
 - Contact geometry is too delicate
 - The mechanism assumes exact timing
 - The design has unnecessary degrees of freedom
+- Slope sign, handedness, or datum orientation is reversed
+- The motion stack was tuned with too many coupled changes at once
 
 First fix:
 
+- Inspect the first simulation frame or video, verify the real motion direction, and change only the dominant motion determinant.
 - Increase tolerance to runtime variation and remove fragile dependency points.
 
 ## Evidence and review

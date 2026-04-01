@@ -1,7 +1,7 @@
 transcript:
 - node: engineer_planner
   steps:
-  - thought: I will design a mechanism with a servo motor using ServoMotor_SG90.
+  - thought: I will design a mechanism with a catalog-backed servo motor using ServoMotor_DS3218.
     tool_name: write_file
     tool_args:
       path: plan.md
@@ -26,10 +26,17 @@ transcript:
       overwrite: true
       content_file: INT-014/engineer_planner/entry_01/04__benchmark_definition.yaml
     expected_observation: success
+  - thought: Seed the benchmark script so downstream planner stages can inspect the read-only benchmark geometry.
+    tool_name: write_file
+    tool_args:
+      path: benchmark_script.py
+      overwrite: true
+      content_file: INT-005/benchmark_coder/entry_01/01__benchmark_script.py
+    expected_observation: success
   - tool_name: submit_plan
     expected_observation: submitted
   - finished: true
-    summary: Plan with ServoMotor_SG90 generated.
+    summary: Plan with ServoMotor_DS3218 generated.
     thought: Plan is complete.
 - node: electronics_planner
   steps:
@@ -39,6 +46,13 @@ transcript:
       path: todo.md
       overwrite: true
       content_file: INT-014/electronics_planner/entry_01/01__todo.md
+    expected_observation: success
+  - thought: Seed the benchmark script before the electronics planner handoff.
+    tool_name: write_file
+    tool_args:
+      path: benchmark_script.py
+      overwrite: true
+      content_file: INT-005/benchmark_coder/entry_01/01__benchmark_script.py
     expected_observation: success
   - tool_name: submit_plan
     expected_observation: submitted
@@ -59,6 +73,13 @@ transcript:
       path: solution_script.py
       overwrite: true
       content_file: INT-014/engineer_coder/entry_01/01__solution_script.py
+    expected_observation: success
+  - thought: Seed the benchmark script before implementing the engineer coder output.
+    tool_name: write_file
+    tool_args:
+      path: benchmark_script.py
+      overwrite: true
+      content_file: INT-005/benchmark_coder/entry_01/01__benchmark_script.py
     expected_observation: success
   - thought: Seed execution-review handoff evidence.
     tool_name: execute_command
@@ -90,7 +111,7 @@ transcript:
         \ seeded\")\nPY\n"
     expected_observation: handoff seeded
   - finished: true
-    journal: Implemented mechanism with ServoMotor_SG90.
+    journal: Implemented mechanism with ServoMotor_DS3218.
     thought: Implementation complete.
 - node: electronics_reviewer
   steps:

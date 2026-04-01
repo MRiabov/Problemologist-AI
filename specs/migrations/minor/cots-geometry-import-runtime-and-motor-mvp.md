@@ -334,6 +334,10 @@ either completed or explicitly waived with a written rationale.
   handoff or validation path.
 - [x] Refresh the integration catalog if a dedicated COTS geometry import row
   is the clearer test shape than extending the existing motor rows.
+- [ ] Update eval seeds that cover COTS geometry import so they exercise the
+  new class-aware factory path.
+- [ ] Update relevant integration-test mock responses and fixtures to include
+  the COTS geometry import additions where the tests depend on mocked payloads.
 
 ### Template and guidance follow-up
 

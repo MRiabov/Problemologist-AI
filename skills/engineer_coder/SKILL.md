@@ -80,7 +80,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 4. Draft the smallest physically credible solution that can survive the declared runtime variation.
 5. Keep `solution_script.py` import-safe and bind the final object as `result`.
 6. Run a cheap syntax/import check, then a real validation probe, then simulation.
-7. Inspect render or video evidence when it exists for the current revision.
+7. Inspect render or video evidence as soon as motion is uncertain. Do not spend extra geometry effort before checking the first failing dynamic result.
 8. Fix the narrowest failure mode and repeat.
 9. Submit for review only when the latest revision is actually ready.
 
@@ -104,6 +104,7 @@ This role should behave like a high-confidence solver, not a wandering explorer.
 - Retries are allowed and expected.
 - Keep retries narrow: use new evidence, a clearer diagnosis, or reviewer feedback to justify the next attempt.
 - Change one dimension at a time when debugging: geometry, placement, mechanism family, process/material choice, or contract.
+- Keep one active hypothesis at a time. If a targeted fix does not change the measured failure mode, record that and pivot instead of layering unrelated edits.
 - Preserve working substructures instead of rebuilding the entire model after every failure.
 - Use the first simulation or review failure to identify the dominant failure class, then repair that class directly.
 - Spend one quick pass on the handoff files, then start drafting.
@@ -115,6 +116,7 @@ This role should behave like a high-confidence solver, not a wandering explorer.
 
 - Validation success is necessary but not sufficient.
 - Simulation success is necessary but not sufficient.
+- A passing validator does not excuse skipping the simulation video or frame evidence. Use the first dynamic result to confirm direction, capture, and stability.
 - If render images exist for the current revision, inspect them with `inspect_media(...)` before finishing.
 - If the solution has moving behavior and simulation video exists, inspect the dynamic evidence before approval.
 - Treat `validation_results.json`, `simulation_result.json`, and render manifests as evidence inputs, not as substitutes for reasoning.
@@ -127,7 +129,8 @@ This role should behave like a high-confidence solver, not a wandering explorer.
 3. Manufacturability failure: fix process choice, stock assumptions, wall thickness, access, or tool reach first.
 4. Cost or weight failure: simplify the mechanism or change the part family before inventing a workaround.
 5. Robustness failure: widen tolerances to runtime jitter and remove exact-seed dependence.
-6. Reviewer failure: resolve the valid checklist items directly and ignore non-applicable demands.
+6. Directional motion failure: verify slope sign, handedness, and capture path from the actual simulation media before changing more geometry.
+7. Reviewer failure: resolve the valid checklist items directly and ignore non-applicable demands.
 
 If the same blocker persists after one targeted fix, record it in `journal.md` and stop widening the search.
 
