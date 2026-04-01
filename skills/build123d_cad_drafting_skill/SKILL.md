@@ -14,7 +14,8 @@ Read this skill and the relevant reference files below before planning any `buil
 3. **MJCF Compliance**: Ensure parts are non-intersecting if they belong to different simulation links.
 4. **Assembly Labels**: Use `.label = "stator"` and `.label = "rotor"` for automatic motor/joint injection in MJCF.
 5. **Label Namespace Hygiene**: Top-level authored labels must be unique and must not be `environment` or start with `zone_`. The simulator reserves those names for the scene root and generated objective bodies, and duplicate labels collide with MJCF mesh/body names.
-6. **Intersection Checks**: For pairwise geometry, use `shape_a.intersect(shape_b)`. For assembly-level overlap checks, wrap the children in `Compound(children=[...])` and call `do_children_intersect()` on the compound. The method name is `do_children_intersect`, not `do_children_intesect`.
+6. **Intersection Checks**: For pairwise geometry, use `shape_a.intersect(shape_b)`. The returned shape has a `.volume` property; if that volume is greater than zero, the shapes intersect, and you can inspect or render the returned intersection shape for debugging. For grouped children, wrap the parts in `Compound(children=[...])` and call `do_children_intersect()` on the compound; in this runtime it returns `(intersects, (shape_a, shape_b), volume)`, so unpack it for logging.
+7. **COTS Parts**: If the geometry includes catalog-backed components, load `skills/cots-parts/SKILL.md` and keep the concrete COTS instance intact. Do not strip provenance or replace it with anonymous solids when the task still depends on part identity.
 
 ## Placement And Rotation Contract
 
@@ -63,6 +64,13 @@ rail_lower = rail_builder.part.moved(Location((0, -0.06, 0.09), (0, 2, 0)))
 - Bearings & Fasteners (L59)
 - Environment Zones (Goal/Forbid) (L75)
 - Collision Best Practices (L82)
+
+### [cots-parts](../cots-parts/SKILL.md) (Catalog-Backed Components)
+
+- Class-first COTS construction and provenance
+- Motor local frames and placement contract
+- Fixtures vs solution parts
+- Declared-vs-used validation and anti-patterns
 
 ### [cheat_sheet.md](references/cheat_sheet.md) (Syntax Reference)
 

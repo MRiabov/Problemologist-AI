@@ -17,6 +17,8 @@ Use this skill as a router. Keep the main prompt lean and load only the referenc
   Use for fluid-containment or flow-rate benchmarks.
 - `references/optimization.md`
   Use when a design already works and you are refining cost, weight, or safety factor.
+- `../cots-parts/SKILL.md`
+  Use when the mechanism includes catalog-backed components, motors, or benchmark fixtures that must preserve part identity, provenance, or ownership.
 
 ## Core Rules
 
@@ -30,6 +32,16 @@ Use this skill as a router. Keep the main prompt lean and load only the referenc
    `get_stress_report(...)`, `preview_stress(...)`, and `define_fluid(...)` are the current repo-level hooks; do not invent alternate analysis paths in prompts.
 5. Keep manufacturing and physics aligned.
    Benchmark-owned fixtures are not priced as manufactured parts, but engineer-authored parts still need realistic geometry, materials, and attachment logic.
+6. If the mechanism uses COTS components, keep the concrete part contract separate from the motion contract.
+   Do not treat motors, fixtures, or other catalog-backed parts as generic geometry.
+
+## Passive-Transfer Debugging
+
+- Start from the dynamic requirement, not the static shape. The real success condition is "ball stays captured and reaches the goal," so judge the first design pass against motion, not just valid geometry.
+- Separate validation from effectiveness. Passing geometry validation is necessary, but it is not evidence of a working mechanism. Stop treating validation success as progress once simulation is still failing.
+- Inspect the first simulation frames or video as soon as direction is uncertain.
+- Treat seed hints for direction, x-position, and capture span as hard constraints.
+- Change one variable at a time; validation success is necessary, but it is not proof that the mechanism works.
 
 ## Workflow
 

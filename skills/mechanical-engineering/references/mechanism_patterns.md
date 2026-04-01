@@ -6,7 +6,8 @@
 2. Passive transfer patterns
 3. Failure patterns to reject
 4. Practical geometry heuristics
-5. When to escalate beyond passive transfer
+5. Simulation-first iteration loop
+6. When to escalate beyond passive transfer
 
 ## 1. Choosing a mechanism family
 
@@ -98,7 +99,19 @@ Check for discontinuities in support:
 - rails without a floor
 - floor segments that do not produce net downhill travel
 
-## 5. When To Escalate Beyond Passive Transfer
+## 5. Simulation-First Iteration Loop
+
+Use this loop when a passive-transfer draft validates but the motion still fails.
+
+1. Judge the draft by whether the object stays captured and reaches the goal, not just whether the geometry is valid.
+2. Inspect the first simulation frames or video immediately when direction is uncertain.
+3. If the object drifts the wrong way, fix slope direction before seam cleanup, cosmetics, or cost tuning.
+4. Preserve one continuous transport corridor from capture to goal; a flat funnel feeding a sloped lane is a bad handoff.
+5. Treat seed hints for direction, x-position, and corridor placement as hard constraints when they are explicit.
+6. Change one variable at a time. Do not mix placement, clearance, slope, and capture geometry changes in the same iteration.
+7. Treat validation as a prerequisite, not evidence that the mechanism works.
+
+## 6. When To Escalate Beyond Passive Transfer
 
 Escalate only when passive geometry cannot satisfy the benchmark contract.
 
