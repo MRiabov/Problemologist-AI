@@ -39,13 +39,14 @@ This migration sits on top of the existing split architecture in
   index plus pose metadata as preview outputs are added.
 - `preview_design(...)` is not kept as a long-term alias; `preview(...)`
   replaces it.
-- The helper lives in `utils` as an export layer.
+- The helper is exposed by the public `utils` package, alongside `preview(...)`
+  and `validate(...)`.
 - Validation does not generate preview artifacts by default; preview evidence
   is produced only through explicit preview requests.
 - Benchmark previews stay geometry-only at the helper boundary; `build()`
-  supplies the benchmark assembly geometry and `objectives_geometry()`
-  supplies the objective overlays reconstructed from the `objectives` section of
-  `benchmark_definition.yaml`.
+  supplies the benchmark assembly geometry and `utils.objectives_geometry()`
+  supplies the objective overlays reconstructed from the `objectives` section
+  of `benchmark_definition.yaml`.
   The caller composes both into a `Compound(children=[...])`, or an equivalent
   composed component, before calling `preview(...)`.
 
@@ -324,9 +325,11 @@ context comes from the benchmark geometry source contract defined in
 [Benchmark Geometry Source and Read-Only Benchmark Script](../minor/benchmark-geometry-source-and-read-only-script.md).
 
 - `benchmark_script.py` exposes the benchmark assembly through `build()`.
-- `objectives_geometry()` is the zero-argument utility that reconstructs the
-  objective overlays declared in the `objectives` section of
-  `benchmark_definition.yaml` for the current workspace.
+- `utils.objectives_geometry()` is the zero-argument utility that reconstructs
+  the objective overlays declared in the `objectives` section of
+  `benchmark_definition.yaml` for the current workspace. It is exposed through
+  the public `utils` package, alongside `preview(...)` and `validate(...)`, so
+  callers import it rather than defining an agent-local geometry helper.
 - The caller combines `build()` output with `objectives_geometry()` output into
   a `Compound(children=[...])`, or an equivalent composed component, before
   calling `preview(...)`.
@@ -464,8 +467,8 @@ validation paths.
 ### Prompts and permissions
 
 - [x] Update `utils/__init__.py` and the `shared/utils/agent` export layer so
-  `preview(...)` and `objectives_geometry()` are both importable from the agent
-  surface.
+  `preview(...)` and `utils.objectives_geometry()` are both importable from the
+  agent surface.
 - [ ] Update `config/prompts.yaml` and `config/agents_config.yaml` so roles that
   need preview access can discover the async, multi-view helper without stale
   `preview_design(...)` guidance.

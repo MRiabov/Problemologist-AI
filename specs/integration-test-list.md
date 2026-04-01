@@ -16,7 +16,7 @@ contract: `benchmark_script.py` owns benchmark assembly geometry,
 `solution_script.py` owns engineer code, and benchmark rows that claim visible
 geometry are invalid until seed and node-entry validation can see
 `benchmark_script.py`. Preview tests must compose benchmark assembly from
-`build()` and source objective overlays through `objectives_geometry()`.
+`build()` and source objective overlays through `utils.objectives_geometry()`.
 
 Preview-helper migration mainly affects this preview-evidence slice of the
 catalog: `INT-032`, `INT-033`, `INT-034`, `INT-039`, `INT-040`, `INT-074`,
@@ -267,7 +267,7 @@ Backend integration tests run in strict backend-log mode as well:
 This section exists to force implementation as true integration tests, not unit tests.
 It assumes the authored-source split contract from the benchmark migration:
 benchmark geometry is exposed via `benchmark_script.py`, engineer code lives in
-`solution_script.py`, and bare `script.py` is not the authored-source contract.
+`solution_script.py`, and those two files are the authored-source contract.
 
 | ID | How to implement as integration | Reject as unit-test anti-pattern |
 | -- | -- | -- |

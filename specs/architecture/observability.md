@@ -60,7 +60,7 @@ Contract:
 
 ### All collected events
 
-We track the following structured domain events to compute the evaluation metrics defined in the [Agent Evaluations](#agent-evaluations) section:
+We track the following structured domain events to compute the evaluation metrics defined in the [Metrics](#metrics) section:
 
 01. Component usage,
 
@@ -88,7 +88,7 @@ We track the following structured domain events to compute the evaluation metric
 
     - Failure/pass reason -
       - Success: hit green zone
-      - Failure in [failures](#failure):
+      - Failure in the [tracking failures](#tracking-failures) section:
         - Timeout,
         - Out of bounds
         - Forbid zone hit

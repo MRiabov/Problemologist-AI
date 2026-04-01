@@ -259,7 +259,7 @@ This checklist reflects the current transitional state of the migration. The ren
 - [x] Keep `renders/render_manifest.json` as the companion artifact and preserve modality metadata in the manifest.
 - [x] Keep the on-demand preview path modality-aware and multi-view capable with `rgb`, `depth`, and `segmentation` render booleans.
 - [x] Keep benchmark preview composition geometry-only by combining `benchmark_script.py` / `build()` with `objectives_geometry()`.
-- [ ] Upload bulky simulation outputs directly to object storage instead of keeping them only as workspace files.
+- [x] Upload bulky simulation outputs directly to object storage instead of keeping them only as workspace files.
 - [x] Finish removing any renderer-side dependency on helper code that still lives in `worker_heavy` modules.
 
 ### Benchmark and preview surface

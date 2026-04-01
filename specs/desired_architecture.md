@@ -35,7 +35,7 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 
 - [Application acceptance criteria](./architecture/application-acceptance-criteria.md): legacy application acceptance surface; the current product acceptance criteria live in `_bmad-output/planning-artifacts/prd.md` and `_bmad-output/planning-artifacts/epics.md`.
 - [Eval architecture](./architecture/evals-architecture.md): how eval tiers, pass criteria, terminalization, and fail-closed gates work.
-- [Agent reward architecture](./architecture/agent/reward-architecture.md): reward shaping used for downstream training and optimization.
+- [Agent reward architecture](./architecture/agents/reward-architecture.md): reward shaping used for downstream training and optimization.
 - [Integration test rules](./integration-test-rules.md) and [integration test catalog](./integration-test-list.md): HTTP-only release-gate contracts and canonical `INT-xxx` / `INT-NEG-###` mappings for the system boundary checks.
 
 ### Simulation

@@ -10,14 +10,18 @@ seed validator must understand.
 The target contract is:
 
 1. `benchmark_script.py` is the benchmark-owned, read-only source file that
-   houses `build()` and `objectives_geometry()`.
+   houses `build()`. The public `utils.objectives_geometry()` helper
+   reconstructs the benchmark objective overlays from
+   `benchmark_definition.yaml`.
 2. `build()` is the canonical benchmark-assembly constructor. It defines the
    benchmark geometry such as parts, motors, and other benchmark-owned bodies.
-3. `objectives_geometry()` is the canonical zero-argument utility for
+3. `utils.objectives_geometry()` is the canonical zero-argument utility for
    reconstructing the objective overlays declared in the `objectives` section of
    `benchmark_definition.yaml` (`goal_zone`, `forbid_zones`, and `build_zone`).
-   It materializes those zones as visual geometry only; it does not define
-   benchmark assembly geometry or `simulation_bounds`.
+   It is exposed through the public `utils` package, so benchmark and engineer
+   code import it rather than defining a local helper. It materializes those
+   zones as visual geometry only; it does not define benchmark assembly
+   geometry or `simulation_bounds`.
 4. `solution_script.py` is the engineer-authored source file.
 5. There is no longer a user-authored, bare `script.py` in seeded workspaces.
    The authored workspace surface is the split pair of
@@ -223,9 +227,9 @@ Use this checklist to track the migration from spec edits through runtime gates,
 ### Contract and docs
 
 - [x] Update the architecture docs so `benchmark_script.py` is the benchmark-owned, read-only geometry source and `solution_script.py` is the engineer-authored source.
-- [ ] Keep `build()` as the benchmark assembly constructor and `objectives_geometry()` as the only canonical geometry helper for objective overlays, with no positional arguments.
-- [ ] Remove or replace any remaining architecture wording that tells agents to edit a bare `script.py` when the authored source should be `benchmark_script.py` or `solution_script.py`.
-- [ ] Retire `shared/assets/template_repos/benchmark_generator/result.py` as a source-of-truth contract surface.
+- [x] Keep `build()` as the benchmark assembly constructor and `objectives_geometry()` as the only canonical geometry helper for objective overlays, with no positional arguments.
+- [x] Remove or replace any remaining architecture wording that tells agents to edit a bare `script.py` when the authored source should be `benchmark_script.py` or `solution_script.py`.
+- [x] Retire `shared/assets/template_repos/benchmark_generator/result.py` as a source-of-truth contract surface.
 - [ ] Keep this migration aligned with the on-demand preview-rendering migration; do not add prerender-image ownership here.
 - [x] Update `specs/integration-test-list.md` and any adjacent guidance if the migration changes any INT scope notes or test-name expectations.
 
@@ -239,8 +243,8 @@ Use this checklist to track the migration from spec edits through runtime gates,
 - [x] Ensure engineering workspaces use `solution_script.py` as the writable authored implementation source.
 - [x] Update prompt generation in `evals/logic/codex_workspace.py` and related helpers so the prompt text names `solution_script.py` and conditionally names `benchmark_script.py`.
 - [x] Update any submission helper, reviewer helper, or workspace bootstrapper that still assumes a bare `script.py` is the authored source file.
-- [ ] Add `build()` to benchmark scripts so benchmark assembly geometry lives in `build()` instead of `objectives_geometry()`.
-- [ ] Make sure `objectives_geometry()` reconstructs only objective overlays from the `objectives` section of `benchmark_definition.yaml`.
+- [x] Add `build()` to benchmark scripts so benchmark assembly geometry lives in `build()` instead of `objectives_geometry()`.
+- [x] Make sure `objectives_geometry()` reconstructs only objective overlays from the `objectives` section of `benchmark_definition.yaml`.
 - [x] Keep mesh-backed benchmark geometry inline in Python only; do not introduce a separate mesh-file contract or a new authoring pipeline.
 
 ### Validation gates
@@ -257,13 +261,13 @@ Use this checklist to track the migration from spec edits through runtime gates,
 ### Seed and fixture updates
 
 - [x] Add `benchmark_script.py` to every benchmark-backed seed row that claims visible geometry.
-- [ ] Rewrite any benchmark-backed seed script that still uses `result = objectives_geometry()` so the main benchmark assembly moves into `build()`.
-- [ ] Populate `objectives_geometry()` in every benchmark script that needs to render or inspect objective overlays.
+- [x] Rewrite any benchmark-backed seed script that still uses `result = objectives_geometry()` so the main benchmark assembly moves into `build()`.
+- [x] Populate `objectives_geometry()` in every benchmark script that needs to render or inspect objective overlays.
 - [x] Keep `solution_script.py` as the only authored engineer source in engineer seed artifacts.
 - [x] Rename any seed artifacts or seed JSON metadata that still refer to bare `script.py` as the authored source.
 - [ ] Remove any seed rows that are YAML-only but still claim benchmark geometry.
 - [ ] Confirm that benchmark seeds remain readable, measurable, and renderable from the visible source file.
-- [ ] Confirm that the seeded workspace copies match the new file-name contract without aliasing `result.py` or bare `script.py`.
+- [x] Confirm that the seeded workspace copies match the new file-name contract without aliasing `result.py` or bare `script.py`.
 
 ### Integration tests and fixtures to update
 
@@ -315,8 +319,8 @@ Use this checklist to track the migration from spec edits through runtime gates,
 - [x] Confirm benchmark planner workspaces never receive `benchmark_script.py` before plan approval.
 - [x] Confirm benchmark coder and benchmark reviewer workspaces do receive `benchmark_script.py` after plan approval.
 - [x] Confirm engineer workspaces receive `benchmark_script.py` as read-only context and `solution_script.py` as writable authored code.
-- [ ] Confirm no seeded workspace treats bare `script.py` as the authored source file.
+- [x] Confirm no seeded workspace treats bare `script.py` as the authored source file.
 - [ ] Confirm `scripts/validate_eval_seed.py` rejects benchmark-backed rows that are YAML-only.
 - [ ] Confirm `controller/agent/node_entry_validation.py` rejects the same missing-geometry condition.
-- [ ] Confirm `result.py` is not treated as a source-of-truth benchmark artifact anywhere.
-- [ ] Confirm the integration-test catalog, seed fixtures, and runtime gates all agree on the new filenames.
+- [x] Confirm `result.py` is not treated as a source-of-truth benchmark artifact anywhere.
+- [x] Confirm the integration-test catalog, seed fixtures, and runtime gates all agree on the new filenames.
