@@ -257,7 +257,7 @@ This checklist reflects the current transitional state of the migration. The ren
 - [x] Keep one renderer contract for on-demand preview and simulation-video rendering.
 - [x] Preserve the workspace-visible bucket layout under `renders/benchmark_renders/`, `renders/engineer_renders/`, and `renders/final_preview_renders/`.
 - [x] Keep `renders/render_manifest.json` as the companion artifact and preserve modality metadata in the manifest.
-- [x] Keep the single-view preview path modality-aware with `rgb`, `depth`, and `segmentation` render modes.
+- [x] Keep the on-demand preview path modality-aware and multi-view capable with `rgb`, `depth`, and `segmentation` render booleans.
 - [x] Keep benchmark preview composition geometry-only by combining `benchmark_script.py` / `build()` with `objectives_geometry()`.
 - [ ] Upload bulky simulation outputs directly to object storage instead of keeping them only as workspace files.
 - [x] Finish removing any renderer-side dependency on helper code that still lives in `worker_heavy` modules.
@@ -267,7 +267,7 @@ This checklist reflects the current transitional state of the migration. The ren
 - [x] Keep `benchmark_script.py` as the benchmark-owned, read-only preview source for downstream workspaces.
 - [x] Keep `solution_script.py` as the writable engineer-authored source.
 - [x] Update prompt/config surfaces so `preview(..., orbit_pitch=..., orbit_yaw=...)` and `objectives_geometry()` are discoverable where live preview is needed.
-- [x] Preserve the current agent-facing preview contract shape, including structured preview responses and workspace-relative paths.
+- [x] Preserve the current agent-facing preview contract shape, including structured preview job acks, workspace-relative paths, and streamed preview status.
 - [ ] Remove remaining legacy wording or code paths that still imply the old heavy-worker render ownership model.
 
 ### Test and rollout
