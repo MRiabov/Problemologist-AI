@@ -2,7 +2,7 @@
   "version": "1.0",
   "episode_id": "ec-010-lower-bin-deflector",
   "worker_session_id": "ec-010-lower-bin-deflector",
-  "revision": "afcf81d2648490c505c64a8b608a42a17cd142dd",
+  "revision": "6c5040c5f14291c22d6d62dc7fdee4ef6c5c44e0",
   "environment_version": "1.0",
   "preview_evidence_paths": [
     "renders/images/render_e15_a0.png",

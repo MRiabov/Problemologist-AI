@@ -255,9 +255,9 @@ Use this checklist to track the migration from spec edits through runtime gates,
 
 - [x] Update [tests/integration/architecture_p0/test_shared_agent_templates.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_shared_agent_templates.py).
 - [x] Update [tests/integration/architecture_p0/test_codex_runner_mode.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_codex_runner_mode.py).
-- [ ] Update [tests/integration/architecture_p0/test_codex_session_trace_capture.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_codex_session_trace_capture.py).
-- [ ] Update [tests/integration/architecture_p0/test_int_008_objectives_validation.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_int_008_objectives_validation.py).
-- [ ] Update [tests/integration/architecture_p0/test_int_018_multipart_dfm_gate.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_int_018_multipart_dfm_gate.py).
+- [x] Update [tests/integration/architecture_p0/test_codex_session_trace_capture.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_codex_session_trace_capture.py).
+- [x] Update [tests/integration/architecture_p0/test_int_008_objectives_validation.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_int_008_objectives_validation.py).
+- [x] Update [tests/integration/architecture_p0/test_int_018_multipart_dfm_gate.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_int_018_multipart_dfm_gate.py).
 - [ ] Update [tests/integration/architecture_p0/test_int_024_runtime_execute.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_int_024_runtime_execute.py).
 - [ ] Update [tests/integration/architecture_p0/test_int_026_030.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_int_026_030.py).
 - [ ] Update [tests/integration/architecture_p0/test_int_071_to_073.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/architecture_p0/test_int_071_to_073.py).

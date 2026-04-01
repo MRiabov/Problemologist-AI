@@ -378,7 +378,7 @@ modality-aware instead of piggybacking on heavyweight validation paths.
   the modality enum is carried end to end without lossy conversion.
 - [x] Preserve the existing preview file naming convention, including the angle
   tags already used in render artifacts.
-- [ ] Keep the `render_e15_a45`-style angle family, plus a run-unique suffix or
+- [x] Keep the `render_e15_a45`-style angle family, plus a run-unique suffix or
   timestamp where repeated previews need disambiguation.
 - [x] Keep `renders/render_manifest.json` synchronized with each preview write
   using atomic update behavior, not ad hoc agent edits.
