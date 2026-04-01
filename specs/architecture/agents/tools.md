@@ -165,8 +165,8 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 
 <!-- Same: what's in the compound? -->
 
-- `preview(component: Part|Compound, orbit_pitch: float|list[float] = 45.0, orbit_yaw: float|list[float] = 45.0, rgb: bool = True, depth: bool = True, segmentation: bool = False) -> PreviewJobAck` - async on-demand preview submission for engineer and reviewer nodes. The runtime normalizes scalar camera inputs to lists, zip-pairs views by index, enforces the 64-view cap, and streams queued/view-ready/completed status over the worker-light control path while `worker-renderer` materializes the images. The helper returns a structured job ack; `inspect_media(...)` remains the tool for viewing the persisted render files under the role-scoped preview bucket. Benchmark callers compose benchmark `build()` output with objective overlays from `objectives_geometry()` before previewing benchmark context.
-- `objectives_geometry()` - a zero-argument utility imported from `utils` that reconstructs the benchmark objective overlay geometry from the `objectives` section of the canonical `benchmark_definition.yaml` path for the current workspace. Preview callers combine its output with benchmark `build()` output before rendering benchmark context.
+- `preview(component: Part|Compound, orbit_pitch: float|list[float] = 45.0, orbit_yaw: float|list[float] = 45.0, rgb: bool = True, depth: bool = True, segmentation: bool = False) -> PreviewJobAck` - async on-demand preview submission for engineer and reviewer nodes. The runtime normalizes scalar camera inputs to lists, zip-pairs views by index, enforces the 64-view cap, and streams queued/view-ready/completed status over the worker-light control path while `worker-renderer` materializes the images. The helper returns a structured job ack; `inspect_media(...)` remains the tool for viewing the persisted render files under the role-scoped preview bucket. Benchmark callers compose benchmark `build()` output with objective overlays from `utils.objectives_geometry()` before previewing benchmark context.
+- `objectives_geometry()` - a zero-argument utility re-exported by the public `utils` package, alongside `preview()` and `validate()`, that reconstructs the benchmark objective overlay geometry from the `objectives` section of the canonical `benchmark_definition.yaml` path for the current workspace. It is shared runtime utility, not agent-authored geometry code. Preview callers combine its output with benchmark `build()` output before rendering benchmark context.
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service which does it fo us-->
 
 #### Reviewer / media-inspection tool
@@ -218,7 +218,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 
   Validated under all environment randomization.
 
-  - `objectives_geometry()` returns benchmark objective overlay geometry for the current workspace. It takes no arguments because the benchmark objective zones are defined in the `objectives` section of the canonical `benchmark_definition.yaml` path for the current workspace, and preview callers compose the returned geometry with the benchmark `build()` output before rendering.
+  - `utils.objectives_geometry()` returns benchmark objective overlay geometry for the current workspace. It takes no arguments because the benchmark objective zones are defined in the `objectives` section of the canonical `benchmark_definition.yaml` path for the current workspace, and preview callers compose the returned geometry with the benchmark `build()` output before rendering. The helper is a shared importable utility, not benchmark-authored geometry logic.
 
   - `validate()` is therefore a fast geometry gate, not a render gate or Genesis-runtime parity gate.
 
