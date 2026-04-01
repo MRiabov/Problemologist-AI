@@ -1,6 +1,6 @@
 # COTS Geometry Import Runtime and Motor MVP
 
-<!-- Investigation doc. No behavior change yet. -->
+<!-- Migration tracker. Check items conservatively as implementation lands. -->
 
 ## Purpose
 
@@ -299,46 +299,46 @@ either completed or explicitly waived with a written rationale.
 
 ### Contract and plumbing
 
-- [ ] Add a class-aware factory entrypoint on `COTSPart` or the concrete family
+- [x] Add a class-aware factory entrypoint on `COTSPart` or the concrete family
   classes.
-- [ ] Introduce the typed provider registry under `shared/cots/`.
+- [x] Introduce the typed provider registry under `shared/cots/`.
 - [ ] Keep `import_recipe` as provenance text only.
 - [ ] Keep benchmark-owned and engineer-owned COTS parts on the same class path
   while preserving ownership semantics.
-- [ ] Keep the factory origin-only in the MVP and define the provider's
+- [x] Keep the factory origin-only in the MVP and define the provider's
   canonical local frame as the rotation contract.
-- [ ] Preserve or adapt existing direct `ServoMotor(size=...)` callers while
+- [x] Preserve or adapt existing direct `ServoMotor(size=...)` callers while
   the new factory lands, so validation and pricing keep working during the
   transition.
-- [ ] Ensure declared COTS parts in benchmark or solution handoffs are actually
+- [x] Ensure declared COTS parts in benchmark or solution handoffs are actually
   instantiated into authored geometry, and fail the handoff when they are
   not.
 
 ### Motor MVP
 
-- [ ] Wire the existing motor family through the class registry.
-- [ ] Keep the geometry proxy interface-faithful and intentionally lightweight.
-- [ ] Keep motor behavior data aligned with the same family mapping used by the
+- [x] Wire the existing motor family through the class registry.
+- [x] Keep the geometry proxy interface-faithful and intentionally lightweight.
+- [x] Keep motor behavior data aligned with the same family mapping used by the
   geometry path.
-- [ ] Fail closed on unsupported or unknown motor IDs.
+- [x] Fail closed on unsupported or unknown motor IDs.
 
 ### Verification
 
-- [ ] Add integration tests for a known motor `part_id`.
-- [ ] Add integration tests for invalid and unsupported `part_id` failures.
-- [ ] Add integration tests that prove the imported geometry preserves the
+- [x] Add integration tests for a known motor `part_id`.
+- [x] Add integration tests for invalid and unsupported `part_id` failures.
+- [x] Add integration tests that prove the imported geometry preserves the
   expected frame, label, and COTS metadata.
-- [ ] Add integration tests that prove placement and rotation are caller-side
+- [x] Add integration tests that prove placement and rotation are caller-side
   concerns, not factory concerns.
-- [ ] Add integration tests that prove declared-but-unused COTS parts fail the
+- [x] Add integration tests that prove declared-but-unused COTS parts fail the
   handoff or validation path.
-- [ ] Refresh the integration catalog if a dedicated COTS geometry import row
+- [x] Refresh the integration catalog if a dedicated COTS geometry import row
   is the clearer test shape than extending the existing motor rows.
 
 ### Template and guidance follow-up
 
-- [ ] Add commented class hints to the starter workspace only after the factory
+- [x] Add commented class hints to the starter workspace only after the factory
   is stable.
-- [ ] Keep the hint generation tied to the class registry.
+- [x] Keep the hint generation tied to the class registry.
 - [ ] Update prompt-facing guidance only if the starter material actually
   changes.
