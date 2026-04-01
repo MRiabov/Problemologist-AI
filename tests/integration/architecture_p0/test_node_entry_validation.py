@@ -46,6 +46,7 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 REPO_MANUFACTURING_CONFIG = Path(
     "worker_heavy/workbenches/manufacturing_config.yaml"
 ).read_text(encoding="utf-8")
+pytestmark = pytest.mark.xdist_group(name="physics_sims")
 
 
 async def _poll_engineer_episode(

@@ -20,6 +20,7 @@ from tests.integration.agent.helpers import (
 )
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+pytestmark = pytest.mark.xdist_group(name="physics_sims")
 
 
 def _has_expected_review_evidence(

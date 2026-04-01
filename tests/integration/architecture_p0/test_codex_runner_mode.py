@@ -44,6 +44,7 @@ from tests.integration.agent.helpers import repo_git_revision
 from worker_renderer.utils.build123d_rendering import render_preview_view
 
 ROOT = Path(__file__).resolve().parents[3]
+pytestmark = pytest.mark.xdist_group(name="eval_runner")
 
 
 def _load_dataset_item(dataset_rel_path: str, row_id: str) -> EvalDatasetItem:
@@ -985,11 +986,10 @@ def test_prompt_manager_unified_render_uses_shared_source_model(tmp_path: Path):
     assert cli_prompt.index("Use workspace-relative paths only.") < cli_prompt.index(
         "This is a local Codex workspace."
     )
+    assert "Available skills you can read:" in api_prompt
+    assert "Available skills you can read:" not in cli_prompt
     assert cli_prompt.index("This is a local Codex workspace.") < cli_prompt.index(
         "Workspace: current directory"
-    )
-    assert cli_prompt.index("Workspace: current directory") < cli_prompt.index(
-        "Available skills you can read:"
     )
     assert "common.code_template" not in cli_prompt
     assert materialized.prompt_text == cli_prompt

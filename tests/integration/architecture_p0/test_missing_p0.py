@@ -27,6 +27,7 @@ from tests.integration.agent.helpers import (
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+pytestmark = pytest.mark.xdist_group(name="physics_sims")
 
 
 @pytest.mark.integration_p0
