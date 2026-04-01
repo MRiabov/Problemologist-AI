@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 import structlog
 
+from shared.agents import get_video_render_resolution
 from shared.models.simulation import (
     RendererCapabilities,
     SimulationRenderProvenance,
@@ -24,12 +25,16 @@ class MediaRecorder:
         backend_type: SimulatorBackendType,
         capture_interval: int = 15,
         session_id: str | None = None,
+        render_resolution: tuple[int, int] | None = None,
     ):
         self.video_path = video_path
         self.frames: list[np.ndarray] = []
         self.capture_interval = capture_interval
         self.session_id = session_id
         self.backend_type = backend_type
+        if render_resolution is None:
+            render_resolution = get_video_render_resolution()
+        self.render_width, self.render_height = render_resolution
         self.render_provenance: SimulationRenderProvenance | None = None
         self._capture_disabled = False
 
@@ -82,7 +87,9 @@ class MediaRecorder:
 
             for cam_to_use in camera_candidates:
                 try:
-                    frame = backend.render_camera(cam_to_use, 640, 480)
+                    frame = backend.render_camera(
+                        cam_to_use, self.render_width, self.render_height
+                    )
                     render_provenance.resolved_camera_name = cam_to_use
                     render_provenance.used_default_view = False
                     render_provenance.resolved_default_view_label = None

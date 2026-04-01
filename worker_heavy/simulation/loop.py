@@ -4,6 +4,7 @@ import numpy as np
 import structlog
 from build123d import Compound, Part
 
+from shared.agents import get_video_render_resolution
 from shared.config.simulation import simulation_settings
 from shared.enums import FailureReason
 from shared.models.schemas import BenchmarkDefinition, ElectronicsSection
@@ -389,6 +390,7 @@ class SimulationLoop:
             video_path,
             backend_type=self.backend_type,
             session_id=self.session_id,
+            render_resolution=get_video_render_resolution(),
         )
 
         # 3. Apply initial controls

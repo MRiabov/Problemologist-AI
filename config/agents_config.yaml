@@ -5,6 +5,12 @@ llm:
   requests_per_minute: 40
   multimodal_model: null
 render:
+  image_resolution:
+    width: 1024
+    height: 768
+  video_resolution:
+    width: 1280
+    height: 960
   split_video_renders_to_images: true
   video_frame_attachment_stride: 6
   video_frame_jpeg_quality_percent: 85

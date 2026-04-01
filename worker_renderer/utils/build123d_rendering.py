@@ -15,6 +15,7 @@ from build123d import Compound
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field
 
+from shared.agents import get_image_render_resolution
 from shared.models.schemas import BenchmarkDefinition
 from shared.models.simulation import RendererCapabilities, RenderMode
 from shared.rendering import (
@@ -858,12 +859,17 @@ def render_preview_scene(
     pitch: float = -35.0,
     yaw: float = 45.0,
     output_dir: Path | None = None,
-    width: int = 640,
-    height: int = 480,
+    width: int | None = None,
+    height: int | None = None,
     include_axes: bool = True,
     include_edges: bool = True,
 ) -> Path:
     """Render a single preview image from a pre-built scene bundle."""
+    if width is None or height is None:
+        default_width, default_height = get_image_render_resolution()
+        width = default_width if width is None else width
+        height = default_height if height is None else height
+
     center = scene.center
     distance = _preview_camera_distance(scene, width=width, height=height)
     camera_position = camera_position_from_orbit(center, distance, pitch, yaw)
@@ -910,8 +916,8 @@ def render_preview_scene_bundle(
     output_dir: Path,
     workspace_root: Path | None = None,
     smoke_test_mode: bool = False,
-    width: int = 640,
-    height: int = 480,
+    width: int | None = None,
+    height: int | None = None,
     include_rgb: bool = True,
     include_depth: bool = True,
     include_segmentation: bool = True,
@@ -923,6 +929,11 @@ def render_preview_scene_bundle(
     segmentation_edges: bool = True,
 ) -> PreviewRenderResult:
     """Render the standard preview bundle from a pre-built mesh scene."""
+    if width is None or height is None:
+        default_width, default_height = get_image_render_resolution()
+        width = default_width if width is None else width
+        height = default_height if height is None else height
+
     saved_paths: list[str] = []
     legend_entries = _preview_segmentation_legend(scene)
     legend_by_path: dict[str, list[SegmentationLegendEntry]] = {}
@@ -1256,7 +1267,8 @@ class Build123dRendererBackend(RendererBackend):
         )
 
     def render(self) -> np.ndarray:
-        return self.render_camera("preview", 640, 480)
+        width, height = get_image_render_resolution()
+        return self.render_camera("preview", width, height)
 
     def get_render_capabilities(self) -> RendererCapabilities:
         return RendererCapabilities(
@@ -1628,10 +1640,14 @@ def render_preview_view(
     workspace_root: Path,
     include_axes: bool = True,
     include_edges: bool = True,
-    width: int = 640,
-    height: int = 480,
+    width: int | None = None,
+    height: int | None = None,
 ) -> Path:
     """Render a single build123d preview image via the dedicated renderer."""
+    if width is None or height is None:
+        default_width, default_height = get_image_render_resolution()
+        width = default_width if width is None else width
+        height = default_height if height is None else height
 
     bundle_base64 = export_preview_scene_bundle(
         component,
@@ -1692,14 +1708,19 @@ def render_preview_bundle(
     include_rgb: bool = True,
     include_depth: bool = True,
     include_segmentation: bool = True,
-    width: int = 640,
-    height: int = 480,
+    width: int | None = None,
+    height: int | None = None,
 ) -> PreviewRenderResult:
     """
     Render the standard preview bundle through build123d/VTK.
 
     Returns the saved render paths and the per-entity segmentation legend.
     """
+    if width is None or height is None:
+        default_width, default_height = get_image_render_resolution()
+        width = default_width if width is None else width
+        height = default_height if height is None else height
+
     backend = Build123dRendererBackend(
         workspace_root=workspace_root,
         objectives=objectives,

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Optional
 import numpy as np
 import structlog
 
+from shared.agents import get_video_render_resolution
 from shared.runtime.headless import configure_headless_rendering
 
 if TYPE_CHECKING:
@@ -81,6 +82,7 @@ class GenesisBackend(PhysicsRendererBackend):
         self._is_built = False
         self.session_id = session_id
         self.num_envs = max(1, num_envs)
+        self.render_width, self.render_height = get_video_render_resolution()
         self._ensure_initialized()
 
     def _ensure_initialized(self):
@@ -1123,7 +1125,7 @@ class GenesisBackend(PhysicsRendererBackend):
 
     # Rendering & Visualization
     def render(self) -> np.ndarray:
-        return self.render_camera("default", 640, 480)
+        return self.render_camera("default", self.render_width, self.render_height)
 
     def get_render_capabilities(self) -> RendererCapabilities:
         return RendererCapabilities(
@@ -1204,7 +1206,7 @@ class GenesisBackend(PhysicsRendererBackend):
 
         if camera_name not in self.cameras:
             # Create with default res, will be updated by render_camera if needed
-            cam = self.scene.add_camera(res=(640, 480))
+            cam = self.scene.add_camera(res=(self.render_width, self.render_height))
             self.cameras[camera_name] = cam
 
         cam = self.cameras[camera_name]

@@ -1,6 +1,7 @@
 import zipfile
 from pathlib import Path
 
+from shared.agents import get_video_render_resolution
 from worker_heavy.simulation._mujoco_env import ensure_headless_physics
 
 ensure_headless_physics()
@@ -22,10 +23,14 @@ class Renderer:
         self,
         model: mujoco.MjModel,
         data: mujoco.MjData,
-        width: int = 640,
-        height: int = 480,
+        width: int | None = None,
+        height: int | None = None,
         session_id: str | None = None,
     ):
+        if width is None or height is None:
+            default_width, default_height = get_video_render_resolution()
+            width = default_width if width is None else width
+            height = default_height if height is None else height
         self.model = model
         self.data = data
         self.width = width

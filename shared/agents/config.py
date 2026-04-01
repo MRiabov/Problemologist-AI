@@ -107,6 +107,11 @@ class LLMPolicyConfig(BaseModel):
     multimodal_model: str | None = None
 
 
+class RenderResolutionConfig(BaseModel):
+    width: int = Field(default=1024, ge=1)
+    height: int = Field(default=768, ge=1)
+
+
 class RenderModalityConfig(BaseModel):
     enabled: bool = True
     axes: bool = True
@@ -114,6 +119,12 @@ class RenderModalityConfig(BaseModel):
 
 
 class RenderPolicyConfig(BaseModel):
+    image_resolution: RenderResolutionConfig = Field(
+        default_factory=lambda: RenderResolutionConfig(width=1024, height=768)
+    )
+    video_resolution: RenderResolutionConfig = Field(
+        default_factory=lambda: RenderResolutionConfig(width=1280, height=960)
+    )
     split_video_renders_to_images: bool = False
     video_frame_attachment_stride: int = Field(default=6, ge=1)
     video_frame_jpeg_quality_percent: int = Field(default=85, ge=1, le=100)
@@ -130,6 +141,11 @@ class RenderPolicyConfig(BaseModel):
             return value
 
         normalized = dict(value)
+
+        legacy_resolution = normalized.pop("resolution", None)
+        if isinstance(legacy_resolution, dict):
+            normalized.setdefault("image_resolution", legacy_resolution)
+            normalized.setdefault("video_resolution", legacy_resolution)
 
         def _ensure_modality_config(modality: str) -> dict[str, object]:
             raw_modality = normalized.get(modality)
@@ -217,6 +233,25 @@ class AgentsConfig(BaseModel):
         if policy is None:
             return ()
         return tuple(policy.allowed_during_unit_eval)
+
+
+def get_render_resolution(config: AgentsConfig | None = None) -> tuple[int, int]:
+    render_config = (config or load_agents_config()).render.image_resolution
+    return render_config.width, render_config.height
+
+
+def get_image_render_resolution(
+    config: AgentsConfig | None = None,
+) -> tuple[int, int]:
+    render_config = (config or load_agents_config()).render.image_resolution
+    return render_config.width, render_config.height
+
+
+def get_video_render_resolution(
+    config: AgentsConfig | None = None,
+) -> tuple[int, int]:
+    render_config = (config or load_agents_config()).render.video_resolution
+    return render_config.width, render_config.height
 
 
 # Backward-compatible alias while import sites are migrated.

@@ -7,6 +7,7 @@ from pathlib import Path
 import structlog
 from build123d import Compound, Part
 
+from shared.agents import get_image_render_resolution
 from shared.models.schemas import BenchmarkDefinition
 from shared.rendering import (
     export_preview_scene_bundle,
@@ -30,10 +31,14 @@ def preview(
     rendering_type: PreviewRenderingType | str | None = None,
     output_dir: Path | None = None,
     objectives: BenchmarkDefinition | None = None,
-    width: int = 640,
-    height: int = 480,
+    width: int | None = None,
+    height: int | None = None,
 ) -> PreviewDesignResponse:
     """Render a preview of a CAD component and persist it to the preview bucket."""
+    if width is None or height is None:
+        default_width, default_height = get_image_render_resolution()
+        width = default_width if width is None else width
+        height = default_height if height is None else height
     del width, height
 
     workspace_root = Path.cwd()

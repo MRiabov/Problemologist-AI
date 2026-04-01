@@ -4,6 +4,7 @@ from typing import Any
 
 import structlog
 
+from shared.agents import get_video_render_resolution
 from worker_heavy.simulation._mujoco_env import ensure_headless_physics
 
 ensure_headless_physics()
@@ -43,6 +44,7 @@ class MuJoCoBackend(PhysicsRendererBackend):
         self.model = None
         self.data = None
         self.renderer = None
+        self.render_width, self.render_height = get_video_render_resolution()
         self.custom_cameras = {}  # name -> mjvCamera
         self.smoke_test_mode = False
         self.session_id = session_id
@@ -194,12 +196,12 @@ class MuJoCoBackend(PhysicsRendererBackend):
             cam_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_CAMERA, 0)
 
         if cam_name:
-            return self.render_camera(cam_name, 640, 480)
+            return self.render_camera(cam_name, self.render_width, self.render_height)
 
         frame, _, _ = self.render_camera_modalities(
             None,
-            640,
-            480,
+            self.render_width,
+            self.render_height,
             include_rgb=True,
             include_depth=False,
             include_segmentation=False,

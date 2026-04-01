@@ -7,6 +7,7 @@ import numpy as np
 import structlog
 from build123d import export_stl
 
+from shared.agents import get_image_render_resolution
 from shared.observability.storage import S3Client, S3Config
 from shared.rendering import (
     configure_headless_rendering,
@@ -122,7 +123,8 @@ def render_selection_snapshot(
         renderer.SetBackground(1.0, 1.0, 1.0)  # White background for reports
 
         # 4. Render
-        render_window.SetSize(1024, 768)
+        width, height = get_image_render_resolution()
+        render_window.SetSize(width, height)
         render_window.Render()
 
         w2i = vtk.vtkWindowToImageFilter()

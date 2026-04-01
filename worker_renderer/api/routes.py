@@ -15,6 +15,7 @@ import structlog
 from fastapi import APIRouter, Header, HTTPException
 from PIL import Image
 
+from shared.agents import get_image_render_resolution
 from shared.agents.config import load_agents_config
 from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition
@@ -383,6 +384,8 @@ def _render_single_preview(
     view_count: int,
     rendering_type: PreviewRenderingType,
     group_key: str | None = None,
+    width: int | None = None,
+    height: int | None = None,
     include_rgb_axes: bool,
     include_rgb_edges: bool,
     include_depth_axes: bool,
@@ -390,8 +393,13 @@ def _render_single_preview(
     include_segmentation_axes: bool,
     include_segmentation_edges: bool,
 ) -> tuple[Path, dict[str, RenderArtifactMetadata]]:
+    if width is None or height is None:
+        default_width, default_height = get_image_render_resolution()
+        width = default_width if width is None else width
+        height = default_height if height is None else height
+
     center = scene.center
-    distance = _preview_camera_distance(scene, width=640, height=480)
+    distance = _preview_camera_distance(scene, width=width, height=height)
     camera_position = camera_position_from_orbit(center, distance, pitch, yaw)
     workspace_root = output_dir.parent.parent
 
@@ -409,8 +417,8 @@ def _render_single_preview(
     if rendering_type == PreviewRenderingType.RGB:
         bundle = _build_renderer(
             scene,
-            width=640,
-            height=480,
+            width=width,
+            height=height,
             segmentation=False,
             include_axes=include_rgb_axes,
             include_edges=include_rgb_edges,
@@ -456,8 +464,8 @@ def _render_single_preview(
     if rendering_type == PreviewRenderingType.DEPTH:
         depth_base_bundle = _build_renderer(
             scene,
-            width=640,
-            height=480,
+            width=width,
+            height=height,
             segmentation=False,
             include_axes=False,
             include_edges=False,
@@ -470,8 +478,8 @@ def _render_single_preview(
         if include_depth_axes or include_depth_edges:
             depth_overlay_bundle = _build_renderer(
                 scene,
-                width=640,
-                height=480,
+                width=width,
+                height=height,
                 segmentation=False,
                 include_axes=include_depth_axes,
                 include_edges=include_depth_edges,
@@ -533,24 +541,24 @@ def _render_single_preview(
         )
         return image_path, artifacts
 
-    seg_base_bundle = _build_renderer(
-        scene,
-        width=640,
-        height=480,
-        segmentation=True,
-        include_axes=False,
-        include_edges=False,
-        include_fill=True,
-        axes_color=_OVERLAY_AXES_COLOR,
-        edge_color=_OVERLAY_EDGE_COLOR,
-        background=(0.0, 0.0, 0.0),
-    )
+        seg_base_bundle = _build_renderer(
+            scene,
+            width=width,
+            height=height,
+            segmentation=True,
+            include_axes=False,
+            include_edges=False,
+            include_fill=True,
+            axes_color=_OVERLAY_AXES_COLOR,
+            edge_color=_OVERLAY_EDGE_COLOR,
+            background=(0.0, 0.0, 0.0),
+        )
     seg_overlay_bundle: Any | None = None
     if include_segmentation_axes or include_segmentation_edges:
         seg_overlay_bundle = _build_renderer(
             scene,
-            width=640,
-            height=480,
+            width=width,
+            height=height,
             segmentation=False,
             include_axes=include_segmentation_axes,
             include_edges=include_segmentation_edges,
@@ -827,6 +835,8 @@ async def api_preview(
                         )
                     )
                     render_policy = load_agents_config().render
+                    render_width = render_policy.image_resolution.width
+                    render_height = render_policy.image_resolution.height
                     if not any((request.rgb, request.depth, request.segmentation)):
                         raise ValueError(
                             "preview request must enable at least one modality"
@@ -910,6 +920,8 @@ async def api_preview(
                                     include_depth_edges=render_policy.depth.edges,
                                     include_segmentation_axes=render_policy.segmentation.axes,
                                     include_segmentation_edges=render_policy.segmentation.edges,
+                                    width=render_width,
+                                    height=render_height,
                                 )
                                 artifacts.update(view_artifacts)
                                 rel_path = str(image_path.relative_to(root))
@@ -1024,6 +1036,8 @@ async def api_static_preview(
     try:
         async with render_operation_admission("static-preview", x_session_id):
             render_policy = load_agents_config().render
+            render_width = render_policy.image_resolution.width
+            render_height = render_policy.image_resolution.height
             if not any(
                 (
                     render_policy.rgb.enabled,
@@ -1066,6 +1080,8 @@ async def api_static_preview(
                             depth_edges=render_policy.depth.edges,
                             segmentation_axes=render_policy.segmentation.axes,
                             segmentation_edges=render_policy.segmentation.edges,
+                            width=render_width,
+                            height=render_height,
                         )
                         _build_preview_manifest(
                             root=root,
@@ -1097,6 +1113,8 @@ async def api_static_preview(
                             include_rgb=render_policy.rgb.enabled,
                             include_depth=render_policy.depth.enabled,
                             include_segmentation=render_policy.segmentation.enabled,
+                            width=render_width,
+                            height=render_height,
                         )
                         _build_preview_manifest(
                             root=root,

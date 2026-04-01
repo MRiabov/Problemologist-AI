@@ -11,6 +11,7 @@ import numpy as np
 import structlog
 from PIL import Image
 
+from shared.agents import get_video_render_resolution
 from shared.observability.storage import S3Client, S3Config
 from shared.rendering.renderer_client import (
     bundle_workspace_base64,
@@ -52,11 +53,16 @@ def render_simulation_video_artifact(
     output_name: str,
     fps: int,
     session_id: str,
-    width: int = 640,
-    height: int = 480,
+    width: int | None = None,
+    height: int | None = None,
 ) -> RenderedSimulationVideo:
     if not frames:
         raise ValueError("simulation video requires at least one frame")
+
+    if width is None or height is None:
+        default_width, default_height = get_video_render_resolution()
+        width = default_width if width is None else width
+        height = default_height if height is None else height
 
     with tempfile.TemporaryDirectory() as tmpdir:
         staging_root = Path(tmpdir)
@@ -158,8 +164,8 @@ def render_simulation_video_bytes(
     output_name: str,
     fps: int,
     session_id: str,
-    width: int = 640,
-    height: int = 480,
+    width: int | None = None,
+    height: int | None = None,
 ) -> bytes:
     """Stage frames locally, delegate MP4 encoding to worker-renderer, and return bytes."""
     rendered = render_simulation_video_artifact(
