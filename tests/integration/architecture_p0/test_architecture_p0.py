@@ -295,12 +295,16 @@ async def _assert_simulation_video_contract(
     render_paths = list(data.artifacts.render_paths)
     assert any(path.endswith(".mp4") for path in render_paths), render_paths
     assert "renders/render_manifest.json" in data.artifacts.render_blobs_base64
+    assert data.artifacts.object_store_keys, data.artifacts
     mp4_keys = [
-        path for path in data.artifacts.render_blobs_base64 if path.endswith(".mp4")
+        path for path in data.artifacts.object_store_keys if path.endswith(".mp4")
     ]
-    assert mp4_keys, data.artifacts.render_blobs_base64
+    assert mp4_keys, data.artifacts.object_store_keys
     for key in mp4_keys:
-        assert data.artifacts.render_blobs_base64[key], key
+        assert data.artifacts.object_store_keys[key], key
+    assert not any(
+        path.endswith(".mp4") for path in data.artifacts.render_blobs_base64
+    ), data.artifacts.render_blobs_base64
 
 
 @pytest.mark.integration_p0

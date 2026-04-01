@@ -130,7 +130,8 @@ class MediaRecorder:
                     self.render_provenance.render_error = str(e)
                 raise
 
-    def save(self):
+    def save(self) -> str | None:
         """Finalize and save the video."""
         if self.video_renderer:
-            self.video_renderer.save()
+            return self.video_renderer.save()
+        return None

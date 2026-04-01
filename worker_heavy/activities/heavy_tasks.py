@@ -144,6 +144,7 @@ def _collect_simulation_artifacts(
 ) -> SimulationArtifacts:
     artifacts = SimulationArtifacts(
         render_paths=list(result.render_paths),
+        object_store_keys=dict(result.render_object_store_keys),
         mjcf_content=result.mjcf_content,
         stress_summaries=list(result.stress_summaries),
         fluid_metrics=list(result.fluid_metrics),
@@ -165,6 +166,8 @@ def _collect_simulation_artifacts(
         if suffix not in {".png", ".jpg", ".jpeg", ".mp4"}:
             continue
         rel_path = str(Path(raw_path))
+        if rel_path in artifacts.object_store_keys and suffix == ".mp4":
+            continue
         render_blobs_base64[rel_path] = base64.b64encode(
             render_path.read_bytes()
         ).decode("ascii")
@@ -275,6 +278,10 @@ async def preview_design_activity(params: HeavyPreviewParams) -> HeavyPreviewRes
         script_path=params.script_path,
         orbit_pitch=pitch,
         orbit_yaw=yaw,
+        rgb=params.rgb,
+        depth=params.depth,
+        segmentation=params.segmentation,
+        rendering_type=params.rendering_type,
     )
 
     image_bytes = (
@@ -283,7 +290,16 @@ async def preview_design_activity(params: HeavyPreviewParams) -> HeavyPreviewRes
         else None
     )
     image_path = response.image_path
-    filename = Path(response.image_path).name if response.image_path else None
+    if response.image_path:
+        filename = Path(response.image_path).name
+    elif isinstance(pitch, list) and pitch and isinstance(yaw, list) and yaw:
+        filename = f"preview_pitch{int(pitch[0])}_yaw{int(yaw[0])}.jpg"
+    elif isinstance(pitch, list) and pitch:
+        filename = f"preview_pitch{int(pitch[0])}_yaw{int(yaw if isinstance(yaw, float) else yaw[0])}.jpg"
+    elif isinstance(yaw, list) and yaw:
+        filename = f"preview_pitch{int(pitch if isinstance(pitch, float) else pitch[0])}_yaw{int(yaw[0])}.jpg"
+    else:
+        filename = None
 
     return HeavyPreviewResponse(
         success=response.success,

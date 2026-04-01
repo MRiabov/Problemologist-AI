@@ -21,12 +21,13 @@ async def preview_render_activity(
         session_id=params.session_id,
         agent_role=params.agent_role,
         script_path=params.script_path,
-        rendering_type=params.rendering_type.value,
+        rendering_type=(params.rendering_type.value if params.rendering_type else None),
     )
     client = WorkerClient(
         base_url=WORKER_LIGHT_URL,
         session_id=params.session_id,
         heavy_url=WORKER_HEAVY_URL,
+        controller_url="",
         agent_role=params.agent_role,
         light_transport=settings.worker_light_transport,
     )
@@ -35,6 +36,9 @@ async def preview_render_activity(
         script_content=params.script_content,
         orbit_pitch=params.orbit_pitch,
         orbit_yaw=params.orbit_yaw,
+        rgb=params.rgb,
+        depth=params.depth,
+        segmentation=params.segmentation,
         rendering_type=params.rendering_type,
         bundle_base64=params.bundle_base64,
         smoke_test_mode=params.smoke_test_mode,

@@ -26,6 +26,7 @@ from shared.workers.schema import (
     PreviewDesignRequest,
     PreviewDesignResponse,
     PreviewRenderingType,
+    PreviewViewSpec,
     RenderArtifactMetadata,
     RenderManifest,
     RenderSiblingPaths,
@@ -116,6 +117,55 @@ def _event_file_context(root: Path):
             os.environ["EVENTS_FILE"] = previous
 
 
+def _renderer_storage_client():
+    access_key = os.getenv("S3_ACCESS_KEY", os.getenv("AWS_ACCESS_KEY_ID"))
+    secret_key = os.getenv("S3_SECRET_KEY", os.getenv("AWS_SECRET_ACCESS_KEY"))
+    if not access_key or not secret_key:
+        return None
+
+    try:
+        from shared.observability.storage import S3Client, S3Config
+    except ModuleNotFoundError:
+        return None
+
+    return S3Client(
+        S3Config(
+            endpoint_url=os.getenv("S3_ENDPOINT"),
+            access_key_id=access_key,
+            secret_access_key=secret_key,
+            bucket_name=os.getenv("ASSET_S3_BUCKET", "problemologist"),
+            region_name=os.getenv("AWS_REGION", "us-east-1"),
+        )
+    )
+
+
+def _maybe_store_large_render_artifact(
+    render_path: Path, *, rel_path: str, session_id: str | None = None
+) -> str | None:
+    if render_path.suffix.lower() != ".mp4":
+        return None
+
+    client = _renderer_storage_client()
+    if client is None:
+        logger.info(
+            "renderer_object_store_skipped",
+            rel_path=rel_path,
+            reason="storage_unavailable",
+            session_id=session_id,
+        )
+        return None
+
+    object_key = rel_path
+    client.upload_file(render_path, object_key)
+    logger.info(
+        "renderer_object_store_uploaded",
+        rel_path=rel_path,
+        object_key=object_key,
+        session_id=session_id,
+    )
+    return object_key
+
+
 @contextlib.contextmanager
 def _bundle_context(bundle_base64: str | None):
     if not bundle_base64:
@@ -167,6 +217,7 @@ def _collect_render_artifacts(
 ) -> SimulationArtifacts:
     normalized_render_paths: list[str] = []
     render_blobs_base64: dict[str, str] = {}
+    object_store_keys: dict[str, str] = {}
 
     for raw_path in render_paths:
         candidate = Path(raw_path)
@@ -186,6 +237,13 @@ def _collect_render_artifacts(
             continue
         rel_key = str(rel_path)
         normalized_render_paths.append(rel_key)
+        if suffix == ".mp4":
+            object_store_key = _maybe_store_large_render_artifact(
+                render_path, rel_path=rel_key, session_id=session_id
+            )
+            if object_store_key is not None:
+                object_store_keys[rel_key] = object_store_key
+                continue
         render_blobs_base64[rel_key] = base64.b64encode(
             render_path.read_bytes()
         ).decode("ascii")
@@ -221,6 +279,7 @@ def _collect_render_artifacts(
 
     artifacts = SimulationArtifacts(render_paths=normalized_render_paths)
     artifacts.render_blobs_base64 = render_blobs_base64
+    artifacts.object_store_keys = object_store_keys
     return artifacts
 
 
@@ -234,14 +293,28 @@ def _write_text_atomic(path: Path, content: str) -> None:
     tmp_path.replace(path)
 
 
-def _single_preview_group_key(pitch: float, yaw: float) -> str:
-    return f"render_e{abs(int(round(pitch)))}_a{int(round(yaw))}"
+def _single_preview_group_key(
+    pitch: float, yaw: float, *, view_index: int | None = None, view_count: int = 1
+) -> str:
+    base = f"render_e{abs(int(round(pitch)))}_a{int(round(yaw))}"
+    if view_count > 1:
+        if view_index is None:
+            raise ValueError("view_index is required for multi-view preview naming")
+        return f"{base}_v{view_index}"
+    return base
 
 
 def _resolve_single_preview_group_key(
-    output_dir: Path, pitch: float, yaw: float
+    output_dir: Path,
+    pitch: float,
+    yaw: float,
+    *,
+    view_index: int | None = None,
+    view_count: int = 1,
 ) -> str:
-    base_key = _single_preview_group_key(pitch, yaw)
+    base_key = _single_preview_group_key(
+        pitch, yaw, view_index=view_index, view_count=view_count
+    )
     candidate_paths = (
         output_dir / f"{base_key}.jpg",
         output_dir / f"{base_key}_depth.png",
@@ -255,13 +328,37 @@ def _resolve_single_preview_group_key(
     return f"{base_key}_{timestamp}_{suffix}"
 
 
+def _normalize_preview_views(
+    orbit_pitch: float | list[float], orbit_yaw: float | list[float]
+) -> list[PreviewViewSpec]:
+    pitch_values = orbit_pitch if isinstance(orbit_pitch, list) else [orbit_pitch]
+    yaw_values = orbit_yaw if isinstance(orbit_yaw, list) else [orbit_yaw]
+    if len(pitch_values) == 1 and len(yaw_values) > 1:
+        pitch_values = pitch_values * len(yaw_values)
+    elif len(yaw_values) == 1 and len(pitch_values) > 1:
+        yaw_values = yaw_values * len(pitch_values)
+    elif len(pitch_values) != len(yaw_values):
+        raise ValueError(
+            "orbit_pitch and orbit_yaw must broadcast or have matching lengths"
+        )
+    if len(pitch_values) > 64:
+        raise ValueError("preview requests are capped at 64 views")
+    return [
+        PreviewViewSpec(view_index=index, orbit_pitch=pitch, orbit_yaw=yaw)
+        for index, (pitch, yaw) in enumerate(zip(pitch_values, yaw_values))
+    ]
+
+
 def _render_single_preview(
     scene: PreviewScene,
     *,
     output_dir: Path,
     pitch: float,
     yaw: float,
+    view_index: int,
+    view_count: int,
     rendering_type: PreviewRenderingType,
+    group_key: str | None = None,
     include_rgb_axes: bool,
     include_rgb_edges: bool,
     include_depth_axes: bool,
@@ -272,12 +369,13 @@ def _render_single_preview(
     center = scene.center
     distance = _preview_camera_distance(scene, width=640, height=480)
     camera_position = camera_position_from_orbit(center, distance, pitch, yaw)
-    group_key = _single_preview_group_key(pitch, yaw)
     workspace_root = output_dir.parent.parent
 
     output_dir.mkdir(parents=True, exist_ok=True)
     artifacts: dict[str, RenderArtifactMetadata] = {}
-    group_key = _resolve_single_preview_group_key(output_dir, pitch, yaw)
+    group_key = group_key or _resolve_single_preview_group_key(
+        output_dir, pitch, yaw, view_index=view_index, view_count=view_count
+    )
 
     if rendering_type == PreviewRenderingType.RGB:
         bundle = _build_renderer(
@@ -309,6 +407,9 @@ def _render_single_preview(
         artifacts[rel_path] = RenderArtifactMetadata(
             modality="rgb",
             group_key=group_key,
+            view_index=view_index,
+            orbit_pitch=pitch,
+            orbit_yaw=yaw,
             siblings=RenderSiblingPaths(
                 rgb=str(image_path.relative_to(workspace_root)),
                 depth=str(
@@ -381,6 +482,9 @@ def _render_single_preview(
         artifacts[rel_path] = RenderArtifactMetadata(
             modality="depth",
             group_key=group_key,
+            view_index=view_index,
+            orbit_pitch=pitch,
+            orbit_yaw=yaw,
             siblings=RenderSiblingPaths(
                 rgb=str((output_dir / f"{group_key}.jpg").relative_to(workspace_root)),
                 depth=str(image_path.relative_to(workspace_root)),
@@ -454,6 +558,9 @@ def _render_single_preview(
     artifacts[rel_path] = RenderArtifactMetadata(
         modality="segmentation",
         group_key=group_key,
+        view_index=view_index,
+        orbit_pitch=pitch,
+        orbit_yaw=yaw,
         siblings=RenderSiblingPaths(
             rgb=str((output_dir / f"{group_key}.jpg").relative_to(workspace_root)),
             depth=str(
@@ -472,6 +579,7 @@ def _build_preview_manifest(
     saved_paths: list[str],
     legend_by_path: dict[str, list[SegmentationLegendEntry]],
     depth_ranges_by_path: dict[str, tuple[float, float]] | None,
+    view_metadata_by_path: dict[str, PreviewViewSpec] | None,
     session_id: str | None,
 ) -> Path:
     artifacts: dict[str, RenderArtifactMetadata] = {}
@@ -482,6 +590,25 @@ def _build_preview_manifest(
         filename = Path(rel_path).name
         render_dir = Path(rel_path).parent
         stem = Path(rel_path).stem
+        view_spec = (
+            view_metadata_by_path.get(rel_path) if view_metadata_by_path else None
+        )
+        view_index = view_spec.view_index if view_spec is not None else None
+        orbit_pitch = view_spec.orbit_pitch if view_spec is not None else None
+        orbit_yaw = view_spec.orbit_yaw if view_spec is not None else None
+        rgb_candidate_jpg = (
+            render_dir
+            / f"{stem.removesuffix('_depth').removesuffix('_segmentation')}.jpg"
+        )
+        rgb_candidate_png = (
+            render_dir
+            / f"{stem.removesuffix('_depth').removesuffix('_segmentation')}.png"
+        )
+        rgb_sibling = (
+            rgb_candidate_jpg.name
+            if rgb_candidate_jpg.exists()
+            else rgb_candidate_png.name
+        )
         if filename.endswith("_depth.png"):
             group_key = stem.removesuffix("_depth")
             depth_range = None
@@ -490,8 +617,11 @@ def _build_preview_manifest(
             artifacts[rel_path] = RenderArtifactMetadata(
                 modality="depth",
                 group_key=group_key,
+                view_index=view_index,
+                orbit_pitch=orbit_pitch,
+                orbit_yaw=orbit_yaw,
                 siblings=RenderSiblingPaths(
-                    rgb=str(render_dir / f"{group_key}.png"),
+                    rgb=str(render_dir / rgb_sibling),
                     depth=str(render_dir / f"{group_key}_depth.png"),
                     segmentation=str(render_dir / f"{group_key}_segmentation.png"),
                 ),
@@ -509,8 +639,11 @@ def _build_preview_manifest(
             artifacts[rel_path] = RenderArtifactMetadata(
                 modality="segmentation",
                 group_key=group_key,
+                view_index=view_index,
+                orbit_pitch=orbit_pitch,
+                orbit_yaw=orbit_yaw,
                 siblings=RenderSiblingPaths(
-                    rgb=str(render_dir / f"{group_key}.png"),
+                    rgb=str(render_dir / rgb_sibling),
                     depth=str(render_dir / f"{group_key}_depth.png"),
                     segmentation=str(render_dir / f"{group_key}_segmentation.png"),
                 ),
@@ -521,8 +654,11 @@ def _build_preview_manifest(
             artifacts[rel_path] = RenderArtifactMetadata(
                 modality="rgb",
                 group_key=group_key,
+                view_index=view_index,
+                orbit_pitch=orbit_pitch,
+                orbit_yaw=orbit_yaw,
                 siblings=RenderSiblingPaths(
-                    rgb=str(render_dir / f"{group_key}.png"),
+                    rgb=str(render_dir / rgb_sibling),
                     depth=str(render_dir / f"{group_key}_depth.png"),
                     segmentation=str(render_dir / f"{group_key}_segmentation.png"),
                 ),
@@ -594,7 +730,7 @@ async def api_preview(
     request: PreviewDesignRequest,
     x_session_id: str = Header(default="renderer"),
 ):
-    """Render a single inspection preview in a dedicated renderer process."""
+    """Render one or more inspection previews in a dedicated renderer process."""
     try:
         async with render_operation_admission("preview", x_session_id):
             with _bundle_context(request.bundle_base64) as root:
@@ -607,44 +743,39 @@ async def api_preview(
                         root / "renders" / select_single_preview_render_subdir(root)
                     )
                     render_policy = load_agents_config().render
-                    if (
-                        request.rendering_type == PreviewRenderingType.RGB
-                        and not render_policy.rgb.enabled
-                    ):
+                    if not any((request.rgb, request.depth, request.segmentation)):
+                        raise ValueError(
+                            "preview request must enable at least one modality"
+                        )
+                    if request.rgb and not render_policy.rgb.enabled:
                         raise ValueError("rgb preview rendering is disabled")
-                    if (
-                        request.rendering_type == PreviewRenderingType.DEPTH
-                        and not render_policy.depth.enabled
-                    ):
+                    if request.depth and not render_policy.depth.enabled:
                         raise ValueError("depth preview rendering is disabled")
-                    if (
-                        request.rendering_type == PreviewRenderingType.SEGMENTATION
-                        and not render_policy.segmentation.enabled
-                    ):
+                    if request.segmentation and not render_policy.segmentation.enabled:
                         raise ValueError("segmentation preview rendering is disabled")
+
+                    view_specs = _normalize_preview_views(
+                        request.orbit_pitch, request.orbit_yaw
+                    )
+                    if not view_specs:
+                        raise ValueError(
+                            "preview request must include at least one view"
+                        )
+
                     scene = _load_preview_scene(root)
                     if scene is not None:
-                        image_path, artifacts = await asyncio.to_thread(
-                            _render_single_preview,
-                            scene,
-                            output_dir=renders_dir,
-                            pitch=request.orbit_pitch,
-                            yaw=request.orbit_yaw,
-                            rendering_type=request.rendering_type,
-                            include_rgb_axes=render_policy.rgb.axes,
-                            include_rgb_edges=render_policy.rgb.edges,
-                            include_depth_axes=render_policy.depth.axes,
-                            include_depth_edges=render_policy.depth.edges,
-                            include_segmentation_axes=render_policy.segmentation.axes,
-                            include_segmentation_edges=render_policy.segmentation.edges,
-                        )
+                        preview_scene = scene
+                        mesh_tmpdir_ctx = contextlib.nullcontext(None)
                     else:
                         component = load_component_from_script(
                             script_path=root / request.script_path,
                             session_root=root,
                             script_content=request.script_content,
                         )
-                        with tempfile.TemporaryDirectory() as mesh_tmpdir:
+                        mesh_tmpdir_ctx = tempfile.TemporaryDirectory()
+
+                    with mesh_tmpdir_ctx as mesh_tmpdir:
+                        if scene is None:
                             preview_scene = await asyncio.to_thread(
                                 collect_preview_scene,
                                 component,
@@ -653,47 +784,121 @@ async def api_preview(
                                 smoke_test_mode=bool(request.smoke_test_mode),
                                 mesh_root=Path(mesh_tmpdir),
                             )
-                            image_path, artifacts = await asyncio.to_thread(
-                                _render_single_preview,
-                                preview_scene,
-                                output_dir=renders_dir,
-                                pitch=request.orbit_pitch,
-                                yaw=request.orbit_yaw,
-                                rendering_type=request.rendering_type,
-                                include_rgb_axes=render_policy.rgb.axes,
-                                include_rgb_edges=render_policy.rgb.edges,
-                                include_depth_axes=render_policy.depth.axes,
-                                include_depth_edges=render_policy.depth.edges,
-                                include_segmentation_axes=render_policy.segmentation.axes,
-                                include_segmentation_edges=render_policy.segmentation.edges,
+
+                        modalities: list[PreviewRenderingType] = []
+                        if request.rgb:
+                            modalities.append(PreviewRenderingType.RGB)
+                        if request.depth:
+                            modalities.append(PreviewRenderingType.DEPTH)
+                        if request.segmentation:
+                            modalities.append(PreviewRenderingType.SEGMENTATION)
+
+                        artifacts: dict[str, RenderArtifactMetadata] = {}
+                        saved_paths: list[str] = []
+                        legend_by_path: dict[str, list[SegmentationLegendEntry]] = {}
+                        depth_ranges_by_path: dict[str, tuple[float, float]] = {}
+                        view_metadata_by_path: dict[str, PreviewViewSpec] = {}
+                        first_image_path: Path | None = None
+
+                        for view_spec in view_specs:
+                            group_key = _resolve_single_preview_group_key(
+                                renders_dir,
+                                view_spec.orbit_pitch,
+                                view_spec.orbit_yaw,
+                                view_index=view_spec.view_index,
+                                view_count=len(view_specs),
                             )
+                            for modality in modalities:
+                                image_path, view_artifacts = await asyncio.to_thread(
+                                    _render_single_preview,
+                                    preview_scene,
+                                    output_dir=renders_dir,
+                                    pitch=view_spec.orbit_pitch,
+                                    yaw=view_spec.orbit_yaw,
+                                    view_index=view_spec.view_index,
+                                    view_count=len(view_specs),
+                                    rendering_type=modality,
+                                    group_key=group_key,
+                                    include_rgb_axes=render_policy.rgb.axes,
+                                    include_rgb_edges=render_policy.rgb.edges,
+                                    include_depth_axes=render_policy.depth.axes,
+                                    include_depth_edges=render_policy.depth.edges,
+                                    include_segmentation_axes=render_policy.segmentation.axes,
+                                    include_segmentation_edges=render_policy.segmentation.edges,
+                                )
+                                artifacts.update(view_artifacts)
+                                rel_path = str(image_path.relative_to(root))
+                                if rel_path not in saved_paths:
+                                    saved_paths.append(rel_path)
+                                view_metadata_by_path[rel_path] = view_spec
+                                metadata = view_artifacts[rel_path]
+                                if first_image_path is None:
+                                    first_image_path = image_path
+                                if (
+                                    metadata.modality == "segmentation"
+                                    and metadata.segmentation_legend
+                                ):
+                                    legend_by_path[rel_path] = (
+                                        metadata.segmentation_legend
+                                    )
+                                if (
+                                    metadata.modality == "depth"
+                                    and metadata.depth_min_m is not None
+                                    and metadata.depth_max_m is not None
+                                ):
+                                    depth_ranges_by_path[rel_path] = (
+                                        metadata.depth_min_m,
+                                        metadata.depth_max_m,
+                                    )
 
-                preview_manifest = build_render_manifest(
-                    artifacts,
-                    workspace_root=root,
-                    episode_id=x_session_id,
-                    worker_session_id=x_session_id,
-                    preview_evidence_paths=list(artifacts.keys()),
-                )
-                manifest_json = preview_manifest.model_dump_json(indent=2)
-                _write_text_atomic(
-                    root / "renders" / "render_manifest.json", manifest_json
-                )
+                        if first_image_path is None:
+                            raise RuntimeError("preview renderer returned no output")
 
+                preview_manifest = _build_preview_manifest(
+                    root=root,
+                    saved_paths=saved_paths,
+                    legend_by_path=legend_by_path,
+                    depth_ranges_by_path=depth_ranges_by_path or None,
+                    view_metadata_by_path=view_metadata_by_path,
+                    session_id=x_session_id,
+                )
+                manifest_json = preview_manifest.read_text(encoding="utf-8")
+
+                render_artifacts = _collect_render_artifacts(
+                    root, saved_paths, session_id=x_session_id
+                )
                 events = collect_and_cleanup_events(root, session_id=x_session_id)
+                resolved_rendering_type = request.rendering_type
+                if resolved_rendering_type is None:
+                    resolved_rendering_type = (
+                        PreviewRenderingType.RGB
+                        if request.rgb
+                        else PreviewRenderingType.DEPTH
+                        if request.depth
+                        else PreviewRenderingType.SEGMENTATION
+                    )
                 return PreviewDesignResponse(
                     success=True,
                     status_text="Preview generated successfully",
                     message="Preview generated successfully",
-                    artifact_path=str(image_path.relative_to(root)),
+                    job_id=None,
+                    queued=False,
+                    view_count=len(view_specs),
+                    view_specs=view_specs,
+                    artifact_path=str(first_image_path.relative_to(root)),
                     manifest_path=str(Path("renders") / "render_manifest.json"),
-                    rendering_type=request.rendering_type,
-                    pitch=request.orbit_pitch,
-                    yaw=request.orbit_yaw,
-                    image_path=str(image_path.relative_to(root)),
-                    image_bytes_base64=base64.b64encode(image_path.read_bytes()).decode(
-                        "ascii"
-                    ),
+                    rendering_type=resolved_rendering_type,
+                    pitch=request.orbit_pitch
+                    if isinstance(request.orbit_pitch, float)
+                    else None,
+                    yaw=request.orbit_yaw
+                    if isinstance(request.orbit_yaw, float)
+                    else None,
+                    image_path=str(first_image_path.relative_to(root)),
+                    image_bytes_base64=base64.b64encode(
+                        first_image_path.read_bytes()
+                    ).decode("ascii"),
+                    render_blobs_base64=render_artifacts.render_blobs_base64,
                     render_manifest_json=manifest_json,
                     events=events,
                 )
@@ -707,9 +912,20 @@ async def api_preview(
             success=False,
             status_text="Preview generation failed",
             message=str(exc),
-            rendering_type=request.rendering_type,
-            pitch=request.orbit_pitch,
-            yaw=request.orbit_yaw,
+            rendering_type=(
+                request.rendering_type
+                or (
+                    PreviewRenderingType.RGB
+                    if request.rgb
+                    else PreviewRenderingType.DEPTH
+                    if request.depth
+                    else PreviewRenderingType.SEGMENTATION
+                )
+            ),
+            pitch=request.orbit_pitch
+            if isinstance(request.orbit_pitch, float)
+            else None,
+            yaw=request.orbit_yaw if isinstance(request.orbit_yaw, float) else None,
         )
 
 

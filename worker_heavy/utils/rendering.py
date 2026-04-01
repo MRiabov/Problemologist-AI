@@ -17,7 +17,7 @@ from shared.models.schemas import BenchmarkDefinition
 from shared.observability.events import emit_event
 from shared.rendering import (
     materialize_render_artifacts,
-    render_simulation_video_bytes,
+    render_simulation_video_artifact,
     render_static_preview,
 )
 from shared.simulation.backends import StressField
@@ -325,11 +325,9 @@ def prerender_24_views(
     Generates 24 renders (8 angles x 3 elevation levels) of the component.
     Saves to output_dir.
     """
+    from shared.rendering import export_preview_scene_bundle
     from worker_heavy.config import settings
-    from worker_heavy.utils.build123d_rendering import (
-        PREVIEW_BACKEND_NAME,
-        export_preview_scene_bundle,
-    )
+    from worker_heavy.utils.build123d_rendering import PREVIEW_BACKEND_NAME
 
     if smoke_test_mode is None:
         smoke_test_mode = settings.smoke_test_mode
@@ -566,7 +564,7 @@ class VideoRenderer:
             pass
         self.frames.append(frame)
 
-    def save(self):
+    def save(self) -> str | None:
         """Delegates MP4 encoding to the dedicated renderer worker."""
         if not self.frames:
             logger.warning("video_render_no_frames", session_id=self.session_id)
@@ -574,7 +572,7 @@ class VideoRenderer:
                 "deprecated functionality removed: video rendering without captured frames"
             )
 
-        video_bytes = render_simulation_video_bytes(
+        rendered = render_simulation_video_artifact(
             self.frames,
             output_name=self.output_path.name,
             fps=self.fps,
@@ -583,9 +581,11 @@ class VideoRenderer:
             height=self.height,
         )
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
-        self.output_path.write_bytes(video_bytes)
+        self.output_path.write_bytes(rendered.video_bytes)
         logger.info(
             "video_render_complete",
             path=str(self.output_path),
             session_id=self.session_id,
+            object_store_key=rendered.object_store_key,
         )
+        return rendered.object_store_key

@@ -60,6 +60,7 @@ export { ObservabilityEventType } from './models/ObservabilityEventType';
 export { PlanReviewManifest } from './models/PlanReviewManifest';
 export type { PreviewDesignResponse } from './models/PreviewDesignResponse';
 export { PreviewRenderingType } from './models/PreviewRenderingType';
+export type { PreviewViewSpec } from './models/PreviewViewSpec';
 export type { RendererCapabilities } from './models/RendererCapabilities';
 export { RenderMode } from './models/RenderMode';
 export type { ReplayArtifactRecord } from './models/ReplayArtifactRecord';

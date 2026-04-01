@@ -110,6 +110,9 @@ def _preview_workflow_id(
             "orbit_yaw": request_model.get("orbit_yaw")
             if "orbit_yaw" in request_model
             else request_model.get("yaw"),
+            "rgb": request_model.get("rgb"),
+            "depth": request_model.get("depth"),
+            "segmentation": request_model.get("segmentation"),
             "rendering_type": str(request_model.get("rendering_type", "")),
             "script_content": request_model.get("script_content"),
             "smoke_test_mode": request_model.get("smoke_test_mode"),
@@ -127,6 +130,9 @@ def _preview_workflow_id(
                 "orbit_yaw",
                 getattr(request_model, "yaw", None),
             ),
+            "rgb": getattr(request_model, "rgb", None),
+            "depth": getattr(request_model, "depth", None),
+            "segmentation": getattr(request_model, "segmentation", None),
             "rendering_type": str(getattr(request_model, "rendering_type", "")),
             "script_content": getattr(request_model, "script_content", None),
             "smoke_test_mode": getattr(request_model, "smoke_test_mode", None),
@@ -871,9 +877,12 @@ class RemoteFilesystemMiddleware:
     async def preview(
         self,
         script_path: str | Path,
-        orbit_pitch: float = -45.0,
-        orbit_yaw: float = 45.0,
-        rendering_type: str = "rgb",
+        orbit_pitch: float | list[float] = 45.0,
+        orbit_yaw: float | list[float] = 45.0,
+        rgb: bool | None = None,
+        depth: bool | None = None,
+        segmentation: bool | None = None,
+        rendering_type: str | PreviewRenderingType | None = None,
         bundle_base64: str | None = None,
         smoke_test_mode: bool | None = None,
         script_content: str | None = None,
@@ -895,7 +904,12 @@ class RemoteFilesystemMiddleware:
             script_content=script_content,
             orbit_pitch=orbit_pitch,
             orbit_yaw=orbit_yaw,
-            rendering_type=PreviewRenderingType(str(rendering_type)),
+            rgb=rgb,
+            depth=depth,
+            segmentation=segmentation,
+            rendering_type=PreviewRenderingType(str(rendering_type))
+            if rendering_type is not None
+            else None,
             smoke_test_mode=smoke_test_mode,
             session_id=self.client.session_id,
             agent_role=str(self.agent_role.value)

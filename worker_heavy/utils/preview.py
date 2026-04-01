@@ -8,7 +8,11 @@ import structlog
 from build123d import Compound, Part
 
 from shared.models.schemas import BenchmarkDefinition
-from shared.rendering import materialize_preview_response, render_preview
+from shared.rendering import (
+    export_preview_scene_bundle,
+    materialize_preview_response,
+    render_preview,
+)
 from shared.workers.schema import PreviewDesignResponse, PreviewRenderingType
 from worker_heavy.utils.rendering import select_single_preview_render_subdir
 
@@ -17,17 +21,19 @@ logger = structlog.get_logger(__name__)
 
 def preview(
     component: Part | Compound,
-    orbit_pitch: float = -35.0,
-    orbit_yaw: float = 45.0,
-    rendering_type: PreviewRenderingType | str = PreviewRenderingType.RGB,
+    orbit_pitch: float | list[float] = 45.0,
+    orbit_yaw: float | list[float] = 45.0,
+    rgb: bool | None = None,
+    depth: bool | None = None,
+    segmentation: bool | None = None,
+    rendering_type: PreviewRenderingType | str | None = None,
     output_dir: Path | None = None,
     objectives: BenchmarkDefinition | None = None,
     width: int = 640,
     height: int = 480,
 ) -> PreviewDesignResponse:
-    """Render a single view of a CAD component and persist it to the preview bucket."""
+    """Render a preview of a CAD component and persist it to the preview bucket."""
     del width, height
-    from worker_heavy.utils.build123d_rendering import export_preview_scene_bundle
 
     workspace_root = Path.cwd()
     preview_scene_bundle = export_preview_scene_bundle(
@@ -41,7 +47,14 @@ def preview(
         script_path="preview_scene.json",
         orbit_pitch=orbit_pitch,
         orbit_yaw=orbit_yaw,
-        rendering_type=PreviewRenderingType(str(rendering_type)),
+        rgb=rgb,
+        depth=depth,
+        segmentation=segmentation,
+        rendering_type=(
+            PreviewRenderingType(str(rendering_type))
+            if rendering_type is not None
+            else None
+        ),
         session_id=session_id,
     )
     if not response.success:
@@ -60,9 +73,11 @@ def preview(
     output_dir.mkdir(parents=True, exist_ok=True)
     materialized_path = materialize_preview_response(response, output_dir)
     if materialized_path is None:
+        pitch_value = orbit_pitch[0] if isinstance(orbit_pitch, list) else orbit_pitch
+        yaw_value = orbit_yaw[0] if isinstance(orbit_yaw, list) else orbit_yaw
         image_name = Path(
             response.image_path
-            or f"preview_pitch{int(orbit_pitch)}_yaw{int(orbit_yaw)}.jpg"
+            or f"preview_pitch{int(pitch_value)}_yaw{int(yaw_value)}.jpg"
         ).name
         materialized_path = output_dir / image_name
         materialized_path.write_bytes(base64.b64decode(image_bytes_base64))
@@ -73,8 +88,14 @@ def preview(
         response.image_path = str(materialized_path)
     response.artifact_path = response.image_path
     response.manifest_path = str(Path("renders") / "render_manifest.json")
-    response.pitch = orbit_pitch
-    response.yaw = orbit_yaw
+    if isinstance(orbit_pitch, list):
+        response.pitch = orbit_pitch[0] if len(orbit_pitch) == 1 else None
+    else:
+        response.pitch = orbit_pitch
+    if isinstance(orbit_yaw, list):
+        response.yaw = orbit_yaw[0] if len(orbit_yaw) == 1 else None
+    else:
+        response.yaw = orbit_yaw
     if response.status_text is None:
         response.status_text = response.message or "Preview generated successfully"
 

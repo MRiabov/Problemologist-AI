@@ -48,6 +48,7 @@ from shared.workers.schema import (
     ListFilesRequest,
     PreviewDesignRequest,
     PreviewDesignResponse,
+    PreviewRenderingType,
     ReadFileRequest,
     ReadFileResponse,
     StatusResponse,
@@ -178,7 +179,12 @@ async def api_preview(
             "worker_light_preview_started",
             session_id=x_session_id,
             script_path=request.script_path,
-            rendering_type=request.rendering_type.value,
+            rendering_type=(
+                request.rendering_type.value if request.rendering_type else None
+            ),
+            rgb=request.rgb,
+            depth=request.depth,
+            segmentation=request.segmentation,
             orbit_pitch=request.orbit_pitch,
             orbit_yaw=request.orbit_yaw,
         )
@@ -193,6 +199,9 @@ async def api_preview(
             script_path=request.script_path,
             orbit_pitch=request.orbit_pitch,
             orbit_yaw=request.orbit_yaw,
+            rgb=request.rgb,
+            depth=request.depth,
+            segmentation=request.segmentation,
             rendering_type=request.rendering_type,
             session_id=x_session_id,
             script_content=request.script_content,
@@ -243,19 +252,29 @@ async def api_preview(
             session_id=x_session_id,
             artifact_path=artifact_path,
             manifest_path=str(Path("renders") / "render_manifest.json"),
-            rendering_type=request.rendering_type.value,
+            rendering_type=(
+                request.rendering_type.value if request.rendering_type else None
+            ),
+            view_count=response.view_count,
         )
         return PreviewDesignResponse(
             success=True,
             status_text="Preview generated successfully",
             message="Preview generated successfully",
+            job_id=response.job_id,
+            queued=response.queued,
+            view_count=response.view_count,
+            view_specs=response.view_specs,
             artifact_path=artifact_path,
             manifest_path=str(Path("renders") / "render_manifest.json"),
-            rendering_type=request.rendering_type,
-            pitch=request.orbit_pitch,
-            yaw=request.orbit_yaw,
+            rendering_type=response.rendering_type,
+            pitch=request.orbit_pitch
+            if isinstance(request.orbit_pitch, float)
+            else None,
+            yaw=request.orbit_yaw if isinstance(request.orbit_yaw, float) else None,
             image_path=artifact_path,
             image_bytes_base64=response.image_bytes_base64,
+            render_blobs_base64=response.render_blobs_base64,
             render_manifest_json=response.render_manifest_json,
             events=events,
         )
@@ -265,9 +284,11 @@ async def api_preview(
             success=False,
             status_text="Preview generation failed",
             message=str(exc),
-            rendering_type=request.rendering_type,
-            pitch=request.orbit_pitch,
-            yaw=request.orbit_yaw,
+            rendering_type=(request.rendering_type or PreviewRenderingType.RGB),
+            pitch=request.orbit_pitch
+            if isinstance(request.orbit_pitch, float)
+            else None,
+            yaw=request.orbit_yaw if isinstance(request.orbit_yaw, float) else None,
         )
 
 

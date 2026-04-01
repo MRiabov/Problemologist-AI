@@ -10,6 +10,7 @@ from typing import Any
 import httpx
 import structlog
 
+from shared.observability.storage import S3Client, S3Config
 from shared.workers.bundling import bundle_directory_base64
 from shared.workers.schema import (
     BenchmarkToolRequest,
@@ -46,6 +47,23 @@ def _write_text_atomic(path: Path, content: str) -> None:
         tmp.write(content)
         tmp_path = Path(tmp.name)
     tmp_path.replace(path)
+
+
+def _storage_client_from_env() -> S3Client | None:
+    access_key = os.getenv("S3_ACCESS_KEY", os.getenv("AWS_ACCESS_KEY_ID"))
+    secret_key = os.getenv("S3_SECRET_KEY", os.getenv("AWS_SECRET_ACCESS_KEY"))
+    if not access_key or not secret_key:
+        return None
+
+    return S3Client(
+        S3Config(
+            endpoint_url=os.getenv("S3_ENDPOINT"),
+            access_key_id=access_key,
+            secret_access_key=secret_key,
+            bucket_name=os.getenv("ASSET_S3_BUCKET", "problemologist"),
+            region_name=os.getenv("AWS_REGION", "us-east-1"),
+        )
+    )
 
 
 def _post_json_with_busy_retry(
@@ -100,9 +118,12 @@ def render_preview(
     *,
     bundle_base64: str | None,
     script_path: str,
-    orbit_pitch: float,
-    orbit_yaw: float,
-    rendering_type: PreviewRenderingType = PreviewRenderingType.RGB,
+    orbit_pitch: float | list[float],
+    orbit_yaw: float | list[float],
+    rgb: bool | None = None,
+    depth: bool | None = None,
+    segmentation: bool | None = None,
+    rendering_type: PreviewRenderingType | None = None,
     session_id: str | None = None,
     script_content: str | None = None,
     smoke_test_mode: bool | None = None,
@@ -112,6 +133,9 @@ def render_preview(
         script_path=script_path,
         orbit_pitch=orbit_pitch,
         orbit_yaw=orbit_yaw,
+        rgb=rgb,
+        depth=depth,
+        segmentation=segmentation,
         rendering_type=rendering_type,
         script_content=script_content,
         smoke_test_mode=smoke_test_mode,
@@ -183,23 +207,40 @@ def materialize_preview_response(
 ) -> Path | None:
     """Persist a preview response payload into the local workspace."""
     output_dir.mkdir(parents=True, exist_ok=True)
+    workspace_root = output_dir.parent.parent
+    first_materialized: Path | None = None
+
+    if response.render_blobs_base64:
+        for rel_path, blob in response.render_blobs_base64.items():
+            target = workspace_root / rel_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(base64.b64decode(blob))
+            if first_materialized is None and target.suffix.lower() in {
+                ".png",
+                ".jpg",
+                ".jpeg",
+            }:
+                first_materialized = target
+
     if response.image_bytes_base64:
         image_name = Path(response.image_path or "preview.jpg").name
         image_path = output_dir / image_name
         image_path.write_bytes(base64.b64decode(response.image_bytes_base64))
-        if response.render_manifest_json:
-            manifest_path = output_dir.parent / "render_manifest.json"
-            _write_text_atomic(manifest_path, response.render_manifest_json)
-        return image_path
-    if response.image_path:
-        if response.render_manifest_json:
-            manifest_path = output_dir.parent / "render_manifest.json"
-            _write_text_atomic(manifest_path, response.render_manifest_json)
-        return output_dir / Path(response.image_path).name
+        if first_materialized is None:
+            first_materialized = image_path
+
+    if response.image_path and first_materialized is None:
+        candidate = workspace_root / response.image_path
+        if candidate.exists():
+            first_materialized = candidate
+        else:
+            first_materialized = output_dir / Path(response.image_path).name
+
     if response.render_manifest_json:
         manifest_path = output_dir.parent / "render_manifest.json"
         _write_text_atomic(manifest_path, response.render_manifest_json)
-    return None
+
+    return first_materialized
 
 
 def materialize_render_artifacts(
@@ -208,10 +249,23 @@ def materialize_render_artifacts(
     """Persist renderer artifact blobs into the caller's workspace."""
     render_paths: list[str] = []
     render_blobs = getattr(artifacts, "render_blobs_base64", None) or {}
+    object_store_keys = getattr(artifacts, "object_store_keys", None) or {}
+    storage_client = None
     for rel_path, blob in render_blobs.items():
         target = workspace_root / rel_path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(base64.b64decode(blob))
+        render_paths.append(str(Path(rel_path)))
+    if object_store_keys:
+        storage_client = _storage_client_from_env()
+    for rel_path, object_key in object_store_keys.items():
+        if rel_path in render_blobs:
+            continue
+        if storage_client is None:
+            continue
+        target = workspace_root / rel_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        storage_client.download_file(object_key, target)
         render_paths.append(str(Path(rel_path)))
     if not render_paths:
         render_paths = [

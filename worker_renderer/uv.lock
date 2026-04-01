@@ -70,6 +70,34 @@ wheels = [
 ]
 
 [[package]]
+name = "boto3"
+version = "1.42.80"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "botocore" },
+    { name = "jmespath" },
+    { name = "s3transfer" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4b/85/f1e43429ce4c81a920742f98af5cd377a020768738645a7d0ff450553ef0/boto3-1.42.80.tar.gz", hash = "sha256:797cec65f8a36dde38d2397119a114ab0d807cf92c43fb44b72b0522558acc0a", size = 112777, upload-time = "2026-03-31T19:33:46.036Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5c/3d/a36837ddfcd08e2506b34a6cb785885923f49c9e20559a832681a5e8228d/boto3-1.42.80-py3-none-any.whl", hash = "sha256:293cbdeaec7eda2a0b08e6a9c2bf1a51c54453863137d45a6431058a9280fdda", size = 140554, upload-time = "2026-03-31T19:33:43.656Z" },
+]
+
+[[package]]
+name = "botocore"
+version = "1.42.80"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jmespath" },
+    { name = "python-dateutil" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2e/42/d0ce09fe5b494e2a9de513206dec90fbe72bcb101457a60f526a6b1c300b/botocore-1.42.80.tar.gz", hash = "sha256:fe32af53dc87f5f4d61879bc231e2ca2cc0719b19b8f6d268e82a34f713a8a09", size = 15110373, upload-time = "2026-03-31T19:33:33.82Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/17/b0/c03f2ed8e7817db1c22d70720636a1b22a2a4d3aa3c09da0257072b30bc5/botocore-1.42.80-py3-none-any.whl", hash = "sha256:7291632b2ede71b7c69e6e366480bb6e2a5d2fae8f7d2d2eb49215e32b7c7a12", size = 14787168, upload-time = "2026-03-31T19:33:29.396Z" },
+]
+
+[[package]]
 name = "build123d"
 version = "0.10.1.dev299+g8c06e7500"
 source = { git = "https://github.com/gumyr/build123d.git?branch=dev#8c06e750040783ee435a0c7547518fd1031a6438" }
@@ -539,6 +567,15 @@ wheels = [
 ]
 
 [[package]]
+name = "jmespath"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d3/59/322338183ecda247fb5d1763a6cbe46eff7222eaeebafd9fa65d4bf5cb11/jmespath-1.1.0.tar.gz", hash = "sha256:472c87d80f36026ae83c6ddd0f1d05d4e510134ed462851fd5f754c8c3cbb88d", size = 27377, upload-time = "2026-01-22T16:35:26.279Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/14/2f/967ba146e6d58cf6a652da73885f52fc68001525b4197effc174321d70b4/jmespath-1.1.0-py3-none-any.whl", hash = "sha256:a5663118de4908c91729bea0acadca56526eb2698e83de10cd116ae0f4e97c64", size = 20419, upload-time = "2026-01-22T16:35:24.919Z" },
+]
+
+[[package]]
 name = "jsonschema"
 version = "4.26.0"
 source = { registry = "https://pypi.org/simple" }
@@ -880,6 +917,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "beartype" },
+    { name = "boto3" },
     { name = "build123d" },
     { name = "fastapi", extra = ["standard"] },
     { name = "gitpython" },
@@ -900,6 +938,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "beartype", specifier = ">=0.22.9" },
+    { name = "boto3", specifier = ">=1.42.49" },
     { name = "build123d", git = "https://github.com/gumyr/build123d.git?branch=dev" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.129.0" },
     { name = "gitpython", specifier = ">=3.1.46" },
@@ -1211,6 +1250,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/e9/a4/c2292b95246b9165cc43a0c3757e80995d58bc9b43da5cb47ad6e3535213/rtree-1.4.1-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:f155bc8d6bac9dcd383481dee8c130947a4866db1d16cb6dff442329a038a0dc", size = 1555140, upload-time = "2025-08-13T19:31:58.031Z" },
     { url = "https://files.pythonhosted.org/packages/74/25/5282c8270bfcd620d3e73beb35b40ac4ab00f0a898d98ebeb41ef0989ec8/rtree-1.4.1-py3-none-win_amd64.whl", hash = "sha256:efe125f416fd27150197ab8521158662943a40f87acab8028a1aac4ad667a489", size = 389358, upload-time = "2025-08-13T19:31:59.247Z" },
     { url = "https://files.pythonhosted.org/packages/3f/50/0a9e7e7afe7339bd5e36911f0ceb15fed51945836ed803ae5afd661057fd/rtree-1.4.1-py3-none-win_arm64.whl", hash = "sha256:3d46f55729b28138e897ffef32f7ce93ac335cb67f9120125ad3742a220800f0", size = 355253, upload-time = "2025-08-13T19:32:00.296Z" },
+]
+
+[[package]]
+name = "s3transfer"
+version = "0.16.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "botocore" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/05/04/74127fc843314818edfa81b5540e26dd537353b123a4edc563109d8f17dd/s3transfer-0.16.0.tar.gz", hash = "sha256:8e990f13268025792229cd52fa10cb7163744bf56e719e0b9cb925ab79abf920", size = 153827, upload-time = "2025-12-01T02:30:59.114Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fc/51/727abb13f44c1fcf6d145979e1535a35794db0f6e450a0cb46aa24732fe2/s3transfer-0.16.0-py3-none-any.whl", hash = "sha256:18e25d66fed509e3868dc1572b3f427ff947dd2c56f844a5bf09481ad3f3b2fe", size = 86830, upload-time = "2025-12-01T02:30:57.729Z" },
 ]
 
 [[package]]

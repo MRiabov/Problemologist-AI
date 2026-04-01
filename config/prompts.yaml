@@ -290,7 +290,7 @@ engineer:
       - `/skills/manufacturing-knowledge/SKILL.md` when cost or quantity matters
       - `/skills/electronics-engineering/SKILL.md` only when the approved handoff explicitly includes electronics
 
-      Keep `solution_script.py` import-safe, use the canonical `utils.*` surface, including `preview(..., orbit_pitch=..., orbit_yaw=...)` for on-demand live inspection and `objectives_geometry()` when benchmark geometry must be composed into a preview scene, inspect at least one current render with `inspect_media(...)` when renders exist, update `todo.md` and `journal.md`, and validate/simulate the authored result before handoff. The current render evidence may be under `renders/benchmark_renders/`, `renders/engineer_renders/`, or `renders/final_preview_renders/`, depending on workflow stage. Use the runtime completion workflow exactly once when the work is complete, and do not duplicate rules already enforced by the runtime or the skills.
+      Keep `solution_script.py` import-safe, use the canonical `utils.*` surface, including `preview(..., rgb=..., depth=..., segmentation=..., orbit_pitch=..., orbit_yaw=...)` for on-demand live inspection and `objectives_geometry()` when benchmark geometry must be composed into a preview scene, inspect at least one current render with `inspect_media(...)` when renders exist, update `todo.md` and `journal.md`, and validate/simulate the authored result before handoff. The current render evidence may be under `renders/benchmark_renders/`, `renders/engineer_renders/`, or `renders/final_preview_renders/`, depending on workflow stage. Use the runtime completion workflow exactly once when the work is complete, and do not duplicate rules already enforced by the runtime or the skills.
 
   electronics_planner:
     system: |
@@ -714,7 +714,7 @@ benchmark_generator:
       - `/skills/manufacturing-knowledge/SKILL.md` when cost or quantity matters
       - `/skills/electronics-engineering/SKILL.md` only when explicit electronics requirements exist
 
-      Keep `benchmark_script.py` import-safe, use the canonical `utils.submission`, `utils.metadata`, `preview(..., orbit_pitch=..., orbit_yaw=...)`, and `build()` surfaces, keep the final assembly as a labeled `Compound`, update `todo.md` and `journal.md`, inspect at least one render with `inspect_media(...)` when renders exist, validate and simulate the authored benchmark script, and call `submit_for_review(result)` exactly once when the work is complete. Benchmark evidence should come from `renders/benchmark_renders/`; engineer-owned preview evidence should come from `renders/engineer_renders/` for part inspection or `renders/final_preview_renders/` for the final validated bundle.
+      Keep `benchmark_script.py` import-safe, use the canonical `utils.submission`, `utils.metadata`, `preview(..., rgb=..., depth=..., segmentation=..., orbit_pitch=..., orbit_yaw=...)`, and `build()` surfaces, keep the final assembly as a labeled `Compound`, update `todo.md` and `journal.md`, inspect at least one render with `inspect_media(...)` when renders exist, validate and simulate the authored benchmark script, and call `submit_for_review(result)` exactly once when the work is complete. Benchmark evidence should come from `renders/benchmark_renders/`; engineer-owned preview evidence should come from `renders/engineer_renders/` for part inspection or `renders/final_preview_renders/` for the final validated bundle.
 
   reviewer:
     system: |

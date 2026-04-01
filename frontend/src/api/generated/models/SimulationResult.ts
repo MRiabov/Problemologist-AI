@@ -16,6 +16,7 @@ export type SimulationResult = {
     failure?: (SimulationFailure | null);
     render_provenance?: (SimulationRenderProvenance | null);
     render_paths?: Array<string>;
+    render_object_store_keys?: Record<string, string>;
     mjcf_content?: (string | null);
     stress_summaries?: Array<StressSummary>;
     stress_fields?: Record<string, StressFieldData>;

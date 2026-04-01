@@ -86,6 +86,7 @@ class SimulationLoop:
 
         self.particle_budget = particle_budget or (5000 if smoke_test_mode else 100000)
         self.render_provenance: SimulationRenderProvenance | None = None
+        self.render_object_store_key: str | None = None
 
         try:
             # Emit backend selection event (WP2)
@@ -424,7 +425,7 @@ class SimulationLoop:
 
         # 7. Finalization
         self.render_provenance = media_recorder.render_provenance
-        media_recorder.save()
+        self.render_object_store_key = media_recorder.save()
         self.objective_evaluator.evaluate_final(self.backend, current_time)
 
         return self._build_simulation_metrics(current_time)

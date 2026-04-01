@@ -13,7 +13,7 @@ from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode
 from shared.observability.storage import S3Client, S3Config
 from shared.rendering import (
-    render_simulation_video_bytes,
+    render_simulation_video_artifact,
     synthesize_placeholder_frames,
 )
 from shared.type_checking import type_check
@@ -72,7 +72,7 @@ async def render_video_activity(
         width=64,
         height=48,
     )
-    video_bytes = render_simulation_video_bytes(
+    rendered = render_simulation_video_artifact(
         frames,
         output_name="simulation.mp4",
         fps=10,
@@ -80,8 +80,11 @@ async def render_video_activity(
         width=64,
         height=48,
     )
+    if rendered.object_store_key:
+        return rendered.object_store_key
+
     with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tf:
-        tf.write(video_bytes)
+        tf.write(rendered.video_bytes)
         tf.flush()
         return tf.name
 
@@ -116,9 +119,11 @@ async def upload_to_s3_activity(
     client = S3Client(config)
 
     video_p = Path(video_path)
-    # If the file doesn't exist (e.g. someone passed a literal "video_path"),
-    # create a dummy one to avoid hang/retry loop in tests
+    # If the file doesn't exist and this looks like an object-store key,
+    # treat it as already uploaded by the renderer worker.
     if not video_p.exists():
+        if not video_p.is_absolute():
+            return video_path
         video_p.write_bytes(b"fallback dummy content")
 
     object_key = f"videos/{uuid.uuid4()}_{video_p.name}"

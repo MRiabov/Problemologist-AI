@@ -2371,25 +2371,87 @@
             "description": "Gzipped tarball of the session workspace (base64 encoded)."
           },
           "pitch": {
-            "type": "number",
-            "maximum": 90.0,
-            "minimum": -90.0,
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            ],
             "title": "Pitch",
-            "description": "Camera elevation angle in degrees (negative = looking down).",
-            "default": -45.0
+            "description": "Camera elevation angle in degrees (negative = looking down). Scalar inputs are normalized to single-item view lists.",
+            "default": 45.0,
+            "ge": -90.0,
+            "le": 90.0
           },
           "yaw": {
-            "type": "number",
-            "exclusiveMaximum": 360.0,
-            "minimum": 0.0,
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            ],
             "title": "Yaw",
-            "description": "Camera azimuth angle in degrees (clockwise from front).",
-            "default": 45.0
+            "description": "Camera azimuth angle in degrees (clockwise from front). Scalar inputs are normalized to single-item view lists.",
+            "default": 45.0,
+            "ge": 0.0,
+            "lt": 360.0
+          },
+          "rgb": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rgb",
+            "description": "Request RGB output."
+          },
+          "depth": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth",
+            "description": "Request depth output."
+          },
+          "segmentation": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segmentation",
+            "description": "Request segmentation output."
           },
           "rendering_type": {
-            "$ref": "#/components/schemas/PreviewRenderingType",
-            "description": "Requested preview modality.",
-            "default": "rgb"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PreviewRenderingType"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Legacy single-modality preview selector. When explicit modality booleans are omitted, this maps to a single requested modality."
           },
           "smoke_test_mode": {
             "anyOf": [
@@ -2428,6 +2490,40 @@
               }
             ],
             "title": "Message"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "queued": {
+            "type": "boolean",
+            "title": "Queued",
+            "default": false
+          },
+          "view_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "View Count"
+          },
+          "view_specs": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewViewSpec"
+            },
+            "type": "array",
+            "title": "View Specs"
           },
           "artifact_path": {
             "anyOf": [
@@ -2500,6 +2596,13 @@
             "title": "Image Bytes Base64",
             "description": "Base64-encoded preview image payload used internally by worker delegation layers."
           },
+          "render_blobs_base64": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Render Blobs Base64"
+          },
           "render_manifest_json": {
             "anyOf": [
               {
@@ -2536,6 +2639,32 @@
         ],
         "title": "PreviewRenderingType",
         "description": "Supported single-view preview modalities."
+      },
+      "PreviewViewSpec": {
+        "properties": {
+          "view_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "View Index"
+          },
+          "orbit_pitch": {
+            "type": "number",
+            "title": "Orbit Pitch"
+          },
+          "orbit_yaw": {
+            "type": "number",
+            "title": "Orbit Yaw"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "view_index",
+          "orbit_pitch",
+          "orbit_yaw"
+        ],
+        "title": "PreviewViewSpec",
+        "description": "One requested preview camera view after normalization."
       },
       "ReadFileRequest": {
         "properties": {
@@ -3284,6 +3413,13 @@
             },
             "type": "object",
             "title": "Render Blobs Base64"
+          },
+          "object_store_keys": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Object Store Keys"
           },
           "mjcf_content": {
             "anyOf": [

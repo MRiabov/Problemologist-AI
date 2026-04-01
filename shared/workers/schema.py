@@ -10,6 +10,7 @@ from pydantic import (
     StrictInt,
     StrictStr,
     field_validator,
+    model_validator,
 )
 
 from shared.enums import AgentName, AssetType, EpisodeStatus, ResponseStatus
@@ -41,6 +42,16 @@ class PreviewRenderingType(StrEnum):
     RGB = "rgb"
     DEPTH = "depth"
     SEGMENTATION = "segmentation"
+
+
+class PreviewViewSpec(BaseModel):
+    """One requested preview camera view after normalization."""
+
+    view_index: StrictInt = Field(ge=0)
+    orbit_pitch: float
+    orbit_yaw: float
+
+    model_config = ConfigDict(extra="forbid")
 
 
 LEGACY_REVIEWER_STAGE_ALIASES = {
@@ -300,6 +311,7 @@ class SimulationArtifacts(BaseModel):
 
     render_paths: list[StrictStr] = Field(default_factory=list)
     render_blobs_base64: dict[StrictStr, StrictStr] = Field(default_factory=dict)
+    object_store_keys: dict[StrictStr, StrictStr] = Field(default_factory=dict)
     mjcf_content: StrictStr | None = None
     stress_summaries: list[StressSummary] = Field(default_factory=list)
     fluid_metrics: list[FluidMetricResult] = Field(default_factory=list)
@@ -521,28 +533,62 @@ class PreviewDesignRequest(BaseModel):
         default=None,
         description="Gzipped tarball of the session workspace (base64 encoded).",
     )
-    orbit_pitch: float = Field(
-        default=-45.0,
+    orbit_pitch: float | list[float] = Field(
+        default=45.0,
         ge=-90.0,
         le=90.0,
-        description="Camera elevation angle in degrees (negative = looking down).",
+        description=(
+            "Camera elevation angle in degrees (negative = looking down). "
+            "Scalar inputs are normalized to single-item view lists."
+        ),
         validation_alias=AliasChoices("pitch", "orbit_pitch"),
     )
-    orbit_yaw: float = Field(
+    orbit_yaw: float | list[float] = Field(
         default=45.0,
         ge=0.0,
         lt=360.0,
-        description="Camera azimuth angle in degrees (clockwise from front).",
+        description=(
+            "Camera azimuth angle in degrees (clockwise from front). "
+            "Scalar inputs are normalized to single-item view lists."
+        ),
         validation_alias=AliasChoices("yaw", "orbit_yaw"),
     )
-    rendering_type: PreviewRenderingType = Field(
-        default=PreviewRenderingType.RGB,
-        description="Requested preview modality.",
+    rgb: bool | None = Field(default=None, description="Request RGB output.")
+    depth: bool | None = Field(default=None, description="Request depth output.")
+    segmentation: bool | None = Field(
+        default=None, description="Request segmentation output."
+    )
+    rendering_type: PreviewRenderingType | None = Field(
+        default=None,
+        description=(
+            "Legacy single-modality preview selector. When explicit modality "
+            "booleans are omitted, this maps to a single requested modality."
+        ),
     )
     smoke_test_mode: bool | None = Field(
         default=None,
         description="If true: cap particles to 5000, label results as approximate.",
     )
+
+    @model_validator(mode="after")
+    def normalize_preview_request(self) -> "PreviewDesignRequest":
+        explicit_modalities = any(
+            getattr(self, field) is not None
+            for field in ("rgb", "depth", "segmentation")
+        )
+        if not explicit_modalities and self.rendering_type is not None:
+            self.rgb = self.rendering_type == PreviewRenderingType.RGB
+            self.depth = self.rendering_type == PreviewRenderingType.DEPTH
+            self.segmentation = self.rendering_type == PreviewRenderingType.SEGMENTATION
+        else:
+            self.rgb = bool(self.rgb) if self.rgb is not None else True
+            self.depth = bool(self.depth) if self.depth is not None else True
+            self.segmentation = (
+                bool(self.segmentation) if self.segmentation is not None else False
+            )
+        if not any((self.rgb, self.depth, self.segmentation)):
+            raise ValueError("at least one preview modality must be enabled")
+        return self
 
     @field_validator("smoke_test_mode", mode="after")
     @classmethod
@@ -556,6 +602,10 @@ class PreviewDesignResponse(BaseModel):
     success: StrictBool
     status_text: StrictStr
     message: StrictStr | None = None
+    job_id: StrictStr | None = None
+    queued: StrictBool = False
+    view_count: StrictInt | None = None
+    view_specs: list[PreviewViewSpec] = Field(default_factory=list)
     artifact_path: StrictStr | None = None
     manifest_path: StrictStr | None = None
     rendering_type: PreviewRenderingType = PreviewRenderingType.RGB
@@ -569,6 +619,7 @@ class PreviewDesignResponse(BaseModel):
             "delegation layers."
         ),
     )
+    render_blobs_base64: dict[StrictStr, StrictStr] = Field(default_factory=dict)
     render_manifest_json: StrictStr | None = None
     events: list[BaseEvent] = Field(default_factory=list)
 
@@ -579,17 +630,20 @@ class PreviewWorkflowParams(BaseModel):
     bundle_base64: StrictStr
     script_path: StrictStr = Field(default="script.py")
     script_content: StrictStr | None = None
-    orbit_pitch: float = Field(
-        default=-45.0,
+    orbit_pitch: float | list[float] = Field(
+        default=45.0,
         validation_alias=AliasChoices("pitch", "orbit_pitch"),
     )
-    orbit_yaw: float = Field(
+    orbit_yaw: float | list[float] = Field(
         default=45.0,
         validation_alias=AliasChoices("yaw", "orbit_yaw"),
     )
-    rendering_type: PreviewRenderingType = Field(
-        default=PreviewRenderingType.RGB,
-        description="Requested preview modality.",
+    rgb: bool | None = None
+    depth: bool | None = None
+    segmentation: bool | None = None
+    rendering_type: PreviewRenderingType | None = Field(
+        default=None,
+        description="Legacy single-modality preview selector.",
     )
     smoke_test_mode: bool | None = None
     session_id: StrictStr
@@ -626,15 +680,18 @@ class HeavyPreviewParams(BaseModel):
 
     bundle_base64: StrictStr
     script_path: str
-    orbit_pitch: float = Field(
-        default=-45.0,
+    orbit_pitch: float | list[float] = Field(
+        default=45.0,
         validation_alias=AliasChoices("pitch", "orbit_pitch"),
     )
-    orbit_yaw: float = Field(
+    orbit_yaw: float | list[float] = Field(
         default=45.0,
         validation_alias=AliasChoices("yaw", "orbit_yaw"),
     )
-    rendering_type: PreviewRenderingType = PreviewRenderingType.RGB
+    rgb: bool | None = None
+    depth: bool | None = None
+    segmentation: bool | None = None
+    rendering_type: PreviewRenderingType | None = None
 
 
 class SimulationVideoRequest(BaseModel):
@@ -741,6 +798,9 @@ class RenderArtifactMetadata(BaseModel):
 
     modality: Literal["rgb", "depth", "segmentation", "unknown"] = "unknown"
     group_key: StrictStr | None = None
+    view_index: StrictInt | None = None
+    orbit_pitch: float | None = None
+    orbit_yaw: float | None = None
     siblings: RenderSiblingPaths = Field(default_factory=RenderSiblingPaths)
     depth_min_m: float | None = None
     depth_max_m: float | None = None

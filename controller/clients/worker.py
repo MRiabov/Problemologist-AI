@@ -2,6 +2,7 @@ import asyncio
 import base64
 import contextlib
 import os
+import tempfile
 import uuid
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -12,6 +13,7 @@ import structlog
 from controller.clients.worker_ws import WorkerLightWebSocketClient
 from controller.config.settings import settings
 from shared.enums import AgentName, ResponseStatus
+from shared.observability.storage import S3Client, S3Config
 from shared.simulation.schemas import (
     SimulatorBackendType,
     get_default_simulator_backend,
@@ -59,6 +61,23 @@ def _is_static_preview_bundle_path(path: str) -> bool:
         len(parts) >= 2
         and parts[0] == "renders"
         and parts[1] in _STATIC_PREVIEW_BUNDLES
+    )
+
+
+def _storage_client_from_env() -> S3Client | None:
+    access_key = os.getenv("S3_ACCESS_KEY", os.getenv("AWS_ACCESS_KEY_ID"))
+    secret_key = os.getenv("S3_SECRET_KEY", os.getenv("AWS_SECRET_ACCESS_KEY"))
+    if not access_key or not secret_key:
+        return None
+
+    return S3Client(
+        S3Config(
+            endpoint_url=os.getenv("S3_ENDPOINT"),
+            access_key_id=access_key,
+            secret_access_key=secret_key,
+            bucket_name=os.getenv("ASSET_S3_BUCKET", "problemologist"),
+            region_name=os.getenv("AWS_REGION", "us-east-1"),
+        )
     )
 
 
@@ -648,6 +667,34 @@ class WorkerClient:
             else:
                 logger.info("handover_render_synced", path=path)
 
+        object_store_keys = getattr(artifacts, "object_store_keys", None) or {}
+        if object_store_keys:
+            storage_client = _storage_client_from_env()
+            if storage_client is None:
+                logger.warning(
+                    "handover_render_sync_object_store_unavailable",
+                    paths=sorted(object_store_keys),
+                )
+            else:
+                for path, object_key in object_store_keys.items():
+                    if path in artifacts.render_blobs_base64:
+                        continue
+                    with tempfile.NamedTemporaryFile(suffix=Path(path).suffix) as tmp:
+                        storage_client.download_file(object_key, tmp.name)
+                        ok = await self.upload_file(
+                            path,
+                            Path(tmp.name).read_bytes(),
+                            bypass_agent_permissions=True,
+                        )
+                    if not ok:
+                        logger.warning(
+                            "handover_render_sync_upload_failed",
+                            path=path,
+                            source="object_store",
+                        )
+                    else:
+                        logger.info("handover_render_synced", path=path)
+
     async def upload_file(
         self,
         path: str,
@@ -724,35 +771,49 @@ class WorkerClient:
         self,
         script_path: str = "script.py",
         script_content: str | None = None,
-        orbit_pitch: float = -45.0,
-        orbit_yaw: float = 45.0,
-        rendering_type: PreviewRenderingType | str = PreviewRenderingType.RGB,
+        orbit_pitch: float | list[float] = 45.0,
+        orbit_yaw: float | list[float] = 45.0,
+        rgb: bool | None = None,
+        depth: bool | None = None,
+        segmentation: bool | None = None,
+        rendering_type: PreviewRenderingType | str | None = None,
         bundle_base64: str | None = None,
         smoke_test_mode: bool | None = None,
     ) -> PreviewDesignResponse:
-        """Trigger design preview via worker."""
+        """Trigger design preview via the controller preview workflow when available."""
+        payload = {
+            "script_path": script_path,
+            "orbit_pitch": orbit_pitch,
+            "orbit_yaw": orbit_yaw,
+            "rgb": rgb,
+            "depth": depth,
+            "segmentation": segmentation,
+            "rendering_type": rendering_type,
+        }
+        if script_content is not None:
+            payload["script_content"] = script_content
+
+        if smoke_test_mode is not None:
+            payload["smoke_test_mode"] = smoke_test_mode
+
+        await self._add_bundle_to_payload(payload, bundle_base64=bundle_base64)
+
         client = await self._get_client()
         try:
-            payload = {
-                "script_path": script_path,
-                "orbit_pitch": orbit_pitch,
-                "orbit_yaw": orbit_yaw,
-                "rendering_type": rendering_type,
-            }
-            if script_content is not None:
-                payload["script_content"] = script_content
-
-            if smoke_test_mode is not None:
-                payload["smoke_test_mode"] = smoke_test_mode
-
-            await self._add_bundle_to_payload(payload, bundle_base64=bundle_base64)
-
-            response = await client.post(
-                f"{self.base_url}/benchmark/preview",
-                json=payload,
-                headers=self._request_headers(stage=self.agent_role),
-                timeout=300.0,
-            )
+            if self.controller_url:
+                response = await client.post(
+                    f"{self.controller_url}/api/script-tools/preview",
+                    json=payload,
+                    headers=self._request_headers(stage=self.agent_role),
+                    timeout=1000.0,
+                )
+            else:
+                response = await client.post(
+                    f"{self.base_url}/benchmark/preview",
+                    json=payload,
+                    headers=self._request_headers(stage=self.agent_role),
+                    timeout=300.0,
+                )
             response.raise_for_status()
             return PreviewDesignResponse.model_validate(response.json())
         finally:

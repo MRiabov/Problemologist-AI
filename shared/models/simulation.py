@@ -109,6 +109,7 @@ class SimulationResult(BaseModel):
     failure: SimulationFailure | None = None
     render_provenance: SimulationRenderProvenance | None = None
     render_paths: list[str] = Field(default_factory=list)
+    render_object_store_keys: dict[str, str] = Field(default_factory=dict)
     mjcf_content: str | None = None
     stress_summaries: list[StressSummary] = Field(default_factory=list)
     stress_fields: dict[str, StressFieldData] = Field(default_factory=dict)

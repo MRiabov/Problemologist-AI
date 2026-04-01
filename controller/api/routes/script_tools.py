@@ -43,15 +43,18 @@ class ScriptToolRequest(BaseModel):
     backend: SimulatorBackendType = Field(default_factory=get_default_simulator_backend)
     smoke_test_mode: bool | None = None
     bundle_base64: str | None = None
-    orbit_pitch: float = Field(
+    orbit_pitch: float | list[float] = Field(
         default=-45.0,
         validation_alias=AliasChoices("pitch", "orbit_pitch"),
     )
-    orbit_yaw: float = Field(
+    orbit_yaw: float | list[float] = Field(
         default=45.0,
         validation_alias=AliasChoices("yaw", "orbit_yaw"),
     )
-    rendering_type: PreviewRenderingType = PreviewRenderingType.RGB
+    rgb: bool | None = None
+    depth: bool | None = None
+    segmentation: bool | None = None
+    rendering_type: PreviewRenderingType | None = None
     reviewer_stage: ReviewerStage | None = None
     jitter_range: tuple[float, float, float] | None = None
     num_scenes: int | None = None
@@ -311,6 +314,9 @@ async def preview_script(
                 payload.script_path,
                 orbit_pitch=payload.orbit_pitch,
                 orbit_yaw=payload.orbit_yaw,
+                rgb=payload.rgb,
+                depth=payload.depth,
+                segmentation=payload.segmentation,
                 rendering_type=payload.rendering_type,
                 bundle_base64=payload.bundle_base64,
                 smoke_test_mode=payload.smoke_test_mode,

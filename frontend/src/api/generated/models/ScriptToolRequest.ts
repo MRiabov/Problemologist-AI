@@ -11,9 +11,12 @@ export type ScriptToolRequest = {
     backend?: SimulatorBackendType;
     smoke_test_mode?: (boolean | null);
     bundle_base64?: (string | null);
-    pitch?: number;
-    yaw?: number;
-    rendering_type?: PreviewRenderingType;
+    pitch?: (number | Array<number>);
+    yaw?: (number | Array<number>);
+    rgb?: (boolean | null);
+    depth?: (boolean | null);
+    segmentation?: (boolean | null);
+    rendering_type?: (PreviewRenderingType | null);
     reviewer_stage?: ('benchmark_reviewer' | 'engineering_execution_reviewer' | 'electronics_reviewer' | null);
     jitter_range?: (any[] | null);
     num_scenes?: (number | null);

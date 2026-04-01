@@ -5514,6 +5514,40 @@
             ],
             "title": "Message"
           },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "queued": {
+            "type": "boolean",
+            "title": "Queued",
+            "default": false
+          },
+          "view_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "View Count"
+          },
+          "view_specs": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewViewSpec"
+            },
+            "type": "array",
+            "title": "View Specs"
+          },
           "artifact_path": {
             "anyOf": [
               {
@@ -5585,6 +5619,13 @@
             "title": "Image Bytes Base64",
             "description": "Base64-encoded preview image payload used internally by worker delegation layers."
           },
+          "render_blobs_base64": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Render Blobs Base64"
+          },
           "render_manifest_json": {
             "anyOf": [
               {
@@ -5621,6 +5662,32 @@
         ],
         "title": "PreviewRenderingType",
         "description": "Supported single-view preview modalities."
+      },
+      "PreviewViewSpec": {
+        "properties": {
+          "view_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "View Index"
+          },
+          "orbit_pitch": {
+            "type": "number",
+            "title": "Orbit Pitch"
+          },
+          "orbit_yaw": {
+            "type": "number",
+            "title": "Orbit Yaw"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "view_index",
+          "orbit_pitch",
+          "orbit_yaw"
+        ],
+        "title": "PreviewViewSpec",
+        "description": "One requested preview camera view after normalization."
       },
       "RenderMode": {
         "type": "string",
@@ -6284,18 +6351,77 @@
             "title": "Bundle Base64"
           },
           "pitch": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            ],
             "title": "Pitch",
             "default": -45.0
           },
           "yaw": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            ],
             "title": "Yaw",
             "default": 45.0
           },
+          "rgb": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rgb"
+          },
+          "depth": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth"
+          },
+          "segmentation": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segmentation"
+          },
           "rendering_type": {
-            "$ref": "#/components/schemas/PreviewRenderingType",
-            "default": "rgb"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PreviewRenderingType"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "reviewer_stage": {
             "anyOf": [
@@ -6422,6 +6548,13 @@
             },
             "type": "object",
             "title": "Render Blobs Base64"
+          },
+          "object_store_keys": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Object Store Keys"
           },
           "mjcf_content": {
             "anyOf": [
@@ -6841,6 +6974,13 @@
             },
             "type": "array",
             "title": "Render Paths"
+          },
+          "render_object_store_keys": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Render Object Store Keys"
           },
           "mjcf_content": {
             "anyOf": [

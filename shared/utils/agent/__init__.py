@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import importlib.util
 import math
@@ -14,7 +15,11 @@ from build123d import Compound, Part
 from pydantic import BaseModel
 
 from shared.enums import AgentName
-from shared.rendering import materialize_preview_response, render_preview
+from shared.rendering import (
+    export_preview_scene_bundle,
+    materialize_preview_response,
+    render_preview,
+)
 from shared.script_contracts import authored_script_path_for_agent
 from shared.simulation.schemas import get_default_simulator_backend
 from shared.utils.fasteners import HoleType as HoleType
@@ -27,7 +32,6 @@ from shared.workers.schema import (
     PreviewDesignResponse,
     PreviewRenderingType,
 )
-from worker_heavy.utils.build123d_rendering import export_preview_scene_bundle
 from worker_heavy.utils.rendering import select_single_preview_render_subdir
 
 logger = structlog.get_logger(__name__)
@@ -187,6 +191,36 @@ def _call_controller_script_tool(action: str, payload: dict[str, Any]) -> dict |
             "controller_script_tool_failed",
             action=action,
             error=str(e),
+            session_id=session_id,
+        )
+        raise
+
+
+def _call_controller_preview_tool(
+    payload: PreviewDesignRequest,
+) -> PreviewDesignResponse | None:
+    controller_url = _controller_base_url()
+    if not controller_url:
+        return None
+    session_id = os.getenv("SESSION_ID", "default")
+    agent_role = _script_agent_role()
+    url = f"{controller_url}/api/script-tools/preview"
+    headers = {
+        "X-Session-ID": session_id,
+        "X-Agent-Role": agent_role,
+        "X-Stage": agent_role,
+    }
+    try:
+        with httpx.Client(timeout=1000.0) as client:
+            resp = client.post(
+                url, json=payload.model_dump(mode="json"), headers=headers
+            )
+            resp.raise_for_status()
+            return PreviewDesignResponse.model_validate(resp.json())
+    except Exception as exc:
+        logger.error(
+            "controller_preview_tool_failed",
+            error=str(exc),
             session_id=session_id,
         )
         raise
@@ -535,11 +569,51 @@ def submit_for_review(compound: Compound) -> bool:
     return BenchmarkToolResponse.model_validate(res).success
 
 
-def preview(
+class _PreviewResponseProxy:
+    def __init__(self, factory):
+        self._factory = factory
+        self._resolved: PreviewDesignResponse | None = None
+
+    async def _resolve_async(self) -> PreviewDesignResponse:
+        if self._resolved is None:
+            self._resolved = await self._factory()
+        return self._resolved
+
+    def _resolve_sync(self) -> PreviewDesignResponse:
+        if self._resolved is not None:
+            return self._resolved
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            self._resolved = asyncio.run(self._factory())
+            return self._resolved
+        raise RuntimeError(
+            "preview() must be awaited when called from an async context"
+        )
+
+    def __await__(self):
+        return self._resolve_async().__await__()
+
+    def __getattr__(self, item):
+        return getattr(self._resolve_sync(), item)
+
+    def __bool__(self):
+        return bool(self._resolve_sync())
+
+    def __repr__(self):
+        if self._resolved is not None:
+            return repr(self._resolved)
+        return "<_PreviewResponseProxy unresolved>"
+
+
+async def _preview_async(
     component: Part | Compound,
-    orbit_pitch: float = 45,
-    orbit_yaw: float = 45,
-    rendering_type: PreviewRenderingType | str = PreviewRenderingType.RGB,
+    orbit_pitch: float | list[float] = 45,
+    orbit_yaw: float | list[float] = 45,
+    rgb: bool | None = None,
+    depth: bool | None = None,
+    segmentation: bool | None = None,
+    rendering_type: PreviewRenderingType | str | None = None,
 ) -> PreviewDesignResponse:
     """Render an on-demand preview for a live build123d component."""
     if _is_script_import_mode():
@@ -547,7 +621,11 @@ def preview(
             success=True,
             status_text=SCRIPT_IMPORT_DEFERRED_MESSAGE,
             message=SCRIPT_IMPORT_DEFERRED_MESSAGE,
-            rendering_type=PreviewRenderingType(str(rendering_type)),
+            rendering_type=(
+                PreviewRenderingType(str(rendering_type))
+                if rendering_type is not None
+                else PreviewRenderingType.RGB
+            ),
         )
 
     preview_scene_bundle = export_preview_scene_bundle(
@@ -560,18 +638,34 @@ def preview(
         bundle_base64=preview_scene_bundle,
         orbit_pitch=orbit_pitch,
         orbit_yaw=orbit_yaw,
-        rendering_type=PreviewRenderingType(str(rendering_type)),
+        rgb=rgb,
+        depth=depth,
+        segmentation=segmentation,
+        rendering_type=(
+            PreviewRenderingType(str(rendering_type))
+            if rendering_type is not None
+            else None
+        ),
     )
     response = _call_worker_light_preview(
         preview_request, session_id=os.getenv("SESSION_ID")
     )
+    if response is None:
+        response = _call_controller_preview_tool(preview_request)
     if response is None:
         response = render_preview(
             bundle_base64=preview_scene_bundle,
             script_path="preview_scene.json",
             orbit_pitch=orbit_pitch,
             orbit_yaw=orbit_yaw,
-            rendering_type=PreviewRenderingType(str(rendering_type)),
+            rgb=rgb,
+            depth=depth,
+            segmentation=segmentation,
+            rendering_type=(
+                PreviewRenderingType(str(rendering_type))
+                if rendering_type is not None
+                else None
+            ),
             session_id=os.getenv("SESSION_ID"),
         )
     if not response.success:
@@ -601,12 +695,40 @@ def preview(
     if response.manifest_path is None:
         response.manifest_path = str(Path("renders") / "render_manifest.json")
     if response.pitch is None:
-        response.pitch = orbit_pitch
+        if isinstance(orbit_pitch, float):
+            response.pitch = orbit_pitch
+        elif isinstance(orbit_pitch, list) and len(orbit_pitch) == 1:
+            response.pitch = orbit_pitch[0]
     if response.yaw is None:
-        response.yaw = orbit_yaw
+        if isinstance(orbit_yaw, float):
+            response.yaw = orbit_yaw
+        elif isinstance(orbit_yaw, list) and len(orbit_yaw) == 1:
+            response.yaw = orbit_yaw[0]
     if response.status_text is None:
         response.status_text = response.message or "Preview generated successfully"
     return response
+
+
+def preview(
+    component: Part | Compound,
+    orbit_pitch: float | list[float] = 45,
+    orbit_yaw: float | list[float] = 45,
+    rgb: bool | None = None,
+    depth: bool | None = None,
+    segmentation: bool | None = None,
+    rendering_type: PreviewRenderingType | str | None = None,
+) -> _PreviewResponseProxy:
+    return _PreviewResponseProxy(
+        lambda: _preview_async(
+            component,
+            orbit_pitch=orbit_pitch,
+            orbit_yaw=orbit_yaw,
+            rgb=rgb,
+            depth=depth,
+            segmentation=segmentation,
+            rendering_type=rendering_type,
+        )
+    )
 
 
 def refuse_plan(reason: str) -> bool:

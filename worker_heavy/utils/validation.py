@@ -1553,6 +1553,7 @@ def simulate(
     try:
         video_path = renders_dir / "simulation.mp4"
         final_video_path: Path | None = video_path
+        render_object_store_keys: dict[str, str] = {}
         sim_duration = 0.5 if smoke_test_mode else 30.0
         metrics = loop.step(
             control_inputs=control_inputs,
@@ -1561,6 +1562,10 @@ def simulate(
             video_path=video_path,
         )
         render_provenance = loop.render_provenance
+        if loop.render_object_store_key:
+            render_object_store_keys[str(video_path.relative_to(working_dir))] = (
+                loop.render_object_store_key
+            )
 
         # WP2: T017: GPU OOM Retry Logic
         if metrics.fail_reason and "out of memory" in metrics.fail_reason.lower():
@@ -1581,6 +1586,7 @@ def simulate(
                 with contextlib.suppress(Exception):
                     video_path.unlink()
             final_video_path = None
+            render_object_store_keys = {}
 
             from worker_heavy.simulation.loop import SimulationLoop
 
@@ -1602,6 +1608,10 @@ def simulate(
                 video_path=None,  # Skip video during emergency retry path
             )
             render_provenance = loop.render_provenance
+            if loop.render_object_store_key:
+                render_object_store_keys[str(video_path.relative_to(working_dir))] = (
+                    loop.render_object_store_key
+                )
 
         # Release the physics backend before starting the VTK preview pass.
         # MuJoCo/Genesis and the build123d renderer both touch GL/X state, and
@@ -1686,6 +1696,7 @@ def simulate(
             failure=metrics.failure,
             render_provenance=render_provenance,
             render_paths=render_paths,
+            render_object_store_keys=render_object_store_keys,
             mjcf_content=mjcf_content,
             stress_summaries=_sanitize_stress_summaries(metrics.stress_summaries),
             stress_fields=metrics.stress_fields,
@@ -1932,10 +1943,8 @@ def validate(
         )
         renders_dir.mkdir(parents=True, exist_ok=True)
 
-        from worker_heavy.utils.build123d_rendering import (
-            PREVIEW_BACKEND_NAME,
-            export_preview_scene_bundle,
-        )
+        from shared.rendering import export_preview_scene_bundle
+        from worker_heavy.utils.build123d_rendering import PREVIEW_BACKEND_NAME
 
         emit_event(
             {
