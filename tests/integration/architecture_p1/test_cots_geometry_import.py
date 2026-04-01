@@ -144,9 +144,9 @@ from shared.models.schemas import CompoundMetadata, PartMetadata
 def build():
     body = Box(12, 12, 12)
     body.label = "placeholder_block"
-    body.metadata = PartMetadata(material_id="aluminum_6061")
+    body.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     assembly = Compound(children=[body], label="motor_assembly")
-    assembly.metadata = CompoundMetadata()
+    assembly.metadata = CompoundMetadata(fixed=True)
     return assembly
 """
 
@@ -219,6 +219,42 @@ async def test_int_129_cots_geometry_import_runtime_and_validation():
         assert payload["bbox_min"][2] == pytest.approx(0.0)
         assert payload["bbox_min"][0] < 0 < payload["bbox_max"][0]
         assert payload["bbox_max"][2] > 45.0
+
+        placement_exec = await client.post(
+            f"{WORKER_LIGHT_URL}/runtime/execute",
+            json=ExecuteRequest(
+                code=(
+                    "python - <<'PY'\n"
+                    "import json\n"
+                    "from build123d import Location\n"
+                    "from shared.cots.parts.motors import ServoMotor\n"
+                    "motor = ServoMotor.from_catalog_id('ServoMotor_DS3218', label='drive_motor')\n"
+                    "motor = motor.move(Location((12.5, -3.0, 7.5), (0, 0, 90)))\n"
+                    "payload = {\n"
+                    "    'location': [\n"
+                    "        motor.location.position.X,\n"
+                    "        motor.location.position.Y,\n"
+                    "        motor.location.position.Z,\n"
+                    "    ],\n"
+                    "    'orientation': [\n"
+                    "        motor.location.orientation.X,\n"
+                    "        motor.location.orientation.Y,\n"
+                    "        motor.location.orientation.Z,\n"
+                    "    ],\n"
+                    "}\n"
+                    "print(json.dumps(payload))\n"
+                    "PY"
+                ),
+                timeout=60,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+        assert placement_exec.status_code == 200, placement_exec.text
+        placement_data = ExecuteResponse.model_validate(placement_exec.json())
+        assert placement_data.exit_code == 0, placement_data.stderr
+        placement_payload = json.loads(placement_data.stdout.strip().splitlines()[-1])
+        assert placement_payload["location"] == [12.5, -3.0, 7.5]
+        assert placement_payload["orientation"][2] == pytest.approx(90.0)
 
         invalid_exec = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
