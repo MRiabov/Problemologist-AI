@@ -160,7 +160,7 @@ find "$ARCHIVE_DIR" -maxdepth 1 -name "run_*" -mmin +1440 -exec rm -rf {} + 2>/d
 export PYTHONPATH=$PYTHONPATH:.
 export WORKER_TYPE=light
 export EXTRA_DEBUG_LOG="$LOG_DIR/worker_light_debug.log"
-nohup .venv/bin/python -m uvicorn worker_light.app:app --host 0.0.0.0 --port "$WORKER_LIGHT_HOST_PORT" > "$LOG_DIR/worker_light.log" 2>&1 &
+setsid .venv/bin/python -m uvicorn worker_light.app:app --host 0.0.0.0 --port "$WORKER_LIGHT_HOST_PORT" > "$LOG_DIR/worker_light.log" 2>&1 &
 WORKER_LIGHT_PID=$!
 echo $WORKER_LIGHT_PID > "$STACK_PID_DIR/worker_light.pid"
 echo "Worker Light started (PID: $WORKER_LIGHT_PID)"
@@ -181,14 +181,14 @@ echo "Worker Renderer container started (ID: $WORKER_RENDERER_CONTAINER_ID)"
 # Start Worker Heavy (port 18002)
 export WORKER_TYPE=heavy
 export EXTRA_DEBUG_LOG="$LOG_DIR/worker_heavy_debug.log"
-nohup .venv/bin/python -m uvicorn worker_heavy.app:app --host 0.0.0.0 --port "$WORKER_HEAVY_HOST_PORT" > "$LOG_DIR/worker_heavy.log" 2>&1 &
+setsid .venv/bin/python -m uvicorn worker_heavy.app:app --host 0.0.0.0 --port "$WORKER_HEAVY_HOST_PORT" > "$LOG_DIR/worker_heavy.log" 2>&1 &
 WORKER_HEAVY_PID=$!
 echo $WORKER_HEAVY_PID > "$STACK_PID_DIR/worker_heavy.pid"
 echo "Worker Heavy started (PID: $WORKER_HEAVY_PID)"
 
 # Start Controller (port 18000)
 export EXTRA_DEBUG_LOG="$LOG_DIR/controller_debug.log"
-nohup .venv/bin/python -m uvicorn controller.api.main:app --host 0.0.0.0 --port "$CONTROLLER_HOST_PORT" > "$LOG_DIR/controller.log" 2>&1 &
+setsid .venv/bin/python -m uvicorn controller.api.main:app --host 0.0.0.0 --port "$CONTROLLER_HOST_PORT" > "$LOG_DIR/controller.log" 2>&1 &
 CONTROLLER_PID=$!
 echo $CONTROLLER_PID > "$STACK_PID_DIR/controller.pid"
 echo "Controller started (PID: $CONTROLLER_PID)"
@@ -196,14 +196,14 @@ echo "Controller started (PID: $CONTROLLER_PID)"
 # Start Temporal Worker
 export PYTHONPATH=$PYTHONPATH:.
 export EXTRA_DEBUG_LOG="$LOG_DIR/temporal_worker_debug.log"
-nohup .venv/bin/python -m controller.temporal_worker > "$LOG_DIR/temporal_worker.log" 2>&1 &
+setsid .venv/bin/python -m controller.temporal_worker > "$LOG_DIR/temporal_worker.log" 2>&1 &
 TEMP_WORKER_PID=$!
 echo $TEMP_WORKER_PID > "$STACK_PID_DIR/temporal_worker.pid"
 echo "Temporal Worker started (PID: $TEMP_WORKER_PID)"
 
 # Start Heavy Temporal Worker (separate from worker-heavy API process)
 export EXTRA_DEBUG_LOG="$LOG_DIR/worker_heavy_temporal_debug.log"
-nohup .venv/bin/python -m worker_heavy.temporal_worker > "$LOG_DIR/worker_heavy_temporal.log" 2>&1 &
+setsid .venv/bin/python -m worker_heavy.temporal_worker > "$LOG_DIR/worker_heavy_temporal.log" 2>&1 &
 HEAVY_TEMP_WORKER_PID=$!
 echo $HEAVY_TEMP_WORKER_PID > "$STACK_PID_DIR/worker_heavy_temporal.pid"
 echo "Heavy Temporal Worker started (PID: $HEAVY_TEMP_WORKER_PID)"
@@ -224,7 +224,7 @@ elif [ "$STACK_START_FRONTEND" = "1" ]; then
   echo "Starting Frontend dev server on port ${FRONTEND_PORT}..."
   (
     cd frontend
-    nohup npm run dev > "../$LOG_DIR/frontend.log" 2>&1 &
+    setsid npm run dev > "../$LOG_DIR/frontend.log" 2>&1 &
     echo $! > "$STACK_PID_DIR/frontend.pid"
   )
   FRONTEND_STARTED=true
