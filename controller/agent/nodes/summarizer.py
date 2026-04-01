@@ -18,11 +18,7 @@ logger = structlog.get_logger(__name__)
 
 
 class SummarizerSignature(dspy.Signature):
-    """
-    Summarizer node: Compresses the journal to stay within token limits.
-    Provide a concise summary of the key decisions, attempts, and outcomes recorded in the journal.
-    Maintain critical technical details while reducing verbosity.
-    """
+    """DSPy signature for the journalling agent."""
 
     journal = dspy.InputField()
     summarized_journal = dspy.OutputField(desc="A concise summary of the journal")

@@ -566,11 +566,13 @@ class BaseNode:
     ) -> str:
         inspected = self._inspected_unique_media_path_count()
         examples = ", ".join(media_paths[: min(3, len(media_paths))])
-        return (
-            "Visual inspection is mandatory for this node. "
-            f"Inspect at least {policy.min_images} distinct render image(s) with "
-            f"`inspect_media(path)` before finishing. Already inspected: "
-            f"{inspected}/{policy.min_images}. Available render paths: {examples}."
+        return self._get_runtime_prompt(
+            self._runtime_prompt_key(
+                self.ctx.fs.agent_role, "visual_inspection_reminder"
+            ),
+            min_images=policy.min_images,
+            inspected=inspected,
+            examples=examples,
         )
 
     def _get_visual_inspection_requirement_message(
@@ -634,19 +636,20 @@ class BaseNode:
         output_fields = ", ".join(signature_cls.output_fields.keys())
         completion_tool_name = self._completion_tool_name(node_type)
         instructions = signature_cls.instructions or ""
-        native_instructions = (
-            "Use provider-native tool calls.\n"
-            "Call the provided tools to inspect and modify the workspace.\n"
-            "When all required work is complete, call "
-            f"`{completion_tool_name}` with these output "
-            f"fields: {output_fields}.\n"
-            "Do not emit textual tool-call markers such as `next_tool_name` or "
-            "`next_tool_args`."
+        native_instructions = self._get_runtime_prompt(
+            self._runtime_prompt_key(node_type, "native_tool_signature_contract"),
+            completion_tool_name=completion_tool_name,
+            output_fields=output_fields,
         )
         if node_type == AgentName.BENCHMARK_PLANNER:
             native_instructions = (
                 native_instructions
-                + "\nAlways call `submit_plan` before finishing planner work."
+                + "\n"
+                + self._get_runtime_prompt(
+                    self._runtime_prompt_key(
+                        node_type, "benchmark_planner_native_tool_signature_suffix"
+                    )
+                )
             )
 
         field_defs: dict[str, tuple[type[Any], Any]] = {}
@@ -1021,21 +1024,14 @@ class BaseNode:
         instructions = signature_cls.instructions or ""
         requires_submit_plan = self._requires_submit_plan(node_type)
         completion_tool_name = self._completion_tool_name(node_type)
-        runtime_instructions = (
-            "Runtime tool-calling contract:\n"
-            "- Use provider-native tool calls only.\n"
-            "- Call the provided tools to inspect and modify the workspace.\n"
-            "- Do not emit textual tool-call wrappers such as `next_tool_name`, `next_tool_args`, or `[[ ## tool_calls ## ]]`.\n"
-            "- Before each tool call, include one short plain-text reasoning sentence in assistant content.\n"
-            f"- Call `{completion_tool_name}` exactly once when all required work is complete.\n"
+        runtime_instructions = self._get_runtime_prompt(
+            self._runtime_prompt_key(node_type, "native_tool_loop_contract"),
+            completion_tool_name=completion_tool_name,
         )
         if requires_submit_plan:
-            runtime_instructions += (
-                f"- Call `submit_plan()` before `{completion_tool_name}`.\n"
-                '- Stop exploratory work after `submit_plan()` returns `{ok: true, status: "submitted"}`.\n'
-                "- If `submit_plan()` returns validation errors, fix the files and call `submit_plan()` again.\n"
-                f"- Do not call `{completion_tool_name}` until `submit_plan()` has succeeded.\n"
-                "- Use `validate_costing_and_price()` for planner validation; do not browse `/scripts` or validator source files.\n"
+            runtime_instructions += "\n" + self._get_runtime_prompt(
+                self._runtime_prompt_key(node_type, "planner_submit_contract"),
+                completion_tool_name=completion_tool_name,
             )
         system_prompt = (
             f"{instructions.strip()}\n\n{runtime_instructions}".strip()
@@ -1185,8 +1181,11 @@ class BaseNode:
                         )
                     ).strip()
                     if requires_submit_plan and not submit_plan_succeeded:
-                        no_tool_call_reminder += (
-                            f" Call `submit_plan()` before `{completion_tool_name}`."
+                        no_tool_call_reminder += "\n" + self._get_runtime_prompt(
+                            self._runtime_prompt_key(
+                                node_type, "submit_before_completion_nudge"
+                            ),
+                            completion_tool_name=completion_tool_name,
                         )
                 else:
                     no_tool_call_reminder = self._get_runtime_prompt(

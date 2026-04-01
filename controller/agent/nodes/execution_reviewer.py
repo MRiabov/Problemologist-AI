@@ -36,14 +36,7 @@ logger = structlog.get_logger(__name__)
 
 
 class ExecutionReviewerSignature(dspy.Signature):
-    """
-    Engineer Execution Reviewer node: Evaluates the implementation based on simulation and workbench reports.
-    You must use the provided tools to read `solution_script.py`.
-    You must use the provided tools to read `benchmark_script.py`.
-    You must use the provided tools to read 'simulation_result.json' and 'workbench_report.md'.
-    You also receive benchmark-owned read-only benchmark_assembly_definition.yaml handoff context copied into this workspace.
-    When done, return the final ReviewResult.
-    """
+    """DSPy signature for the engineer execution reviewer."""
 
     task = dspy.InputField()
     plan = dspy.InputField()

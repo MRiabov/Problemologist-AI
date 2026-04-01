@@ -16,11 +16,7 @@ logger = structlog.get_logger(__name__)
 
 
 class COTSSearchSignature(dspy.Signature):
-    """
-    COTS Search node: Searches for components based on current needs.
-    You must use the provided tools to perform searches.
-    When done, use SUBMIT to provide a summary of the components found.
-    """
+    """DSPy signature for the COTS search subagent."""
 
     prompt = dspy.InputField()
     search_summary = dspy.OutputField(desc="A summary of the components found")

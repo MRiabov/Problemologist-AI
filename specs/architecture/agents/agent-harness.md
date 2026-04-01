@@ -80,15 +80,16 @@ It must describe the workspace in relative-path terms and must not teach the age
 
 The canonical prompt rules are:
 
-1. The prompt says `Workspace: current directory`.
-2. The prompt tells the agent to use workspace-relative paths only.
-3. The prompt does not mention `/workspace` as the workspace root.
-4. Planner prompts instruct `bash scripts/submit_plan.sh` as the submission command.
-5. Benchmark planner prompts do not include `benchmark_script.py`; that file is introduced only after benchmark plan approval. Coder prompts instruct editing the role-owned authored source file (`solution_script.py` for engineer roles, `benchmark_script.py` for benchmark coder roles) and supporting `*.py` files, then either running `bash scripts/submit_for_review.sh` or using the Python submission utility from `utils.submission` in a supporting script. In that route, `validate` and `simulate` are intermediate checks before `submit_for_review`.
-6. Reviewer prompts instruct writing stage-specific review artifacts under `reviews/`, then running `bash scripts/submit_review.sh`.
-7. The prompt also advertises `python .admin/clear_env.py` as the in-workspace reset helper for clean retries.
-8. The prompt includes the task text, agent name, task ID, and seed dataset name when available.
-9. The prompt does not need to describe repository-level import paths or module layout.
+01. The prompt says `Workspace: current directory`.
+02. The prompt tells the agent to use workspace-relative paths only.
+03. The prompt does not mention `/workspace` as the workspace root.
+04. Planner prompts instruct `bash scripts/submit_plan.sh` as the submission command.
+05. Benchmark planner prompts do not include `benchmark_script.py`; that file is introduced only after benchmark plan approval. Coder prompts instruct editing the role-owned authored source file (`solution_script.py` for engineer roles, `benchmark_script.py` for benchmark coder roles) and supporting `*.py` files, then either running `bash scripts/submit_for_review.sh` or using the Python submission utility from `utils.submission` in a supporting script. In that route, `validate` and `simulate` are intermediate checks before `submit_for_review`.
+06. Reviewer prompts instruct writing stage-specific review artifacts under `reviews/`, then running `bash scripts/submit_review.sh`.
+07. The prompt also advertises `python .admin/clear_env.py` as the in-workspace reset helper for clean retries.
+08. The prompt includes the task text, agent name, task ID, and seed dataset name when available.
+09. The prompt does not need to describe repository-level import paths or module layout.
+10. All starter, non-DSPy-optimized prompts live in `config/prompts.yaml`.
 
 The prompt builder in `evals/logic/codex_workspace.py` is the canonical definition of that prompt text.
 

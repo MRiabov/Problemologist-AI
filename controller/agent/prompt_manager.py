@@ -30,7 +30,9 @@ class PromptManager:
             AgentName.ENGINEER_PLAN_REVIEWER.value: data["engineer"][
                 "engineer_plan_reviewer"
             ]["system"],
-            AgentName.ELECTRONICS_REVIEWER.value: data["engineer"]["critic"]["system"],
+            AgentName.ELECTRONICS_REVIEWER.value: data["engineer"][
+                "electronics_reviewer"
+            ]["system"],
             AgentName.ENGINEER_EXECUTION_REVIEWER.value: data["engineer"][
                 "engineer_execution_reviewer"
             ]["system"],
@@ -50,7 +52,7 @@ class PromptManager:
             # Subagents
             AgentName.COTS_SEARCH.value: data["subagents"]["cots_search"]["system"],
             AgentName.SKILL_AGENT.value: data["subagents"]["skill_learner"]["system"],
-            AgentName.JOURNALLING_AGENT.value: data["subagents"]["documentation"][
+            AgentName.JOURNALLING_AGENT.value: data["subagents"]["token_compressor"][
                 "system"
             ],
         }

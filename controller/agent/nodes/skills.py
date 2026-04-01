@@ -22,12 +22,7 @@ logger = structlog.get_logger(__name__)
 
 
 class SkillsSignature(dspy.Signature):
-    """
-    Skills node: Analyzes the journal to suggest new skills.
-    You must use the provided tools to analyze the work and save new skills.
-    If you identify a valuable skill or pattern, use the `save_suggested_skill` tool to record it.
-    When done, use SUBMIT to provide a summary of your work.
-    """
+    """DSPy signature for the skill learner subagent."""
 
     task = dspy.InputField()
     journal = dspy.InputField()

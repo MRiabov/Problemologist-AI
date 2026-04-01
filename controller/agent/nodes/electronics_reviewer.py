@@ -21,15 +21,7 @@ logger = structlog.get_logger(__name__)
 
 
 class ElectronicsReviewerSignature(dspy.Signature):
-    """
-    Electronics Reviewer node: Evaluates the electrical implementation.
-    You must use the provided tools to read `solution_script.py`,
-    `benchmark_script.py`, and any circuit-related files.
-    You also receive benchmark-owned read-only benchmark_assembly_definition.yaml
-    handoff context copied into this workspace.
-    Ensure the circuit is correctly defined, wires are routed properly, and it matches the electrical plan.
-    When done, provide your final ReviewResult.
-    """
+    """DSPy signature for the electronics reviewer."""
 
     task = dspy.InputField()
     plan = dspy.InputField()

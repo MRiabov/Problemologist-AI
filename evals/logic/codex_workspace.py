@@ -17,6 +17,7 @@ from controller.agent.review_handover import (
     validate_plan_reviewer_handover,
     validate_reviewer_handover,
 )
+from controller.prompts import load_prompts
 from evals.logic.models import EvalDatasetItem
 from evals.logic.review_checks import (
     parse_review_decision_yaml,
@@ -33,7 +34,6 @@ from shared.agent_templates import (
 from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import ReviewComments, ReviewFrontmatter
-from shared.script_contracts import authored_script_path_for_agent
 from shared.skills import build_skill_catalog_lines
 from shared.workers.filesystem.backend import FileInfo
 from worker_heavy.utils.file_validation import (
@@ -400,6 +400,9 @@ def build_codex_prompt(
 ) -> str:
     """Build a role-specific Codex prompt for the materialized workspace."""
 
+    prompts = load_prompts()
+    codex_prompts = prompts.get("codex", {})
+
     task = item.task.strip()
     workspace_note = (
         "Use workspace-relative paths only. Do not use absolute workspace "
@@ -412,91 +415,23 @@ def build_codex_prompt(
         ".admin/clear_env.py` to restore the seeded workspace in place."
     )
 
-    if is_planner_agent(agent_name):
-        if agent_name == AgentName.BENCHMARK_PLANNER:
-            role_lines = [
-                "You are the Benchmark Planner.",
-                "Write and refine `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml`.",
-                "Keep the benchmark definition internally consistent before submission.",
-                "Do not expect `benchmark_script.py` in this workspace until after benchmark plan approval.",
-                "When the files are ready, run `bash scripts/submit_plan.sh` and keep iterating until it reports `ok=true` and `status=submitted`.",
-                "Do not leave template placeholders in the submitted files.",
-            ]
-        else:
-            role_lines = [
-                "You are an Engineering Planner.",
-                "Write and refine `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`.",
-                "Treat `benchmark_assembly_definition.yaml` as benchmark-owned read-only handoff context copied into this workspace if it is present.",
-                "When the files are ready, run `bash scripts/submit_plan.sh` and keep iterating until it reports `ok=true` and `status=submitted`.",
-                "Do not leave template placeholders in the submitted files.",
-            ]
-    elif is_coder_agent(agent_name):
-        authored_script = authored_script_path_for_agent(agent_name)
-        if agent_name == AgentName.BENCHMARK_CODER:
-            role_lines = [
-                "You are the Benchmark Coder.",
-                f"Edit `{authored_script}` and any supporting `*.py` files until the benchmark implementation works.",
-                "Expose the finished benchmark geometry as `result = objectives_geometry()` and keep the authored module import-safe.",
-                f"Use `python {authored_script}` as the canonical execution path.",
-                "Keep `todo.md` and `journal.md` in sync with the work you are actually doing.",
-                "Use the seeded handoff files in this workspace as the primary source of truth; do not go hunting through unrelated dataset examples unless the workspace artifacts are missing or contradictory.",
-                "Prefer the simplest geometry that satisfies the reviewed plan and the benchmark constraints; do not over-engineer alternate mechanisms.",
-                "After a quick pass over the handoff files, start writing the implementation instead of continuing to browse references.",
-                "Do not spend more than a few tool calls on exploratory reading before producing a first implementation draft.",
-                "Do not stop at a merely stable smoke test; the latest revision must pass validation and simulation for the intended task before you hand it off.",
-                "When the implementation is ready, finalize it either by running `bash scripts/submit_for_review.sh` or by using a supporting Python file that calls `validate` and `simulate` as intermediate checks before `submit_for_review` from `utils.submission`. Only `submit_for_review` performs the review handoff.",
-                "If the submit helper reports a blocker, fix the latest revision and rerun the full validation and simulation flow.",
-            ]
-        else:
-            role_lines = [
-                "You are the Engineer Coder.",
-                f"Edit `{authored_script}` and any supporting `*.py` files until the implementation works.",
-                "Expose the finished compound as `result = build()` or a `build()` function returning a `Compound`.",
-                f"Use `python {authored_script}` as the canonical execution path.",
-                "Keep `todo.md` and `journal.md` in sync with the work you are actually doing.",
-                "Use the seeded handoff files in this workspace as the primary source of truth; do not go hunting through unrelated dataset examples unless the workspace artifacts are missing or contradictory.",
-                "Prefer the simplest geometry that satisfies the reviewed plan and the benchmark constraints; do not over-engineer alternate mechanisms.",
-                "After a quick pass over the handoff files, start writing the implementation instead of continuing to browse references.",
-                "Do not spend more than a few tool calls on exploratory reading before producing a first implementation draft.",
-                "Do not stop at a merely stable smoke test; the latest revision must pass validation and simulation for the intended task before you hand it off.",
-                "When the implementation is ready, finalize it either by running `bash scripts/submit_for_review.sh` or by using a supporting Python file that calls `validate` and `simulate` as intermediate checks before `submit_for_review` from `utils.submission`. Only `submit_for_review` performs the review handoff.",
-                "If the submit helper reports a blocker, fix the latest revision and rerun the full validation and simulation flow.",
-            ]
-    elif is_plan_reviewer_agent(agent_name):
-        role_lines = [
-            "You are the Plan Reviewer.",
-            "Inspect the planner artifacts and write the stage-specific review decision and comments files under `reviews/` with `write_file`.",
-            "When the review is ready, run `bash scripts/submit_review.sh` to validate the handoff.",
-            "Use the latest planner handoff state; do not edit planner-owned source files.",
-            "If the benchmark or engineer plan is invalid, reject it with concrete reasons in the review files.",
-        ]
-    elif is_execution_reviewer_agent(agent_name):
-        if agent_name == AgentName.BENCHMARK_REVIEWER:
-            role_lines = [
-                "You are the Benchmark Reviewer.",
-                "Inspect the implementation, validation results, simulation result, and stage-specific review files.",
-                "Read `benchmark_script.py` as benchmark-owned read-only geometry context before review.",
-                "Read `benchmark_assembly_definition.yaml` as benchmark-owned read-only context before review.",
-                "Write the stage-specific review decision and comments files under `reviews/` with `write_file`.",
-                "When the review is ready, run `bash scripts/submit_review.sh` to validate the handoff.",
-                "If the latest implementation is not reviewable, reject it with concrete reasons in the review files.",
-            ]
-        else:
-            role_lines = [
-                "You are the Execution Reviewer.",
-                "Inspect the implementation, validation results, simulation result, and stage-specific review files.",
-                "Read `solution_script.py` as the authored implementation source before review.",
-                "Read `benchmark_script.py` as benchmark-owned read-only geometry context before review.",
-                "Read `benchmark_assembly_definition.yaml` as benchmark-owned read-only context before review.",
-                "Write the stage-specific review decision and comments files under `reviews/` with `write_file`.",
-                "When the review is ready, run `bash scripts/submit_review.sh` to validate the handoff.",
-                "If the latest implementation is not reviewable, reject it with concrete reasons in the review files.",
-            ]
+    role_key_map = {
+        AgentName.BENCHMARK_PLANNER: "benchmark_planner",
+        AgentName.ENGINEER_PLANNER: "engineer_planner",
+        AgentName.ELECTRONICS_PLANNER: "engineer_planner",
+        AgentName.BENCHMARK_CODER: "benchmark_coder",
+        AgentName.ENGINEER_CODER: "engineer_coder",
+        AgentName.ENGINEER_PLAN_REVIEWER: "engineer_plan_reviewer",
+        AgentName.BENCHMARK_PLAN_REVIEWER: "benchmark_plan_reviewer",
+        AgentName.BENCHMARK_REVIEWER: "benchmark_reviewer",
+        AgentName.ENGINEER_EXECUTION_REVIEWER: "engineer_execution_reviewer",
+        AgentName.ELECTRONICS_REVIEWER: "engineer_execution_reviewer",
+    }
+    role_key = role_key_map.get(agent_name)
+    if role_key is not None:
+        role_lines = codex_prompts.get(role_key, {}).get("role_lines", [])
     else:
-        role_lines = [
-            f"You are operating as `{agent_name.value}`.",
-            "Use the workspace files directly and follow the seeded task instructions.",
-        ]
+        role_lines = codex_prompts.get("default", {}).get("role_lines", [])
 
     if item.seed_dataset is not None:
         dataset_note = f"Seed dataset: {item.seed_dataset}"

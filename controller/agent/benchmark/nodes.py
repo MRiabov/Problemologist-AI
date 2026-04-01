@@ -101,16 +101,7 @@ def _goal_reached(summary: str) -> bool:
 
 
 class BenchmarkPlannerSignature(dspy.Signature):
-    """
-    Planner node for benchmark generation.
-    Use tools to produce planner artifacts and call `submit_plan()` before `finish`.
-    Any benchmark-side motion in `benchmark_assembly_definition.yaml` must be
-    spelled out in `plan.md` and `todo.md` with one explicit DOF axis,
-    reviewer-visible motion bounds/limits, and controller facts. Unsupported or
-    impossible benchmark setups must be rejected instead of brute-forcing
-    `submit_plan()`.
-    Emit one tool step at a time (no multi-step batched transcripts).
-    """
+    """DSPy signature for the benchmark planner."""
 
     prompt = dspy.InputField()
     history = dspy.InputField()
@@ -383,22 +374,9 @@ class BenchmarkPlannerNode(BaseNode):
         system_prompt = (
             self.ctx.pm.render(AgentName.BENCHMARK_PLANNER).strip()
             + "\n\n"
-            + "Runtime tool-calling contract:\n"
-            + "- Use provider-native tool calls only.\n"
-            + "- Do not emit `next_tool_name`, `next_tool_args`, `[[ ## ... ## ]]`, or raw JSON tool transcripts.\n"
-            + "- Before each tool call, include one short plain-text reasoning sentence in assistant content.\n"
-            + '- Stop after `submit_plan()` returns `{ok: true, status: "submitted"}`.\n'
-            + "- If `submit_plan()` returns validation errors, fix the files and call `submit_plan()` again.\n"
-            + "- In `benchmark_definition.yaml`, `moved_object.start_position` must be a top-level field under `moved_object`, not nested under `static_randomization`.\n"
-            + "- In `benchmark_definition.yaml`, every `benchmark_parts[*].part_id` and `benchmark_parts[*].label` must be unique.\n"
-            + "- In authored benchmark scripts, every top-level part label must be unique and must not be `environment`, start with `zone_`, or start with `benchmark_moved_object__` because the simulator reserves those names for the scene root and generated objective bodies.\n"
-            + "- `benchmark_assembly_definition.yaml` must be a full `AssemblyDefinition` shape and include numeric planner-target `constraints` and `totals` fields; benchmark caps are sourced from `benchmark_definition.yaml` and must not be treated as duplicated ownership in the assembly file.\n"
-            + "- Any benchmark-side motion in `benchmark_assembly_definition.yaml` must be explicit in both `plan.md` and `todo.md`; one moving fixture may expose at most one DOF axis, and the handoff must state reviewer-visible motion bounds/limits plus controller facts.\n"
-            + "- Hidden, unsupported, or over-actuated benchmark motion is a rejection condition, even if the scene still looks passive at a glance.\n"
-            + "- If the motion contract is impossible to explain explicitly, stop and revise the handoff instead of brute-forcing `submit_plan()`.\n"
-            + "- Prefer schema-safe minimal assembly for planner handoff: use empty `manufactured_parts`, `cots_parts`, and `final_assembly` unless you can provide fully valid entries (e.g., `stock_bbox_mm` must be an object with `x/y/z`, and final assembly parts use `name/config`).\n"
-            + "- Keep the moved object's full runtime AABB inside `build_zone` by checking `start_position +/- runtime_jitter +/- max(radius)` on x, y, and z before `submit_plan()`.\n"
-            + "- Do not use `cots_search` to price benchmark-owned fixtures or other benchmark context objects. Reserve pricing lookups for likely engineer-side solution parts, and if catalog search fails, stop retrying and use one heuristic estimate instead.\n"
+            + self._get_runtime_prompt(
+                "benchmark_generator.runtime.native_planner_contract"
+            )
         )
         user_prompt = "Benchmark planner inputs:\n" + json.dumps(
             inputs, indent=2, ensure_ascii=True, default=str
@@ -1059,20 +1037,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
 
 
 class BenchmarkPlanReviewerSignature(dspy.Signature):
-    """
-    Review the benchmark planning handoff before coding begins.
-    Inspect plan.md, todo.md, benchmark_definition.yaml, benchmark_assembly_definition.yaml,
-    and the latest-revision solvability evidence before deciding.
-    `benchmark_script.py` is not available to Benchmark Planner before approval.
-    Reject plans that reference nonexistent objects, hide benchmark-side motion,
-    rely on impossible or unsupported geometry, leave the goal obstructed or
-    unreachable, omit reviewer-visible motion bounds/controller facts, or
-    over-actuate a moving fixture beyond one explicit DOF axis.
-    When render images exist for the current revision, use inspect_media(path)
-    on the current revision's render paths during this review attempt; file
-    listing alone is not visual inspection.
-    When done, use SUBMIT to provide the final review result.
-    """
+    """DSPy signature for the benchmark plan reviewer."""
 
     prompt = dspy.InputField()
     plan_md = dspy.InputField()
@@ -1439,12 +1404,7 @@ async def plan_reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGenerat
 
 
 class BenchmarkCoderSignature(dspy.Signature):
-    """
-    Generates build123d script and validates it for the benchmark.
-    You must use the provided tools to create the benchmark script in
-    'benchmark_script.py'.
-    When done, use SUBMIT to provide a summary of your work.
-    """
+    """DSPy signature for the benchmark coder."""
 
     prompt = dspy.InputField()
     plan = dspy.InputField()
@@ -1842,12 +1802,7 @@ async def skills_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState
 
 
 class SummarizerSignature(dspy.Signature):
-    """
-    Summarizer node: Compresses the journal to stay within token limits.
-    Provide a concise summary of the key decisions, attempts, and outcomes
-    recorded in the journal.
-    Maintain critical technical details while reducing verbosity.
-    """
+    """DSPy signature for the benchmark journalling agent."""
 
     journal = dspy.InputField()
     summarized_journal = dspy.OutputField(desc="A concise summary of the journal")
@@ -1937,15 +1892,7 @@ async def summarizer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorS
 
 
 class BenchmarkReviewerSignature(dspy.Signature):
-    """
-    Agentic review of the generated benchmark.
-    You must use the provided tools to read `benchmark_script.py`.
-    Reject hidden benchmark-side motion, unsupported motion, over-actuated
-    fixtures, missing bounds/controller facts, or any final scene that does not
-    clearly match the planner's explicit motion contract.
-    You must use the provided tools to inspect the workspace.
-    When done, return the final review result.
-    """
+    """DSPy signature for the benchmark reviewer."""
 
     theme = dspy.InputField()
     prompt = dspy.InputField()

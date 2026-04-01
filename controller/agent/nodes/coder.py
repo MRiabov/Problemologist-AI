@@ -20,12 +20,7 @@ logger = structlog.get_logger(__name__)
 
 
 class CoderSignature(dspy.Signature):
-    """
-    Engineer coder node: implement the approved handoff in `solution_script.py`
-    using the current runtime contract and the relevant skills.
-    `benchmark_assembly_definition.yaml` and `benchmark_script.py` are read-only
-    benchmark context; do not modify them.
-    """
+    """DSPy signature for the engineer coder."""
 
     task = dspy.InputField()
     current_step = dspy.InputField()
