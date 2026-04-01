@@ -23,8 +23,8 @@ from shared.rendering.renderer_client import (
     materialize_render_artifacts,
     render_static_preview,
 )
-from shared.workers.loader import load_component_from_script
 from shared.script_contracts import authored_script_path_for_reviewer_stage
+from shared.workers.loader import load_component_from_script
 from shared.workers.schema import (
     RenderArtifactMetadata,
     RenderManifest,

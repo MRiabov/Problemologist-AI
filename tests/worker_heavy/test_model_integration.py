@@ -92,8 +92,10 @@ def test_model_produced_script_integration(tmp_path):
     assert is_geom_valid[0] is True
 
     # 4. Simulate without crashing
-    # Mock mujoco.Renderer to avoid framebuffer issues in headless environment
-    with patch("mujoco.Renderer") as mock_renderer_cls:
+    # Mock the classic MuJoCo renderer used by the heavy worker.
+    with patch(
+        "worker_heavy.simulation.mujoco_backend.MujocoRenderer"
+    ) as mock_renderer_cls:
         mock_renderer = mock_renderer_cls.return_value
         mock_renderer.render.return_value = np.zeros((480, 640, 3), dtype=np.uint8)
 

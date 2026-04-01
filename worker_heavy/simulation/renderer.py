@@ -9,6 +9,7 @@ import ffmpeg
 import mujoco
 import numpy as np
 import structlog
+from mujoco.rendering.classic.renderer import Renderer as MujocoRenderer
 from PIL import Image
 
 logger = structlog.get_logger(__name__)
@@ -31,7 +32,7 @@ class Renderer:
         self.height = height
         self.session_id = session_id
         # Offscreen rendering initialization
-        self.renderer = mujoco.Renderer(model, height, width)
+        self.renderer = MujocoRenderer(model, height, width)
         self.frames = []
 
     def render_frame(self, camera: int = -1) -> np.ndarray:

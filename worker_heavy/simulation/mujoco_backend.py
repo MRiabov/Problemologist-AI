@@ -10,6 +10,7 @@ ensure_headless_mujoco()
 
 import mujoco
 import numpy as np
+from mujoco.rendering.classic.renderer import Renderer as MujocoRenderer
 
 from shared.enums import FailureReason
 
@@ -258,7 +259,7 @@ class MuJoCoBackend(PhysicsRendererBackend):
                 with contextlib.suppress(BaseException):
                     self.renderer.close()
 
-            self.renderer = mujoco.Renderer(self.model, width, height)
+            self.renderer = MujocoRenderer(self.model, height, width)
 
             # Require an explicit camera. Silent default-view fallback hides bad
             # scene contracts and makes render failures look like success.
