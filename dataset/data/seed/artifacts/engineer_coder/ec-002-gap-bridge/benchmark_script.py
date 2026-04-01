@@ -75,8 +75,6 @@ def build() -> Compound:
     return environment
 
 
-
-
 def _load_objectives() -> dict:
     """Load objective zones from benchmark_definition.yaml."""
     with open("benchmark_definition.yaml", encoding="utf-8") as fh:
@@ -123,7 +121,10 @@ def objectives_geometry() -> Compound:
 
     for index, forbid_zone in enumerate(objectives.get("forbid_zones", []) or []):
         if isinstance(forbid_zone, dict):
-            zone_name = str(forbid_zone.get("name", f"forbid_{index}")).strip() or f"forbid_{index}"
+            zone_name = (
+                str(forbid_zone.get("name", f"forbid_{index}")).strip()
+                or f"forbid_{index}"
+            )
             children.append(
                 _build_objective_zone(
                     f"zone_forbid_{index}_{zone_name}",
