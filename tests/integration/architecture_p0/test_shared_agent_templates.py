@@ -24,9 +24,7 @@ def test_common_agent_templates_load_from_shared_templates():
     assert templates["solution_script.py"] == (
         shared_root / "solution_script.py"
     ).read_text(encoding="utf-8")
-    assert templates["todo.md"] == (shared_root / "todo.md").read_text(
-        encoding="utf-8"
-    )
+    assert templates["todo.md"] == (shared_root / "todo.md").read_text(encoding="utf-8")
     assert templates["journal.md"] == (shared_root / "journal.md").read_text(
         encoding="utf-8"
     )

@@ -113,7 +113,9 @@ def _preview_output_dir() -> Path:
     return (
         _workspace_root()
         / "renders"
-        / select_single_preview_render_subdir(_workspace_root())
+        / select_single_preview_render_subdir(
+            _workspace_root(), agent_role=_script_agent_role()
+        )
     )
 
 
@@ -243,12 +245,17 @@ def _call_worker_light_preview(
     if not worker_light_url:
         return None
 
+    agent_role = _script_agent_role()
     try:
         with httpx.Client(timeout=300.0) as client:
             resp = client.post(
                 f"{worker_light_url}/benchmark/preview",
                 json=payload.model_dump(mode="json"),
-                headers={"X-Session-ID": session_id or "default"},
+                headers={
+                    "X-Session-ID": session_id or "default",
+                    "X-Agent-Role": agent_role,
+                    "X-Stage": agent_role,
+                },
             )
             resp.raise_for_status()
             return PreviewDesignResponse.model_validate(resp.json())
@@ -678,6 +685,7 @@ async def _preview_async(
                 else None
             ),
             session_id=os.getenv("SESSION_ID"),
+            agent_role=_script_agent_role(),
         )
     if not response.success:
         return response

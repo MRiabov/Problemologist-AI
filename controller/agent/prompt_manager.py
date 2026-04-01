@@ -98,7 +98,10 @@ class PromptManager:
             prompt_sections.append(runtime_context.strip())
         if self._skill_catalog:
             prompt_sections.append(self._skill_catalog)
-        return "\n\n".join(section for section in prompt_sections if section).rstrip() + "\n"
+        return (
+            "\n\n".join(section for section in prompt_sections if section).rstrip()
+            + "\n"
+        )
 
     def get_prompt_value(self, key: str) -> Any:
         """Return a raw value from config/prompts.yaml using dot-separated keys."""

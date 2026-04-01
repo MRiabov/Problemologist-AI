@@ -26,4 +26,3 @@ def load_prompts():
             )
             raise ValueError(f"Prompts config is empty at {CONFIG_PATH}")
         return data
-
