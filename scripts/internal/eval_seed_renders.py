@@ -24,6 +24,7 @@ from shared.rendering.renderer_client import (
     render_static_preview,
 )
 from shared.workers.loader import load_component_from_script
+from shared.script_contracts import authored_script_path_for_reviewer_stage
 from shared.workers.schema import (
     RenderArtifactMetadata,
     RenderManifest,
@@ -48,6 +49,7 @@ _NO_RENDER_ROLE = {
 _RENDER_ROLE_WITH_SCRIPT = {
     "benchmark_reviewer",
     "engineer_execution_reviewer",
+    "electronics_reviewer",
 }
 
 _RENDER_ROLE_WITH_DEFINITION_PREVIEW = {
@@ -164,8 +166,12 @@ def _build_moved_object_component(definition: BenchmarkDefinition) -> Compound:
 def _load_preview_component(
     artifact_dir: Path, definition: BenchmarkDefinition, role_name: str
 ) -> Compound:
-    script_path = artifact_dir / "script.py"
-    if role_name in _RENDER_ROLE_WITH_SCRIPT and script_path.exists():
+    if role_name in _RENDER_ROLE_WITH_SCRIPT:
+        script_path = artifact_dir / authored_script_path_for_reviewer_stage(role_name)
+        if not script_path.exists():
+            raise FileNotFoundError(
+                f"{script_path.name} missing in {artifact_dir} for {role_name}"
+            )
         return load_component_from_script(script_path, session_root=artifact_dir)
     return _build_moved_object_component(definition)
 

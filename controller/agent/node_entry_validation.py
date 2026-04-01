@@ -56,7 +56,6 @@ from shared.models.schemas import (
 from shared.models.simulation import SimulationResult
 from shared.script_contracts import (
     BENCHMARK_SCRIPT_PATH,
-    SOLUTION_SCRIPT_PATH,
     authored_script_path_for_reviewer_stage,
 )
 from shared.simulation.schemas import CustomObjectives
@@ -246,7 +245,6 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
             required_artifacts=[
                 *ENGINEER_PLANNER_HANDOFF_ARTIFACTS,
                 *ENGINEER_BENCHMARK_SOURCE_ARTIFACTS,
-                SOLUTION_SCRIPT_PATH,
             ],
         ),
         AgentName.ELECTRONICS_REVIEWER: NodeEntryContract(
@@ -956,6 +954,21 @@ async def validate_seeded_workspace_handoff_artifacts(
 
     present_paths = set(contents)
 
+    if (
+        "benchmark_definition.yaml" in present_paths
+        and target_node != AgentName.BENCHMARK_PLANNER
+        and "benchmark_script.py" not in present_paths
+    ):
+        errors.append(
+            _seeded_schema_error(
+                message=(
+                    "benchmark_script.py missing for benchmark-backed seeded "
+                    f"workspace targeting {target_node.value}."
+                ),
+                artifact_path="benchmark_script.py",
+            )
+        )
+
     if {
         "benchmark_definition.yaml",
         "assembly_definition.yaml",
@@ -1089,17 +1102,6 @@ async def evaluate_node_entry_contract(
                 )
             )
 
-    for required_artifact in contract.required_artifacts:
-        if not await artifact_exists(required_artifact):
-            errors.append(
-                NodeEntryValidationError(
-                    code=REASON_MISSING_ARTIFACT,
-                    message=f"Required artifact '{required_artifact}' is missing.",
-                    source=EntryValidationSource.ARTIFACT,
-                    artifact_path=required_artifact,
-                )
-            )
-
     if contract.custom_check:
         custom_check = (custom_checks or {}).get(contract.custom_check)
         if custom_check is None:
@@ -1127,6 +1129,17 @@ async def evaluate_node_entry_contract(
                         source=EntryValidationSource.POLICY,
                     )
                 )
+
+    for required_artifact in contract.required_artifacts:
+        if not await artifact_exists(required_artifact):
+            errors.append(
+                NodeEntryValidationError(
+                    code=REASON_MISSING_ARTIFACT,
+                    message=f"Required artifact '{required_artifact}' is missing.",
+                    source=EntryValidationSource.ARTIFACT,
+                    artifact_path=required_artifact,
+                )
+            )
 
     if not errors:
         return NodeEntryValidationResult(

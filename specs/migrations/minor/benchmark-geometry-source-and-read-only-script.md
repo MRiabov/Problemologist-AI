@@ -238,7 +238,7 @@ Use this checklist to track the migration from spec edits through runtime gates,
 - [ ] Verify benchmark plan review still blocks missing or contradictory geometry, motion, or material metadata.
 - [ ] Verify benchmark coder entry still blocks if the benchmark handoff is incomplete or the benchmark geometry source is missing.
 - [ ] Verify reviewer entry still uses the latest-revision manifest and fails closed on stale or missing artifacts.
-- [ ] Verify `benchmark_assembly_definition.yaml` remains a required benchmark-owned handoff artifact for downstream engineering intake.
+- [x] Verify `benchmark_assembly_definition.yaml` remains a required benchmark-owned handoff artifact for downstream engineering intake.
 - [x] Verify `benchmark_script.py` is read-only once copied into downstream engineering or benchmark-review workspaces.
 
 ### Seed and fixture updates
