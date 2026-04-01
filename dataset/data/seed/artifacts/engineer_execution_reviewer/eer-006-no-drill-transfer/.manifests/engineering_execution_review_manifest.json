@@ -3,7 +3,7 @@
   "reviewer_stage": "engineering_execution_reviewer",
   "timestamp": "2026-03-11T12:00:00Z",
   "session_id": "seed-eer-006-no-drill-transfer",
-  "revision": "8fb6acadf3fd2f13f9101d8f3e91d09c5f1bbc2e",
+  "revision": "b061d58535370ebc96537c067fd4a25343e37b85",
   "script_path": "solution_script.py",
   "script_sha256": "0c2d38148a5dee026ef88d87783930713719acac15a5ef2c97b4b9c251317757",
   "validation_success": true,
