@@ -20,6 +20,7 @@ class COTSPart(Compound, ABC):
         part_number: str,
         data: dict[str, Any],
         children=None,
+        label: str | None = None,
         **kwargs,
     ):
         """
@@ -43,9 +44,10 @@ class COTSPart(Compound, ABC):
             material_id=data.get("material_id", "cots-generic"),
         )
 
-        # Ensure label exists for identification
-
-        if not hasattr(self, "label") or not self.label:
+        # Ensure label exists for identification.
+        if label is not None:
+            self.label = label
+        elif not hasattr(self, "label") or not self.label:
             self.label = f"{category}_{part_number}"
 
         # Price and weight are mandatory for observability metrics
@@ -68,3 +70,18 @@ class COTSPart(Compound, ABC):
     def info(self):
         """Standard property to access metadata, identical to Indexer expectations."""
         return self.metadata
+
+    @classmethod
+    def from_catalog_id(cls, part_id: str, *, label: str | None = None) -> "COTSPart":
+        """Resolve a catalog-backed `part_id` to a concrete COTS geometry object."""
+        from shared.cots.providers import resolve_cots_provider
+
+        provider = resolve_cots_provider(part_id)
+        if not issubclass(provider.cots_class, cls):
+            raise ValueError(
+                f"{cls.__name__}.from_catalog_id cannot resolve provider family "
+                f"'{provider.family}' for part_id '{part_id}'"
+            )
+        if label is not None and not str(label).strip():
+            raise ValueError("label must be a non-empty string when provided")
+        return provider.instantiate(label=label)

@@ -975,6 +975,7 @@ def calculate_assembly_totals(
     config = manufacturing_config or load_config()
     total_cost = 0.0
     total_weight = 0.0
+    observed_cots_counts: dict[str, int] = {}
 
     # 1. Manufactured parts
     children = getattr(component, "children", [])
@@ -999,6 +1000,7 @@ def calculate_assembly_totals(
             catalog_details = catalog_item.metadata or {}
             total_cost += catalog_item.unit_cost
             total_weight += catalog_item.weight_g
+            observed_cots_counts[cots_id] = observed_cots_counts.get(cots_id, 0) + 1
 
             manufacturer = getattr(metadata, "manufacturer", None)
             catalog_manufacturer = catalog_details.get("manufacturer")
@@ -1171,7 +1173,11 @@ def calculate_assembly_totals(
 
     # 3. Generic COTS parts from assembly definition
     if cots_parts:
+        declared_cots_counts: dict[str, int] = {}
         for p in cots_parts:
+            declared_cots_counts[p.part_id] = (
+                declared_cots_counts.get(p.part_id, 0) + p.quantity
+            )
             lookup = _resolve_cots_catalog_item(p.part_id)
             if lookup is None:
                 raise ValueError(f"Unknown catalog COTS part_id '{p.part_id}'")
@@ -1199,34 +1205,40 @@ def calculate_assembly_totals(
                     f"catalog weight {catalog_item.weight_g}g"
                 )
 
-            provenance_pairs = (
-                (
-                    "catalog_version",
-                    p.catalog_version,
-                    catalog_metadata.get("catalog_version"),
-                ),
-                (
-                    "bd_warehouse_commit",
-                    p.bd_warehouse_commit,
-                    catalog_metadata.get("bd_warehouse_commit"),
-                ),
-                (
-                    "catalog_snapshot_id",
-                    p.catalog_snapshot_id,
-                    catalog_metadata.get("catalog_snapshot_id"),
-                ),
-                ("generated_at", p.generated_at, catalog_metadata.get("generated_at")),
+        missing_declared_cots_parts = [
+            f"'{part_id}' x{quantity}"
+            for part_id, quantity in declared_cots_counts.items()
+            if observed_cots_counts.get(part_id, 0) < quantity
+        ]
+        if missing_declared_cots_parts:
+            raise ValueError(
+                "Declared COTS part(s) were not instantiated in authored geometry: "
+                + ", ".join(missing_declared_cots_parts)
             )
-            for field_name, observed, expected in provenance_pairs:
-                if (
-                    observed is not None
-                    and expected is not None
-                    and observed != expected
-                ):
-                    raise ValueError(
-                        f"COTS provenance mismatch for part_id '{p.part_id}': "
-                        f"{field_name} '{observed}' does not match catalog '{expected}'"
-                    )
+        provenance_pairs = (
+            (
+                "catalog_version",
+                p.catalog_version,
+                catalog_metadata.get("catalog_version"),
+            ),
+            (
+                "bd_warehouse_commit",
+                p.bd_warehouse_commit,
+                catalog_metadata.get("bd_warehouse_commit"),
+            ),
+            (
+                "catalog_snapshot_id",
+                p.catalog_snapshot_id,
+                catalog_metadata.get("catalog_snapshot_id"),
+            ),
+            ("generated_at", p.generated_at, catalog_metadata.get("generated_at")),
+        )
+        for field_name, observed, expected in provenance_pairs:
+            if observed is not None and expected is not None and observed != expected:
+                raise ValueError(
+                    f"COTS provenance mismatch for part_id '{p.part_id}': "
+                    f"{field_name} '{observed}' does not match catalog '{expected}'"
+                )
 
     if assembly_definition is not None:
         total_cost += calculate_benchmark_drilling_cost(assembly_definition, config)
