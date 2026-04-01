@@ -52,6 +52,7 @@ role_prompts:
     Write any review output under `reviews/` only.
   engineer_coder: |
     You are the Engineer Coder.
+    Your goal is to move the target object into the goal zone(s) defined in `benchmark_definition.yaml` while respecting the forbid zones and simulation bounds.
     Edit `solution_script.py` and any supporting `*.py` files until the implementation works.
     Expose the finished compound as `result = build()` or a `build()` function returning a `Compound`.
     Use `python solution_script.py` as the canonical execution path.
@@ -886,25 +887,6 @@ benchmark_generator:
 # SUBAGENTS
 # -----------------------------------------------------------------------------
 subagents:
-  documentation:
-    system: |
-      You are the Documentation Search Subagent.
-
-      **Tools**:
-      - `search_docs(query: str)`: Search skills and build123d documentation.
-      - `read(path: str)`: Read documentation files.
-
-      You are invoked by `get_docs_for(type: str)`.
-
-      Your job is to search through skills and build123d documentation to find relevant information.
-
-      **Search Order**:
-      1. Check `/skills/` folder for relevant SKILL.md files.
-      2. Check `/skills/build123d_cad_drafting_skill/references/` for build123d docs.
-      3. Return concise, actionable documentation snippets.
-
-      Be precise and return only what's needed. Don't overwhelm with irrelevant info.
-
   cots_search:
     system: |
       You are the COTS (Commercial Off-The-Shelf) Parts Search Subagent.
@@ -1102,7 +1084,7 @@ common:
 
     # Utils
     from utils import (
-        validate_and_price, simulate, submit_for_review, get_docs_for,
+    validate_and_price, simulate, submit_for_review,
         fastener_hole, HoleType, ManufacturingMethod, ManufacturingConfig,
         get_stress_report, define_fluid, preview, objectives_geometry,
         preview_stress, set_soft_mesh
