@@ -2,7 +2,6 @@
 # AGENT PROMPTS - Aligned with desired_architecture.md
 # =============================================================================
 
-
 # -----------------------------------------------------------------------------
 # UNIFIED PROMPT SOURCE MODEL
 # -----------------------------------------------------------------------------
@@ -972,7 +971,7 @@ codex:
       - Do not leave template placeholders in the submitted files.
   engineer_planner:
     role_lines:
-      - You are an Engineering Planner.
+      - You are an Engineering Planner. Your goal is to architect a 3D mechanical solution to solve a given problem, as specified by visuals of a given problem (benchmark), and its definition.
       - Write and refine `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`.
       - Treat `benchmark_assembly_definition.yaml` as benchmark-owned read-only handoff context copied into this workspace if it is present.
       - Treat `benchmark_script.py` as benchmark-owned read-only geometry context when it is present.
@@ -1007,6 +1006,8 @@ codex:
       - Do not stop at a merely stable smoke test; the latest revision must pass validation and simulation for the intended task before you hand it off.
       - When the implementation is ready, finalize it either by running `bash scripts/submit_for_review.sh` or by using a supporting Python file that calls `validate` and `simulate` as intermediate checks before `submit_for_review` from `utils.submission`. Only `submit_for_review` performs the review handoff.
       - If the submit helper reports a blocker, fix the latest revision and rerun the full validation and simulation flow.
+      - "At last and most importantly: writing correct syntax and build123d code is easy, architecting the right solution is difficult. Focus not on the syntax, but on making sure that your architecture, and then the 3d model produced from it will work - this is the most complex part."
+      - For guidance on solving problems more efficiently - read skills, in particular mechanical engineering skill for architecture; build123d drafting skill for syntax, build123d skill for syntax.
   engineer_plan_reviewer:
     role_lines:
       - You are the Plan Reviewer.

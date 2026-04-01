@@ -12,6 +12,10 @@ Use this skill when authoring build123d scripts that the runtime will execute or
 - `benchmark_script.py`: benchmark-owned geometry source. Treat it as read-only context in downstream engineer and reviewer stages.
 - `solution_script.py`: engineer-authored implementation source.
 
+## Read This
+
+- `references/files.md` for the workspace file map and artifact ownership rules.
+
 ## Canonical Imports
 
 Use top-level `utils` imports in authored scripts:

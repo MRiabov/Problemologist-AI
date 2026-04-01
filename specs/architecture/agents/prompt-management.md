@@ -96,9 +96,15 @@ Examples include the task text, agent name, task ID, seed dataset name, workspac
 
 This context is injected by the runtime. It is not a manually maintained prompt template.
 
-### Skills
+## Skills
 
 Skills own the detailed business logic, procedures, and domain guidance.
+
+Each first-class agent role has a dedicated maintained skill. Roles such as `engineer_coder` and `benchmark_planner` each map to their own skill, and the same 1:1 rule applies to the other active planner, coder, and reviewer roles.
+
+Skills are expected to evolve per agent over time as the role's workflows, failure modes, and operating heuristics mature.
+
+Skills are one of the most important levers for optimizing an agent because they can pack a large amount of useful guidance for a particular class of problems into a compact reusable artifact.
 
 The prompt manager should not hand-author skill-loading explanations or long skill catalogs. If a backend needs discoverability hints, derive them mechanically from the installed skill tree and keep them compact.
 

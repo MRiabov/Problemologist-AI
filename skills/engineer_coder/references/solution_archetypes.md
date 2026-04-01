@@ -1,0 +1,149 @@
+# Solution Archetypes
+
+## Table of Contents
+
+1. [How to choose](#how-to-choose)
+2. [Passive transfer](#passive-transfer)
+3. [Actuated solutions](#actuated-solutions)
+4. [COTS-backed solutions](#cots-backed-solutions)
+5. [Electronics-backed solutions](#electronics-backed-solutions)
+6. [Convergence heuristics](#convergence-heuristics)
+
+## How to choose
+
+Choose the smallest mechanism family that can satisfy the objective under runtime jitter.
+
+- If gravity and geometry are enough, use a passive transfer family.
+- If the task needs timing, reset, or sequencing, add only the minimum actuation needed.
+- If the handoff depends on exact part identity, use a COTS-backed design.
+- If the handoff explicitly includes electronics, keep the logical circuit and the physical routing consistent.
+
+When in doubt, start with the simplest family that can plausibly solve the problem and only escalate after a concrete failure explains why.
+
+## Passive transfer
+
+Use for drop, redirect, catch, funnel, capture, and guide tasks.
+
+Common forms:
+
+- Ramp
+- Chute
+- Funnel
+- Deflector
+- Capture pocket
+- Guide rail
+
+Drafting cues:
+
+- Make the transport path continuous.
+- Keep support surfaces aligned with the intended motion direction.
+- Include enough lateral containment to survive jitter and bounce.
+- Avoid tiny ledges or gaps that only work on the nominal seed.
+
+Typical failure modes:
+
+- The object leaves the intended path.
+- The object bounces out at the handoff.
+- The guide is technically valid but too narrow for jitter.
+- The path is continuous in concept but not in the actual placed geometry.
+
+First response:
+
+- Increase capture margin.
+- Remove unsupported gaps.
+- Re-check the final placed envelope, not just the sketch.
+
+## Actuated solutions
+
+Use when a passive path cannot satisfy the objective.
+
+Common forms:
+
+- Gate
+- Pusher
+- Latch
+- Slider
+- Lever
+- Cam-driven reset
+
+Drafting cues:
+
+- Declare the motion contract explicitly.
+- Minimize DOFs.
+- Give each moving part a real physical reason to move.
+- Define the stop positions and travel limits clearly.
+
+Typical failure modes:
+
+- A motion axis exists only because it was convenient.
+- The control contract is ambiguous.
+- The design works only if the actuator is treated like magic.
+- The mechanism collides with its own supports or with the benchmark environment.
+
+First response:
+
+- Remove unneeded DOFs.
+- Add clear stops and path constraints.
+- Reconcile the motion path with the surrounding geometry.
+
+## COTS-backed solutions
+
+Use when a catalog part materially improves the design or is required by the handoff.
+
+Rules:
+
+- Preserve the exact part identity.
+- Keep the local frame and placement explicit.
+- Do not replace the part with anonymous solids when provenance matters.
+- Keep the chosen part visible in the authored geometry.
+
+Good uses:
+
+- Motors
+- Switches
+- Bearings
+- Fasteners
+- Connectors
+- Fixture interfaces that depend on a real product shape
+
+Typical failure modes:
+
+- The part is declared but never actually used.
+- The geometry fits, but the frame or orientation is wrong.
+- The part is conceptually present but not preserved as the concrete component instance.
+
+First response:
+
+- Re-read the part contract.
+- Re-place the part from its real frame.
+- Check clearances and provenance after placement.
+
+## Electronics-backed solutions
+
+Use only when the approved handoff explicitly requires electronics or the benchmark declares electronics requirements.
+
+Rules:
+
+- Keep the logical circuit and the physical routing consistent.
+- Validate the circuit before physics concerns.
+- Route wires with clearance and tension in mind.
+- Do not invent electronics because a mechanism has a motor.
+
+Typical failure modes:
+
+- The circuit is valid on paper but impossible in the geometry.
+- The wire path collides with the mechanism.
+- The design silently assumes power, control, or switching behavior that was never declared.
+
+First response:
+
+- Separate netlist issues from routing issues.
+- Fix the logical contract first, then the physical path.
+
+## Convergence heuristics
+
+- Prefer the first physically credible geometry over an elaborate speculative one.
+- Solve the nominal objective and runtime jitter together.
+- Reduce sensitivity before increasing complexity.
+- If a review or simulation failure recurs, promote the winning pattern into this file so the next run starts from a better prior.
+- Keep new patterns here concise enough to reuse, but specific enough to be actionable.
