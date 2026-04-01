@@ -116,7 +116,7 @@ def test_codex_session_trace_capture_keeps_artifacts_separate(tmp_path: Path) ->
     workspace_dir = tmp_path / "workspace"
     workspace_dir.mkdir()
 
-    script_path = workspace_dir / "script.py"
+    script_path = workspace_dir / "solution_script.py"
     notes_path = workspace_dir / "notes.md"
     stable_path = workspace_dir / "stable.txt"
 
@@ -197,15 +197,15 @@ def test_codex_session_trace_capture_keeps_artifacts_separate(tmp_path: Path) ->
     diff = artifact.workspace_diff
     assert diff is not None
     assert diff.workspace_dir == workspace_dir
-    assert "script.py" in diff.changed_paths
+    assert "solution_script.py" in diff.changed_paths
     assert "notes.md" in diff.changed_paths
     assert "new.txt" in diff.changed_paths
 
     modified_paths = {entry.path: entry for entry in diff.modified}
-    assert "script.py" in modified_paths
-    assert modified_paths["script.py"].diff is not None
-    assert '-print("before")' in modified_paths["script.py"].diff
-    assert '+print("after")' in modified_paths["script.py"].diff
+    assert "solution_script.py" in modified_paths
+    assert modified_paths["solution_script.py"].diff is not None
+    assert '-print("before")' in modified_paths["solution_script.py"].diff
+    assert '+print("after")' in modified_paths["solution_script.py"].diff
 
     added_paths = {entry.path for entry in diff.added}
     removed_paths = {entry.path for entry in diff.removed}

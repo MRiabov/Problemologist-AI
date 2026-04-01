@@ -404,9 +404,9 @@
 │   │   └── ./shared/assets/template_repos
 │   │   ├── ./shared/assets/template_repos/benchmark_generator
 │   │   │   ├── ./shared/assets/template_repos/benchmark_generator/plan.md # Markdown documentation or specification.
-│   │   │   └── ./shared/assets/template_repos/benchmark_generator/result.py # Python source code.
+│   │   │   └── ./shared/assets/template_repos/benchmark_generator/benchmark_script.py # Python source code.
 │   │   └── ./shared/assets/template_repos/engineer
-│   │   └── ./shared/assets/template_repos/engineer/result.py # Python source code.
+│   │   └── ./shared/assets/template_repos/engineer/solution_script.py # Python source code.
 │   ├── ./shared/cli
 │   │   └── ./shared/cli/benchmark.py # Python source code.
 │   ├── ./shared/cots # Commercial Off-The-Shelf parts logic.
@@ -512,7 +512,7 @@
 ├── ./worker # The 'Muscle': Executes code, simulations, and utilizes heavy tools.
 │   ├── ./worker/agent_files # Template files for agents (journal, script, todo).
 │   │   ├── ./worker/agent_files/journal.md # Markdown documentation or specification.
-│   │   ├── ./worker/agent_files/script.py # Python source code.
+│   │   ├── ./worker/agent_files/solution_script.py # Python source code.
 │   │   └── ./worker/agent_files/todo.md # Markdown documentation or specification.
 │   ├── ./worker/api # Worker API routes.
 │   │   ├── ./worker/api/__init__.py # Package initialization file.

@@ -1019,7 +1019,7 @@ def build():
             "benchmark_assembly_definition.yaml",
             benchmark_assembly_definition,
         )
-        await _write_workspace_file(client, headers, "script.py", goal_script)
+        await _write_workspace_file(client, headers, "benchmark_script.py", goal_script)
         await _write_workspace_file(
             client, headers, "benchmark_definition.yaml", interactable_objectives
         )
@@ -1043,7 +1043,7 @@ def build():
         )
 
         benchmark_request = BenchmarkToolRequest(
-            script_path="script.py",
+            script_path="benchmark_script.py",
             reviewer_stage=AgentName.BENCHMARK_REVIEWER,
         )
         validate_resp = await client.post(
@@ -1218,13 +1218,13 @@ def build():
             "benchmark_assembly_definition.yaml",
             benchmark_assembly_definition,
         )
-        await _write_workspace_file(client, headers, "script.py", goal_script)
+        await _write_workspace_file(client, headers, "benchmark_script.py", goal_script)
         await _write_workspace_file(
             client, headers, "benchmark_definition.yaml", missing_permission_objectives
         )
 
         benchmark_request = BenchmarkToolRequest(
-            script_path="script.py",
+            script_path="benchmark_script.py",
             reviewer_stage=AgentName.BENCHMARK_REVIEWER,
         )
         validate_resp = await client.post(
@@ -1637,7 +1637,9 @@ async def _setup_drill_workspace(
     """Write the common workspace files for drilling contract tests."""
     await _write_workspace_file(client, headers, "plan.md", _DRILL_TEST_PLAN)
     await _write_workspace_file(client, headers, "todo.md", _DRILL_TEST_TODO)
-    await _write_workspace_file(client, headers, "script.py", _DRILL_TEST_SCRIPT)
+    await _write_workspace_file(
+        client, headers, "benchmark_script.py", _DRILL_TEST_SCRIPT
+    )
     await _write_workspace_file(
         client, headers, "benchmark_definition.yaml", benchmark_definition
     )
@@ -1655,7 +1657,7 @@ async def _validate_and_simulate(
 ) -> None:
     """Run /benchmark/validate and /benchmark/simulate so submit prerequisites pass."""
     benchmark_request = BenchmarkToolRequest(
-        script_path="script.py",
+        script_path="benchmark_script.py",
         reviewer_stage=AgentName.BENCHMARK_REVIEWER,
     )
     validate_resp = await client.post(
@@ -1728,7 +1730,7 @@ async def test_int_008_drilling_contract_rejects_exceeding_hole_count():
         submit_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
             json=BenchmarkToolRequest(
-                script_path="script.py",
+                script_path="benchmark_script.py",
                 reviewer_stage=AgentName.BENCHMARK_REVIEWER,
             ).model_dump(mode="json"),
             headers=headers,
@@ -1785,7 +1787,7 @@ async def test_int_008_drilling_contract_rejects_diameter_out_of_range():
         submit_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
             json=BenchmarkToolRequest(
-                script_path="script.py",
+                script_path="benchmark_script.py",
                 reviewer_stage=AgentName.BENCHMARK_REVIEWER,
             ).model_dump(mode="json"),
             headers=headers,
@@ -1842,7 +1844,7 @@ async def test_int_008_drilling_contract_rejects_depth_exceeding_max():
         submit_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
             json=BenchmarkToolRequest(
-                script_path="script.py",
+                script_path="benchmark_script.py",
                 reviewer_stage=AgentName.BENCHMARK_REVIEWER,
             ).model_dump(mode="json"),
             headers=headers,
@@ -1909,7 +1911,7 @@ async def test_int_008_no_attachment_policy_defaults_to_non_drillable():
         submit_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
             json=BenchmarkToolRequest(
-                script_path="script.py",
+                script_path="benchmark_script.py",
                 reviewer_stage=AgentName.BENCHMARK_REVIEWER,
             ).model_dump(mode="json"),
             headers=headers,

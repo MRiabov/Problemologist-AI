@@ -129,7 +129,7 @@ randomization:
 
     async with httpx.AsyncClient(timeout=300.0) as client:
         for path, content in {
-            "script.py": script,
+            "benchmark_script.py": script,
             "benchmark_definition.yaml": objectives,
         }.items():
             resp = await client.post(
@@ -146,7 +146,7 @@ randomization:
         validate_resp = await _post_heavy_tool(
             client,
             "/benchmark/validate",
-            BenchmarkToolRequest(script_path="script.py"),
+            BenchmarkToolRequest(script_path="benchmark_script.py"),
             headers,
         )
         assert validate_resp.status_code == 200, validate_resp.text
@@ -156,7 +156,7 @@ randomization:
         simulate_resp = await _post_heavy_tool(
             client,
             "/benchmark/simulate",
-            BenchmarkToolRequest(script_path="script.py"),
+            BenchmarkToolRequest(script_path="benchmark_script.py"),
             headers,
         )
         assert simulate_resp.status_code == 200, simulate_resp.text
@@ -247,7 +247,7 @@ randomization:
 
     async with httpx.AsyncClient(timeout=300.0) as client:
         for path, content in {
-            "script.py": script,
+            "benchmark_script.py": script,
             "benchmark_definition.yaml": objectives,
         }.items():
             resp = await client.post(
@@ -264,7 +264,7 @@ randomization:
         validate_resp = await _post_heavy_tool(
             client,
             "/benchmark/validate",
-            BenchmarkToolRequest(script_path="script.py"),
+            BenchmarkToolRequest(script_path="benchmark_script.py"),
             headers,
         )
         assert validate_resp.status_code == 200, validate_resp.text
@@ -274,7 +274,7 @@ randomization:
         simulate_resp = await _post_heavy_tool(
             client,
             "/benchmark/simulate",
-            BenchmarkToolRequest(script_path="script.py"),
+            BenchmarkToolRequest(script_path="benchmark_script.py"),
             headers,
         )
         assert simulate_resp.status_code == 200, simulate_resp.text
