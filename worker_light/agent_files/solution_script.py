@@ -1,6 +1,10 @@
 from build123d import Box, BuildPart
 
-with BuildPart() as builder:
-    Box(10, 10, 10)
 
-result = builder.part
+def build():
+    with BuildPart() as builder:
+        Box(10, 10, 10)
+    return builder.part
+
+
+result = build()

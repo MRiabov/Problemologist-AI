@@ -279,7 +279,7 @@ async def test_int_192_controller_script_tools_validate_waits_through_temporal_q
 
     async with httpx.AsyncClient(timeout=1000.0) as client:
         await _write_session_workspace(client, busy_session_id, "busy_script.py")
-        await _write_session_workspace(client, tool_session_id, "script.py")
+        await _write_session_workspace(client, tool_session_id, "sample_script.py")
 
         create_episode_resp = await client.post(
             f"{CONTROLLER_URL}/api/test/episodes",
@@ -318,7 +318,7 @@ async def test_int_192_controller_script_tools_validate_waits_through_temporal_q
         validate_resp = await client.post(
             f"{CONTROLLER_URL}/api/script-tools/validate",
             json={
-                "script_path": "script.py",
+                "script_path": "sample_script.py",
                 "agent_role": AgentName.BENCHMARK_CODER.value,
             },
             headers={"X-Session-ID": tool_session_id},
@@ -334,7 +334,7 @@ async def test_int_192_controller_script_tools_validate_waits_through_temporal_q
         simulate_resp = await client.post(
             f"{CONTROLLER_URL}/api/script-tools/simulate",
             json={
-                "script_path": "script.py",
+                "script_path": "sample_script.py",
                 "agent_role": AgentName.BENCHMARK_CODER.value,
             },
             headers={"X-Session-ID": tool_session_id},
@@ -349,7 +349,7 @@ async def test_int_192_controller_script_tools_validate_waits_through_temporal_q
         submit_resp = await client.post(
             f"{CONTROLLER_URL}/api/script-tools/submit",
             json={
-                "script_path": "script.py",
+                "script_path": "sample_script.py",
                 "agent_role": AgentName.BENCHMARK_CODER.value,
                 "reviewer_stage": "benchmark_reviewer",
             },
@@ -384,7 +384,7 @@ async def test_int_193_controller_script_tools_verify_waits_through_temporal_que
 
     async with httpx.AsyncClient(timeout=1000.0) as client:
         await _write_session_workspace(client, busy_session_id, "busy_script.py")
-        await _write_session_workspace(client, tool_session_id, "script.py")
+        await _write_session_workspace(client, tool_session_id, "sample_script.py")
 
         create_episode_resp = await client.post(
             f"{CONTROLLER_URL}/api/test/episodes",
@@ -403,7 +403,7 @@ async def test_int_193_controller_script_tools_verify_waits_through_temporal_que
                 "success": True,
                 "message": "seeded",
                 "timestamp": 0.0,
-                "script_path": "script.py",
+                "script_path": "sample_script.py",
                 "script_sha256": "1" * 64,
                 "verification_result": None,
             }
@@ -472,7 +472,7 @@ async def test_int_193_controller_script_tools_verify_waits_through_temporal_que
         verify_resp = await client.post(
             f"{CONTROLLER_URL}/api/script-tools/verify",
             json={
-                "script_path": "script.py",
+                "script_path": "sample_script.py",
                 "agent_role": AgentName.BENCHMARK_CODER.value,
                 "backend": SimulatorBackendType.MUJOCO.value,
                 "smoke_test_mode": True,
@@ -641,7 +641,7 @@ async def test_int_193b_worker_heavy_smoke_verification_uses_smoke_defaults(
             success=True,
             message="seeded",
             timestamp=0.0,
-            script_path="script.py",
+            script_path="sample_script.py",
             script_sha256="0" * 64,
             verification_result=None,
         ).model_dump_json(),
@@ -685,7 +685,7 @@ async def test_int_193b_worker_heavy_smoke_verification_uses_smoke_defaults(
     response = await verification_mod.run_verification_job(
         root=root,
         request=VerificationRequest(
-            script_path="script.py",
+            script_path="sample_script.py",
             backend=SimulatorBackendType.MUJOCO,
             smoke_test_mode=True,
             jitter_range=[0.0, 0.0, 0.0],
