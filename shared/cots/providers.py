@@ -102,7 +102,14 @@ def supported_cots_geometry_hints() -> tuple[str, ...]:
         return tuple(hints)
 
     hints.append("# COTS import hint:")
-    provider = SUPPORTED_GEOMETRY_PROVIDERS[0]
+    provider = next(
+        (
+            candidate
+            for candidate in SUPPORTED_GEOMETRY_PROVIDERS
+            if candidate.catalog_part_id == "ServoMotor_DS3218"
+        ),
+        SUPPORTED_GEOMETRY_PROVIDERS[0],
+    )
     if provider.family == "motor":
         class_name = provider.cots_class.__name__
         hints.append(f"# from shared.cots.parts.motors import {class_name}")
