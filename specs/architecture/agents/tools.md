@@ -165,8 +165,8 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 
 <!-- Same: what's in the compound? -->
 
-- `preview(component: Part|Compound, orbit_pitch: float = 45, orbit_yaw: float = 45, rendering_type: RenderingType | Literal["rgb", "depth", "segmentation"])` - a way to render the CAD files on demand. Used for the engineer to get a visual inspection of its work. The single-view preview bundle is persisted under `renders/engineer_renders/` rather than being flattened into the root render directory. Benchmark callers compose benchmark geometry first and then preview the composed result.
-- `objectives_geometry()` - a zero-argument utility imported from `utils` that materializes the benchmark objective geometry from the canonical benchmark definition path for the current workspace. Preview callers combine its output with benchmark `build()` output before rendering benchmark context.
+- `preview(component: Part|Compound, orbit_pitch: float = 45, orbit_yaw: float = 45, rendering_type: RenderingType | Literal["rgb", "depth", "segmentation"])` - a way to render the CAD files on demand. Used for the engineer to get a visual inspection of its work. The single-view preview bundle is persisted under `renders/engineer_renders/` rather than being flattened into the root render directory. Benchmark callers compose benchmark `build()` output with objective overlays from `objectives_geometry()` before previewing benchmark context.
+- `objectives_geometry()` - a zero-argument utility imported from `utils` that reconstructs the benchmark objective overlay geometry from the `objectives` section of the canonical `benchmark_definition.yaml` path for the current workspace. Preview callers combine its output with benchmark `build()` output before rendering benchmark context.
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service which does it fo us-->
 
 #### Reviewer / media-inspection tool
@@ -218,7 +218,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 
   Validated under all environment randomization.
 
-  - `objectives_geometry()` returns benchmark objective geometry for the current workspace. It takes no arguments because the benchmark objectives are defined in the canonical `benchmark_definition.yaml` path for the current workspace, and preview callers compose the returned geometry with the benchmark assembly output before rendering.
+  - `objectives_geometry()` returns benchmark objective overlay geometry for the current workspace. It takes no arguments because the benchmark objective zones are defined in the `objectives` section of the canonical `benchmark_definition.yaml` path for the current workspace, and preview callers compose the returned geometry with the benchmark `build()` output before rendering.
 
   - The validation tool also generates the standard 24-view static preview package, persisted under `renders/benchmark_renders/` for benchmark-side validation and `renders/final_preview_renders/` for engineer-side validation.
 
@@ -251,7 +251,7 @@ submit_for_review(result)
 
 The preferred execution path for the agent is to run the checked-in shell helper (`bash scripts/submit_for_review.sh`). The underlying Python utility `utils.submission.submit_for_review(...)` is also available for direct invocation in a supporting script when a prompt explicitly chooses that route; `validate` and `simulate` remain intermediate checks.
 
-`build()` may still exist as a compatibility helper, but it is no longer a required submission-script entrypoint. The architecture contract is the submission script itself, not an import-only `build()` API.
+For benchmark scripts, `build()` remains the assembly constructor; for other authored scripts, it may remain a compatibility helper. It is not a required submission-script entrypoint. The architecture contract is the submission script itself, not an import-only `build()` API.
 
 ### Planner tools
 

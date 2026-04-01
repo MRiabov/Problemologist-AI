@@ -186,7 +186,7 @@ The engineer will also receive YAML files with:
 Note that the maximum price and weight are also set by the planner later internally. However, the planner sets their own constraints *under* the maximum price. Here the "maximum prices and weight" are a "customer-specified price and weight" (the "customer" being the benchmark generator), and the planner price and weight are their own price and weight.
     <!-- (in future work) Later on, we will challenge the agent to optimize its previous result. It would have to beat its own solution, by, say, 15%.  -->
 
-The positions of objectives (including a build zone) and runtime randomization are in `benchmark_definition.yaml`. The Benchmark Planner's `benchmark_assembly_definition.yaml` is a required benchmark-owned handoff artifact copied into the engineer session as read-only context. The benchmark-owned geometry source is materialized in `benchmark_script.py` by `Benchmark Coder` after plan approval, and preview callers compose its `objectives_geometry()` output with the benchmark assembly context before rendering benchmark context.
+The positions of objectives (including a build zone) and runtime randomization are in `benchmark_definition.yaml`. The Benchmark Planner's `benchmark_assembly_definition.yaml` is a required benchmark-owned handoff artifact copied into the engineer session as read-only context. The benchmark-owned assembly geometry is materialized in `benchmark_script.py` by `Benchmark Coder` after plan approval through `build()`, and preview callers compose that assembly output with the objective overlays reconstructed by `objectives_geometry()` from the `objectives` section of `benchmark_definition.yaml` before rendering benchmark context.
 
 Engineering may read `benchmark_assembly_definition.yaml`, reason about it, and design against it, but must not modify benchmark-owned fixtures or benchmark motion definitions. Missing `benchmark_assembly_definition.yaml` is a handoff failure, not an optional omission, and the file remains benchmark-owned read-only context rather than an engineer-owned planning artifact. `benchmark_script.py` is also read-only context for engineering intake once it exists.
 
@@ -209,7 +209,7 @@ If a benchmark-owned fixture is meant to be interactable by engineering, the rel
 
 That flag is a permission, not transfer of ownership. The engineer may interact with the intended benchmark-owned surface, but may not redefine benchmark-owned components.
 
-The benchmark-owned geometry source is created in `benchmark_script.py` by `Benchmark Coder` and is copied read-only into downstream engineer workspaces and benchmark execution review. The engineer-owned solution source lives in `solution_script.py`.
+The benchmark-owned geometry source is created in `benchmark_script.py` by `Benchmark Coder` and is copied read-only into downstream engineer workspaces and benchmark execution review. The engineer-owned solution source lives in `solution_script.py`. Benchmark assembly geometry comes from `build()`, while `objectives_geometry()` reconstructs the objective overlays declared in the `objectives` section of `benchmark_definition.yaml`.
 
 #### Renders
 

@@ -31,13 +31,13 @@ Rendering becomes a separate containerized worker:
 
 The agent-facing boundary does not change. The internal boundary does:
 
-- public tools still call `validate`, `simulate`, `preview`, and `submit` through the existing controller/Temporal/worker path;
-- `worker-heavy` becomes the only service that talks to `worker-renderer`;
+- public tools still call `validate`, `simulate`, `preview`, and `submit` through the existing controller/Temporal orchestration path family; preview is a direct render route rather than a validation/simulation handoff;
+- validation and simulation render jobs continue to flow through `worker-heavy`, but on-demand preview can reach `worker-renderer` without first traversing `worker-heavy`;
 - `worker-renderer` is internal-only and containerized in every environment.
 
 ## Render Contract
 
-Use one renderer service and one endpoint family. Static preview and heavy simulation rendering should hit the same service contract and differ only by job kind.
+Use one renderer service and one endpoint family. Static validation preview, on-demand preview, and heavy simulation rendering should hit the same service contract and differ only by route/purpose and job kind.
 
 Recommended shape:
 
@@ -53,6 +53,8 @@ Example job kinds:
 - `depth`
 - `segmentation`
 
+On-demand `preview` requests use the same renderer contract and artifact layout, but they are triggered by the preview workflow/helper rather than by the validation/simulation path.
+
 The renderer should remain single-flight per instance. If busy, it should fail closed with the same deterministic busy behavior used elsewhere in the worker plane.
 
 ## Data Flow
@@ -62,14 +64,14 @@ The source of truth stays in the session workspace, not in controller memory and
 Recommended flow:
 
 1. Authoring and session files live in the normal worker filesystem.
-2. `worker-heavy` stages the minimal render input bundle for the render job.
+2. `worker-heavy` stages the minimal render input bundle for validation and simulation render jobs; the preview workflow stages its own bundle for on-demand preview requests.
 3. `worker-renderer` consumes that bundle or bundle reference.
 4. `worker-renderer` writes render outputs and manifest data.
-5. `worker-heavy` mirrors only the required artifacts back into the existing handoff path.
+5. `worker-heavy` mirrors only the required artifacts back into the existing handoff path; preview artifacts are mirrored by the preview workflow into the agent-visible workspace.
 
 The renderer must not receive raw `build123d.Compound` objects over HTTP. It should receive a staged scene bundle or a reference to staged files.
 
-For static CAD preview, that bundle can contain the authored script and the workspace files needed to reconstruct the geometry, or a synthesized `preview_scene.json` bundle when the geometry already exists in memory and no persistent `script.py` is available.
+For static CAD preview, that bundle can contain the authored `benchmark_script.py` or `solution_script.py` workspace files needed to reconstruct the geometry, or a synthesized `preview_scene.json` bundle when the geometry already exists in memory and no persisted source snapshot is needed.
 For MuJoCo, FEM, and fluid jobs, the bundle can contain the backend-produced scene state, meshes, fields, or particle snapshots required for rendering.
 For simulation video, the bundle can contain captured frame files plus a small manifest of frame paths and encoding parameters; the renderer worker encodes the MP4 from those files rather than from in-memory frame arrays.
 The bundle transport itself is a gzipped tarball encoded as base64 so it can cross the existing JSON HTTP boundary without introducing a new binary upload protocol.
@@ -102,12 +104,15 @@ When a large artifact is object-store-backed, the workspace should keep the poin
 
 The network boundary should be:
 
-`agent/controller -> worker-light -> Temporal -> worker-heavy -> worker-renderer`
+`agent/controller -> worker-light -> controller -> Temporal -> worker-renderer` for on-demand preview
+
+`agent/controller -> worker-light -> controller -> Temporal -> worker-heavy -> worker-renderer` for validation/simulation render jobs
 
 Important rules:
 
 - no browser or agent should call `worker-renderer` directly;
 - no controller route should depend on renderer internals;
+- preview requests may reach `worker-renderer` without first traversing `worker-heavy`; validation and simulation render requests may still use `worker-heavy`;
 - the controller should only see the existing worker contract and the same artifact paths it already understands;
 - the renderer should never become the public entrypoint for agent tool calls.
 
@@ -117,7 +122,8 @@ This keeps the public API stable and confines render-specific complexity to the 
 
 1. Extract the render-specific code into a new `worker_renderer/` package.
 
-   - Move the build123d/VTK rendering code, preview helpers, and render manifest generation there first.
+   - Move the build123d/VTK rendering code and render manifest generation there first.
+   - Keep the preview helper in the runtime utility surface as an orchestration wrapper around the renderer service; do not relocate the helper itself into `worker_renderer/`.
    - Keep the validation and simulation logic in `worker-heavy`.
 
 2. Add a container image and compose service for `worker-renderer`.
@@ -129,7 +135,7 @@ This keeps the public API stable and confines render-specific complexity to the 
 
 3. Add a renderer client inside the worker plane.
 
-   - Prefer a `worker-heavy -> worker-renderer` client or adapter.
+   - Prefer a shared renderer client used by validation/simulation orchestration and the preview workflow/helper.
    - Keep the controller-side tool surface unchanged.
    - Do not add a new agent-facing renderer client.
 
@@ -137,9 +143,10 @@ This keeps the public API stable and confines render-specific complexity to the 
 
    - Validation still validates.
    - Simulation still simulates.
-   - Only the render step moves out.
+   - Only the validation/simulation render step moves out.
    - Preserve the current `BenchmarkToolResponse` / `SimulationArtifacts` contract so the controller keeps seeing the same artifact fields.
    - Simulation video generation moves with the same rule: `worker-heavy` captures the frames or render inputs, `worker-renderer` encodes the video.
+   - On-demand preview uses the same renderer contract from the preview workflow instead of routing through `worker-heavy`.
 
 5. Remove graphics dependencies from `worker-heavy` after the new service is stable.
 
@@ -157,6 +164,7 @@ This keeps the public API stable and confines render-specific complexity to the 
 7. Make rendering on-demand.
 
    - Static validation preview remains generated when validation requires it.
+   - Direct on-demand preview remains available through the preview helper and does not require validation to run first.
    - Simulation videos and extra render variants should be generated only when the workflow requests them.
    - Do not pre-render all views or all media types just because the renderer exists.
 
@@ -224,5 +232,5 @@ The test policy stays the same:
 - Latency: the extra hop exists, but it is not the main concern at prototype scale.
 - Same endpoints: yes, one renderer service contract should handle quick preview, MuJoCo video, Genesis video, and heavy render jobs.
 - Model storage: session workspace remains the source of truth.
-- Raw compounds vs meshes: do not send raw compounds. Send staged bundles or file references, with meshes and backend scene data serialized as files when needed. For preview handoff, prefer a `preview_scene.json` plus mesh bundle over persisting or depending on a `script.py` entrypoint.
+- Raw compounds vs meshes: do not send raw compounds. Send staged bundles or file references, with meshes and backend scene data serialized as files when needed. For preview handoff, prefer a `preview_scene.json` plus mesh bundle over persisting or depending on a legacy bare `script.py` entrypoint; if a source snapshot is needed, use the role-owned `benchmark_script.py` or `solution_script.py` contract instead.
 - On-demand rendering: yes, render when requested or required by workflow policy, not proactively for everything.

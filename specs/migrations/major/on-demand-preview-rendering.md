@@ -34,9 +34,12 @@ This migration sits on top of the existing split architecture in
 - `preview_design(...)` is not kept as a long-term alias; `preview(...)`
   replaces it.
 - The helper lives in `utils` as an export layer.
-- Benchmark previews stay geometry-only at the helper boundary; benchmark
-  geometry and objective boxes are composed into a `Compound(children=[...])`
-  by the caller before calling `preview(...)`.
+- Benchmark previews stay geometry-only at the helper boundary; `build()`
+  supplies the benchmark assembly geometry and `objectives_geometry()`
+  supplies the objective overlays reconstructed from the `objectives` section of
+  `benchmark_definition.yaml`.
+  The caller composes both into a `Compound(children=[...])`, or an equivalent
+  composed component, before calling `preview(...)`.
 
 ## Why This Exists
 
@@ -245,9 +248,9 @@ Target on-demand flow:
 - Expose the new preview helper in the engineer and benchmark tool prompts.
 - Add it to any role allowlists that need live inspection of a component or
   assembly.
-- Benchmark-facing prompts should point callers at the benchmark geometry
-  composition rule instead of expecting hidden benchmark context in the helper
-  signature.
+- Benchmark-facing prompts should point callers at the benchmark assembly plus
+  objective-overlay composition rule instead of expecting hidden benchmark
+  context in the helper signature.
 - Keep reviewer roles on `inspect_media(...)` for evidence review, but allow
   preview when the role needs to materialize a new view first.
 
@@ -271,11 +274,11 @@ context comes from the benchmark geometry source contract defined in
 [Benchmark Geometry Source and Read-Only Benchmark Script](../minor/benchmark-geometry-source-and-read-only-script.md).
 
 - `benchmark_script.py` exposes the benchmark assembly through `build()`.
-- `objectives_geometry()` is the zero-argument utility that materializes the
-  objective boxes from the canonical benchmark definition path for the current
-  workspace.
-- The caller combines `build()` output with `objectives_geometry()` into a
-  `Compound(children=[...])`, or an equivalent composed component, before
+- `objectives_geometry()` is the zero-argument utility that reconstructs the
+  objective overlays declared in the `objectives` section of
+  `benchmark_definition.yaml` for the current workspace.
+- The caller combines `build()` output with `objectives_geometry()` output into
+  a `Compound(children=[...])`, or an equivalent composed component, before
   calling `preview(...)`.
 - This keeps the public helper singular while still rendering the benchmark
   assembly and objectives together in the same frame.
@@ -360,8 +363,9 @@ modality-aware instead of piggybacking on heavyweight validation paths.
 
 ### Geometry composition
 
-- [x] Export `objectives_geometry()` as the zero-argument benchmark geometry
-  helper from the utils surface.
+- [ ] Export `objectives_geometry()` as the zero-argument objective-overlay
+  helper from the utils surface, and keep `build()` as the pre-existing
+  benchmark assembly constructor.
 - [ ] Keep benchmark previews composed at the call site from `build()` plus
   `objectives_geometry()`, not from hidden geometry injected inside the helper.
 - [ ] Ensure benchmark input geometry, solution geometry, and whole-assembly

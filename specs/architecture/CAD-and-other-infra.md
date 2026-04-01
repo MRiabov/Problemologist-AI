@@ -88,7 +88,7 @@ This split is intentional. Static 24-view preview does not require Genesis runti
 
 Validation-preview renders are context artifacts, not backend-authoritative proof of Genesis runtime compatibility. Genesis-specific runtime behavior is still established through actual Genesis simulation runs where Genesis behavior is required.
 
-On-demand preview uses the worker-light-facing `preview(...)` helper instead of the validation bundle path. Benchmark callers compose `objectives_geometry()` with the benchmark assembly context before previewing benchmark context, while engineer callers preview their solution geometry directly. The helper persists workflow-specific preview artifacts under the existing render buckets and does not imply Genesis parity.
+On-demand preview uses the worker-light-facing `preview(...)` helper instead of the validation bundle path. Benchmark callers compose `build()` output with objective overlays reconstructed by `objectives_geometry()` from the `objectives` section of `benchmark_definition.yaml` before previewing benchmark context, while engineer callers preview their solution geometry directly. The helper persists workflow-specific preview artifacts under the existing render buckets and does not imply Genesis parity.
 
 #### Rendering views
 
