@@ -142,7 +142,7 @@ engineer:
       Do not emit textual tool-call markers such as `next_tool_name` or `next_tool_args`.
     planner_submit_contract: |
       - Call `submit_plan()` before `{completion_tool_name}`.
-      - Stop exploratory work after `submit_plan()` returns `{ok: true, status: "submitted"}`.
+      - Stop exploratory work after `submit_plan()` returns `ok=true` and `status=submitted`.
       - If `submit_plan()` returns validation errors, fix the files and call `submit_plan()` again.
       - Do not call `{completion_tool_name}` until `submit_plan()` has succeeded.
       - Use `validate_costing_and_price()` for planner validation; do not browse `/scripts` or validator source files.
@@ -591,7 +591,7 @@ benchmark_generator:
       Always call `submit_plan()` before finishing planner work.
     planner_submit_contract: |
       - Call `submit_plan()` before `{completion_tool_name}`.
-      - Stop exploratory work after `submit_plan()` returns `{ok: true, status: "submitted"}`.
+      - Stop exploratory work after `submit_plan()` returns `ok=true` and `status=submitted`.
       - If `submit_plan()` returns validation errors, fix the files and call `submit_plan()` again.
       - Do not call `{completion_tool_name}` until `submit_plan()` has succeeded.
     submit_before_completion_nudge: |
@@ -603,7 +603,7 @@ benchmark_generator:
       - Use provider-native tool calls only.
       - Do not emit `next_tool_name`, `next_tool_args`, `[[ ## ... ## ]]`, or raw JSON tool transcripts.
       - Before each tool call, include one short plain-text reasoning sentence in assistant content.
-      - Stop after `submit_plan()` returns `{ok: true, status: "submitted"}`.
+      - Stop after `submit_plan()` returns `ok=true` and `status=submitted`.
       - If `submit_plan()` returns validation errors, fix the files and call `submit_plan()` again.
       - In `benchmark_definition.yaml`, `moved_object.start_position` must be a top-level field under `moved_object`, not nested under `static_randomization`.
       - In `benchmark_definition.yaml`, every `benchmark_parts[*].part_id` and `benchmark_parts[*].label` must be unique.
