@@ -1368,9 +1368,7 @@ def test_validate_eval_seed_accepts_curated_rows_and_preserves_redundancy_metada
 
 
 @pytest.mark.integration_p0
-def test_validate_eval_seed_accepts_render_free_seed_for_engineer_coder(
-    tmp_path: Path,
-):
+def test_validate_eval_seed_removes_preview_bundles_from_all_seed_artifacts():
     completed = subprocess.run(
         [
             sys.executable,
@@ -1399,22 +1397,25 @@ def test_validate_eval_seed_accepts_render_free_seed_for_engineer_coder(
     assert "PASS engineer_coder ec-001:" in completed.stdout, completed.stdout
     assert "black/empty" not in combined_output, combined_output
 
-    item = _load_dataset_item(
-        "dataset/data/seed/role_based/engineer_coder.json",
-        "ec-001",
-    )
-    workspace_dir = tmp_path / "workspace"
-    materialized = materialize_seed_workspace(
-        item=item,
-        agent_name=AgentName.ENGINEER_CODER,
-        workspace_dir=workspace_dir,
+    seed_root = ROOT / "dataset" / "data" / "seed" / "role_based"
+    seed_artifact_dirs = sorted(
+        {
+            ROOT / row["seed_artifact_dir"]
+            for dataset_path in seed_root.glob("*.json")
+            for row in json.loads(dataset_path.read_text(encoding="utf-8"))
+            if row.get("seed_artifact_dir")
+        }
     )
 
-    assert not any(
-        rel_path.startswith("renders/") for rel_path in materialized.copied_paths
-    ), materialized.copied_paths
-    assert not (workspace_dir / "renders").exists()
-
+    assert seed_artifact_dirs, "Expected seeded artifact directories to exist."
+    for artifact_dir in seed_artifact_dirs:
+        assert not any(
+            path.is_dir() and path.name == "renders" for path in artifact_dir.rglob("renders")
+        ), artifact_dir
+        assert not any(
+            path.name == "render_manifest.json"
+            for path in artifact_dir.rglob("render_manifest.json")
+        ), artifact_dir
 
 @pytest.mark.integration_p0
 def test_validate_eval_seed_can_filter_rows_by_complexity_level():
