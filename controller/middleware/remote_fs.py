@@ -859,8 +859,8 @@ class RemoteFilesystemMiddleware:
     async def preview(
         self,
         script_path: str | Path,
-        pitch: float = -45.0,
-        yaw: float = 45.0,
+        orbit_pitch: float = -45.0,
+        orbit_yaw: float = 45.0,
         rendering_type: str = "rgb",
         bundle_base64: str | None = None,
         smoke_test_mode: bool | None = None,
@@ -872,8 +872,8 @@ class RemoteFilesystemMiddleware:
             return await self.client.preview(
                 p_str,
                 script_content=script_content,
-                pitch=pitch,
-                yaw=yaw,
+                orbit_pitch=orbit_pitch,
+                orbit_yaw=orbit_yaw,
                 rendering_type=PreviewRenderingType(str(rendering_type)),
                 bundle_base64=bundle_base64,
                 smoke_test_mode=smoke_test_mode,
@@ -893,9 +893,10 @@ class RemoteFilesystemMiddleware:
             {
                 "script_path": p_str,
                 "script_content": script_content,
-                "pitch": pitch,
-                "yaw": yaw,
+                "pitch": orbit_pitch,
+                "yaw": orbit_yaw,
                 "rendering_type": PreviewRenderingType(str(rendering_type)),
+                "smoke_test_mode": smoke_test_mode,
             },
         )
         agent_role_value = (
@@ -910,8 +911,8 @@ class RemoteFilesystemMiddleware:
                 bundle_base64=bundle_base64,
                 script_path=p_str,
                 script_content=script_content,
-                pitch=pitch,
-                yaw=yaw,
+                pitch=orbit_pitch,
+                yaw=orbit_yaw,
                 rendering_type=PreviewRenderingType(str(rendering_type)),
                 smoke_test_mode=smoke_test_mode,
                 session_id=self.client.session_id,

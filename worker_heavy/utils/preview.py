@@ -1,23 +1,15 @@
-"""
-Preview design utility for CAD visualization.
+"""Preview design utility for CAD visualization."""
 
-Renders CAD models from specific camera angles for agent inspection.
-"""
-
+import base64
+import os
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 import structlog
 from build123d import Compound, Part
-from PIL import Image
 
-from shared.agents.config import load_agents_config
 from shared.models.schemas import BenchmarkDefinition
-from worker_heavy.utils.build123d_rendering import (
-    Build123dRendererBackend,
-    _preview_camera_distance,
-    camera_position_from_orbit,
-)
+from shared.rendering import render_preview
+from worker_heavy.utils.build123d_rendering import export_preview_scene_bundle
 
 logger = structlog.get_logger(__name__)
 
@@ -31,57 +23,37 @@ def preview_design(
     width: int = 640,
     height: int = 480,
 ) -> Path:
-    """
-    Render a single view of a CAD component. Default (-35, 45) is ISO view.
+    """Render a single view of a CAD component. Default (-35, 45) is ISO view."""
+    del width, height
+    preview_scene_bundle = export_preview_scene_bundle(
+        component,
+        objectives=objectives,
+        workspace_root=Path.cwd(),
+    )
+    session_id = os.getenv("SESSION_ID") or None
+    response = render_preview(
+        bundle_base64=preview_scene_bundle,
+        script_path="preview_scene.json",
+        orbit_pitch=pitch,
+        orbit_yaw=yaw,
+        session_id=session_id,
+    )
+    if not response.success:
+        raise RuntimeError(response.message or "build123d preview render failed")
 
-    Args:
-        component: The build123d Part or Compound to render
-        pitch: Camera elevation angle in degrees (negative = looking down)
-        yaw: Camera azimuth angle in degrees (clockwise from front)
-        output_dir: Directory to save the image (uses /tmp if None)
-        width: Image width in pixels
-        height: Image height in pixels
+    image_bytes_base64 = response.image_bytes_base64
+    if not image_bytes_base64:
+        raise RuntimeError("renderer returned no preview image bytes")
 
-    Returns:
-        Path to the saved preview image
-    """
-    render_policy = load_agents_config().render
-    with TemporaryDirectory() as temp_build_dir:
-        build_dir = Path(temp_build_dir)
-        backend = Build123dRendererBackend(
-            workspace_root=build_dir,
-            objectives=objectives,
-            rgb_axes=render_policy.rgb.axes,
-            rgb_edges=render_policy.rgb.edges,
-        )
-        try:
-            backend.load_scene(component)
-            scene = backend.scene
-            if scene is None:
-                raise RuntimeError("build123d preview scene failed to load")
-
-            distance = _preview_camera_distance(scene, width=width, height=height)
-            camera_position = camera_position_from_orbit(
-                scene.center, distance, pitch, yaw
-            )
-            backend.set_camera(
-                "preview",
-                pos=camera_position,
-                lookat=scene.center,
-                up=(0.0, 0.0, 1.0),
-            )
-            frame = backend.render_camera("preview", width, height)
-        finally:
-            backend.close()
-
-    # Save image
     if output_dir is None:
         output_dir = Path("/tmp")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    image_path = output_dir / f"preview_pitch{int(pitch)}_yaw{int(yaw)}.jpg"
-    img = Image.fromarray(frame)
-    img.save(image_path, "JPEG")
+    image_name = Path(
+        response.image_path or f"preview_pitch{int(pitch)}_yaw{int(yaw)}.jpg"
+    ).name
+    image_path = output_dir / image_name
+    image_path.write_bytes(base64.b64decode(image_bytes_base64))
 
     logger.info("preview_saved", path=str(image_path), pitch=pitch, yaw=yaw)
     return image_path
