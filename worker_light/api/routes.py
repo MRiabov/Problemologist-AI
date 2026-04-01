@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import json
+import os
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,7 @@ from fastapi import (
     Form,
     Header,
     HTTPException,
+    Request,
     Response,
     UploadFile,
     WebSocket,
@@ -1028,11 +1030,13 @@ async def git_complete(
 @light_router.post("/runtime/execute", response_model=ExecuteResponse)
 async def execute_code(
     request: ExecuteRequest,
+    http_request: Request,
     x_session_id: str = Header(...),
     fs_router=Depends(get_router),
 ):
     """Execute a shell command in the session-isolated environment."""
     session_dir = fs_router.local_backend.root
+    worker_light_url = str(http_request.base_url).rstrip("/")
 
     config = RuntimeConfig(
         timeout_seconds=request.timeout,
@@ -1051,7 +1055,11 @@ async def execute_code(
             "SESSION_ID": x_session_id,
             "EPISODE_ID": request.episode_id or x_session_id,
             "WORKER_HEAVY_URL": settings.worker_heavy_url,
-            "CONTROLLER_URL": "",
+            "CONTROLLER_URL": os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000"),
+            # Runtime execution must exercise the real validation path, not the
+            # control-plane import shim used while materializing authored scripts.
+            "PROBLEMOLOGIST_SCRIPT_IMPORT_MODE": "0",
+            "WORKER_LIGHT_URL": worker_light_url,
             **(
                 {"WORKER_SESSIONS_DIR": settings.sessions_dir}
                 if settings.sessions_dir is not None

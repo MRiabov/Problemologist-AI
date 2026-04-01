@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import contextlib
 import importlib.util
 import math
@@ -45,10 +46,29 @@ AGENT_NAME_ENV = "AGENT_NAME"
 
 def _call_heavy_worker(endpoint: str, payload: dict | BaseModel) -> dict:
     heavy_url = os.getenv("WORKER_HEAVY_URL", "http://worker-heavy:8002")
+    worker_light_url = _worker_light_base_url()
     session_id = os.getenv("SESSION_ID", "default")
     json_payload = payload.model_dump() if isinstance(payload, BaseModel) else payload
     agent_role = str(json_payload.get("agent_role") or _script_agent_role())
     stage = str(json_payload.get("reviewer_stage") or agent_role)
+
+    if worker_light_url and "bundle_base64" not in json_payload:
+        try:
+            with httpx.Client(timeout=60.0) as client:
+                bundle_resp = client.post(
+                    f"{worker_light_url}/fs/bundle",
+                    headers={"X-Session-ID": session_id},
+                )
+                bundle_resp.raise_for_status()
+                json_payload["bundle_base64"] = base64.b64encode(
+                    bundle_resp.content
+                ).decode("utf-8")
+        except Exception as e:
+            logger.warning(
+                "session_bundle_collection_failed",
+                error=str(e),
+                session_id=session_id,
+            )
 
     url = f"{heavy_url.rstrip('/')}/{endpoint.lstrip('/')}"
     headers = {
