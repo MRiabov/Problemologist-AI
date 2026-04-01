@@ -544,6 +544,7 @@ def submit_for_review(compound: Compound) -> bool:
             compound,
             reviewer_stage=reviewer_stage,
             episode_id=episode_id,
+            script_path=script_path,
         )
 
     controller_payload = {
