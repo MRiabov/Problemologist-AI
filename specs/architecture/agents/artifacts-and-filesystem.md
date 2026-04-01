@@ -24,6 +24,7 @@ Reusable starter files and prompt-context artifacts are defined once in `shared/
 The shared starter set includes `.admin/clear_env.py`, which resets the current
 seeded workspace in place without changing the conversation context.
 PromptManager consumes these prompt-context inputs when it materializes the runtime prompt.
+For Codex CLI-backed sessions, the runtime loads skills from the repo-local `.agents/skills/` tree, so prompt text does not need to duplicate the skill inventory. Do not confuse `.agents/skills/` or `.codex/skills/` with the runtime workspace paths the agent sees after materialization; the representative permission examples below are compatibility-oriented and describe the workspace contract, not the repo checkout layout.
 
 Role-specific planner scaffolds remain in `shared/assets/template_repos/` and are copied into each workspace before node entry.
 `worker_light/agent_files/` is a legacy compatibility mirror for bootstrap and local inspection, not the canonical source of truth.

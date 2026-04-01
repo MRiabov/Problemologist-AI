@@ -6,7 +6,7 @@ This document defines the unified prompt source model for controller/API agents 
 
 ## Purpose
 
-The prompt layer is intentionally thin. It frames the agent, states workspace and submission rules, and points the model at the relevant skills. Detailed business logic, procedures, and examples belong in skills.
+The prompt layer is intentionally thin. It frames the agent, states workspace and submission rules, and only points the model at skills when the backend does not already load them from the workspace tree. Detailed business logic, procedures, and examples belong in skills.
 
 The target state keeps prompt optimization unified. We do not maintain one base prompt source for API and another base prompt source for Codex.
 
@@ -28,7 +28,7 @@ The unified prompt manager treats these inputs as authoritative:
 - `config/prompts.yaml`: structured role prompts and appendix fragments.
 - `shared/agent_templates/`: prompt-context files, helper scripts, and boilerplate that belong in the workspace context.
 - `shared/assets/template_repos/`: role-scoped starter workspace material copied into the run-local workspace.
-- installed skill definitions (`SKILL.md` files) and the skill catalog that references them.
+- backend-managed skill trees in the repo checkout (for example `.agents/skills/` for Codex CLI-backed runs) and any compact generated index derived from them when the backend needs one. Those repo-local trees are inputs to the runtime, not the same thing as the workspace-visible skill paths the agent later sees.
 - `worker_light/agent_files/`: legacy compatibility mirror only.
 - runtime-generated context: task text, agent identity, task ID, workspace state, backend selection, and tool registration.
 
@@ -58,7 +58,7 @@ It must:
 4. add the shared appendix,
 5. add the backend appendix,
 6. append runtime-generated context,
-7. append the skill catalog.
+7. append a compact generated skill index when the backend family needs one.
 
 The backend choice selects which appendix branch is used. It does not select a different prompt manager or a different prompt source model.
 
@@ -100,7 +100,7 @@ This context is injected by the runtime. It is not a manually maintained prompt 
 
 Skills own the detailed business logic, procedures, and domain guidance.
 
-The prompt manager appends the skill catalog so the agent can discover those skills by name, and the catalog is derived from installed skill definitions rather than hand-written prompt prose.
+The prompt manager should not hand-author skill-loading explanations or long skill catalogs. If a backend needs discoverability hints, derive them mechanically from the installed skill tree and keep them compact.
 
 The rule of thumb is simple: prompts frame the work; skills explain the work.
 
@@ -114,6 +114,7 @@ The current backend families are:
 - `api_based`
 
 The backend family determines which appendix branch is used and which runtime reminders are shown. It does not change the canonical prompt source or the ownership of the prompt manager.
+CLI-based Codex runs do not need the prompt to restate the full skill inventory when the workspace already exposes the relevant skill files.
 
 ## Assembly order
 
@@ -123,7 +124,7 @@ The final prompt should read in this order:
 2. shared appendix
 3. backend appendix
 4. runtime-generated context
-5. skill catalog
+5. compact generated skill index, when needed
 
 That order keeps the base prompt stable while still allowing backend-specific and runtime-specific context to appear in a predictable place.
 

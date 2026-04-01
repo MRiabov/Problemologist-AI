@@ -147,19 +147,22 @@ The helper script is intentionally simple: it is a local shell/Python command, n
 
 ## Skill source contract
 
-Runtime agents read skills from the canonical skill repository mounted into the workspace as `skills/`.
+Skill loading is runtime-managed, not prompt-authored.
+
+For Codex CLI-backed sessions, the repo-local canonical skill tree is `.agents/skills/`. Do not confuse that checkout directory with the runtime workspace path the agent sees after materialization; the backend exposes the workspace-visible skill mount separately. The prompt does not need to explain where skills live or restate the discovery workflow.
 
 The skill repository boundary is explicit:
 
-1. `skills/` is the canonical runtime skill repository mounted into agent workspaces as `/skills`.
-2. `.codex/skills/` is a Codex-only overlay for local debugging/editorial workflows and is not part of the runtime agent skill contract.
-3. `suggested_skills/` is a writable sidecar output area for proposed/new skills, not the canonical skill mount that normal agents should read from.
-4. Runtime agents should not be taught to treat `.codex/skills/`, `suggested_skills/`, or any other agent-specific skill store as interchangeable with `/skills`.
+1. `.agents/skills/` is the repo-local source tree for Codex CLI-backed runs, not the runtime workspace mount.
+2. `skills/` remains the workspace-visible compatibility mount used by controller-backed or legacy integrations until that path is retired.
+3. `.codex/skills/` is a repo-local Codex-only overlay for local debugging/editorial workflows and is not part of the runtime agent skill contract.
+4. `suggested_skills/` is a writable sidecar output area for proposed/new skills, not the canonical skill mount that normal agents should read from.
+5. Runtime agents should not be taught to treat `.codex/skills/`, `suggested_skills/`, or any other agent-specific skill store as interchangeable with the canonical tree.
 
 The skill lifecycle is:
 
-1. The agent can read skills that exist in the canonical mount.
-2. The skill creator / learner may update `skills/**` subject to safety limits.
+1. The agent can read skills that exist in the canonical tree.
+2. The skill creator / learner may update the canonical tree subject to safety limits.
 3. Learned skills are versioned and persisted to observability.
 4. The skill agent runs asynchronously from the main execution flow.
 

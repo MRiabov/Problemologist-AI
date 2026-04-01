@@ -30,7 +30,7 @@ The repository also still mixes several prompt source shapes in `config/prompts.
 - role prompts for controller-facing agents,
 - `codex.*.role_lines` for Codex eval workspaces,
 - the legacy `common.code_template` block,
-- skill catalog references, and
+- skill-loading prose that should be runtime-managed instead of hand-authored, and
 - helper guidance that should really live in backend appendices or prompt-context files.
 
 At the same time, workspace materialization already copies starter files and prompt-context files from `shared/agent_templates/` and role-scoped starter material from `shared/assets/template_repos/`, but those files are not yet treated as first-class prompt inputs in the architecture.
@@ -42,8 +42,8 @@ The result is a prompt surface that is functionally working but structurally dup
 | Area | Current behavior | Why it must change |
 | -- | -- | -- |
 | `controller/prompts.py` | Loads `config/prompts.yaml` and exposes direct dot-path lookup helpers. | It is only a loader today; the prompt source model still lives in multiple shapes. |
-| `controller/agent/prompt_manager.py` | Maps agent names to `config/prompts.yaml` entries, renders Jinja templates, and appends the skill catalog. | It should become the single merge point for the unified source model instead of one of several prompt worlds. |
-| `evals/logic/codex_workspace.py` | Builds the Codex workspace prompt string directly and appends the skill catalog independently. | Prompt assembly should move out of this module; it should only supply runtime context or template variables to `PromptManager`. |
+| `controller/agent/prompt_manager.py` | Maps agent names to `config/prompts.yaml` entries, renders Jinja templates, and appends a compact generated skill index when needed. | It should become the single merge point for the unified source model instead of one of several prompt worlds. |
+| `evals/logic/codex_workspace.py` | Builds the Codex workspace prompt string directly and still carries hand-authored skill-loading prose. | Prompt assembly should move out of this module; it should only supply runtime context or template variables to `PromptManager`. |
 | `controller/agent/nodes/base.py` | Injects runtime context into the controller-side prompt flow. | Runtime context should stay separate from canonical prompt content and be inserted after the shared prompt layers. |
 | `config/prompts.yaml` | Mixes controller role prompts, Codex role lines, legacy `common.code_template`, and assorted helper text. | The file needs a unified schema with role prompts plus appendices. |
 | `shared/agent_templates/` | Holds prompt-context files and helper scripts, but not as a first-class prompt source. | These files should be treated as prompt inputs because they materially change the agent's starting context. |
@@ -83,7 +83,7 @@ The result is a prompt surface that is functionally working but structurally dup
 - Update `controller/agent/prompt_manager.py` so it renders from the unified source model for every backend family.
 - Keep `controller/prompts.py` as the loader for the YAML source, but stop using the file as a collection of unrelated prompt worlds.
 - Ensure the same merge order is used for controller/API and Codex prompt materialization.
-- Keep skill catalog appending in one place only, so both paths discover the same installed skills.
+- Keep any generated skill index in one place only, so both paths use the same backend-managed skill source.
 
 ### 3. Delegate Codex prompt assembly to PromptManager
 
@@ -101,7 +101,7 @@ The result is a prompt surface that is functionally working but structurally dup
 
 ### 5. Keep skills as the owner of detailed behavior
 
-- Preserve the skill catalog as the discovery layer for deeper procedures.
+- Preserve the generated skill index as the discovery layer for deeper procedures when a backend needs one.
 - Avoid duplicating skill bodies in prompt text.
 - Move any role guidance that is long-lived and reusable into a skill rather than growing the prompt.
 - Keep prompts focused on role identity, workspace contract, backend differences, and invocation guidance.
@@ -127,9 +127,9 @@ The result is a prompt surface that is functionally working but structurally dup
 ### PromptManager and controller path
 
 - [x] Update `controller/prompts.py` so it remains the YAML loader, not a second prompt architecture.
-- [x] Update `controller/agent/prompt_manager.py` so it is the single merge point for role prompts, appendices, runtime context, and the skill catalog.
+- [x] Update `controller/agent/prompt_manager.py` so it is the single merge point for role prompts, appendices, runtime context, and any backend-managed skill index.
 - [x] Keep controller/API rendering on the unified source model rather than on controller-only prompt branches.
-- [x] Make sure the controller path appends the same installed skill catalog that Codex sees.
+- [x] Make sure the controller path and Codex path derive any skill index from the same backend-managed skill source.
 
 ### Codex workspace path
 
