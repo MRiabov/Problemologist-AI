@@ -44,6 +44,7 @@ from worker_heavy.workbenches.config import load_config, load_merged_config
 
 ROOT = Path(__file__).resolve().parents[2]
 _CODEX_RUNTIME_ROOT_NAME = "codex-runtime"
+SKILL_ROOT = ROOT / "skills"
 
 _TEXT_SUFFIXES = {
     ".cfg",
@@ -220,6 +221,9 @@ def is_reviewer_agent(agent_name: AgentName) -> bool:
 def _workspace_files_to_validate(workspace_dir: Path) -> dict[str, str]:
     files: dict[str, str] = {}
     for path in sorted(p for p in workspace_dir.rglob("*") if p.is_file()):
+        relative_parts = path.relative_to(workspace_dir).parts
+        if relative_parts and relative_parts[0] == "skills":
+            continue
         if any(part == "__pycache__" for part in path.parts):
             continue
         if path.suffix.lower() in _BINARY_SUFFIXES:
@@ -252,6 +256,12 @@ def _copy_tree(src_root: Path, dst_root: Path) -> list[str]:
         shutil.copy2(src_path, dst_path)
         copied.append(rel_path.as_posix())
     return copied
+
+
+def _copy_skills_tree(dst_root: Path) -> list[str]:
+    if not SKILL_ROOT.exists():
+        raise FileNotFoundError(f"Skill repository not found: {SKILL_ROOT}")
+    return [f"skills/{path}" for path in _copy_tree(SKILL_ROOT, dst_root / "skills")]
 
 
 def copy_workspace_contents(
@@ -451,6 +461,7 @@ def materialize_seed_workspace(
     copied_paths.extend(
         _write_template_files(workspace_dir, load_common_template_files())
     )
+    copied_paths.extend(_copy_skills_tree(workspace_dir))
 
     if is_planner_agent(agent_name):
         copied_paths.extend(

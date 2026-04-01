@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 import sys
+import traceback
+from contextlib import contextmanager
 from importlib import import_module
 from pathlib import Path
 from typing import Any
@@ -48,7 +50,40 @@ def _load_solution(script_path: str) -> Compound:
 
 
 def _print_json(payload: dict[str, Any]) -> None:
-    print(json.dumps(payload, indent=2, sort_keys=True))
+    print(json.dumps(payload, indent=2, sort_keys=True), flush=True)
+
+
+def _submission_log_path(workspace: Path) -> Path:
+    return workspace / "logs" / "submit_for_review.log"
+
+
+@contextmanager
+def _capture_submission_output(log_path: Path):
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("w", encoding="utf-8") as log_handle:
+        stdout_fd = sys.stdout.fileno()
+        stderr_fd = sys.stderr.fileno()
+        saved_stdout_fd = os.dup(stdout_fd)
+        saved_stderr_fd = os.dup(stderr_fd)
+        try:
+            sys.stdout.flush()
+            sys.stderr.flush()
+        except Exception:
+            pass
+        try:
+            os.dup2(log_handle.fileno(), stdout_fd)
+            os.dup2(log_handle.fileno(), stderr_fd)
+            yield
+        finally:
+            try:
+                sys.stdout.flush()
+                sys.stderr.flush()
+            except Exception:
+                pass
+            os.dup2(saved_stdout_fd, stdout_fd)
+            os.dup2(saved_stderr_fd, stderr_fd)
+            os.close(saved_stdout_fd)
+            os.close(saved_stderr_fd)
 
 
 def main() -> int:
@@ -69,89 +104,92 @@ def main() -> int:
                     "Unable to infer coder agent from workspace: expected "
                     "benchmark_assembly_definition.yaml or assembly_definition.yaml"
                 ),
+                "log_path": str(_submission_log_path(workspace).relative_to(workspace)),
             }
         )
         return 1
 
     script_path = _script_path_for_agent(agent_name)
-    try:
-        solution = _load_solution(script_path)
-    except Exception as exc:
-        _print_json(
-            {
+    log_path = _submission_log_path(workspace)
+    rejection: dict[str, Any] | None = None
+    validation_ok = False
+    simulation_success = False
+    manifest_path = (
+        workspace / ".manifests" / "engineering_execution_review_manifest.json"
+    )
+
+    with _capture_submission_output(log_path):
+        try:
+            solution = _load_solution(script_path)
+        except Exception as exc:
+            traceback.print_exc()
+            rejection = {
                 "ok": False,
                 "status": "rejected",
                 "stage": "load",
                 "message": str(exc),
             }
-        )
+        else:
+            validation_ok, validation_message = validate(
+                solution,
+                output_dir=str(workspace),
+                session_id=session_id,
+            )
+            record_validation_result(
+                workspace,
+                validation_ok,
+                validation_message,
+                script_path=script_path,
+                session_id=session_id,
+            )
+            if not validation_ok:
+                rejection = {
+                    "ok": False,
+                    "status": "rejected",
+                    "stage": "validation",
+                    "message": validation_message,
+                }
+            else:
+                simulation_result = simulate(
+                    solution,
+                    output_dir=str(workspace),
+                    session_id=session_id,
+                )
+                simulation_success = simulation_result.success
+                if not simulation_result.success:
+                    rejection = {
+                        "ok": False,
+                        "status": "rejected",
+                        "stage": "simulation",
+                        "message": simulation_result.summary,
+                    }
+                else:
+                    submitted = _handover_submit_for_review(
+                        solution,
+                        cwd=workspace,
+                        session_id=session_id,
+                        reviewer_stage=(
+                            AgentName.ENGINEER_EXECUTION_REVIEWER
+                            if agent_name == AgentName.ENGINEER_CODER
+                            else AgentName.BENCHMARK_REVIEWER
+                        ),
+                        episode_id=episode_id,
+                        script_path=script_path,
+                    )
+                    if not submitted:
+                        rejection = {
+                            "ok": False,
+                            "status": "rejected",
+                            "stage": "handover",
+                            "message": "submit_for_review returned false",
+                        }
+
+    log_path_rel = str(log_path.relative_to(workspace))
+    if rejection is not None:
+        rejection["log_path"] = log_path_rel
+        _print_json(rejection)
         return 1
 
-    validation_ok, validation_message = validate(
-        solution,
-        output_dir=str(workspace),
-        session_id=session_id,
-    )
-    record_validation_result(
-        workspace,
-        validation_ok,
-        validation_message,
-        script_path=script_path,
-        session_id=session_id,
-    )
-    if not validation_ok:
-        _print_json(
-            {
-                "ok": False,
-                "status": "rejected",
-                "stage": "validation",
-                "message": validation_message,
-            }
-        )
-        return 1
-
-    simulation_result = simulate(
-        solution,
-        output_dir=str(workspace),
-        session_id=session_id,
-    )
-    if not simulation_result.success:
-        _print_json(
-            {
-                "ok": False,
-                "status": "rejected",
-                "stage": "simulation",
-                "message": simulation_result.summary,
-            }
-        )
-        return 1
-
-    submitted = _handover_submit_for_review(
-        solution,
-        cwd=workspace,
-        session_id=session_id,
-        reviewer_stage=(
-            AgentName.ENGINEER_EXECUTION_REVIEWER
-            if agent_name == AgentName.ENGINEER_CODER
-            else AgentName.BENCHMARK_REVIEWER
-        ),
-        episode_id=episode_id,
-        script_path=script_path,
-    )
-    if not submitted:
-        _print_json(
-            {
-                "ok": False,
-                "status": "rejected",
-                "stage": "handover",
-                "message": "submit_for_review returned false",
-            }
-        )
-        return 1
-
-    manifest_path = (
-        workspace / ".manifests" / "engineering_execution_review_manifest.json"
-    )
     _print_json(
         {
             "ok": True,
@@ -165,7 +203,8 @@ def main() -> int:
             if manifest_path.exists()
             else None,
             "validation_success": validation_ok,
-            "simulation_success": simulation_result.success,
+            "simulation_success": simulation_success,
+            "log_path": log_path_rel,
         }
     )
     return 0
