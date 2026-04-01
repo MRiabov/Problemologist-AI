@@ -1319,8 +1319,8 @@ async def test_int_188_validation_preview_http_preview_route_uses_vtk_renderer(
             f"{WORKER_HEAVY_URL}/benchmark/preview",
             json=PreviewDesignRequest(
                 script_path="script.py",
-                pitch=pitch,
-                yaw=yaw,
+                orbit_pitch=pitch,
+                orbit_yaw=yaw,
             ).model_dump(mode="json"),
             headers=headers,
             timeout=180.0,

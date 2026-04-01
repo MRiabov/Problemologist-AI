@@ -628,8 +628,8 @@ async def api_preview(
                             _render_single_preview,
                             scene,
                             output_dir=renders_dir,
-                            pitch=request.pitch,
-                            yaw=request.yaw,
+                            pitch=request.orbit_pitch,
+                            yaw=request.orbit_yaw,
                             rendering_type=request.rendering_type,
                             include_rgb_axes=render_policy.rgb.axes,
                             include_rgb_edges=render_policy.rgb.edges,
@@ -657,8 +657,8 @@ async def api_preview(
                                 _render_single_preview,
                                 preview_scene,
                                 output_dir=renders_dir,
-                                pitch=request.pitch,
-                                yaw=request.yaw,
+                                pitch=request.orbit_pitch,
+                                yaw=request.orbit_yaw,
                                 rendering_type=request.rendering_type,
                                 include_rgb_axes=render_policy.rgb.axes,
                                 include_rgb_edges=render_policy.rgb.edges,
@@ -688,8 +688,8 @@ async def api_preview(
                     artifact_path=str(image_path.relative_to(root)),
                     manifest_path=str(Path("renders") / "render_manifest.json"),
                     rendering_type=request.rendering_type,
-                    pitch=request.pitch,
-                    yaw=request.yaw,
+                    pitch=request.orbit_pitch,
+                    yaw=request.orbit_yaw,
                     image_path=str(image_path.relative_to(root)),
                     image_bytes_base64=base64.b64encode(image_path.read_bytes()).decode(
                         "ascii"
@@ -708,8 +708,8 @@ async def api_preview(
             status_text="Preview generation failed",
             message=str(exc),
             rendering_type=request.rendering_type,
-            pitch=request.pitch,
-            yaw=request.yaw,
+            pitch=request.orbit_pitch,
+            yaw=request.orbit_yaw,
         )
 
 

@@ -29,7 +29,6 @@ from controller.workflows.heavy import (
     HeavyValidationWorkflow,
     HeavyVerifyWorkflow,
 )
-from controller.workflows.preview import PreviewWorkflow
 from shared.agents.config import resolve_agents_config_path
 from shared.enums import AgentName, ManufacturingMethod
 from shared.observability.schemas import (
@@ -69,7 +68,6 @@ from shared.workers.schema import (
     MediaInspectionResult,
     PreviewDesignResponse,
     PreviewRenderingType,
-    PreviewWorkflowParams,
     RenderArtifactMetadata,
     RenderManifest,
     ReviewerStage,
@@ -104,8 +102,12 @@ def _preview_workflow_id(
     if isinstance(request_model, dict):
         request_payload = {
             "script_path": request_model.get("script_path"),
-            "pitch": request_model.get("pitch"),
-            "yaw": request_model.get("yaw"),
+            "orbit_pitch": request_model.get("orbit_pitch")
+            if "orbit_pitch" in request_model
+            else request_model.get("pitch"),
+            "orbit_yaw": request_model.get("orbit_yaw")
+            if "orbit_yaw" in request_model
+            else request_model.get("yaw"),
             "rendering_type": str(request_model.get("rendering_type", "")),
             "script_content": request_model.get("script_content"),
             "smoke_test_mode": request_model.get("smoke_test_mode"),
@@ -113,8 +115,16 @@ def _preview_workflow_id(
     else:
         request_payload = {
             "script_path": getattr(request_model, "script_path", None),
-            "pitch": getattr(request_model, "pitch", None),
-            "yaw": getattr(request_model, "yaw", None),
+            "orbit_pitch": getattr(
+                request_model,
+                "orbit_pitch",
+                getattr(request_model, "pitch", None),
+            ),
+            "orbit_yaw": getattr(
+                request_model,
+                "orbit_yaw",
+                getattr(request_model, "yaw", None),
+            ),
             "rendering_type": str(getattr(request_model, "rendering_type", "")),
             "script_content": getattr(request_model, "script_content", None),
             "smoke_test_mode": getattr(request_model, "smoke_test_mode", None),
@@ -866,59 +876,16 @@ class RemoteFilesystemMiddleware:
         smoke_test_mode: bool | None = None,
         script_content: str | None = None,
     ) -> PreviewDesignResponse:
-        """Trigger design preview via controller orchestration when available."""
+        """Trigger design preview via the worker-light controller proxy."""
         p_str = str(script_path)
-        if self.temporal_client is None:
-            return await self.client.preview(
-                p_str,
-                script_content=script_content,
-                orbit_pitch=orbit_pitch,
-                orbit_yaw=orbit_yaw,
-                rendering_type=PreviewRenderingType(str(rendering_type)),
-                bundle_base64=bundle_base64,
-                smoke_test_mode=smoke_test_mode,
-            )
-
-        bundle = (
-            base64.b64decode(bundle_base64)
-            if bundle_base64 is not None
-            else await self.client.bundle_session()
-        )
-        if bundle_base64 is None:
-            bundle_base64 = base64.b64encode(bundle).decode("utf-8")
-
-        workflow_id = _preview_workflow_id(
-            self.client.session_id,
-            bundle,
-            {
-                "script_path": p_str,
-                "script_content": script_content,
-                "pitch": orbit_pitch,
-                "yaw": orbit_yaw,
-                "rendering_type": PreviewRenderingType(str(rendering_type)),
-                "smoke_test_mode": smoke_test_mode,
-            },
-        )
-        agent_role_value = (
-            self.agent_role.value
-            if isinstance(self.agent_role, AgentName)
-            else str(self.agent_role)
-        )
-        return await self._execute_or_use_existing_workflow(
-            PreviewWorkflow.run,
-            workflow_id,
-            PreviewWorkflowParams(
-                bundle_base64=bundle_base64,
-                script_path=p_str,
-                script_content=script_content,
-                pitch=orbit_pitch,
-                yaw=orbit_yaw,
-                rendering_type=PreviewRenderingType(str(rendering_type)),
-                smoke_test_mode=smoke_test_mode,
-                session_id=self.client.session_id,
-                agent_role=agent_role_value,
-            ),
-            result_type=PreviewDesignResponse,
+        return await self.client.preview(
+            p_str,
+            script_content=script_content,
+            orbit_pitch=orbit_pitch,
+            orbit_yaw=orbit_yaw,
+            rendering_type=PreviewRenderingType(str(rendering_type)),
+            bundle_base64=bundle_base64,
+            smoke_test_mode=smoke_test_mode,
         )
 
     async def validate(

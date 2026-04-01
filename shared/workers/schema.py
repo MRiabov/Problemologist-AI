@@ -2,6 +2,7 @@ from enum import StrEnum
 from typing import Any, Literal, TypeAlias
 
 from pydantic import (
+    AliasChoices,
     BaseModel,
     ConfigDict,
     Field,
@@ -520,17 +521,19 @@ class PreviewDesignRequest(BaseModel):
         default=None,
         description="Gzipped tarball of the session workspace (base64 encoded).",
     )
-    pitch: float = Field(
+    orbit_pitch: float = Field(
         default=-45.0,
         ge=-90.0,
         le=90.0,
         description="Camera elevation angle in degrees (negative = looking down).",
+        validation_alias=AliasChoices("pitch", "orbit_pitch"),
     )
-    yaw: float = Field(
+    orbit_yaw: float = Field(
         default=45.0,
         ge=0.0,
         lt=360.0,
         description="Camera azimuth angle in degrees (clockwise from front).",
+        validation_alias=AliasChoices("yaw", "orbit_yaw"),
     )
     rendering_type: PreviewRenderingType = Field(
         default=PreviewRenderingType.RGB,
@@ -576,8 +579,14 @@ class PreviewWorkflowParams(BaseModel):
     bundle_base64: StrictStr
     script_path: StrictStr = Field(default="script.py")
     script_content: StrictStr | None = None
-    pitch: float = Field(default=-45.0)
-    yaw: float = Field(default=45.0)
+    orbit_pitch: float = Field(
+        default=-45.0,
+        validation_alias=AliasChoices("pitch", "orbit_pitch"),
+    )
+    orbit_yaw: float = Field(
+        default=45.0,
+        validation_alias=AliasChoices("yaw", "orbit_yaw"),
+    )
     rendering_type: PreviewRenderingType = Field(
         default=PreviewRenderingType.RGB,
         description="Requested preview modality.",
@@ -617,8 +626,14 @@ class HeavyPreviewParams(BaseModel):
 
     bundle_base64: StrictStr
     script_path: str
-    pitch: float = -45.0
-    yaw: float = 45.0
+    orbit_pitch: float = Field(
+        default=-45.0,
+        validation_alias=AliasChoices("pitch", "orbit_pitch"),
+    )
+    orbit_yaw: float = Field(
+        default=45.0,
+        validation_alias=AliasChoices("yaw", "orbit_yaw"),
+    )
     rendering_type: PreviewRenderingType = PreviewRenderingType.RGB
 
 

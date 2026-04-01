@@ -550,6 +550,14 @@ async def api_preview(
     try:
         async with heavy_operation_admission("preview", x_session_id):
             workspace_root = fs_router.local_backend.root
+            logger.info(
+                "worker_heavy_preview_started",
+                session_id=x_session_id,
+                script_path=request.script_path,
+                rendering_type=request.rendering_type.value,
+                orbit_pitch=request.orbit_pitch,
+                orbit_yaw=request.orbit_yaw,
+            )
             with bundle_context(request.bundle_base64, workspace_root) as root:
                 bundle_base64 = (
                     request.bundle_base64
@@ -559,8 +567,8 @@ async def api_preview(
                     renderer_client.render_preview,
                     bundle_base64=bundle_base64,
                     script_path=request.script_path,
-                    orbit_pitch=request.pitch,
-                    orbit_yaw=request.yaw,
+                    orbit_pitch=request.orbit_pitch,
+                    orbit_yaw=request.orbit_yaw,
                     rendering_type=request.rendering_type,
                     session_id=x_session_id,
                     script_content=request.script_content,
@@ -578,6 +586,13 @@ async def api_preview(
                 if image_path is None:
                     raise RuntimeError("renderer returned no preview image")
 
+                logger.info(
+                    "worker_heavy_preview_finished",
+                    session_id=x_session_id,
+                    artifact_path=str(image_path.relative_to(root)),
+                    manifest_path=str(Path("renders") / "render_manifest.json"),
+                    rendering_type=request.rendering_type.value,
+                )
                 return PreviewDesignResponse(
                     success=response.success,
                     message=response.message,
@@ -586,8 +601,8 @@ async def api_preview(
                     artifact_path=str(image_path.relative_to(root)),
                     manifest_path=str(Path("renders") / "render_manifest.json"),
                     rendering_type=request.rendering_type,
-                    pitch=request.pitch,
-                    yaw=request.yaw,
+                    pitch=request.orbit_pitch,
+                    yaw=request.orbit_yaw,
                     image_bytes_base64=response.image_bytes_base64,
                     render_manifest_json=response.render_manifest_json,
                     events=response.events,
@@ -602,8 +617,8 @@ async def api_preview(
             message=str(e),
             status_text="Preview generation failed",
             rendering_type=request.rendering_type,
-            pitch=request.pitch,
-            yaw=request.yaw,
+            pitch=request.orbit_pitch,
+            yaw=request.orbit_yaw,
         )
 
 

@@ -110,8 +110,8 @@ def render_preview(
     payload = PreviewDesignRequest(
         bundle_base64=bundle_base64,
         script_path=script_path,
-        pitch=orbit_pitch,
-        yaw=orbit_yaw,
+        orbit_pitch=orbit_pitch,
+        orbit_yaw=orbit_yaw,
         rendering_type=rendering_type,
         script_content=script_content,
         smoke_test_mode=smoke_test_mode,

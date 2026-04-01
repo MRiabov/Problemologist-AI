@@ -735,8 +735,8 @@ class WorkerClient:
         try:
             payload = {
                 "script_path": script_path,
-                "pitch": orbit_pitch,
-                "yaw": orbit_yaw,
+                "orbit_pitch": orbit_pitch,
+                "orbit_yaw": orbit_yaw,
                 "rendering_type": rendering_type,
             }
             if script_content is not None:

@@ -140,6 +140,14 @@ async def api_preview(
     """Forward a preview request to the renderer worker and persist the result."""
     try:
         workspace_root = fs_router.local_backend.root
+        logger.info(
+            "worker_light_preview_started",
+            session_id=x_session_id,
+            script_path=request.script_path,
+            rendering_type=request.rendering_type.value,
+            orbit_pitch=request.orbit_pitch,
+            orbit_yaw=request.orbit_yaw,
+        )
         bundle_base64 = (
             request.bundle_base64
             if request.bundle_base64 is not None
@@ -149,8 +157,8 @@ async def api_preview(
             render_preview,
             bundle_base64=bundle_base64,
             script_path=request.script_path,
-            orbit_pitch=request.pitch,
-            orbit_yaw=request.yaw,
+            orbit_pitch=request.orbit_pitch,
+            orbit_yaw=request.orbit_yaw,
             rendering_type=request.rendering_type,
             session_id=x_session_id,
             script_content=request.script_content,
@@ -170,6 +178,13 @@ async def api_preview(
 
         events = _collect_events(fs_router)
         artifact_path = str(image_path.relative_to(workspace_root))
+        logger.info(
+            "worker_light_preview_finished",
+            session_id=x_session_id,
+            artifact_path=artifact_path,
+            manifest_path=str(Path("renders") / "render_manifest.json"),
+            rendering_type=request.rendering_type.value,
+        )
         return PreviewDesignResponse(
             success=True,
             status_text="Preview generated successfully",
@@ -177,8 +192,8 @@ async def api_preview(
             artifact_path=artifact_path,
             manifest_path=str(Path("renders") / "render_manifest.json"),
             rendering_type=request.rendering_type,
-            pitch=request.pitch,
-            yaw=request.yaw,
+            pitch=request.orbit_pitch,
+            yaw=request.orbit_yaw,
             image_path=artifact_path,
             image_bytes_base64=response.image_bytes_base64,
             render_manifest_json=response.render_manifest_json,
@@ -191,8 +206,8 @@ async def api_preview(
             status_text="Preview generation failed",
             message=str(exc),
             rendering_type=request.rendering_type,
-            pitch=request.pitch,
-            yaw=request.yaw,
+            pitch=request.orbit_pitch,
+            yaw=request.orbit_yaw,
         )
 
 

@@ -343,12 +343,12 @@ modality-aware instead of piggybacking on heavyweight validation paths.
   surface and keep the boundary geometry-only.
 - [x] Add or update the controller preview entrypoint so preview requests flow
   through controller orchestration instead of calling the renderer directly.
-- [x] Add the Temporal workflow/activity path for preview and keep the live
+- [ ] Add the Temporal workflow/activity path for preview and keep the live
   chain `worker-light -> controller -> Temporal -> worker-renderer`.
 - [ ] Persist preview workflow state, correlation metadata, and timeout/failure
   reasons so stalled renders fail closed instead of hanging or silently
   degrading.
-- [x] Return the structured preview response only after the workflow has a
+- [ ] Return the structured preview response only after the workflow has a
   resolved artifact path, manifest path, modality, and angle metadata.
 - [ ] Make the preview workflow accept a render request, persist the request
   context, and return only after the renderer has produced the artifact path and
@@ -384,7 +384,7 @@ modality-aware instead of piggybacking on heavyweight validation paths.
   using atomic update behavior, not ad hoc agent edits.
 - [ ] Keep `renders/render_manifest.json` runtime-owned and read-only to agent
   roles, with no direct agent write path.
-- [ ] Keep benchmark, engineer, and final preview artifacts in their existing
+- [x] Keep benchmark, engineer, and final preview artifacts in their existing
   bucketed directories so workflow provenance stays visible.
 - [x] Preserve the current image format policy for depth and segmentation
   previews.
@@ -409,7 +409,7 @@ modality-aware instead of piggybacking on heavyweight validation paths.
 - [ ] Rerun or update `INT-024`, `INT-031`, `INT-032`, `INT-033`, `INT-034`,
   `INT-039`, `INT-188`, `INT-189`, `INT-190`, `INT-204`, `INT-207`, and
   `INT-208`.
-- [x] Add a dedicated controller/Temporal preview-path integration test if no
+- [ ] Add a dedicated controller/Temporal preview-path integration test if no
   existing INT already exercises the full worker-light -> controller ->
   Temporal -> renderer chain.
 - [ ] Confirm the benchmark validation and handoff tests still pass with the

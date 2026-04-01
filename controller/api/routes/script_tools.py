@@ -7,7 +7,7 @@ from pathlib import Path
 
 import httpx
 from fastapi import APIRouter, Header, Request
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
 
 from controller.clients.worker import WorkerClient
 from controller.config.settings import settings
@@ -43,8 +43,14 @@ class ScriptToolRequest(BaseModel):
     backend: SimulatorBackendType = Field(default_factory=get_default_simulator_backend)
     smoke_test_mode: bool | None = None
     bundle_base64: str | None = None
-    pitch: float = -45.0
-    yaw: float = 45.0
+    orbit_pitch: float = Field(
+        default=-45.0,
+        validation_alias=AliasChoices("pitch", "orbit_pitch"),
+    )
+    orbit_yaw: float = Field(
+        default=45.0,
+        validation_alias=AliasChoices("yaw", "orbit_yaw"),
+    )
     rendering_type: PreviewRenderingType = PreviewRenderingType.RGB
     reviewer_stage: ReviewerStage | None = None
     jitter_range: tuple[float, float, float] | None = None
@@ -303,8 +309,8 @@ async def preview_script(
         ) as middleware:
             result = await middleware.preview(
                 payload.script_path,
-                orbit_pitch=payload.pitch,
-                orbit_yaw=payload.yaw,
+                orbit_pitch=payload.orbit_pitch,
+                orbit_yaw=payload.orbit_yaw,
                 rendering_type=payload.rendering_type,
                 bundle_base64=payload.bundle_base64,
                 smoke_test_mode=payload.smoke_test_mode,

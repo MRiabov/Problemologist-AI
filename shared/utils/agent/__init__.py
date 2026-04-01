@@ -10,7 +10,7 @@ from uuid import uuid4
 
 import httpx
 import structlog
-from build123d import Compound
+from build123d import Compound, Part
 from pydantic import BaseModel
 
 from shared.enums import AgentName
@@ -503,7 +503,7 @@ def submit_for_review(compound: Compound) -> bool:
 
 
 def preview(
-    component: Any,
+    component: Part | Compound,
     orbit_pitch: float = 45,
     orbit_yaw: float = 45,
     rendering_type: PreviewRenderingType | str = PreviewRenderingType.RGB,
@@ -527,8 +527,8 @@ def preview(
         {
             "script_path": "preview_scene.json",
             "bundle_base64": preview_scene_bundle,
-            "pitch": orbit_pitch,
-            "yaw": orbit_yaw,
+            "orbit_pitch": orbit_pitch,
+            "orbit_yaw": orbit_yaw,
             "rendering_type": PreviewRenderingType(str(rendering_type)).value,
             "agent_role": _script_agent_role(),
         },

@@ -267,8 +267,8 @@ async def verify_design_activity(
 @activity.defn(name="worker_preview_design")
 async def preview_design_activity(params: HeavyPreviewParams) -> HeavyPreviewResponse:
     """Render design preview from a session bundle."""
-    pitch = params.pitch
-    yaw = params.yaw
+    pitch = params.orbit_pitch
+    yaw = params.orbit_yaw
     response = await asyncio.to_thread(
         renderer_client.render_preview,
         bundle_base64=params.bundle_base64,

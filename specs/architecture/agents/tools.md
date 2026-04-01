@@ -165,7 +165,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 
 <!-- Same: what's in the compound? -->
 
-- `preview(component: Part|Compound, pitch: float = 45, yaw: float = 45, rendering_type: RenderingType | Literal["rgb", "depth", "segmentation"])` - a way to render the CAD files on demand. Used for the engineer to get a visual inspection of its work. The single-view preview bundle is persisted under `renders/engineer_renders/` rather than being flattened into the root render directory. Benchmark callers compose benchmark geometry first and then preview the composed result.
+- `preview(component: Part|Compound, orbit_pitch: float = 45, orbit_yaw: float = 45, rendering_type: RenderingType | Literal["rgb", "depth", "segmentation"])` - a way to render the CAD files on demand. Used for the engineer to get a visual inspection of its work. The single-view preview bundle is persisted under `renders/engineer_renders/` rather than being flattened into the root render directory. Benchmark callers compose benchmark geometry first and then preview the composed result.
 - `objectives_geometry()` - a zero-argument utility imported from `utils` that materializes the benchmark objective geometry from the canonical benchmark definition path for the current workspace. Preview callers combine its output with benchmark `build()` output before rendering benchmark context.
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service which does it fo us-->
 

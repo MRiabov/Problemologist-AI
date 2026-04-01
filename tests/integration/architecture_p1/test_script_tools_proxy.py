@@ -562,11 +562,11 @@ async def test_int_212_utils_preview_materializes_modality_manifest_and_depth_ar
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
-async def test_int_213_controller_preview_route_materializes_depth_artifact_via_temporal():
+async def test_int_213_controller_preview_route_materializes_depth_artifact_via_controller_proxy():
     """
-    INT-213: the controller preview route must accept a live bundle, route the
-    request through controller orchestration, and materialize a depth preview
-    bundle with an atomic manifest write.
+    INT-213: the controller preview route must accept a live bundle, proxy the
+    request through the controller script-tool boundary, and materialize a depth
+    preview bundle with an atomic manifest write.
     """
     session_id = f"INT-213-{uuid.uuid4().hex[:8]}"
 
@@ -587,8 +587,8 @@ async def test_int_213_controller_preview_route_materializes_depth_artifact_via_
                 "script_path": "solution_script.py",
                 "agent_role": AgentName.ENGINEER_CODER.value,
                 "bundle_base64": bundle_base64,
-                "pitch": -35.0,
-                "yaw": 45.0,
+                "orbit_pitch": -35.0,
+                "orbit_yaw": 45.0,
                 "rendering_type": "depth",
                 "episode_id": session_id,
             },

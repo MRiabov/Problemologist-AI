@@ -33,8 +33,8 @@ async def preview_render_activity(
     return await client.preview(
         script_path=params.script_path,
         script_content=params.script_content,
-        orbit_pitch=params.pitch,
-        orbit_yaw=params.yaw,
+        orbit_pitch=params.orbit_pitch,
+        orbit_yaw=params.orbit_yaw,
         rendering_type=params.rendering_type,
         bundle_base64=params.bundle_base64,
         smoke_test_mode=params.smoke_test_mode,
