@@ -10,8 +10,8 @@ from shared.models.schemas import (
     AssemblyDefinition,
     AssemblyPartConfig,
     BenchmarkDefinition,
-    CotsPartEstimate,
     CostTotals,
+    CotsPartEstimate,
     PartConfig,
 )
 from shared.workers.schema import (
@@ -30,7 +30,10 @@ pytestmark = pytest.mark.xdist_group(name="physics_sims")
 
 
 async def _require_services(client: httpx.AsyncClient) -> None:
-    for name, url in (("worker-light", WORKER_LIGHT_URL), ("worker-heavy", WORKER_HEAVY_URL)):
+    for name, url in (
+        ("worker-light", WORKER_LIGHT_URL),
+        ("worker-heavy", WORKER_HEAVY_URL),
+    ):
         try:
             resp = await client.get(f"{url}/health", timeout=5.0)
             resp.raise_for_status()
@@ -233,7 +236,9 @@ async def test_int_129_cots_geometry_import_runtime_and_validation():
         assert invalid_exec.status_code == 200, invalid_exec.text
         invalid_data = ExecuteResponse.model_validate(invalid_exec.json())
         assert invalid_data.exit_code != 0
-        assert "Unknown catalog part_id 'ServoMotor_DOES_NOT_EXIST'" in invalid_data.stderr
+        assert (
+            "Unknown catalog part_id 'ServoMotor_DOES_NOT_EXIST'" in invalid_data.stderr
+        )
 
         validate_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
@@ -273,7 +278,10 @@ async def test_int_129_cots_geometry_import_runtime_and_validation():
         assert missing_validate_data.success is False
         assert missing_validate_data.artifacts is not None
         assert missing_validate_data.artifacts.failure is not None
-        assert missing_validate_data.artifacts.failure.reason == FailureReason.VALIDATION_FAILED
+        assert (
+            missing_validate_data.artifacts.failure.reason
+            == FailureReason.VALIDATION_FAILED
+        )
         assert (
             "Declared COTS part(s) were not instantiated in authored geometry"
             in missing_validate_data.artifacts.failure.detail
