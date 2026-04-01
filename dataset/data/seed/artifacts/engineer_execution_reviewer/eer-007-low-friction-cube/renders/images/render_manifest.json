@@ -2,7 +2,7 @@
   "version": "1.0",
   "episode_id": "eer-007-low-friction-cube",
   "worker_session_id": "eer-007-low-friction-cube",
-  "revision": "5fd84779c64c5380193fba21b9eb2bc67aeec2c7",
+  "revision": "afcf81d2648490c505c64a8b608a42a17cd142dd",
   "environment_version": "integration-test",
   "preview_evidence_paths": [
     "renders/images/render_e15_a0.png",
