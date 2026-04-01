@@ -2,7 +2,7 @@
   "version": "1.0",
   "episode_id": "ec-002-gap-bridge",
   "worker_session_id": "ec-002-gap-bridge",
-  "revision": "06d8056c03319e8d3f2b1c17b0603da8cefb7f6b",
+  "revision": "74e646e0086d9f4b5d4180c7d22cf6bfd520a6e8",
   "environment_version": "1.0",
   "preview_evidence_paths": [
     "renders/images/render_e15_a0.png",
