@@ -32,8 +32,8 @@ moved_object:
   start_position: [-250.0, 0.0, 70.0]
   runtime_jitter: [10.0, 8.0, 4.0]
 constraints:
-  max_unit_cost: 60.0
-  max_weight_g: 1000.0
+  max_unit_cost: 120.0
+  max_weight_g: 2200.0
 randomization:
   static_variation_id: engineer_planner_no_drill_v1
   runtime_jitter_enabled: true

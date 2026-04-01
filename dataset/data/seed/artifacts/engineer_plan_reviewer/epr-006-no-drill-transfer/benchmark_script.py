@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from build123d import Align, Box, Compound, Cylinder, Location, Sphere
 import yaml
+from build123d import Align, Box, Compound, Cylinder, Location, Sphere
 
 from utils.metadata import CompoundMetadata, PartMetadata
 
@@ -27,9 +27,7 @@ def _build_moved_object(moved: dict):
         raise ValueError("moved_object.material_id must be a non-empty string")
 
     if shape == "sphere":
-        moved_part = Sphere(
-            radius, align=(Align.CENTER, Align.CENTER, Align.CENTER)
-        )
+        moved_part = Sphere(radius, align=(Align.CENTER, Align.CENTER, Align.CENTER))
     elif shape in {"cube", "box"}:
         edge = radius * 2.0
         moved_part = Box(

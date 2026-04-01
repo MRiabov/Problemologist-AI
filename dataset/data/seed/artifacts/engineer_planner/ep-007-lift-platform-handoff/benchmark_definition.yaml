@@ -35,8 +35,8 @@ moved_object:
   start_position: [0.0, 0.0, 125.0]
   runtime_jitter: [6.0, 6.0, 5.0]
 constraints:
-  max_unit_cost: 100.0
-  max_weight_g: 1500.0
+  max_unit_cost: 120.0
+  max_weight_g: 2200.0
 randomization:
   static_variation_id: engineer_planner_platform_handoff_v1
   runtime_jitter_enabled: true
