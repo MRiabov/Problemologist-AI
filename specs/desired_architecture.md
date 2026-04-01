@@ -31,6 +31,7 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 
 - [Distributed execution](./architecture/distributed-execution.md): controller plus split worker plane, worker APIs, dedicated renderer worker, persistence, Temporal boundary, and backend-routing rules such as fast validation preview versus physics simulation.
 - [CAD and other infrastructure](./architecture/CAD-and-other-infra.md): CAD metadata, rendering direction, dedicated renderer worker boundary, validation-preview rendering policy, schema contracts, and supporting infra assumptions.
+- [COTS geometry import](./architecture/cots-geometry-import.md): class-first COTS resolution contract, typed class registry, interface-faithful proxy policy, and verification expectations for COTS parts.
 
 ### Evaluation and quality gates
 

@@ -112,10 +112,8 @@ class ServoMotor(COTSPart):
             part_number=catalog_part_id,
             data=data,
             children=[body, shaft, cable_exit],
-            label=label,
+            label=label or f"motor_{variant}",
         )
-        if label is None:
-            self.label = f"motor_{variant}"
         self.motor_variant = variant
         self.catalog_part_id = catalog_part_id
 
@@ -142,18 +140,17 @@ def retrieve_cots_physics(cots_id: str) -> dict[str, float] | None:
         return None
 
     data = ServoMotor.motor_data[variant]
-    if data:
-        torque = data["torque_nm"]
+    torque = data["torque_nm"]
 
-        # heuristic for KP/KV if not specified in DB
-        # KP = torque / saturation_error (rad) ~ 0.2 rad
-        saturation_error = 0.2
-        kp = torque / saturation_error
-        # KV = KP * 0.1 (critical damping approx)
-        kv = kp * 0.1
-        return {
-            "torque": torque,
-            "kp": kp,
-            "kv": kv,
-            "max_velocity": 60.0 / data["speed_sec_60deg"],
-        }
+    # heuristic for KP/KV if not specified in DB
+    # KP = torque / saturation_error (rad) ~ 0.2 rad
+    saturation_error = 0.2
+    kp = torque / saturation_error
+    # KV = KP * 0.1 (critical damping approx)
+    kv = kp * 0.1
+    return {
+        "torque": torque,
+        "kp": kp,
+        "kv": kv,
+        "max_velocity": 60.0 / data["speed_sec_60deg"],
+    }

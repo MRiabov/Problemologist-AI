@@ -166,11 +166,11 @@ The workbench validation (as well as other util infrastructure are read-only in 
 
 ### Off-the-shelf parts (COTS)
 
-It is self-understanding that engineers will use off-the-shelf parts - motors, fasteners, gears, etc. The catalog is well-defined in spec 007, but the model should have an access to a CLI tool or a set of python scripts to find something in a codebase. Again, we use DSPy.ReAct.
+COTS search remains the job of the COTS Search subagent. Class resolution and proxy-provider contracts are defined in [COTS geometry import](./cots-geometry-import.md).
 
-I suggest using a subagent for this. Give a prompt of what's necessary and let the subagent execute a series of read-only SQL prompts over a catalog DB. The agent will return a series of catalogs to use.
+The only CAD rule that stays here is metadata ownership: imported COTS geometry must still carry `PartMetadata.cots_id` and must remain benchmark-owned or engineer-owned according to the assembly context, not according to the provider implementation.
 
-Both planner agent and engineer can only prompt the searching agent for searching.
+<!-- Future work: commented class-instantiation hints may later be generated into starter benchmark and solution scripts, but that is a template concern, not a runtime concern. -->
 
 ### Drillability and fasteners
 

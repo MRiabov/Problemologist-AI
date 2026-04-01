@@ -45,19 +45,20 @@ Use this sequence for engineer-coder evals:
 01. Read `plan.md`, `todo.md`, `assembly_definition.yaml`, and `benchmark_definition.yaml`.
 02. If benchmark geometry exists, read `benchmark_script.py` as read-only context before drafting the solution.
 03. Read `skills/build123d_cad_drafting_skill/SKILL.md` before the first geometry draft.
-04. Only read `skills/electronics-engineering/SKILL.md` if the approved handoff explicitly contains an `electronics` section or the benchmark declares `electronics_requirements`. Motors alone do not imply an electronics task, and mechanical wire-routing placeholders do not qualify.
-05. Keep the first `solution_script.py` draft compact and complete for the handoff. Prefer a direct `result = ...` binding and avoid extra helper files.
-06. Run one cheap syntax check first, then one real probe against the authored file:
+04. If the design includes catalog-backed components, read `skills/cots-parts/SKILL.md` before drafting the part geometry or motion contract.
+05. Only read `skills/electronics-engineering/SKILL.md` if the approved handoff explicitly contains an `electronics` section or the benchmark declares `electronics_requirements`. Motors alone do not imply an electronics task, and mechanical wire-routing placeholders do not qualify.
+06. Keep the first `solution_script.py` draft compact and complete for the handoff. Prefer a direct `result = ...` binding and avoid extra helper files.
+07. Run one cheap syntax check first, then one real probe against the authored file:
     - `py_compile` or equivalent
     - import `result` from the authored file
     - `from utils.submission import validate, simulate`
     - `validate(result)`
     - `simulate(result)` if validation passes
-07. If validation fails, fix the geometry or placement in the authored file, not the execution contract.
-08. If the same issue persists after one targeted fix, record the blocker in `journal.md` and stop diagnostics instead of widening into repo spelunking.
-09. For engineer-owned scripts, do not copy benchmark-only `fixed=True` examples into the implementation unless the current task explicitly says you are authoring benchmark fixtures.
-10. If the workspace includes a reviewer-approved seed artifact for the same mechanism family, mirror its placement pattern and datums before inventing a new layout.
-11. If the task includes explicit electronics requirements, keep the electrical design in the approved handoff artifacts and direct geometry implementation. Do not import `utils.electronics`, `shared.*`, or `worker_heavy.*` from the authored script.
+08. If validation fails, fix the geometry or placement in the authored file, not the execution contract.
+09. If the same issue persists after one targeted fix, record the blocker in `journal.md` and stop diagnostics instead of widening into repo spelunking.
+10. For engineer-owned scripts, do not copy benchmark-only `fixed=True` examples into the implementation unless the current task explicitly says you are authoring benchmark fixtures.
+11. If the workspace includes a reviewer-approved seed artifact for the same mechanism family, mirror its placement pattern and datums before inventing a new layout.
+12. If the task includes explicit electronics requirements, keep the electrical design in the approved handoff artifacts and direct geometry implementation. Do not import `utils.electronics`, `shared.*`, or `worker_heavy.*` from the authored script.
 
 ## Placement Contract
 
