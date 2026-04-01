@@ -19,6 +19,7 @@ if str(ROOT) not in sys.path:
 
 from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition, CompoundMetadata, PartMetadata
+from shared.rendering import export_preview_scene_bundle
 from shared.rendering.renderer_client import (
     materialize_render_artifacts,
     render_static_preview,
@@ -36,7 +37,6 @@ from worker_heavy.utils.build123d_rendering import (
     _unique_color,
     _zone_color,
     camera_position_from_orbit,
-    export_preview_scene_bundle,
 )
 
 _NO_RENDER_ROLE = {

@@ -20,7 +20,6 @@ from shared.models.simulation import RendererCapabilities, RenderMode
 from shared.rendering import (
     configure_headless_vtk_egl,
     create_headless_vtk_render_window,
-    render_preview,
 )
 from shared.simulation.backends import RendererBackend
 from shared.workers.bundling import bundle_directory_base64
@@ -1583,6 +1582,8 @@ def render_preview_view(
         workspace_root=workspace_root,
         smoke_test_mode=smoke_test_mode,
     )
+    from shared.rendering.renderer_client import render_preview
+
     response = render_preview(
         bundle_base64=bundle_base64,
         script_path="preview_scene.json",
