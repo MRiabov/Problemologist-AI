@@ -149,7 +149,12 @@ from solution_script import result
 from utils import preview
 
 
-response = preview(result, pitch=-35.0, yaw=45.0, rendering_type="depth")
+response = preview(
+    result,
+    orbit_pitch=-35.0,
+    orbit_yaw=45.0,
+    rendering_type="depth",
+)
 print(f"PREVIEW_SUCCESS={response.success}")
 print(f"PREVIEW_STATUS={response.status_text}")
 print(f"PREVIEW_RENDERING_TYPE={response.rendering_type.value}")
