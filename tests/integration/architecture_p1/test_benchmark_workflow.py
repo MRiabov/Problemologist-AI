@@ -66,7 +66,7 @@ async def test_benchmark_planner_cad_reviewer_path():
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Trigger Benchmark Generation
         request = BenchmarkGenerateRequest(
-            prompt="Create a simple path planning benchmark with a wall and a goal.",
+            prompt="INT-005: Create a simple path planning benchmark with a wall and a goal.",
             backend=SimulatorBackendType.GENESIS,
         )
         resp = await client.post("/benchmark/generate", json=request.model_dump())

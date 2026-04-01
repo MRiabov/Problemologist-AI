@@ -256,6 +256,12 @@ Use this checklist to track the migration from spec edits through runtime gates,
 - [ ] Verify benchmark coder entry still blocks if the benchmark handoff is incomplete or the benchmark geometry source is missing.
 - [ ] Verify reviewer entry still uses the latest-revision manifest and fails closed on stale or missing artifacts.
 - [x] Verify `benchmark_assembly_definition.yaml` remains a required benchmark-owned handoff artifact for downstream engineering intake.
+
+### Verified This Pass
+
+- [x] Seeded Codex workspace materialization still writes `solution_script.py` as the engineer-authored writable source and preserves `benchmark_script.py` as read-only context when present.
+- [x] `shared/agent_templates/codex/scripts/submit_for_review.py` now requires `build()` and no longer treats module-level `result` as an alternate authored-source contract.
+- [x] Seed validation hash refresh now prefers explicit authored filenames (`benchmark_script.py`, `solution_script.py`) when `script_path` is absent instead of assuming `script.py`.
 - [x] Verify `benchmark_script.py` is read-only once copied into downstream engineering or benchmark-review workspaces.
 
 ### Seed and fixture updates

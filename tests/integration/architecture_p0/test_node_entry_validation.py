@@ -501,7 +501,7 @@ async def test_int_184_engineer_planner_rejects_stale_benchmark_bundle():
     """
     async with httpx.AsyncClient(timeout=300.0) as client:
         benchmark_request = BenchmarkGenerateRequest(
-            prompt="Create a benchmark about stacking blocks.",
+            prompt="INT-005: Create a benchmark about stacking blocks.",
             backend=SimulatorBackendType.GENESIS,
         )
         benchmark_resp = await client.post(

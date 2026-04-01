@@ -1368,7 +1368,9 @@ def test_validate_eval_seed_accepts_curated_rows_and_preserves_redundancy_metada
 
 
 @pytest.mark.integration_p0
-def test_validate_eval_seed_accepts_refreshed_render_seed_for_engineer_coder():
+def test_validate_eval_seed_accepts_render_free_seed_for_engineer_coder(
+    tmp_path: Path,
+):
     completed = subprocess.run(
         [
             sys.executable,
@@ -1396,6 +1398,22 @@ def test_validate_eval_seed_accepts_refreshed_render_seed_for_engineer_coder():
     assert completed.returncode == 0, combined_output
     assert "PASS engineer_coder ec-001:" in completed.stdout, completed.stdout
     assert "black/empty" not in combined_output, combined_output
+
+    item = _load_dataset_item(
+        "dataset/data/seed/role_based/engineer_coder.json",
+        "ec-001",
+    )
+    workspace_dir = tmp_path / "workspace"
+    materialized = materialize_seed_workspace(
+        item=item,
+        agent_name=AgentName.ENGINEER_CODER,
+        workspace_dir=workspace_dir,
+    )
+
+    assert not any(
+        rel_path.startswith("renders/") for rel_path in materialized.copied_paths
+    ), materialized.copied_paths
+    assert not (workspace_dir / "renders").exists()
 
 
 @pytest.mark.integration_p0

@@ -16,7 +16,6 @@ from controller.agent.benchmark_handover_validation import (
 )
 from controller.agent.config import settings as agent_settings
 from controller.agent.handover_constants import (
-    BENCHMARK_CODER_HANDOFF_ARTIFACTS,
     BENCHMARK_CODER_HANDOVER_CHECK,
     BENCHMARK_PLAN_REVIEW_MANIFEST,
     BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
@@ -191,7 +190,7 @@ def build_benchmark_node_contracts() -> dict[AgentName, NodeEntryContract]:
         AgentName.BENCHMARK_CODER: NodeEntryContract(
             node=AgentName.BENCHMARK_CODER,
             required_state_fields=["session", "episode_id"],
-            required_artifacts=list(BENCHMARK_CODER_HANDOFF_ARTIFACTS),
+            required_artifacts=list(BENCHMARK_PLANNER_HANDOFF_ARTIFACTS),
             custom_check=BENCHMARK_CODER_HANDOVER_CHECK,
         ),
         AgentName.BENCHMARK_REVIEWER: NodeEntryContract(
@@ -956,7 +955,7 @@ async def validate_seeded_workspace_handoff_artifacts(
 
     if (
         "benchmark_definition.yaml" in present_paths
-        and target_node != AgentName.BENCHMARK_PLANNER
+        and target_node == AgentName.BENCHMARK_REVIEWER
         and "benchmark_script.py" not in present_paths
     ):
         errors.append(

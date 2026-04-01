@@ -237,7 +237,7 @@ The test policy stays the same:
 
 ## Migration Checklist
 
-This checklist reflects the current transitional state of the migration. The renderer service and preview plumbing are already in place, but the render implementation still lives partly in `worker-heavy`, and the heavy worker still carries the old display/bootstrap assumptions.
+This checklist reflects the current post-split state of the migration. The renderer service and preview plumbing are already in place, and the remaining items are simulation-rendering code migration, dependency cleanup, and wording cleanup.
 
 ### Service split and routing
 
@@ -251,6 +251,12 @@ This checklist reflects the current transitional state of the migration. The ren
 - [x] Move the render implementation itself out of `worker_heavy/utils/build123d_rendering.py` and `worker_heavy/utils/rendering.py` so the renderer service no longer imports render logic from `worker-heavy`.
 - [x] Remove the remaining `xvfb-run` / X11 bootstrap assumptions from the `worker-heavy` container and compose service.
 - [ ] Remove render dependency ownership from `worker-heavy` once the renderer service is stable enough to be the only render backend owner.
+
+### Simulation rendering migration
+
+- [x] Move the simulation-video rendering pipeline out of `worker_heavy/simulation/media.py` and related helper code into `worker-renderer`, so `worker-heavy` only captures simulation state and render inputs.
+- [x] Move stress-heatmap rendering and other simulation render post-processing out of `worker_heavy/utils/validation.py` and `worker_heavy/utils/rendering.py` into `worker-renderer`.
+- [ ] Remove render-only dependencies from `worker-heavy` after the simulation render paths are renderer-owned.
 
 ### Render contract and artifacts
 

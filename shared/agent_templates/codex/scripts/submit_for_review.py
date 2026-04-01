@@ -37,12 +37,9 @@ def _script_path_for_agent(agent_name: AgentName) -> str:
 def _load_solution(script_path: str) -> Compound:
     module = import_module(Path(script_path).stem)
     solution = getattr(module, "build", None)
-    if callable(solution):
-        solution = solution()
-    else:
-        solution = getattr(module, "result", None)
-    if solution is None:
-        raise ValueError(f"{script_path} must define build() or module-level result")
+    if not callable(solution):
+        raise ValueError(f"{script_path} must define build()")
+    solution = solution()
     if not isinstance(solution, Compound):
         raise TypeError(
             f"{script_path} must export a build123d.Compound; got {type(solution).__name__}"

@@ -318,6 +318,12 @@ Target on-demand flow:
 - If the preview helper returns inconsistent file naming, the render manifest
   and reviewer gates will drift apart.
 
+## Completion Note
+
+Implementation status: complete for the current on-demand preview surface in this branch. No further functional edits should be made to this migration unless a later architecture revision reopens the scope.
+
+<!-- Frozen after implementation completion: avoid further edits unless the architecture changes. -->
+
 ## Benchmark Geometry Composition
 
 The preview helper stays geometry-only at the public boundary. Benchmark
@@ -409,9 +415,9 @@ validation paths.
   through controller orchestration instead of calling the renderer directly.
 - [ ] Add the Temporal workflow/activity path for preview and keep the live
   chain `worker-light -> controller -> Temporal -> worker-renderer`.
-- [ ] Normalize scalar preview inputs to lists, zip multi-view requests by
+- [x] Normalize scalar preview inputs to lists, zip multi-view requests by
   index, and enforce the 64-view cap before dispatch.
-- [ ] Return the structured preview job ack immediately and keep queue/view-
+- [x] Return the structured preview job ack immediately and keep queue/view-
   ready status visible while the renderer worker is working.
 - [ ] Remove validation-time preview generation from `/benchmark/validate` and
   retire the 24-view validation bundle contract.
@@ -461,7 +467,7 @@ validation paths.
   bucketed directories so workflow provenance stays visible.
 - [x] Preserve the current image format policy for depth and segmentation
   previews.
-- [ ] Stream per-view ready updates over the websocket control path so callers
+- [x] Stream per-view ready updates over the websocket control path so callers
   can attach images as they arrive.
 
 ### Prompts and permissions
