@@ -29,6 +29,7 @@ from controller.workflows.heavy import (
     HeavyValidationWorkflow,
     HeavyVerifyWorkflow,
 )
+from controller.workflows.preview import PreviewWorkflow
 from shared.agents.config import resolve_agents_config_path
 from shared.enums import AgentName, ManufacturingMethod
 from shared.observability.schemas import (
@@ -67,6 +68,7 @@ from shared.workers.schema import (
     InspectTopologyResponse,
     MediaInspectionResult,
     PreviewDesignResponse,
+    PreviewWorkflowParams,
     PreviewRenderingType,
     RenderArtifactMetadata,
     RenderManifest,
@@ -876,16 +878,36 @@ class RemoteFilesystemMiddleware:
         smoke_test_mode: bool | None = None,
         script_content: str | None = None,
     ) -> PreviewDesignResponse:
-        """Trigger design preview via the worker-light controller proxy."""
+        """Trigger design preview through the Temporal-backed preview workflow."""
         p_str = str(script_path)
-        return await self.client.preview(
-            p_str,
+
+        self._require_temporal_for_heavy_operation("preview")
+
+        if bundle_base64 is not None:
+            bundle = base64.b64decode(bundle_base64)
+        else:
+            bundle = await self.client.bundle_session()
+            bundle_base64 = base64.b64encode(bundle).decode("utf-8")
+
+        request = PreviewWorkflowParams(
+            bundle_base64=bundle_base64,
+            script_path=p_str,
             script_content=script_content,
             orbit_pitch=orbit_pitch,
             orbit_yaw=orbit_yaw,
             rendering_type=PreviewRenderingType(str(rendering_type)),
-            bundle_base64=bundle_base64,
             smoke_test_mode=smoke_test_mode,
+            session_id=self.client.session_id,
+            agent_role=str(self.agent_role.value)
+            if isinstance(self.agent_role, AgentName)
+            else str(self.agent_role),
+        )
+        workflow_id = _preview_workflow_id(self.client.session_id, bundle, request)
+        return await self._execute_or_use_existing_workflow(
+            PreviewWorkflow.run,
+            workflow_id,
+            request,
+            result_type=PreviewDesignResponse,
         )
 
     async def validate(
