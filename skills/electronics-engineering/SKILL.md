@@ -16,6 +16,8 @@ It is for electromechanical reasoning and handoff alignment, not for importing r
   Use when composing an `ElectronicsSection` or reviewing a simple circuit topology.
 - `references/routing_best_practices.md`
   Use when routing 3D wires or reviewing clearance/tension risks.
+- `../cots-parts/SKILL.md`
+  Use when the electronics plan includes catalog-backed motors, relays, connectors, wires, or other off-the-shelf components that need part identity and provenance preserved.
 
 ## Core Rules
 
