@@ -89,7 +89,7 @@ The canonical prompt rules are:
 07. The prompt also advertises `python .admin/clear_env.py` as the in-workspace reset helper for clean retries.
 08. The prompt includes the task text, agent name, task ID, and seed dataset name when available.
 09. The prompt does not need to describe repository-level import paths or module layout.
-10. All starter, non-DSPy-optimized prompts live in `config/prompts.yaml`.
+10. All starter, non-DSPy-optimized prompt fragments live in `config/prompts.yaml` and `shared/agent_templates/`; see [prompt-management.md](./prompt-management.md) for the unified prompt-source model and backend appendices.
 
 The prompt builder in `evals/logic/codex_workspace.py` is the canonical definition of that prompt text.
 
