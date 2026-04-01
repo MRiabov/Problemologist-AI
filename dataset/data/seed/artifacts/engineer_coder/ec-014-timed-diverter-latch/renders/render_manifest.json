@@ -1,0 +1,1235 @@
+{
+  "version": "1.0",
+  "episode_id": "c2321a0d-20a7-5ab7-9d0c-e7770bdd56f1",
+  "worker_session_id": "ec-014-timed-diverter-latch",
+  "revision": "d828d162f17606950cf54256dc638b1f71f8188f",
+  "environment_version": "1.0",
+  "preview_evidence_paths": [
+    "renders/engineer_renders/render_e15_a0.png",
+    "renders/engineer_renders/render_e15_a0_depth.png",
+    "renders/engineer_renders/render_e15_a0_segmentation.png",
+    "renders/engineer_renders/render_e15_a135.png",
+    "renders/engineer_renders/render_e15_a135_depth.png",
+    "renders/engineer_renders/render_e15_a135_segmentation.png",
+    "renders/engineer_renders/render_e15_a180.png",
+    "renders/engineer_renders/render_e15_a180_depth.png",
+    "renders/engineer_renders/render_e15_a180_segmentation.png",
+    "renders/engineer_renders/render_e15_a225.png",
+    "renders/engineer_renders/render_e15_a225_depth.png",
+    "renders/engineer_renders/render_e15_a225_segmentation.png",
+    "renders/engineer_renders/render_e15_a270.png",
+    "renders/engineer_renders/render_e15_a270_depth.png",
+    "renders/engineer_renders/render_e15_a270_segmentation.png",
+    "renders/engineer_renders/render_e15_a315.png",
+    "renders/engineer_renders/render_e15_a315_depth.png",
+    "renders/engineer_renders/render_e15_a315_segmentation.png",
+    "renders/engineer_renders/render_e15_a45.png",
+    "renders/engineer_renders/render_e15_a45_depth.png",
+    "renders/engineer_renders/render_e15_a45_segmentation.png",
+    "renders/engineer_renders/render_e15_a90.png",
+    "renders/engineer_renders/render_e15_a90_depth.png",
+    "renders/engineer_renders/render_e15_a90_segmentation.png",
+    "renders/engineer_renders/render_e45_a0.png",
+    "renders/engineer_renders/render_e45_a0_depth.png",
+    "renders/engineer_renders/render_e45_a0_segmentation.png",
+    "renders/engineer_renders/render_e45_a135.png",
+    "renders/engineer_renders/render_e45_a135_depth.png",
+    "renders/engineer_renders/render_e45_a135_segmentation.png",
+    "renders/engineer_renders/render_e45_a180.png",
+    "renders/engineer_renders/render_e45_a180_depth.png",
+    "renders/engineer_renders/render_e45_a180_segmentation.png",
+    "renders/engineer_renders/render_e45_a225.png",
+    "renders/engineer_renders/render_e45_a225_depth.png",
+    "renders/engineer_renders/render_e45_a225_segmentation.png",
+    "renders/engineer_renders/render_e45_a270.png",
+    "renders/engineer_renders/render_e45_a270_depth.png",
+    "renders/engineer_renders/render_e45_a270_segmentation.png",
+    "renders/engineer_renders/render_e45_a315.png",
+    "renders/engineer_renders/render_e45_a315_depth.png",
+    "renders/engineer_renders/render_e45_a315_segmentation.png",
+    "renders/engineer_renders/render_e45_a45.png",
+    "renders/engineer_renders/render_e45_a45_depth.png",
+    "renders/engineer_renders/render_e45_a45_segmentation.png",
+    "renders/engineer_renders/render_e45_a90.png",
+    "renders/engineer_renders/render_e45_a90_depth.png",
+    "renders/engineer_renders/render_e45_a90_segmentation.png",
+    "renders/engineer_renders/render_e75_a0.png",
+    "renders/engineer_renders/render_e75_a0_depth.png",
+    "renders/engineer_renders/render_e75_a0_segmentation.png",
+    "renders/engineer_renders/render_e75_a135.png",
+    "renders/engineer_renders/render_e75_a135_depth.png",
+    "renders/engineer_renders/render_e75_a135_segmentation.png",
+    "renders/engineer_renders/render_e75_a180.png",
+    "renders/engineer_renders/render_e75_a180_depth.png",
+    "renders/engineer_renders/render_e75_a180_segmentation.png",
+    "renders/engineer_renders/render_e75_a225.png",
+    "renders/engineer_renders/render_e75_a225_depth.png",
+    "renders/engineer_renders/render_e75_a225_segmentation.png",
+    "renders/engineer_renders/render_e75_a270.png",
+    "renders/engineer_renders/render_e75_a270_depth.png",
+    "renders/engineer_renders/render_e75_a270_segmentation.png",
+    "renders/engineer_renders/render_e75_a315.png",
+    "renders/engineer_renders/render_e75_a315_depth.png",
+    "renders/engineer_renders/render_e75_a315_segmentation.png",
+    "renders/engineer_renders/render_e75_a45.png",
+    "renders/engineer_renders/render_e75_a45_depth.png",
+    "renders/engineer_renders/render_e75_a45_segmentation.png",
+    "renders/engineer_renders/render_e75_a90.png",
+    "renders/engineer_renders/render_e75_a90_depth.png",
+    "renders/engineer_renders/render_e75_a90_segmentation.png"
+  ],
+  "artifacts": {
+    "renders/engineer_renders/render_e15_a0.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a0",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a0.png",
+        "depth": "renders/engineer_renders/render_e15_a0_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a0_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a0",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a0.png",
+        "depth": "renders/engineer_renders/render_e15_a0_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a0_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a0",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a0.png",
+        "depth": "renders/engineer_renders/render_e15_a0_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a135.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a135",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a135.png",
+        "depth": "renders/engineer_renders/render_e15_a135_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a135_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a135",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a135.png",
+        "depth": "renders/engineer_renders/render_e15_a135_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a135_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a135",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a135.png",
+        "depth": "renders/engineer_renders/render_e15_a135_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a180.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a180",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a180.png",
+        "depth": "renders/engineer_renders/render_e15_a180_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a180_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a180",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a180.png",
+        "depth": "renders/engineer_renders/render_e15_a180_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a180_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a180",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a180.png",
+        "depth": "renders/engineer_renders/render_e15_a180_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a225.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a225",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a225.png",
+        "depth": "renders/engineer_renders/render_e15_a225_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a225_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a225",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a225.png",
+        "depth": "renders/engineer_renders/render_e15_a225_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a225_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a225",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a225.png",
+        "depth": "renders/engineer_renders/render_e15_a225_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a270.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a270",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a270.png",
+        "depth": "renders/engineer_renders/render_e15_a270_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a270_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a270",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a270.png",
+        "depth": "renders/engineer_renders/render_e15_a270_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a270_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a270",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a270.png",
+        "depth": "renders/engineer_renders/render_e15_a270_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a315.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a315",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a315.png",
+        "depth": "renders/engineer_renders/render_e15_a315_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a315_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a315",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a315.png",
+        "depth": "renders/engineer_renders/render_e15_a315_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a315_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a315",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a315.png",
+        "depth": "renders/engineer_renders/render_e15_a315_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a45.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a45",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a45.png",
+        "depth": "renders/engineer_renders/render_e15_a45_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a45_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a45",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a45.png",
+        "depth": "renders/engineer_renders/render_e15_a45_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a45_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a45",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a45.png",
+        "depth": "renders/engineer_renders/render_e15_a45_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a90.png": {
+      "modality": "rgb",
+      "group_key": "render_e15_a90",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a90.png",
+        "depth": "renders/engineer_renders/render_e15_a90_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a90_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e15_a90",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a90.png",
+        "depth": "renders/engineer_renders/render_e15_a90_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e15_a90_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e15_a90",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e15_a90.png",
+        "depth": "renders/engineer_renders/render_e15_a90_depth.png",
+        "segmentation": "renders/engineer_renders/render_e15_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a0.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a0",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a0.png",
+        "depth": "renders/engineer_renders/render_e45_a0_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a0_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a0",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a0.png",
+        "depth": "renders/engineer_renders/render_e45_a0_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a0_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a0",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a0.png",
+        "depth": "renders/engineer_renders/render_e45_a0_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a135.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a135",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a135.png",
+        "depth": "renders/engineer_renders/render_e45_a135_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a135_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a135",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a135.png",
+        "depth": "renders/engineer_renders/render_e45_a135_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a135_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a135",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a135.png",
+        "depth": "renders/engineer_renders/render_e45_a135_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a180.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a180",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a180.png",
+        "depth": "renders/engineer_renders/render_e45_a180_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a180_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a180",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a180.png",
+        "depth": "renders/engineer_renders/render_e45_a180_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a180_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a180",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a180.png",
+        "depth": "renders/engineer_renders/render_e45_a180_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a225.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a225",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a225.png",
+        "depth": "renders/engineer_renders/render_e45_a225_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a225_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a225",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a225.png",
+        "depth": "renders/engineer_renders/render_e45_a225_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a225_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a225",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a225.png",
+        "depth": "renders/engineer_renders/render_e45_a225_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a270.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a270",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a270.png",
+        "depth": "renders/engineer_renders/render_e45_a270_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a270_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a270",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a270.png",
+        "depth": "renders/engineer_renders/render_e45_a270_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a270_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a270",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a270.png",
+        "depth": "renders/engineer_renders/render_e45_a270_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a315.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a315",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a315.png",
+        "depth": "renders/engineer_renders/render_e45_a315_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a315_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a315",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a315.png",
+        "depth": "renders/engineer_renders/render_e45_a315_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a315_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a315",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a315.png",
+        "depth": "renders/engineer_renders/render_e45_a315_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a45.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a45",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a45.png",
+        "depth": "renders/engineer_renders/render_e45_a45_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a45_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a45",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a45.png",
+        "depth": "renders/engineer_renders/render_e45_a45_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a45_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a45",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a45.png",
+        "depth": "renders/engineer_renders/render_e45_a45_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a90.png": {
+      "modality": "rgb",
+      "group_key": "render_e45_a90",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a90.png",
+        "depth": "renders/engineer_renders/render_e45_a90_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a90_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e45_a90",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a90.png",
+        "depth": "renders/engineer_renders/render_e45_a90_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e45_a90_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e45_a90",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e45_a90.png",
+        "depth": "renders/engineer_renders/render_e45_a90_depth.png",
+        "segmentation": "renders/engineer_renders/render_e45_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a0.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a0",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a0.png",
+        "depth": "renders/engineer_renders/render_e75_a0_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a0_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a0",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a0.png",
+        "depth": "renders/engineer_renders/render_e75_a0_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a0_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a0",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a0.png",
+        "depth": "renders/engineer_renders/render_e75_a0_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a0_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a135.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a135",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a135.png",
+        "depth": "renders/engineer_renders/render_e75_a135_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a135_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a135",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a135.png",
+        "depth": "renders/engineer_renders/render_e75_a135_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a135_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a135",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a135.png",
+        "depth": "renders/engineer_renders/render_e75_a135_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a135_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a180.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a180",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a180.png",
+        "depth": "renders/engineer_renders/render_e75_a180_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a180_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a180",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a180.png",
+        "depth": "renders/engineer_renders/render_e75_a180_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a180_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a180",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a180.png",
+        "depth": "renders/engineer_renders/render_e75_a180_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a180_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a225.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a225",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a225.png",
+        "depth": "renders/engineer_renders/render_e75_a225_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a225_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a225",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a225.png",
+        "depth": "renders/engineer_renders/render_e75_a225_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a225_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a225",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a225.png",
+        "depth": "renders/engineer_renders/render_e75_a225_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a225_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a270.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a270",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a270.png",
+        "depth": "renders/engineer_renders/render_e75_a270_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a270_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a270",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a270.png",
+        "depth": "renders/engineer_renders/render_e75_a270_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a270_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a270",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a270.png",
+        "depth": "renders/engineer_renders/render_e75_a270_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a270_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a315.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a315",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a315.png",
+        "depth": "renders/engineer_renders/render_e75_a315_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a315_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a315",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a315.png",
+        "depth": "renders/engineer_renders/render_e75_a315_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a315_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a315",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a315.png",
+        "depth": "renders/engineer_renders/render_e75_a315_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a315_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a45.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a45",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a45.png",
+        "depth": "renders/engineer_renders/render_e75_a45_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a45_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a45",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a45.png",
+        "depth": "renders/engineer_renders/render_e75_a45_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a45_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a45",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a45.png",
+        "depth": "renders/engineer_renders/render_e75_a45_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a45_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a90.png": {
+      "modality": "rgb",
+      "group_key": "render_e75_a90",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a90.png",
+        "depth": "renders/engineer_renders/render_e75_a90_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a90_depth.png": {
+      "modality": "depth",
+      "group_key": "render_e75_a90",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a90.png",
+        "depth": "renders/engineer_renders/render_e75_a90_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/render_e75_a90_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "render_e75_a90",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/render_e75_a90.png",
+        "depth": "renders/engineer_renders/render_e75_a90_depth.png",
+        "segmentation": "renders/engineer_renders/render_e75_a90_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    }
+  }
+}

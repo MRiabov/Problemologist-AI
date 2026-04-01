@@ -2,7 +2,7 @@
   "version": "1.0",
   "episode_id": "eer-002-gap-bridge",
   "worker_session_id": "eer-002-gap-bridge",
-  "revision": "908a5c64a1bdde5bed83578726147dbae5ade76b",
+  "revision": "798cbd4353c889d7f1923aac11cda590940d84b9",
   "environment_version": "integration-test",
   "preview_evidence_paths": [
     "renders/images/context_view_01.png",

@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "episode_id": "28dc9e29-4b7e-537a-ad9e-3c104e0aeb64",
+  "worker_session_id": "bpr-003-central-forbid-route",
+  "revision": "d828d162f17606950cf54256dc638b1f71f8188f",
+  "environment_version": "1.0",
+  "preview_evidence_paths": [
+    "renders/benchmark_renders/context_view_01.png",
+    "renders/benchmark_renders/context_view_02.png"
+  ],
+  "artifacts": {
+    "renders/benchmark_renders/context_view_01.png": {
+      "modality": "rgb",
+      "group_key": "context_view_01",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/benchmark_renders/context_view_01.png",
+        "depth": "renders/benchmark_renders/context_view_01_depth.png",
+        "segmentation": "renders/benchmark_renders/context_view_01_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/benchmark_renders/context_view_02.png": {
+      "modality": "rgb",
+      "group_key": "context_view_02",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/benchmark_renders/context_view_02.png",
+        "depth": "renders/benchmark_renders/context_view_02_depth.png",
+        "segmentation": "renders/benchmark_renders/context_view_02_segmentation.png"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    }
+  }
+}
