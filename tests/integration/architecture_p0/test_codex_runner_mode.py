@@ -603,12 +603,12 @@ def test_run_evals_codex_submit_helper_forces_headless_rendering_env(tmp_path):
 
 @pytest.mark.integration_p0
 @pytest.mark.int_id("INT-207")
-def test_run_evals_codex_engineer_workspace_validate_renders_headlessly(
+def test_run_evals_codex_engineer_workspace_validate_delegates_preview_to_renderer(
     tmp_path: Path,
 ):
     """
-    INT-207: an engineer workspace validation preview must render headlessly
-    and persist the validation record.
+    INT-207: engineer workspace validation persists preview artifacts through
+    the renderer worker path without legacy local fallback behavior.
     """
 
     item = _load_dataset_item(
@@ -635,7 +635,7 @@ def build() -> Compound:
     base.label = "test_box"
     base.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
 
-    assembly = Compound(children=[base], label="fallback_preview_box")
+    assembly = Compound(children=[base], label="renderer_preview_box")
     assembly.metadata = CompoundMetadata(fixed=True)
     return assembly
 
@@ -762,7 +762,6 @@ result = build()
 
     assert validate_run.returncode == 0, combined_output
     assert "VALIDATE_OK=True" in combined_output, combined_output
-    assert "xvfb" not in combined_output.lower()
     assert "Validation preview render failed" not in combined_output
 
     validation_record = ValidationResultRecord.model_validate_json(
@@ -1063,7 +1062,7 @@ async def test_codex_materialized_planner_workspace_submits(
                 "bash scripts/submit_for_review.sh",
                 "utils.submission",
                 "intermediate checks before",
-                "result =",
+                "result = build()",
                 "python benchmark_script.py",
                 "python .admin/clear_env.py",
             ),

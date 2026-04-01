@@ -279,6 +279,10 @@ async def seed_execution_reviewer_handover(
     seed_render_preview: bool = True,
 ) -> None:
     """Seed deterministic reviewer handoff artifacts for execution-reviewer runs."""
+    benchmark_script_content = _fixture_script_content(
+        int_id,
+        preferred_path="benchmark_script.py",
+    )
     script_content = script_content or _fixture_script_content(
         int_id,
         preferred_path="solution_script.py",
@@ -351,6 +355,13 @@ async def seed_execution_reviewer_handover(
         assembly_definition_path="renders/assembly_definition.yaml",
     )
 
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="benchmark_script.py",
+        content=benchmark_script_content,
+        bypass_agent_permissions=True,
+    )
     await _seed_workspace_file(
         client,
         session_id=session_id,

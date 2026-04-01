@@ -29,6 +29,7 @@ from shared.workers.schema import (
     ListFilesRequest,
     PreviewDesignRequest,
     PreviewDesignResponse,
+    PreviewRenderingType,
     ReadFileRequest,
     VerificationRequest,
     WriteFileRequest,
@@ -137,6 +138,111 @@ result = part
         assert preview.image_path is not None
         assert preview.image_path.startswith("renders/"), preview
         assert preview.image_bytes_base64 is not None
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+@pytest.mark.int_id("INT-209")
+async def test_int_209_validate_and_preview_delegate_to_renderer_worker():
+    """INT-209: Validate/preview paths keep contract while delegating render work."""
+    session_id = f"INT-209-{uuid.uuid4().hex[:8]}"
+    script_content = """
+from build123d import Align, Box
+from shared.models.schemas import PartMetadata
+
+def build():
+    part = Box(1, 1, 1, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    part.label = "delegate_preview_box"
+    part.metadata = PartMetadata(material_id="aluminum_6061", fixed=False)
+    return part
+"""
+
+    benchmark_definition = BenchmarkDefinition(
+        objectives=ObjectivesSection(
+            goal_zone=BoundingBox(min=(0.5, 0.5, 0.0), max=(1.5, 1.5, 1.5)),
+            forbid_zones=[],
+            build_zone=BoundingBox(min=(-2.0, -2.0, -2.0), max=(2.0, 2.0, 2.0)),
+        ),
+        benchmark_parts=_default_benchmark_parts(),
+        simulation_bounds=BoundingBox(
+            min=(-5.0, -5.0, -5.0),
+            max=(5.0, 5.0, 5.0),
+        ),
+        moved_object=MovedObject(
+            label="delegate_preview_box",
+            shape="box",
+            material_id="aluminum_6061",
+            start_position=(0.0, 0.0, 0.0),
+            runtime_jitter=(0.0, 0.0, 0.0),
+        ),
+        constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+        physics=PhysicsConfig(backend=SimulatorBackendType.MUJOCO),
+    )
+
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="script.py",
+                content=script_content,
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="benchmark_definition.yaml",
+                content=yaml.safe_dump(
+                    benchmark_definition.model_dump(mode="json"),
+                    sort_keys=False,
+                ),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+        bundle64 = await get_bundle(client, session_id)
+
+        validate_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=BenchmarkToolRequest(
+                script_path="script.py",
+                bundle_base64=bundle64,
+                backend=SimulatorBackendType.MUJOCO,
+                smoke_test_mode=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=300.0,
+        )
+        assert validate_resp.status_code == 200, validate_resp.text
+        validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
+        assert validate_data.success, validate_data.message
+        assert validate_data.artifacts is not None
+        assert validate_data.artifacts.render_paths, validate_data.artifacts
+        assert "renders/render_manifest.json" in (
+            validate_data.artifacts.render_blobs_base64
+        )
+
+        preview_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/preview",
+            json=PreviewDesignRequest(
+                script_path="script.py",
+                bundle_base64=bundle64,
+                orbit_pitch=-35.0,
+                orbit_yaw=45.0,
+                rendering_type=PreviewRenderingType.DEPTH,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=300.0,
+        )
+        assert preview_resp.status_code == 200, preview_resp.text
+        preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
+        assert preview_data.success, preview_data.message
+        assert preview_data.image_path is not None
+        assert preview_data.image_path.startswith("renders/"), preview_data
+        assert preview_data.manifest_path == "renders/render_manifest.json"
+        assert preview_data.render_manifest_json is not None
+        assert "artifacts" in preview_data.render_manifest_json
 
 
 def _simulation_video_smoke_script() -> str:
