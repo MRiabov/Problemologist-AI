@@ -5,7 +5,7 @@ description: Expert CAD modeling using build123d. Includes builder modes, semant
 
 # build123d CAD Drafting Expert
 
-**MANDATORY**: Before planning any `build123d` implementation, you MUST use the `read_skill` tool to read this file (`SKILL.md`). It contains expert knowledge and links to critical patterns.
+Read this skill and the relevant reference files below before planning any `build123d` implementation.
 
 ## Core Directives
 
@@ -55,7 +55,7 @@ rail_lower = rail_builder.part.moved(Location((0, -0.06, 0.09), (0, 2, 0)))
 
 ## References & Contents
 
-### \[assembly.md\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/.agent/skills/build123d_cad_drafting_skill/references/assembly.md) (Assembly & Physics)
+### [assembly.md](references/assembly.md) (Assembly & Physics)
 
 - Motor Pattern (stator/rotor) (L11)
 - Explicit Joint Control (L33)
@@ -63,7 +63,7 @@ rail_lower = rail_builder.part.moved(Location((0, -0.06, 0.09), (0, 2, 0)))
 - Environment Zones (Goal/Forbid) (L75)
 - Collision Best Practices (L82)
 
-### \[cheat_sheet.md\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/.agent/skills/build123d_cad_drafting_skill/references/cheat_sheet.md) (Syntax Reference)
+### [cheat_sheet.md](references/cheat_sheet.md) (Syntax Reference)
 
 - Core Builders (L5)
 - Sketching & Surfaces (L15)
@@ -73,7 +73,7 @@ rail_lower = rail_builder.part.moved(Location((0, -0.06, 0.09), (0, 2, 0)))
 - IO & Export (L49)
 - Common Pitfalls for LLMs (L55)
 
-### \[handpicked.md\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/.agent/skills/build123d_cad_drafting_skill/references/handpicked.md) (Expert Patterns)
+### [handpicked.md](references/handpicked.md) (Expert Patterns)
 
 - Simple Parts & Boolean Operations (L5)
 - Sketches & Extrusion (L21)
@@ -84,7 +84,7 @@ rail_lower = rail_builder.part.moved(Location((0, -0.06, 0.09), (0, 2, 0)))
 - Mirroring & Symmetries (L99)
 - **Expert Pitfalls & Patterns (L113)**: `with Locations` Plural Trap, Implicit Contexts.
 
-### \[reference.md\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/.agent/skills/build123d_cad_drafting_skill/references/reference.md) (Exhaustive Examples)
+### [reference.md](references/reference.md) (Exhaustive Examples)
 
 - 1-2: Simple Plates & Holes (L81)
 - 3-5: Prismatic Solids & Locations (L127)
@@ -96,5 +96,4 @@ rail_lower = rail_builder.part.moved(Location((0, -0.06, 0.09), (0, 2, 0)))
 - 23-28: Revolve, Loft, Shelling, Slitting (L691)
 - *Full Table of Contents (36 examples) available inside the file.*
 
-> [!TIP]
-> Use `list_skill_files "build123d_cad_drafting_skill"` to see all available reference guides.
+Use the reference guides above as the lookup path for build123d details.

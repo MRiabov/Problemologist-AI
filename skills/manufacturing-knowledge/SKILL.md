@@ -13,10 +13,10 @@ To get the current material properties, density, and cost constants, use the run
 
 Use:
 
-- `read_file("/config/manufacturing_config.yaml")` for material properties, process costs, and catalog data.
+- `read_file("config/manufacturing_config.yaml")` for material properties, process costs, and catalog data.
 - Planner roles: `validate_costing_and_price()` to validate and price `assembly_definition.yaml`.
 
-Do not browse `/scripts` or invent helper tools that are not exposed to your role.
+Do not browse `scripts/` or invent helper tools that are not exposed to your role.
 
 ## 2. CNC Milling (3-Axis)
 

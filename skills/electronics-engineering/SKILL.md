@@ -6,7 +6,7 @@ description: Electromechanical planning and runtime guidance for the current Pro
 # Electronics Engineering Skill
 
 Use this skill for current repo behavior, not legacy prompt lore.
-It is for electromechanical reasoning and handoff alignment, not for importing runtime internals into authored `script.py`.
+It is for electromechanical reasoning and handoff alignment, not for importing runtime internals into authored `solution_script.py`.
 
 ## Load The Right Reference
 
@@ -40,4 +40,4 @@ It is for electromechanical reasoning and handoff alignment, not for importing r
 
 - For authored CAD scripts, continue to use the canonical `utils.*` import surface unless the task is specifically editing repo internals.
 - For repo/runtime work, the current implementation surface is centered on `worker_heavy/utils/electronics.py`, `shared/circuit_builder.py`, `shared/pyspice_utils.py`, `shared/wire_utils.py`, and `shared/models/schemas.py`.
-- Do not treat those runtime/internal helper modules as part of the authored submission-script import contract. `script.py` should stay on the canonical `utils.submission` / `utils.metadata` surface and use direct build123d geometry for any physical implementation details.
+- Do not treat those runtime/internal helper modules as part of the authored submission-script import contract. `solution_script.py` should stay on the canonical `utils.submission` / `utils.metadata` surface and use direct build123d geometry for any physical implementation details.
