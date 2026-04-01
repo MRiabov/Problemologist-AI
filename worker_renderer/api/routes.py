@@ -54,13 +54,13 @@ from worker_renderer.utils.build123d_rendering import (
     render_preview_scene_bundle,
 )
 from worker_renderer.utils.file_validation import validate_benchmark_definition_yaml
-from worker_renderer.utils.scene_builder import normalize_preview_label
 from worker_renderer.utils.rendering import (
     build_render_manifest,
     normalize_render_manifest,
     select_single_preview_render_subdir,
     select_static_preview_render_subdir,
 )
+from worker_renderer.utils.scene_builder import normalize_preview_label
 
 logger = structlog.get_logger(__name__)
 renderer_router = APIRouter()
@@ -590,12 +590,12 @@ def _render_single_preview(
         view_index=view_index,
         orbit_pitch=pitch,
         orbit_yaw=yaw,
-            siblings=RenderSiblingPaths(
-                rgb=str((output_dir / f"{group_key}.png").relative_to(workspace_root)),
-                depth=str(
-                    (output_dir / f"{group_key}_depth.png").relative_to(workspace_root)
-                ),
-                segmentation=str(image_path.relative_to(workspace_root)),
+        siblings=RenderSiblingPaths(
+            rgb=str((output_dir / f"{group_key}.png").relative_to(workspace_root)),
+            depth=str(
+                (output_dir / f"{group_key}_depth.png").relative_to(workspace_root)
+            ),
+            segmentation=str(image_path.relative_to(workspace_root)),
         ),
         segmentation_legend=_preview_segmentation_legend(scene),
     )

@@ -896,11 +896,7 @@ def render_preview_scene(
     output_dir.mkdir(parents=True, exist_ok=True)
     preview_label = (
         normalize_preview_label(scene.component_label)
-        or (
-            normalize_preview_label(scene.entities[0].label)
-            if scene.entities
-            else ""
-        )
+        or (normalize_preview_label(scene.entities[0].label) if scene.entities else "")
         or f"{_UNNAMED_PREVIEW_LABEL_PREFIX}_1"
     )
     image_path = output_dir / f"{_preview_render_stem(preview_label, pitch, yaw)}.png"
@@ -943,11 +939,7 @@ def render_preview_scene_bundle(
     elevations = [-15, -45, -75]
     preview_label = (
         normalize_preview_label(scene.component_label)
-        or (
-            normalize_preview_label(scene.entities[0].label)
-            if scene.entities
-            else ""
-        )
+        or (normalize_preview_label(scene.entities[0].label) if scene.entities else "")
         or f"{_UNNAMED_PREVIEW_LABEL_PREFIX}_1"
     )
     if smoke_test_mode:
@@ -960,9 +952,7 @@ def render_preview_scene_bundle(
             camera_position = camera_position_from_orbit(
                 center, distance, elevation, angle
             )
-            group_key = _preview_render_stem(
-                preview_label, elevation, angle
-            )
+            group_key = _preview_render_stem(preview_label, elevation, angle)
             rgb_path = output_dir / f"{group_key}.png"
             depth_path = output_dir / f"{group_key}_depth.png"
             segmentation_path = output_dir / f"{group_key}_segmentation.png"

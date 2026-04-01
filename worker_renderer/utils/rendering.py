@@ -187,7 +187,11 @@ def select_single_preview_render_subdir(
     workspace_root: Path, *, agent_role: str | None = None
 ) -> str:
     if agent_role:
-        return "benchmark_renders" if _is_benchmark_role(agent_role) else "engineer_renders"
+        return (
+            "benchmark_renders"
+            if _is_benchmark_role(agent_role)
+            else "engineer_renders"
+        )
     return (
         "engineer_renders"
         if (workspace_root / "assembly_definition.yaml").exists()

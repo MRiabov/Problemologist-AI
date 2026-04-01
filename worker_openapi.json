@@ -76,6 +76,22 @@
               "type": "string",
               "title": "X-Session-Id"
             }
+          },
+          {
+            "name": "x-agent-role",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Role"
+            }
           }
         ],
         "requestBody": {

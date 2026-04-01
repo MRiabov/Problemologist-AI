@@ -216,7 +216,11 @@ def select_single_preview_render_subdir(
     """Choose the single-view preview bundle directory for the active workspace."""
 
     if agent_role:
-        return "benchmark_renders" if _is_benchmark_role(agent_role) else "engineer_renders"
+        return (
+            "benchmark_renders"
+            if _is_benchmark_role(agent_role)
+            else "engineer_renders"
+        )
 
     return (
         "engineer_renders"
