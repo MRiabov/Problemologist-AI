@@ -60,7 +60,7 @@ The workspace contract is:
 
 01. The workspace root is the current directory for the Codex process.
 02. The initial prompt is written to `prompt.md` at the workspace root.
-03. Shared boilerplate starter files come from `shared/agent_templates/common/`.
+03. Shared boilerplate starter files and prompt-context material come from `shared/agent_templates/`.
 04. Role-specific planner starter files come from the role template repositories under `shared/assets/template_repos/`.
 05. Planner workspaces include `scripts/submit_plan.sh` from `shared/agent_templates/codex/`.
 06. Coder workspaces include `scripts/submit_for_review.sh` from `shared/agent_templates/codex/`.
@@ -91,7 +91,7 @@ The canonical prompt rules are:
 09. The prompt does not need to describe repository-level import paths or module layout.
 10. All starter, non-DSPy-optimized prompt fragments live in `config/prompts.yaml` and `shared/agent_templates/`; see [prompt-management.md](./prompt-management.md) for the unified prompt-source model and backend appendices.
 
-The prompt builder in `evals/logic/codex_workspace.py` is the canonical definition of that prompt text.
+PromptManager is the canonical merge point for that prompt text; runtime code such as `evals/logic/codex_workspace.py` only supplies runtime context or template variables.
 
 ## Role behavior
 

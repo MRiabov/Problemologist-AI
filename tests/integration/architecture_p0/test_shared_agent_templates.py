@@ -7,7 +7,7 @@ from shared.agent_templates import load_common_template_files, load_template_tex
 
 
 @pytest.mark.integration_p0
-def test_common_agent_templates_match_worker_light_starters():
+def test_common_agent_templates_load_from_shared_templates():
     templates = load_common_template_files()
     assert set(templates) == {
         ".admin/clear_env.py",
@@ -17,17 +17,17 @@ def test_common_agent_templates_match_worker_light_starters():
         "todo.md",
     }
 
-    worker_light_root = Path("worker_light/agent_files")
+    shared_root = Path("shared/agent_templates/common")
     assert templates[".admin/clear_env.py"] == (
-        worker_light_root / ".admin/clear_env.py"
+        shared_root / ".admin/clear_env.py"
     ).read_text(encoding="utf-8")
     assert templates["solution_script.py"] == (
-        worker_light_root / "solution_script.py"
+        shared_root / "solution_script.py"
     ).read_text(encoding="utf-8")
-    assert templates["todo.md"] == (worker_light_root / "todo.md").read_text(
+    assert templates["todo.md"] == (shared_root / "todo.md").read_text(
         encoding="utf-8"
     )
-    assert templates["journal.md"] == (worker_light_root / "journal.md").read_text(
+    assert templates["journal.md"] == (shared_root / "journal.md").read_text(
         encoding="utf-8"
     )
     assert (
@@ -58,5 +58,7 @@ def test_template_file_expands_from_shared_agent_templates(tmp_path: Path):
     scenarios = load_integration_mock_scenarios(scenario_dir)
     step = scenarios["INT-999"]["transcript"][0]["steps"][0]
     assert step["tool_args"]["content"] == (
-        Path("worker_light/agent_files/solution_script.py").read_text(encoding="utf-8")
+        Path("shared/agent_templates/common/solution_script.py").read_text(
+            encoding="utf-8"
+        )
     )

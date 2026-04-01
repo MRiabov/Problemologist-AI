@@ -56,9 +56,10 @@ The result is a prompt surface that is functionally working but structurally dup
 01. A single PromptManager owns prompt assembly for both controller/API and Codex runtime families.
 02. `config/prompts.yaml` uses one unified prompt source model with structured role prompts and appendices.
 03. Prompt blocks in `config/prompts.yaml` are ordered by runtime call order, not by historical file layout.
-04. The core prompt inventory is organized as:
+04. The active prompt inventory is organized as:
     - benchmark planner -> benchmark plan reviewer -> benchmark coder -> benchmark reviewer,
     - engineer planner -> engineer plan reviewer -> engineer coder -> engineer execution reviewer,
+    - electronics planner -> electronics reviewer,
     - helper agents after the core graphs in runtime invocation order.
 05. `shared/agent_templates/` is treated as first-class prompt-context material.
 06. `shared/assets/template_repos/` continues to provide copied starter workspace content, but it is not a competing prompt source.
@@ -110,39 +111,39 @@ The result is a prompt surface that is functionally working but structurally dup
 - Update the prompt-management architecture doc to describe the unified source model and the backend appendices.
 - Update the agent harness and filesystem docs so they point at the unified prompt-context contract.
 - Update integration coverage to verify that both controller/API and Codex materialize prompts from the same base model.
-- Add or refresh tests that assert the runtime order of prompt blocks and the absence of legacy `common.code_template` from active assembly.
+- Add or refresh tests that detect legacy `common.code_template` usage in active assembly and confirm any active electronics/helper roles remain represented in the same unified model.
 
 ## Detailed Checklist
 
 ### Prompt source model
 
-- [ ] Replace the current mixed prompt structure in `config/prompts.yaml` with a unified `role_prompts` plus `appendices` layout.
-- [ ] Keep the benchmark and engineering role prompts compact, direct, and role-specific.
-- [ ] Place the role prompts in the same order the runtime calls them.
-- [ ] Move backend-specific reminders out of the role prompts and into the appropriate appendix branch.
-- [ ] Remove `common.code_template` from active prompt assembly once the equivalent content lives in managed prompt-context files or is no longer needed.
-- [ ] Confirm that helper-agent prompt entries follow the same runtime-order rule as the core benchmark and engineering graphs.
+- [x] Replace the current mixed prompt structure in `config/prompts.yaml` with a unified `role_prompts` plus `appendices` layout.
+- [x] Keep the benchmark and engineering role prompts compact, direct, and role-specific.
+- [x] Place the role prompts in the same order the runtime calls them.
+- [x] Move backend-specific reminders out of the role prompts and into the appropriate appendix branch.
+- [x] Remove `common.code_template` from active prompt assembly once the equivalent content lives in managed prompt-context files or is no longer needed.
+- [x] Confirm that helper-agent prompt entries and any active electronics roles remain included in the same unified model if they remain first-class.
 
 ### PromptManager and controller path
 
-- [ ] Update `controller/prompts.py` so it remains the YAML loader, not a second prompt architecture.
-- [ ] Update `controller/agent/prompt_manager.py` so it is the single merge point for role prompts, appendices, runtime context, and the skill catalog.
-- [ ] Keep controller/API rendering on the unified source model rather than on controller-only prompt branches.
-- [ ] Make sure the controller path appends the same installed skill catalog that Codex sees.
+- [x] Update `controller/prompts.py` so it remains the YAML loader, not a second prompt architecture.
+- [x] Update `controller/agent/prompt_manager.py` so it is the single merge point for role prompts, appendices, runtime context, and the skill catalog.
+- [x] Keep controller/API rendering on the unified source model rather than on controller-only prompt branches.
+- [x] Make sure the controller path appends the same installed skill catalog that Codex sees.
 
 ### Codex workspace path
 
-- [ ] Remove prompt assembly from `evals/logic/codex_workspace.py` so it only supplies runtime context, adapter-specific variables, or other non-prompt state to `PromptManager`.
-- [ ] Preserve the current Codex prompt tone by keeping the rendered text compact and operational inside `PromptManager`.
-- [ ] Keep runtime facts out of prompt-construction logic outside `PromptManager`; they should be injected as runtime context or template variables.
-- [ ] Ensure the Codex runtime and controller runtime both rely on the same merge order, with no separate prompt-building logic in Codex workspace code.
+- [x] Remove prompt assembly from `evals/logic/codex_workspace.py` so it only supplies runtime context, adapter-specific variables, or other non-prompt state to `PromptManager`.
+- [x] Preserve the current Codex prompt tone by keeping the rendered text compact and operational inside `PromptManager`.
+- [x] Keep runtime facts out of prompt-construction logic outside `PromptManager`; they should be injected as runtime context or template variables.
+- [x] Ensure the Codex runtime and controller runtime both rely on the same merge order, with no separate prompt-building logic in Codex workspace code.
 
 ### Prompt-context files and workspace material
 
-- [ ] Treat `shared/agent_templates/` as first-class prompt-context material.
-- [ ] Keep `shared/assets/template_repos/` as copied starter workspace content, not as a competing prompt source.
-- [ ] Keep `worker_light/agent_files/` as legacy compatibility material only.
-- [ ] Update the architecture docs so they describe prompt-context files as part of the prompt contract.
+- [x] Treat `shared/agent_templates/` as first-class prompt-context material.
+- [x] Keep `shared/assets/template_repos/` as copied starter workspace content, not as a competing prompt source.
+- [x] Keep `worker_light/agent_files/` as legacy compatibility material only.
+- [x] Update the architecture docs so they describe prompt-context files as part of the prompt contract.
 
 ### Skills and prompt boundaries
 
@@ -153,12 +154,12 @@ The result is a prompt surface that is functionally working but structurally dup
 
 ### Docs, tests, and validation
 
-- [ ] Update `specs/architecture/agents/prompt-management.md` to describe the unified prompt source model and appendix structure.
-- [ ] Update `specs/architecture/agents/agent-harness.md` and `specs/architecture/agents/artifacts-and-filesystem.md` so they point at the unified prompt-context contract.
-- [ ] Update integration coverage to verify that controller/API and Codex materialize prompts from the same base model.
-- [ ] Add or refresh tests that assert runtime ordering of prompt blocks.
-- [ ] Add or refresh tests that detect legacy `common.code_template` usage in active prompt assembly.
-- [ ] Validate the migration against the narrowest relevant integration slice before widening to broader coverage.
+- [x] Update `specs/architecture/agents/prompt-management.md` to describe the unified prompt source model and appendix structure.
+- [x] Update `specs/architecture/agents/agent-harness.md` and `specs/architecture/agents/artifacts-and-filesystem.md` so they point at the unified prompt-context contract.
+- [x] Update integration coverage to verify that controller/API and Codex materialize prompts from the same base model.
+- [x] Confirm any active electronics/helper roles remain included in the same unified model if they remain first-class.
+- [x] Add or refresh tests that detect legacy `common.code_template` usage in active prompt assembly.
+- [x] Validate the migration against the narrowest relevant integration slice before widening to broader coverage.
 
 ## Non-Goals
 

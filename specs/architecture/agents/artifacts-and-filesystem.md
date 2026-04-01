@@ -23,6 +23,7 @@ The filesystem rules are:
 Reusable starter files and prompt-context artifacts are defined once in `shared/agent_templates/`, which is part of the prompt-context contract.
 The shared starter set includes `.admin/clear_env.py`, which resets the current
 seeded workspace in place without changing the conversation context.
+PromptManager consumes these prompt-context inputs when it materializes the runtime prompt.
 
 Role-specific planner scaffolds remain in `shared/assets/template_repos/` and are copied into each workspace before node entry.
 `worker_light/agent_files/` is a legacy compatibility mirror for bootstrap and local inspection, not the canonical source of truth.

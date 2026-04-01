@@ -51,8 +51,7 @@ The inputs to each model are as described in @desired_architecture.md document. 
 
 Note that skills and utils files are loaded at runtime (currently from the most recent version, to avoid git work)
 
-When the exact same starter artifact recurs across rows or agent families, store that body once in
-`shared/agent_templates/common/` and copy it into the workspace from there. Dataset rows should keep only row-specific
+When the exact same starter artifact recurs across rows or agent families, store that body once under `shared/agent_templates/` and copy it into the workspace from there. Dataset rows should keep only row-specific
 custom artifacts in their seed folders; common boilerplate such as `todo.md` and `journal.md` should not be duplicated
 in the row bundle. The authored `benchmark_script.py` and `solution_script.py` files remain row-specific artifacts once their respective stages exist.
 

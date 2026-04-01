@@ -42,6 +42,8 @@ For the core benchmark graph, the order is: `benchmark_planner` -> `benchmark_pl
 
 For the core engineering graph, the order is: `engineer_planner` -> `engineer_plan_reviewer` -> `engineer_coder` -> `engineer_execution_reviewer`.
 
+Any other first-class role family, including electronics roles if they remain active, follows the same runtime-order rule.
+
 Helper agents should follow the same rule: place them where the runtime calls them, and keep them grouped after the core graphs when that does not conflict with execution order.
 
 ## PromptManager responsibilities
@@ -201,7 +203,7 @@ appendices:
         Keep the prompt aligned with the controller-backed benchmark tools.
 ```
 
-The shape above is illustrative. The concrete YAML layout can include additional role prompts or appendix entries as needed, but the ownership model should remain the same.
+The shape above is illustrative, not exhaustive. The concrete YAML layout must include any active role families, including electronics planner/reviewer roles and helper agents if they remain first-class, but the ownership model should remain the same.
 
 ## Prompt optimization
 
