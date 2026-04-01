@@ -12,9 +12,11 @@
 
 All render execution runs in a dedicated headless `worker-renderer` container, including:
 
-1. static validation preview renders,
+1. explicit preview renders,
 2. dynamic simulation videos and other runtime evidence artifacts,
 3. selection snapshots, depth renders, segmentation renders, and render-manifest generation.
+
+Static validation no longer produces preview artifacts by default; explicit preview requests use the same renderer worker boundary instead.
 
 The physics backends do not own render process state. They supply scene state, camera policy, and render-capability metadata; the renderer worker owns the graphics stack and executes the render job inside its own container boundary.
 
@@ -117,17 +119,17 @@ The persistent child keeps backend caches split by both session and backend type
 The cache rule is:
 
 1. A session may hold a warm MuJoCo backend and a warm Genesis backend at the same time.
-2. `/benchmark/validate` static preview reuse must not overwrite or alias the backend instance later used by `/benchmark/simulate`.
+2. Explicit preview requests must not overwrite or alias the backend instance later used by `/benchmark/simulate`.
 3. Backend cache lookup is therefore keyed by `(session_id, backend_type)`, not by `session_id` alone.
 4. Session cleanup closes all cached backend instances for that session, not only the most recent one.
 
 The reason is architectural rather than incidental:
 
-- `/benchmark/validate` now uses build123d/VTK for static preview by default,
+- explicit preview requests use build123d/VTK for preview evidence by default,
 - `/benchmark/simulate` may still use Genesis for the same session,
-- a single shared per-session backend cache would let the validation-preview path poison the later simulation path with the wrong backend instance.
+- a single shared per-session backend cache would let the preview path poison the later simulation path with the wrong backend instance.
 
-This split preserves warm-process reuse while keeping the validate-preview/backend-selection contract correct.
+This split preserves warm-process reuse while keeping the preview/backend-selection contract correct.
 
 ### Backend responsibility split
 
@@ -137,16 +139,15 @@ The backend contract is:
 
 1. `physics.backend` selects the physics simulation backend.
 2. Genesis remains the backend for Genesis-only simulation behavior such as FEM and fluids.
-3. Static 24-view validation preview rendering uses build123d/VTK by default and is executed by the renderer worker.
-4. The static validation preview path is a fast geometry/context artifact path, not a Genesis-runtime proof path.
-5. Benchmark-side validation bundles are stored under `renders/benchmark_renders/`, engineer single-view inspection previews are stored under `renders/engineer_renders/`, and engineer-side final preview bundles are stored under `renders/final_preview_renders/`.
+3. Explicit preview rendering uses build123d/VTK by default and is executed by the renderer worker.
+4. The explicit preview path is a fast geometry/context artifact path, not a Genesis-runtime proof path.
+5. Benchmark preview evidence is stored under `renders/benchmark_renders/`, engineer single-view inspection previews are stored under `renders/engineer_renders/`, and engineer-side final preview evidence is stored under `renders/final_preview_renders/`.
 
 This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asymmetric:
 
 1. `/benchmark/validate`
    - checks geometry/objective consistency,
-   - generates static preview artifacts,
-   - uses build123d/VTK for that static preview by default through the renderer worker,
+   - does not generate preview artifacts,
    - preserves the same script-source snapshot selected by the parent request when it launches an isolated preview child, so inline `script_content` and non-default `script_path` entrypoints do not get silently replaced by the workspace-authored source file,
    - does not add an extra Genesis load/render/build gate solely for parity checking,
    - fails closed on duplicate top-level labels or labels that use the reserved `environment` or `zone_` namespaces, because MJCF mesh/body names are derived from authored labels and the simulator owns the scene root and `zone_*` bodies.
@@ -166,8 +167,8 @@ The rule is:
 1. The selected physics backend determines the renderer family for simulation video, but the render job itself is executed by the renderer worker.
 2. The renderer backend exposes a typed capability record that states what artifact modes and view policies it supports.
 3. The runtime-selected simulation render choice is serialized in `simulation_result.json` so reviewers can replay the exact evidence path.
-4. Static build123d/VTK preview remains a separate preview contract, executed by the renderer worker, and continues to live in the preview manifest path.
-5. On-demand preview requests use the worker-light-facing `preview(...)` helper, render a composed `Part | Compound` at the requested camera and modality, and persist workflow-specific preview artifacts. They are separate from simulation evidence and from the 24-view validation bundle.
+4. Explicit build123d/VTK preview remains a separate preview contract, executed by the renderer worker, and continues to live in the preview manifest path.
+5. On-demand preview requests use the worker-light-facing `preview(...)` helper, render a composed `Part | Compound` at the requested camera and modality, and persist workflow-specific preview artifacts. They are separate from simulation evidence and from validation results.
 6. The render bundle path itself identifies whether the evidence belongs to benchmark input, engineer inspection, or final validation.
 7. If a backend cannot satisfy the selected render path, the failure should surface as a validation/runtime contract error rather than being hidden behind an unrelated global fallback.
 

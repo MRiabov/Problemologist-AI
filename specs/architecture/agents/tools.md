@@ -165,7 +165,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 
 <!-- Same: what's in the compound? -->
 
-- `preview(component: Part|Compound, orbit_pitch: float = 45, orbit_yaw: float = 45, rendering_type: RenderingType | Literal["rgb", "depth", "segmentation"])` - a way to render the CAD files on demand. Used for the engineer to get a visual inspection of its work. The single-view preview bundle is persisted under `renders/engineer_renders/` rather than being flattened into the root render directory. Benchmark callers compose benchmark `build()` output with objective overlays from `objectives_geometry()` before previewing benchmark context.
+- `preview(component: Part|Compound, orbit_pitch: float = 45, orbit_yaw: float = 45, rendering_type: RenderingType | Literal["rgb", "depth", "segmentation"])` - a way to render the CAD files on demand. Used for engineer and reviewer nodes to materialize fresh evidence before visual inspection. The single-view preview bundle is persisted under `renders/engineer_renders/` rather than being flattened into the root render directory. Benchmark callers compose benchmark `build()` output with objective overlays from `objectives_geometry()` before previewing benchmark context.
 - `objectives_geometry()` - a zero-argument utility imported from `utils` that reconstructs the benchmark objective overlay geometry from the `objectives` section of the canonical `benchmark_definition.yaml` path for the current workspace. Preview callers combine its output with benchmark `build()` output before rendering benchmark context.
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service which does it fo us-->
 
@@ -220,11 +220,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 
   - `objectives_geometry()` returns benchmark objective overlay geometry for the current workspace. It takes no arguments because the benchmark objective zones are defined in the `objectives` section of the canonical `benchmark_definition.yaml` path for the current workspace, and preview callers compose the returned geometry with the benchmark `build()` output before rendering.
 
-  - The validation tool also generates the standard 24-view static preview package, persisted under `renders/benchmark_renders/` for benchmark-side validation and `renders/final_preview_renders/` for engineer-side validation.
-
-  - That static preview package uses the validation-preview renderer, which is build123d/VTK by default.
-
-  - `validate()` is therefore a fast geometry + preview gate, not a Genesis-runtime parity gate.
+  - `validate()` is therefore a fast geometry gate, not a render gate or Genesis-runtime parity gate.
 
   - Current implementation bug to eliminate: `validate()` must fail closed if the compound being validated can only be reproduced from transient shell state and not from the persisted script/workspace snapshot. A minimal fix is to derive a canonical semantic signature from the compound's child/component history, using primitive/component types, authored parameters, label, bounding box, rounded volume, face count, and wire length with tolerance-aware normalization, and compare it against the persisted authored script state; any mismatch is a fail-fast validation error. Raw mesh equality and direct volume equality are too brittle for this gate.
 

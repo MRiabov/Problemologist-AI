@@ -80,37 +80,33 @@ The renderer worker does not inherit a host X server as its normal execution pat
 
 The rendering backend is not a single global choice. We split rendering by purpose:
 
-1. Static validation preview renders use build123d/VTK by default inside the renderer worker.
+1. Explicit preview renders use build123d/VTK by default inside the renderer worker.
 2. Dynamic simulation artifacts use the active physics backend's render family inside the renderer worker.
 3. Genesis-native visual outputs use Genesis render paths inside the renderer worker when the artifact depends on Genesis-only behavior such as FEM, fluids, or backend-native stress/state output.
 
-This split is intentional. Static 24-view preview does not require Genesis runtime features and is therefore kept on the build123d/VTK geometry path, but it still goes through the dedicated render worker boundary.
+This split is intentional. Preview evidence does not require Genesis runtime features and therefore stays on the build123d/VTK geometry path, but it is produced only on demand through the dedicated render worker boundary.
 
-Validation-preview renders are context artifacts, not backend-authoritative proof of Genesis runtime compatibility. Genesis-specific runtime behavior is still established through actual Genesis simulation runs where Genesis behavior is required.
+Preview renders are context artifacts, not backend-authoritative proof of simulation behavior. Genesis-specific runtime behavior is still established through actual Genesis simulation runs where Genesis behavior is required.
 
-On-demand preview uses the worker-light-facing `preview(...)` helper instead of the validation bundle path. Benchmark callers compose `build()` output with objective overlays reconstructed by `objectives_geometry()` from the `objectives` section of `benchmark_definition.yaml` before previewing benchmark context, while engineer callers preview their solution geometry directly. The helper persists workflow-specific preview artifacts under the existing render buckets and does not imply Genesis parity.
+On-demand preview uses the worker-light-facing `preview(...)` helper instead of any validation-time render path. Benchmark callers compose `build()` output with objective overlays reconstructed by `objectives_geometry()` from the `objectives` section of `benchmark_definition.yaml` before previewing benchmark context, while engineer callers preview their solution geometry directly. The helper persists workflow-specific preview artifacts under the existing render buckets and does not imply Genesis parity.
 
 #### Rendering views
 
 I presume the model will need to render a view or a set of views to get an understanding of what's happening during the simulation. Allow an extra `view_angles` parameter on `simulate` to trigger simulation from different sides, which would essentially reposition a camera (or a multiple) to render.
 
-For the standard benchmark handoff package, we render 24 static preview views. The default policy is:
+Preview evidence is generated explicitly, not as a validation side effect. The default policy is:
 
-1. `/benchmark/validate` generates the benchmark-side 24-view preview bundle through build123d/VTK in the renderer worker.
-2. `/benchmark/simulate` may generate backend-native dynamic renders or videos using the selected simulation backend in the renderer worker.
-3. We do not use `/benchmark/validate` to regenerate the same static preview through Genesis only for parity.
+1. `/benchmark/validate` performs validation only and does not generate preview artifacts by default.
+2. `preview(...)` generates benchmark, engineer, or final preview evidence through the renderer worker when requested.
+3. `/benchmark/simulate` may generate backend-native dynamic renders or videos using the selected simulation backend in the renderer worker.
 
-Static preview bundles preserve the workflow that produced them instead of flattening every image into a single directory:
+Preview bundles preserve the workflow that produced them instead of flattening every image into a single directory:
 
-1. benchmark-side validation preview bundles are persisted under `renders/benchmark_renders/`,
+1. benchmark preview evidence is persisted under `renders/benchmark_renders/`,
 2. single-view engineer inspection previews are persisted under `renders/engineer_renders/`,
-3. final engineer-side preview bundles are persisted under `renders/final_preview_renders/`.
+3. final engineer preview evidence is persisted under `renders/final_preview_renders/`.
 
-For build123d/VTK-backed static preview renders, each camera view is still persisted as an image triplet inside the selected bundle directory:
-
-1. the standard RGB preview image,
-2. a sibling depth-map image with `_depth.png` suffix,
-3. a sibling segmentation-map image with `_segmentation.png` suffix.
+For build123d/VTK-backed preview renders, the requested modality is persisted under the selected bundle directory and the manifest records the modality-specific artifact path. RGB previews preserve material colors. Depth and segmentation previews remain PNG-based, and segmentation renders carry a legend mapping colors to object identity.
 
 Those files are context artifacts for downstream agents and reviewers. They follow the same persistence/discovery flow as the existing preview images rather than introducing a second artifact channel, and the render path itself now encodes whether the evidence belongs to benchmark input, engineer inspection, or final preview review.
 

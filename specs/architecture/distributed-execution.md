@@ -71,10 +71,10 @@ The worker API is physically split into three specialized services to optimize r
 - **Purpose**: Handles compute-intensive, long-running tasks.
 - **Responsibilities**:
   - Physics simulation (`/benchmark/simulate`).
-  - Geometric validation plus static preview coordination (`/benchmark/validate`).
+  - Geometric validation (`/benchmark/validate`).
   - Design handover and DFM checks (`/benchmark/submit`).
   - Manufacturing analysis (`/benchmark/analyze`).
-  - Render-request coordination for validation and simulation jobs.
+  - Render-request coordination for simulation jobs.
   - Asset building (`/benchmark/build`).
   - Single-flight execution gate: one active heavy job per worker instance.
 - **HTTP boundary**: Direct benchmark endpoints are reserved for integration tests; production job dispatch stays behind Temporal.
@@ -84,7 +84,7 @@ The worker API is physically split into three specialized services to optimize r
 
 - **Purpose**: Handles all headless rendering jobs.
 - **Responsibilities**:
-  - Static validation preview generation through build123d/VTK.
+  - Explicit preview generation through build123d/VTK.
   - Simulation video generation and frame extraction.
   - Selection snapshots, depth images, segmentation images, and render-manifest persistence.
   - All render-only post-processing that does not require physics stepping.
@@ -106,15 +106,15 @@ Heavy compute execution has one production path:
 
 - Controller tools call Temporal workflows for heavy operations.
 - Temporal workflows dispatch heavy activities on `heavy-tasks-queue`.
-- Heavy activity execution runs simulation/validation in isolated child process scope (crash containment boundary) and dispatches render jobs to the renderer worker.
+- Heavy activity execution runs simulation/validation in isolated child process scope (crash containment boundary) and dispatches simulation render jobs to the renderer worker.
 
 Backend responsibility is split by operation purpose:
 
 1. `/benchmark/simulate` uses the selected physics backend and requests dynamic render/video artifacts from the renderer worker.
-2. `/benchmark/validate` performs fast validation plus static preview generation through the renderer worker.
-3. Static preview generation for `/benchmark/validate` uses build123d/VTK by default even when `physics.backend=genesis`.
+2. `/benchmark/validate` performs fast validation and does not generate preview artifacts.
+3. Explicit preview requests use the renderer worker through the preview helper and remain separate from validation.
 4. `/benchmark/validate` does not add a separate Genesis load/render gate solely for parity checking; Genesis-specific runtime behavior is established by actual Genesis simulation runs where Genesis behavior is required.
-5. Both paths use the same renderer worker service; only the render job kind differs.
+5. Both render-producing paths use the same renderer worker service; only the render job kind differs.
 
 Backend choice is orthogonal to the controller and worker-plane split:
 

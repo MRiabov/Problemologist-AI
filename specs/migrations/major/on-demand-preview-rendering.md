@@ -34,6 +34,8 @@ This migration sits on top of the existing split architecture in
 - `preview_design(...)` is not kept as a long-term alias; `preview(...)`
   replaces it.
 - The helper lives in `utils` as an export layer.
+- Validation does not generate preview artifacts by default; preview evidence
+  is produced only through explicit preview requests.
 - Benchmark previews stay geometry-only at the helper boundary; `build()`
   supplies the benchmark assembly geometry and `objectives_geometry()`
   supplies the objective overlays reconstructed from the `objectives` section of
@@ -46,7 +48,7 @@ This migration sits on top of the existing split architecture in
 - The current system already has the rendering primitives, but they are split
   across validation, preview, and renderer-worker code paths.
 - Single-view inspection is useful for engineer coder, benchmark coder, planner,
-  and reviewer flows when a full 24-view bundle is unnecessary.
+  and reviewer flows when a full preview bundle is unnecessary.
 - The current controller-side preview path still routes through the heavy-worker
   Temporal path, which is too expensive for interactive inspection.
 - The existing preview helpers are RGB-first and do not expose an explicit
@@ -101,8 +103,7 @@ The refactor should make the preview path explicit, direct, and cheap:
    requests.
 5. Keep the renderer worker as the only process that touches VTK/OpenGL and
    writes the actual image artifacts.
-6. Keep the existing 24-view validation bundle only where the benchmark or
-   review contract requires it.
+6. Remove validation-time 24-view bundle generation from the default contract.
 7. Keep on-demand preview separate from simulation render provenance.
 
 ### Proposed signature
@@ -185,8 +186,7 @@ Target on-demand flow:
 - Do not replace the renderer worker.
 - Do not send raw geometry objects over HTTP.
 - Do not collapse preview into simulation provenance.
-- Do not remove the current validation bundle until the benchmark and review
-  contracts are updated.
+- Do not route preview generation back through `/benchmark/validate`.
 - Do not add a generic render queue.
 - Do not change simulation semantics.
 
@@ -301,8 +301,9 @@ affected are:
   new helper and should be rechecked end to end.
 - INT-039 - render artifact generation policy; on-demand render discovery and
   objective-box visuals share the same artifact pipeline.
-- INT-188 - validation preview backend split contract; the validation-side
-  preview bundle still rides the shared renderer and manifest path.
+- INT-188 - validation render-free contract; the validation-side path should
+  remain render-free by default while explicit preview coverage moves to the
+  preview helper tests.
 - INT-189 - engineer solution evidence default contract; artifact selection
   order must remain stable after the preview path changes.
 - INT-190 - seeded render evidence sanity gate; seeded render artifacts must
@@ -315,7 +316,7 @@ affected are:
   contract.
 - INT-204 - latest-revision render inspection gate; revision-scoped render
   bundle lookup may shift with the new preview helper.
-- INT-207 - engineer workspace bad-display preview fallback contract; this
+- INT-207 - engineer workspace preview renderer delegation contract; this
   directly exercises the worker-light preview path that is being introduced.
 - INT-208 - renderer worker direct preview contract; this becomes the canonical
   smoke test for the new `/benchmark/preview` helper path.
@@ -348,6 +349,8 @@ modality-aware instead of piggybacking on heavyweight validation paths.
   through controller orchestration instead of calling the renderer directly.
 - [ ] Add the Temporal workflow/activity path for preview and keep the live
   chain `worker-light -> controller -> Temporal -> worker-renderer`.
+- [ ] Remove validation-time preview generation from `/benchmark/validate` and
+  retire the 24-view validation bundle contract.
 - [ ] Persist preview workflow state, correlation metadata, and timeout/failure
   reasons so stalled renders fail closed instead of hanging or silently
   degrading.
@@ -411,8 +414,8 @@ modality-aware instead of piggybacking on heavyweight validation paths.
 ### Integration tests
 
 - [ ] Rerun or update `INT-024`, `INT-031`, `INT-032`, `INT-033`, `INT-034`,
-  `INT-039`, `INT-188`, `INT-189`, `INT-190`, `INT-204`, `INT-207`, and
-  `INT-208`.
+  `INT-039`, `INT-188`, `INT-189`, `INT-190`, `INT-204`, `INT-207`, `INT-208`,
+  `INT-209`, `INT-212`, and `INT-213`.
 - [ ] Add a dedicated controller/Temporal preview-path integration test if no
   existing INT already exercises the full worker-light -> controller ->
   Temporal -> renderer chain.

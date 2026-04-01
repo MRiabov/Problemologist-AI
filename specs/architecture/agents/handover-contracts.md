@@ -153,20 +153,19 @@ The benchmark-owned environment, benchmark input objects, benchmark objective ma
 
 Benchmark-owned authored labels are part of that read-only contract too: `moved_object.label` and any top-level build123d object label in the benchmark handoff must be non-empty and stable, and runtime must not invent fallback labels when one is missing.
 
-Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
-Treat that preview as one static render bundle under `renders/`, but keep the workflow-specific subdirectory inside that bundle. Benchmark-side static preview evidence lives under `renders/benchmark_renders/`, engineer single-view inspection previews live under `renders/engineer_renders/`, and final engineer-side preview bundles live under `renders/final_preview_renders/`. Each of the 24 views still persists RGB, depth, and segmentation siblings, so the bundle is 72 files total but one conceptual input surface. Handover and submission collectors recurse through the selected bucket directory, so nested render files and `render_manifest.json` survive the payload assembly step unchanged. The exact role-level render consumption policy stays config-driven in `config/agents_config.yaml`.
+Additionally, the engineering agent will be supplied with preview evidence when the current revision has explicitly generated renders. Treat that preview as role-scoped render evidence under `renders/`, but keep the workflow-specific subdirectory inside that bundle. Benchmark preview evidence lives under `renders/benchmark_renders/`, engineer single-view inspection previews live under `renders/engineer_renders/`, and final engineer preview evidence lives under `renders/final_preview_renders/`. Handover and submission collectors recurse through the selected bucket directory, so nested render files and `render_manifest.json` survive the payload assembly step unchanged. The exact role-level render consumption policy stays config-driven in `config/agents_config.yaml`.
 
-These renders are not only passive assets in storage. Reviewer and other vision-using nodes must inspect them through the dedicated media-inspection tool (`inspect_media(...)`) when visual evidence is required. Merely listing files in `renders/` or reading text artifacts that mention render paths is not treated as image review.
+These renders are not only passive assets in storage. Reviewer and other vision-using nodes must inspect existing render evidence through the dedicated media-inspection tool (`inspect_media(...)`) when visual evidence is required. When a fresh view needs to be materialized first, the same roles use `preview(...)` to generate it and then inspect the result. Merely listing files in `renders/` or reading text artifacts that mention render paths is not treated as image review.
 
 #### Render input contract
 
 - Benchmark Planner: render media are not a mandatory node-entry input.
 - Benchmark Plan Reviewer: render media are not a mandatory node-entry input; if latest-revision render assets already exist, visual inspection still follows the role policy in `config/agents_config.yaml`.
 - Benchmark Coder: render media are not a mandatory node-entry input.
-- Benchmark Reviewer: receives the latest benchmark render evidence for the approved revision, which includes the full static 24-view bundle under `renders/benchmark_renders/` and the latest simulation video when benchmark-owned motion exists.
-- Engineering Planner: receives the same latest benchmark full static render bundle under `renders/benchmark_renders/` as read-only context.
-- Engineering Coder: receives the same latest benchmark full static render bundle under `renders/benchmark_renders/`, the latest simulation video when benchmark-owned motion exists, and any engineer-owned inspection previews under `renders/engineer_renders/` as read-only context.
-- Engineering Execution Reviewer: receives the same full static render bundle under `renders/benchmark_renders/` plus the latest final preview bundle under `renders/final_preview_renders/` and the latest simulation video evidence when present, and must inspect the required media before approval.
+- Benchmark Reviewer: receives the latest benchmark render evidence for the approved revision, which includes any benchmark preview outputs under `renders/benchmark_renders/` and the latest simulation video when benchmark-owned motion exists.
+- Engineering Planner: receives the same latest benchmark preview evidence under `renders/benchmark_renders/` as read-only context.
+- Engineering Coder: receives the same latest benchmark preview evidence under `renders/benchmark_renders/`, the latest simulation video when benchmark-owned motion exists, and any engineer-owned inspection previews under `renders/engineer_renders/` as read-only context.
+- Engineering Execution Reviewer: receives the same benchmark preview evidence under `renders/benchmark_renders/` plus the latest final preview evidence under `renders/final_preview_renders/` and the latest simulation video evidence when present, and must inspect the required media before approval.
 
 The source of truth for which roles must perform visual inspection is `config/agents_config.yaml` under each role's `visual_inspection` policy. Current required roles in engineering/benchmark handoff flow are:
 
@@ -213,11 +212,11 @@ The benchmark-owned geometry source is created in `benchmark_script.py` by `Benc
 
 #### Renders
 
-These 24-view handoff renders are static preview/context artifacts. The default generation policy is:
+These preview renders are static context artifacts. The default generation policy is:
 
-1. benchmark validation generates them through the fast validation-preview path,
+1. preview evidence is generated explicitly, not by `/benchmark/validate`,
 2. that preview path uses build123d/VTK by default,
-3. the images are not a proof that Genesis runtime behavior was exercised during validation (intentionally so, as Genesis runtime behavior stays on the simulation path rather than the static preview path),
+3. the images are not a proof that Genesis runtime behavior was exercised during validation (intentionally so, as Genesis runtime behavior stays on the simulation path rather than the preview path),
 4. Genesis parity is covered by dedicated backend parity tests and by actual Genesis simulation runs where Genesis behavior is required.
 
 Reviewer evidence contract for renders:

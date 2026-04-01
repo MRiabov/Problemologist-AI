@@ -53,8 +53,8 @@ We do not force one simulator to do every job.
 The architecture is:
 
 1. Genesis is the required backend for fluid simulation, deformables, and stress-aware runs.
-2. MuJoCo remains valid for rigid-only tasks and for the fast static preview path.
-3. Static validation preview stays intentionally cheaper than Genesis simulation.
+2. MuJoCo remains valid for rigid-only tasks and for the fast explicit preview path.
+3. Explicit preview stays intentionally cheaper than Genesis simulation.
 4. Backend selection is part of the benchmark contract, not a hidden worker decision.
 
 ### Why the split exists

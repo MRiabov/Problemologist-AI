@@ -4,8 +4,8 @@
 
 ## Purpose
 
-This document investigates a render-path refactor that keeps benchmark evidence,
-engineer inspection previews, and final validation bundles in separate
+This document investigates a render-path refactor that keeps benchmark preview evidence,
+engineer inspection previews, and final preview bundles in separate
 workspace buckets while preserving the existing manifest and review contracts.
 
 The architecture already names those buckets. This note records the runtime
@@ -54,7 +54,7 @@ The path split is mostly in place, but the plumbing is still partly implicit:
 2. Keep engineer single-view inspection previews in `renders/engineer_renders/`
    so `engineer_coder` can inspect its own part previews without confusing them
    with benchmark input evidence.
-3. Keep final engineer validation bundles in `renders/final_preview_renders/`
+3. Keep final engineer preview bundles in `renders/final_preview_renders/`
    so `engineer_execution_reviewer` can review the final assembly bundle as a
    separate evidence surface.
 4. Preserve benchmark-owned static renders as read-only input for engineer
@@ -69,10 +69,10 @@ The path split is mostly in place, but the plumbing is still partly implicit:
 
 ## Proposed Target State
 
-1. Benchmark validation writes static preview evidence to
+1. Benchmark preview writes explicit preview evidence to
    `renders/benchmark_renders/`.
 2. Engineer single-part previews write to `renders/engineer_renders/`.
-3. Final engineer validation writes to `renders/final_preview_renders/`.
+3. Final engineer preview writes to `renders/final_preview_renders/`.
 4. Benchmark and engineer review paths can inspect benchmark renders without
    reclassifying those files as engineer-owned output.
 5. Render-manifest generation remains one manifest per bundle, and the manifest
@@ -116,7 +116,7 @@ The path split is mostly in place, but the plumbing is still partly implicit:
 - The most likely rows to retune are `INT-188`, `INT-189`, `INT-204`,
   `INT-207`, `INT-208`, `INT-210`, and `INT-211`.
 - Add or revise assertions so benchmark evidence, engineer preview evidence,
-  and final validation evidence are checked in the correct bucket.
+  and final preview evidence are checked in the correct bucket.
 
 ## Non-Goals
 
@@ -143,7 +143,7 @@ The safe order is:
 
 1. Benchmark review evidence is surfaced from `renders/benchmark_renders/`.
 2. Engineer inspection previews are surfaced from `renders/engineer_renders/`.
-3. Final validation previews are surfaced from `renders/final_preview_renders/`.
+3. Final preview bundles are surfaced from `renders/final_preview_renders/`.
 4. `benchmark_reviewer` and `engineer_execution_reviewer` can inspect
    benchmark renders without the files being reclassified as engineer-owned
    output.

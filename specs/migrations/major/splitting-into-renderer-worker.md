@@ -32,12 +32,12 @@ Rendering becomes a separate containerized worker:
 The agent-facing boundary does not change. The internal boundary does:
 
 - public tools still call `validate`, `simulate`, `preview`, and `submit` through the existing controller/Temporal orchestration path family; preview is a direct render route rather than a validation/simulation handoff;
-- validation and simulation render jobs continue to flow through `worker-heavy`, but on-demand preview can reach `worker-renderer` without first traversing `worker-heavy`;
+- validation no longer emits preview render jobs, while on-demand preview can reach `worker-renderer` without first traversing `worker-heavy`;
 - `worker-renderer` is internal-only and containerized in every environment.
 
 ## Render Contract
 
-Use one renderer service and one endpoint family. Static validation preview, on-demand preview, and heavy simulation rendering should hit the same service contract and differ only by route/purpose and job kind.
+Use one renderer service and one endpoint family. Explicit preview, on-demand preview, and heavy simulation rendering should hit the same service contract and differ only by route/purpose and job kind.
 
 Recommended shape:
 
@@ -64,7 +64,7 @@ The source of truth stays in the session workspace, not in controller memory and
 Recommended flow:
 
 1. Authoring and session files live in the normal worker filesystem.
-2. `worker-heavy` stages the minimal render input bundle for validation and simulation render jobs; the preview workflow stages its own bundle for on-demand preview requests.
+2. `worker-heavy` stages the minimal render input bundle for simulation render jobs; the preview workflow stages its own bundle for on-demand preview requests.
 3. `worker-renderer` consumes that bundle or bundle reference.
 4. `worker-renderer` writes render outputs and manifest data.
 5. `worker-heavy` mirrors only the required artifacts back into the existing handoff path; preview artifacts are mirrored by the preview workflow into the agent-visible workspace.
@@ -143,7 +143,7 @@ This keeps the public API stable and confines render-specific complexity to the 
 
    - Validation still validates.
    - Simulation still simulates.
-   - Only the validation/simulation render step moves out.
+   - Only the preview/simulation render step moves out.
    - Preserve the current `BenchmarkToolResponse` / `SimulationArtifacts` contract so the controller keeps seeing the same artifact fields.
    - Simulation video generation moves with the same rule: `worker-heavy` captures the frames or render inputs, `worker-renderer` encodes the video.
    - On-demand preview uses the same renderer contract from the preview workflow instead of routing through `worker-heavy`.
@@ -163,7 +163,7 @@ This keeps the public API stable and confines render-specific complexity to the 
 
 7. Make rendering on-demand.
 
-   - Static validation preview remains generated when validation requires it.
+   - Validation does not generate preview artifacts by default.
    - Direct on-demand preview remains available through the preview helper and does not require validation to run first.
    - Simulation videos and extra render variants should be generated only when the workflow requests them.
    - Do not pre-render all views or all media types just because the renderer exists.
@@ -194,7 +194,7 @@ The test policy stays the same:
 ### Existing tests to edit
 
 - `INT-001`: include `worker-renderer` in the compose health contract.
-- `INT-188`: keep the validation preview contract, but update the assertions so they reflect renderer-worker delegation and the lack of any ambient display requirement.
+- `INT-188`: update the validation contract so it remains render-free by default while explicit preview coverage is delegated to the renderer worker.
 - `INT-039`: update render/video assertions so they check renderer-worker ownership and storage behavior for large outputs.
 - `INT-062` or equivalent worker OpenAPI coverage: include the renderer service OpenAPI artifact if the renderer exposes its own API schema.
 - `INT-207`: retire the old private-Xvfb fallback contract. That behavior is no longer part of the design.
@@ -202,7 +202,7 @@ The test policy stays the same:
 ### New tests to add
 
 - `INT-208`: renderer worker boots headless with no `DISPLAY` and passes `/health` and `/ready`.
-- `INT-209`: `/benchmark/validate` and `/benchmark/preview` still produce the expected preview artifacts, but the render work is executed by `worker-renderer`.
+- `INT-209`: `/benchmark/validate` remains render-free while `/benchmark/preview` still produces the expected preview artifacts through `worker-renderer`.
 - `INT-210`: MuJoCo simulation video rendering emits a real MP4 through `worker-renderer` and persists the artifact path or object key without routing raw frame payloads through the controller.
 - `INT-211`: Genesis-backed render jobs use the same renderer service contract and persist bulky render outputs by pointer or object key, not by copying raw bytes through the controller.
 
@@ -234,3 +234,45 @@ The test policy stays the same:
 - Model storage: session workspace remains the source of truth.
 - Raw compounds vs meshes: do not send raw compounds. Send staged bundles or file references, with meshes and backend scene data serialized as files when needed. For preview handoff, prefer a `preview_scene.json` plus mesh bundle over persisting or depending on a legacy bare `script.py` entrypoint; if a source snapshot is needed, use the role-owned `benchmark_script.py` or `solution_script.py` contract instead.
 - On-demand rendering: yes, render when requested or required by workflow policy, not proactively for everything.
+
+## Migration Checklist
+
+This checklist reflects the current transitional state of the migration. The renderer service and preview plumbing are already in place, but the render implementation still lives partly in `worker-heavy`, and the heavy worker still carries the old display/bootstrap assumptions.
+
+### Service split and routing
+
+- [x] Add a dedicated `worker-renderer` service with its own `/health` and `/ready` endpoints.
+- [x] Make the renderer image headless by construction with OSMesa / `vtkOSOpenGLRenderWindow` and no `DISPLAY` or `xvfb-run` dependency.
+- [x] Keep the renderer worker internal-only and single-flight, with deterministic busy rejection instead of queueing.
+- [x] Wire `docker-compose.yml`, `scripts/env_up.sh`, `scripts/env_down.sh`, and `scripts/internal/integration_runner.py` to start and stop `worker-renderer`.
+- [x] Add the shared renderer client and route preview traffic through the existing controller/Temporal path rather than exposing a new agent-facing renderer API.
+- [x] Keep on-demand preview reachable through `worker-light -> controller -> Temporal -> worker-renderer`.
+- [x] Delegate explicit preview rendering and simulation-video encoding to `worker-renderer` at the service boundary.
+- [x] Move the render implementation itself out of `worker_heavy/utils/build123d_rendering.py` and `worker_heavy/utils/rendering.py` so the renderer service no longer imports render logic from `worker-heavy`.
+- [x] Remove the remaining `xvfb-run` / X11 bootstrap assumptions from the `worker-heavy` container and compose service.
+- [ ] Remove render dependency ownership from `worker-heavy` once the renderer service is stable enough to be the only render backend owner.
+
+### Render contract and artifacts
+
+- [x] Keep one renderer contract for on-demand preview and simulation-video rendering.
+- [x] Preserve the workspace-visible bucket layout under `renders/benchmark_renders/`, `renders/engineer_renders/`, and `renders/final_preview_renders/`.
+- [x] Keep `renders/render_manifest.json` as the companion artifact and preserve modality metadata in the manifest.
+- [x] Keep the single-view preview path modality-aware with `rgb`, `depth`, and `segmentation` render modes.
+- [x] Keep benchmark preview composition geometry-only by combining `benchmark_script.py` / `build()` with `objectives_geometry()`.
+- [ ] Upload bulky simulation outputs directly to object storage instead of keeping them only as workspace files.
+- [x] Finish removing any renderer-side dependency on helper code that still lives in `worker_heavy` modules.
+
+### Benchmark and preview surface
+
+- [x] Keep `benchmark_script.py` as the benchmark-owned, read-only preview source for downstream workspaces.
+- [x] Keep `solution_script.py` as the writable engineer-authored source.
+- [x] Update prompt/config surfaces so `preview(..., orbit_pitch=..., orbit_yaw=...)` and `objectives_geometry()` are discoverable where live preview is needed.
+- [x] Preserve the current agent-facing preview contract shape, including structured preview responses and workspace-relative paths.
+- [ ] Remove remaining legacy wording or code paths that still imply the old heavy-worker render ownership model.
+
+### Test and rollout
+
+- [x] Update `specs/integration-test-list.md` with the new renderer and preview coverage entries (`INT-207`, `INT-208`, `INT-210`, `INT-211`, `INT-212`, `INT-213`).
+- [x] Add the missing `INT-209` catalog entry for `/benchmark/validate` and `/benchmark/preview` renderer delegation.
+- [x] Rewrite the old bad-display / private-Xvfb regression coverage so it asserts headless renderer boot instead of the retired fallback.
+- [x] Rerun the affected integration slice through `./scripts/run_integration_tests.sh` after the renderer split and preview contract are fully landed.

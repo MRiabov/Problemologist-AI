@@ -162,7 +162,7 @@ The benchmark loop has two reviewer stages with different responsibilities.
 1. Verify the implemented benchmark follows the approved plan or has justified, reviewable deviations.
 2. Verify the implemented environment is geometrically valid and simulation-valid for the latest revision.
 3. Verify the benchmark remains solvable, properly randomized, and consistent with the declared motion contract and observed simulation behavior after implementation.
-4. For benchmarks with powered fixtures or moving benchmark-owned parts, require dynamic simulation evidence for the latest revision rather than relying on static validation preview alone.
+4. For benchmarks with powered fixtures or moving benchmark-owned parts, require dynamic simulation evidence for the latest revision rather than relying on preview images alone.
 5. Execute only after successful validation/simulation handoff artifacts are present for the latest revision, including `.manifests/benchmark_review_manifest.json`.
 6. When simulation video exists for the current revision, inspect that video through `inspect_media(...)` before approval. Static renders remain mandatory context, but they do not replace dynamic evidence for moving benchmarks.
 7. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
