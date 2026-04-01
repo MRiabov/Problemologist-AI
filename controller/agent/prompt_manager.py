@@ -96,7 +96,9 @@ class PromptManager:
         ]
         if runtime_context and runtime_context.strip():
             prompt_sections.append(runtime_context.strip())
-        if self._skill_catalog:
+        # CLI-backed Codex runs already get the skill files through the workspace
+        # contract, so they do not need the extra catalog text in the prompt.
+        if self._skill_catalog and backend_key != PromptBackendFamily.CLI_BASED.value:
             prompt_sections.append(self._skill_catalog)
         return (
             "\n\n".join(section for section in prompt_sections if section).rstrip()

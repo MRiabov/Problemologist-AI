@@ -103,7 +103,7 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Wait for the shared eval lock instead of failing fast when another eval run is active.",
     )
-    yolo_group = parser.add_mutually_exclusive_group()
+    yolo_group = parser.add_mutually_exclusive_group(required=True)
     yolo_group.add_argument(
         "--yolo",
         dest="yolo",
@@ -116,7 +116,6 @@ def _parse_args() -> argparse.Namespace:
         action="store_false",
         help="Launch Codex with the normal sandboxed behavior.",
     )
-    parser.set_defaults(yolo=False)
     return parser.parse_args()
 
 

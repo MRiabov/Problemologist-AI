@@ -152,6 +152,7 @@ def test_materialize_seed_workspace_overrides_integration_test_env(
             "ec-001",
             "--output-dir",
             str(workspace_dir),
+            "--no-yolo",
         ],
         cwd=ROOT,
         capture_output=True,
@@ -171,6 +172,37 @@ def test_materialize_seed_workspace_overrides_integration_test_env(
     assert workspace_dir.exists(), combined_output
     assert "workspace:" in combined_output
     assert "integration-test setup via IS_INTEGRATION_TEST=true" not in combined_output
+
+
+@pytest.mark.integration_p0
+def test_materialize_seed_workspace_requires_explicit_yolo_choice(
+    tmp_path: Path,
+):
+    workspace_dir = tmp_path / "workspace"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "dataset/evals/materialize_seed_workspace.py",
+            "--agent",
+            "engineer_coder",
+            "--task-id",
+            "ec-001",
+            "--output-dir",
+            str(workspace_dir),
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        env=os.environ.copy(),
+        check=False,
+    )
+    combined_output = "\n".join(
+        part for part in (completed.stdout, completed.stderr) if part
+    )
+
+    assert completed.returncode == 2, combined_output
+    assert "one of the arguments --yolo --no-yolo is required" in combined_output
+    assert not workspace_dir.exists(), combined_output
 
 
 @pytest.mark.integration_p0
@@ -1052,9 +1084,11 @@ async def test_codex_materialized_planner_workspace_submits(
     assert "Workspace: current directory" in materialized.prompt_text
     assert "/workspace" not in materialized.prompt_text
     assert "python .admin/clear_env.py" in materialized.prompt_text
-    assert "Available skills you can read:" in materialized.prompt_text
-    assert "/skills/runtime-script-contract/SKILL.md" in materialized.prompt_text
-    assert "/skills/build123d_cad_drafting_skill/SKILL.md" in materialized.prompt_text
+    assert "Available skills you can read:" not in materialized.prompt_text
+    assert "/skills/runtime-script-contract/SKILL.md" not in materialized.prompt_text
+    assert (
+        "/skills/build123d_cad_drafting_skill/SKILL.md" not in materialized.prompt_text
+    )
     _assert_skills_tree_materialized(workspace_dir)
     _assert_skills_tree_materialized(mirror_workspace_dir)
     assert any(path.startswith("skills/") for path in materialized.copied_paths)
@@ -1367,9 +1401,11 @@ async def test_codex_seed_workspace_materialization_is_role_specific_and_determi
     )
     assert "Workspace: current directory" in materialized.prompt_text
     assert "/workspace" not in materialized.prompt_text
-    assert "Available skills you can read:" in materialized.prompt_text
-    assert "/skills/runtime-script-contract/SKILL.md" in materialized.prompt_text
-    assert "/skills/build123d_cad_drafting_skill/SKILL.md" in materialized.prompt_text
+    assert "Available skills you can read:" not in materialized.prompt_text
+    assert "/skills/runtime-script-contract/SKILL.md" not in materialized.prompt_text
+    assert (
+        "/skills/build123d_cad_drafting_skill/SKILL.md" not in materialized.prompt_text
+    )
     _assert_skills_tree_materialized(workspace_dir)
     _assert_skills_tree_materialized(mirror_workspace_dir)
     assert any(path.startswith("skills/") for path in materialized.copied_paths)

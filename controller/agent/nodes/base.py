@@ -2149,7 +2149,7 @@ class BaseNode:
 
     def _get_skills_context(self) -> str:
         # Use the checked-in repo skill tree only. Hidden overlay skill stores
-        # such as `.agent/skills/` are intentionally excluded here.
+        # such as `.agents/skills/` are intentionally excluded here.
         from shared.skills import iter_skill_catalog_entries
 
         skills = [name for name, _ in iter_skill_catalog_entries()]
