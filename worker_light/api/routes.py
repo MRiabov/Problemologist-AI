@@ -140,8 +140,10 @@ async def api_preview(
     """Forward a preview request to the renderer worker and persist the result."""
     try:
         workspace_root = fs_router.local_backend.root
-        bundle_base64 = base64.b64encode(_bundle_session_bytes(fs_router)).decode(
-            "utf-8"
+        bundle_base64 = (
+            request.bundle_base64
+            if request.bundle_base64 is not None
+            else base64.b64encode(_bundle_session_bytes(fs_router)).decode("utf-8")
         )
         response = await asyncio.to_thread(
             render_preview,
@@ -152,6 +154,7 @@ async def api_preview(
             rendering_type=request.rendering_type,
             session_id=x_session_id,
             script_content=request.script_content,
+            smoke_test_mode=request.smoke_test_mode,
         )
         if not response.success:
             raise RuntimeError(response.message or "preview request failed")

@@ -105,6 +105,7 @@ def render_preview(
     rendering_type: PreviewRenderingType = PreviewRenderingType.RGB,
     session_id: str | None = None,
     script_content: str | None = None,
+    smoke_test_mode: bool | None = None,
 ) -> PreviewDesignResponse:
     payload = PreviewDesignRequest(
         bundle_base64=bundle_base64,
@@ -113,6 +114,7 @@ def render_preview(
         yaw=yaw,
         rendering_type=rendering_type,
         script_content=script_content,
+        smoke_test_mode=smoke_test_mode,
     ).model_dump(mode="json")
     url = f"{renderer_base_url()}/benchmark/preview"
     data = _post_json_with_busy_retry(

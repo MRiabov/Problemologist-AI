@@ -108,6 +108,7 @@ def _preview_workflow_id(
             "yaw": request_model.get("yaw"),
             "rendering_type": str(request_model.get("rendering_type", "")),
             "script_content": request_model.get("script_content"),
+            "smoke_test_mode": request_model.get("smoke_test_mode"),
         }
     else:
         request_payload = {
@@ -116,6 +117,7 @@ def _preview_workflow_id(
             "yaw": getattr(request_model, "yaw", None),
             "rendering_type": str(getattr(request_model, "rendering_type", "")),
             "script_content": getattr(request_model, "script_content", None),
+            "smoke_test_mode": getattr(request_model, "smoke_test_mode", None),
         }
     digest_source = bundle + json.dumps(request_payload, sort_keys=True).encode("utf-8")
     return f"preview-{session_id}-{sha256(digest_source).hexdigest()}"
