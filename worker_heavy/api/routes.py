@@ -581,12 +581,13 @@ async def api_preview(
     try:
         async with heavy_operation_admission("preview", x_session_id):
             workspace_root = fs_router.local_backend.root
+            resolved_rendering_type = _resolve_preview_rendering_type(request)
             logger.info(
                 "worker_heavy_preview_started",
                 session_id=x_session_id,
                 script_path=request.script_path,
                 agent_role=x_agent_role,
-                rendering_type=request.rendering_type.value,
+                rendering_type=resolved_rendering_type.value,
                 orbit_pitch=request.orbit_pitch,
                 orbit_yaw=request.orbit_yaw,
             )
