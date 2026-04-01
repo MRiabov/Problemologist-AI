@@ -10,7 +10,7 @@ logger = structlog.get_logger(__name__)
 
 
 def configure_headless_vtk_egl() -> None:
-    """Configure a process for headless EGL-based VTK rendering."""
+    """Configure a process for headless OSMesa-based VTK rendering."""
 
     os.environ.pop("DISPLAY", None)
     os.environ.pop("XAUTHORITY", None)

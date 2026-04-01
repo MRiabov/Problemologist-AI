@@ -595,10 +595,10 @@ def test_run_evals_codex_submit_helper_forces_headless_rendering_env(tmp_path):
     assert payload["DISPLAY"] is None
     assert payload["XAUTHORITY"] is None
     assert payload["LIBGL_ALWAYS_SOFTWARE"] == "1"
-    assert payload["MUJOCO_GL"] == "egl"
-    assert payload["PYOPENGL_PLATFORM"] == "egl"
+    assert payload["MUJOCO_GL"] == "osmesa"
+    assert payload["PYOPENGL_PLATFORM"] == "osmesa"
     assert payload["PYVISTA_OFF_SCREEN"] == "true"
-    assert payload["VTK_DEFAULT_OPENGL_WINDOW"] == "vtkEGLRenderWindow"
+    assert payload["VTK_DEFAULT_OPENGL_WINDOW"] == "vtkOSOpenGLRenderWindow"
     assert payload["PYGLET_HEADLESS"] == "1"
     assert str(ROOT) in (payload["PYTHONPATH"] or "")
 
@@ -1284,7 +1284,7 @@ async def test_codex_materialized_planner_workspace_submits(
             "erv-002-diverter-gate-review",
             AgentName.ELECTRONICS_REVIEWER,
             (
-                "You are the Execution Reviewer.",
+                "You are the Electronics Reviewer.",
                 "Inspect the implementation, validation results, simulation result",
                 "reviews/",
                 "solution_script.py",

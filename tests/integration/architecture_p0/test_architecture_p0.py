@@ -1088,7 +1088,9 @@ def build():
 
         ls_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/ls",
-            json=ListFilesRequest(path="renders").model_dump(mode="json"),
+            json=ListFilesRequest(path="renders/benchmark_renders").model_dump(
+                mode="json"
+            ),
             headers=headers,
         )
         assert ls_resp.status_code == 200, ls_resp.text
@@ -1101,9 +1103,9 @@ def build():
 
         blob_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/read_blob",
-            json=ReadFileRequest(path=f"renders/{png_renders[0]}").model_dump(
-                mode="json"
-            ),
+            json=ReadFileRequest(
+                path=f"renders/benchmark_renders/{png_renders[0]}"
+            ).model_dump(mode="json"),
             headers=headers,
         )
         assert blob_resp.status_code == 200, blob_resp.text

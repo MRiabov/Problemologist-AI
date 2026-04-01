@@ -88,7 +88,17 @@ def _script_agent_role() -> str:
 
 
 def _workspace_script_path() -> str:
-    return authored_script_path_for_agent(_script_agent_role())
+    workspace = _workspace_root()
+    role_default = authored_script_path_for_agent(_script_agent_role())
+    for candidate in (
+        role_default,
+        "solution_script.py",
+        "benchmark_script.py",
+        "script.py",
+    ):
+        if (workspace / candidate).exists():
+            return candidate
+    return role_default
 
 
 def _workspace_root() -> Path:

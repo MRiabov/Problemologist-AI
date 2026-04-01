@@ -17,7 +17,7 @@ from controller.agent.review_handover import (
     validate_plan_reviewer_handover,
     validate_reviewer_handover,
 )
-from controller.prompts import load_prompts
+from controller.agent.prompt_manager import PromptBackendFamily, PromptManager
 from evals.logic.models import EvalDatasetItem
 from evals.logic.review_checks import (
     parse_review_decision_yaml,
@@ -34,7 +34,6 @@ from shared.agent_templates import (
 from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import ReviewComments, ReviewFrontmatter
-from shared.skills import build_skill_catalog_lines
 from shared.workers.filesystem.backend import FileInfo
 from worker_heavy.utils.file_validation import (
     validate_node_output,
@@ -393,52 +392,14 @@ def _review_prefix(agent_name: AgentName) -> str | None:
     }.get(agent_name)
 
 
-def build_codex_prompt(
-    *,
-    item: EvalDatasetItem,
-    agent_name: AgentName,
-) -> str:
-    """Build a role-specific Codex prompt for the materialized workspace."""
-
-    prompts = load_prompts()
-    codex_prompts = prompts.get("codex", {})
-
+def _build_codex_runtime_context(*, item: EvalDatasetItem, agent_name: AgentName) -> str:
     task = item.task.strip()
-    workspace_note = (
-        "Use workspace-relative paths only. Do not use absolute workspace "
-        "root prefixes."
-    )
-    shared_note = (
-        "The workspace already contains the starter files, role templates, and "
-        "any copied seed artifacts. Treat `.manifests/` as system-owned and do "
-        "not edit it directly. If you need a clean retry, run `python "
-        ".admin/clear_env.py` to restore the seeded workspace in place."
-    )
-
-    role_key_map = {
-        AgentName.BENCHMARK_PLANNER: "benchmark_planner",
-        AgentName.ENGINEER_PLANNER: "engineer_planner",
-        AgentName.ELECTRONICS_PLANNER: "engineer_planner",
-        AgentName.BENCHMARK_CODER: "benchmark_coder",
-        AgentName.ENGINEER_CODER: "engineer_coder",
-        AgentName.ENGINEER_PLAN_REVIEWER: "engineer_plan_reviewer",
-        AgentName.BENCHMARK_PLAN_REVIEWER: "benchmark_plan_reviewer",
-        AgentName.BENCHMARK_REVIEWER: "benchmark_reviewer",
-        AgentName.ENGINEER_EXECUTION_REVIEWER: "engineer_execution_reviewer",
-        AgentName.ELECTRONICS_REVIEWER: "engineer_execution_reviewer",
-    }
-    role_key = role_key_map.get(agent_name)
-    if role_key is not None:
-        role_lines = codex_prompts.get(role_key, {}).get("role_lines", [])
-    else:
-        role_lines = codex_prompts.get("default", {}).get("role_lines", [])
-
     if item.seed_dataset is not None:
         dataset_note = f"Seed dataset: {item.seed_dataset}"
     else:
         dataset_note = "Seed dataset: not provided"
 
-    prompt_lines = [
+    runtime_context_lines = [
         "Workspace: current directory",
         f"Agent: {agent_name.value}",
         f"Task ID: {item.id}",
@@ -448,13 +409,28 @@ def build_codex_prompt(
         task,
         "",
         "Workspace contract:",
-        f"- {workspace_note}",
-        f"- {shared_note}",
+        "- Use workspace-relative paths only.",
+        "- The workspace already contains the starter files, role templates, and any copied seed artifacts.",
+        "- Treat `.manifests/` as system-owned and do not edit it directly.",
+        "- If you need a clean retry, run `python .admin/clear_env.py` to restore the seeded workspace in place.",
     ]
-    prompt_lines.extend(f"- {line}" for line in role_lines)
-    prompt_lines.append("")
-    prompt_lines.extend(build_skill_catalog_lines())
-    return "\n".join(prompt_lines).rstrip() + "\n"
+    return "\n".join(runtime_context_lines)
+
+
+def build_codex_prompt(
+    *,
+    item: EvalDatasetItem,
+    agent_name: AgentName,
+) -> str:
+    """Build a role-specific Codex prompt for the materialized workspace."""
+
+    runtime_context = _build_codex_runtime_context(item=item, agent_name=agent_name)
+    prompt_manager = PromptManager()
+    return prompt_manager.render(
+        agent_name,
+        backend_family=PromptBackendFamily.CLI_BASED,
+        runtime_context=runtime_context,
+    )
 
 
 def materialize_seed_workspace(
