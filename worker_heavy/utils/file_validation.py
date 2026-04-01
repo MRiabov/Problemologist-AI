@@ -32,6 +32,7 @@ from shared.models.schemas import (
 )
 from shared.observability.events import emit_event
 from shared.observability.schemas import LintFailureDocsEvent, LogicFailureEvent
+from shared.script_contracts import BENCHMARK_SCRIPT_PATH, SOLUTION_SCRIPT_PATH
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.workbench_models import ManufacturingConfig
 from worker_heavy.utils.dfm import (
@@ -1056,7 +1057,7 @@ def validate_node_output(
                     "plan.md",
                     "todo.md",
                     "benchmark_definition.yaml",
-                    "script.py",
+                    SOLUTION_SCRIPT_PATH,
                 ],
                 AgentName.ELECTRONICS_PLANNER: [
                     "plan.md",
@@ -1068,6 +1069,7 @@ def validate_node_output(
                     "plan.md",
                     "todo.md",
                     "benchmark_definition.yaml",
+                    BENCHMARK_SCRIPT_PATH,
                 ],
                 AgentName.ELECTRONICS_ENGINEER: [
                     "plan.md",
@@ -1093,7 +1095,7 @@ def validate_node_output(
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
-                "script.py",
+                SOLUTION_SCRIPT_PATH,
             ],
             AgentName.ELECTRONICS_PLANNER: [
                 "plan.md",
@@ -1105,6 +1107,7 @@ def validate_node_output(
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
+                BENCHMARK_SCRIPT_PATH,
             ],
             AgentName.ELECTRONICS_ENGINEER: [
                 "plan.md",

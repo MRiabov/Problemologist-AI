@@ -139,39 +139,64 @@ def _integration_mock_scenarios() -> dict[str, dict[str, object]]:
     return load_integration_mock_scenarios()
 
 
-def _fixture_script_content(int_id: str) -> str:
+def _fixture_script_content(
+    int_id: str,
+    *,
+    preferred_path: str,
+) -> str:
     scenario = _integration_mock_scenarios().get(int_id)
     if not scenario:
-        fallback_path = (
+        fallback_root = (
             Path("tests/integration/mock_responses")
             / int_id
             / "engineer_coder"
             / "entry_01"
-            / "01__script.py"
         )
-        return fallback_path.read_text(encoding="utf-8")
+        for fallback_name in (
+            f"01__{Path(preferred_path).name}",
+            "01__solution_script.py",
+            "01__benchmark_script.py",
+            "01__script.py",
+        ):
+            fallback_path = fallback_root / fallback_name
+            if fallback_path.exists():
+                return fallback_path.read_text(encoding="utf-8")
+        raise FileNotFoundError(
+            f"No fixture script content found for {int_id} at {fallback_root}"
+        )
 
     for node_block in scenario.get("transcript", []):
         if node_block.get("node") != "engineer_coder":
             continue
         for step in node_block.get("steps", []):
             tool_args = step.get("tool_args") or {}
-            if (
-                step.get("tool_name") == "write_file"
-                and tool_args.get("path") == "script.py"
-            ):
+            if step.get("tool_name") == "write_file" and tool_args.get("path") in {
+                "script.py",
+                "solution_script.py",
+                "benchmark_script.py",
+            }:
                 content = tool_args.get("content")
                 if isinstance(content, str):
                     return content
 
-    fallback_path = (
+    fallback_root = (
         Path("tests/integration/mock_responses")
         / int_id
         / "engineer_coder"
         / "entry_01"
-        / "01__script.py"
     )
-    return fallback_path.read_text(encoding="utf-8")
+    for fallback_name in (
+        f"01__{Path(preferred_path).name}",
+        "01__solution_script.py",
+        "01__benchmark_script.py",
+        "01__script.py",
+    ):
+        fallback_path = fallback_root / fallback_name
+        if fallback_path.exists():
+            return fallback_path.read_text(encoding="utf-8")
+    raise FileNotFoundError(
+        f"No fixture script content found for {int_id} at {fallback_root}"
+    )
 
 
 async def _seed_workspace_file(
@@ -254,7 +279,10 @@ async def seed_execution_reviewer_handover(
     seed_render_preview: bool = True,
 ) -> None:
     """Seed deterministic reviewer handoff artifacts for execution-reviewer runs."""
-    script_content = script_content or _fixture_script_content(int_id)
+    script_content = script_content or _fixture_script_content(
+        int_id,
+        preferred_path="solution_script.py",
+    )
     script_sha256 = hashlib.sha256(script_content.encode("utf-8")).hexdigest()
     seed_ts = time.time()
     revision = repo_git_revision()
@@ -279,7 +307,7 @@ async def seed_execution_reviewer_handover(
         success=True,
         message="Validation completed",
         timestamp=seed_ts,
-        script_path="script.py",
+        script_path="solution_script.py",
         script_sha256=script_sha256,
         verification_result=MultiRunResult(
             num_scenes=1,
@@ -303,7 +331,7 @@ async def seed_execution_reviewer_handover(
         status="ready_for_review",
         reviewer_stage="engineering_execution_reviewer",
         session_id=session_id,
-        script_path="script.py",
+        script_path="solution_script.py",
         script_sha256=script_sha256,
         validation_success=True,
         validation_timestamp=seed_ts,
@@ -326,7 +354,7 @@ async def seed_execution_reviewer_handover(
     await _seed_workspace_file(
         client,
         session_id=session_id,
-        path="script.py",
+        path="solution_script.py",
         content=script_content,
         bypass_agent_permissions=True,
     )
@@ -396,7 +424,10 @@ async def seed_approved_benchmark_bundle(
 ) -> None:
     """Seed a benchmark workspace that already satisfies the approval gate."""
 
-    script_content = _fixture_script_content("INT-033")
+    script_content = _fixture_script_content(
+        "INT-033",
+        preferred_path="benchmark_script.py",
+    )
     benchmark_definition_content = Path(
         "tests/integration/mock_responses/INT-033/engineer_planner/entry_01/04__benchmark_definition.yaml"
     ).read_text(encoding="utf-8")
@@ -421,7 +452,7 @@ async def seed_approved_benchmark_bundle(
         success=True,
         message="Validation completed",
         timestamp=seed_ts,
-        script_path="script.py",
+        script_path="benchmark_script.py",
         script_sha256=script_sha256,
         verification_result=MultiRunResult(
             num_scenes=1,
@@ -472,7 +503,7 @@ async def seed_approved_benchmark_bundle(
             render_depth_path,
             render_segmentation_path,
         ],
-        script_path="script.py",
+        script_path="benchmark_script.py",
         script_sha256=script_sha256,
         validation_success=True,
         validation_timestamp=seed_ts,
@@ -494,7 +525,7 @@ async def seed_approved_benchmark_bundle(
     await _seed_workspace_file(
         client,
         session_id=benchmark_session_id,
-        path="script.py",
+        path="benchmark_script.py",
         content=script_content,
         bypass_agent_permissions=True,
     )

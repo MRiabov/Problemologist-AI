@@ -28,6 +28,7 @@ from shared.agent_templates import (
     load_codex_template_files,
     load_common_template_files,
     load_role_template_files,
+    load_template_repo_files,
 )
 from shared.enums import AgentName
 from shared.git_utils import repo_revision
@@ -435,7 +436,7 @@ def build_codex_prompt(
             role_lines = [
                 "You are the Benchmark Coder.",
                 f"Edit `{authored_script}` and any supporting `*.py` files until the benchmark implementation works.",
-                "Expose the finished benchmark geometry as `result = ...` and keep the authored module import-safe.",
+                "Expose the finished benchmark geometry as `result = objectives_geometry()` and keep the authored module import-safe.",
                 f"Use `python {authored_script}` as the canonical execution path.",
                 "Keep `todo.md` and `journal.md` in sync with the work you are actually doing.",
                 "Use the seeded handoff files in this workspace as the primary source of truth; do not go hunting through unrelated dataset examples unless the workspace artifacts are missing or contradictory.",
@@ -485,6 +486,7 @@ def build_codex_prompt(
                 "You are the Execution Reviewer.",
                 "Inspect the implementation, validation results, simulation result, and stage-specific review files.",
                 "Read `solution_script.py` as the authored implementation source before review.",
+                "Read `benchmark_script.py` as benchmark-owned read-only geometry context before review.",
                 "Read `benchmark_assembly_definition.yaml` as benchmark-owned read-only context before review.",
                 "Write the stage-specific review decision and comments files under `reviews/` with `write_file`.",
                 "When the review is ready, run `bash scripts/submit_review.sh` to validate the handoff.",
@@ -583,6 +585,26 @@ def materialize_seed_workspace(
             },
         )
     )
+
+    if (
+        agent_name
+        not in {
+            AgentName.BENCHMARK_PLANNER,
+            AgentName.BENCHMARK_PLAN_REVIEWER,
+        }
+        and (workspace_dir / "benchmark_definition.yaml").exists()
+    ):
+        benchmark_script_path = workspace_dir / "benchmark_script.py"
+        if not benchmark_script_path.exists():
+            benchmark_script_text = load_template_repo_files("benchmark_generator")[
+                "benchmark_script.py"
+            ]
+            copied_paths.extend(
+                _write_template_files(
+                    workspace_dir,
+                    {"benchmark_script.py": benchmark_script_text},
+                )
+            )
 
     prompt_text = build_codex_prompt(
         item=item,
