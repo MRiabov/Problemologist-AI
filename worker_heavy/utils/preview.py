@@ -10,7 +10,6 @@ from build123d import Compound, Part
 from shared.models.schemas import BenchmarkDefinition
 from shared.rendering import materialize_preview_response, render_preview
 from shared.workers.schema import PreviewDesignResponse, PreviewRenderingType
-from worker_heavy.utils.build123d_rendering import export_preview_scene_bundle
 from worker_heavy.utils.rendering import select_single_preview_render_subdir
 
 logger = structlog.get_logger(__name__)
@@ -28,6 +27,8 @@ def preview(
 ) -> PreviewDesignResponse:
     """Render a single view of a CAD component and persist it to the preview bucket."""
     del width, height
+    from worker_heavy.utils.build123d_rendering import export_preview_scene_bundle
+
     workspace_root = Path.cwd()
     preview_scene_bundle = export_preview_scene_bundle(
         component,

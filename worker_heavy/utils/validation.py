@@ -52,10 +52,6 @@ from worker_heavy.simulation.factory import (
 )
 from worker_heavy.simulation.naming import MOVED_OBJECT_SCENE_PREFIX
 from worker_heavy.utils import renderer_client
-from worker_heavy.utils.build123d_rendering import (
-    PREVIEW_BACKEND_NAME,
-    export_preview_scene_bundle,
-)
 from worker_heavy.utils.rendering import (
     normalize_render_manifest,
     prerender_24_views,
@@ -1935,6 +1931,11 @@ def validate(
             working_root / "renders" / select_static_preview_render_subdir(working_root)
         )
         renders_dir.mkdir(parents=True, exist_ok=True)
+
+        from worker_heavy.utils.build123d_rendering import (
+            PREVIEW_BACKEND_NAME,
+            export_preview_scene_bundle,
+        )
 
         emit_event(
             {

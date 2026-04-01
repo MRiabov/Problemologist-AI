@@ -180,16 +180,7 @@ services:
     networks:
       - default
     command:
-      [
-        "xvfb-run",
-        "-a",
-        "uvicorn",
-        "worker_heavy.app:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8002",
-      ]
+      ["uvicorn", "worker_heavy.app:app", "--host", "0.0.0.0", "--port", "8002"]
     env_file:
       - .env
     depends_on:
@@ -225,7 +216,6 @@ services:
         condition: service_healthy
     volumes:
       - ./worker_renderer:/app/worker_renderer
-      - ./worker_heavy:/app/worker_heavy
       - ./shared:/app/shared
       - ./config:/app/config
       - ${WORKER_RENDERER_LOG_DIR:-./logs}:/app/logs

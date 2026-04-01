@@ -23,6 +23,7 @@ from shared.workers.loader import sys_path_context
 from shared.workers.schema import (
     BenchmarkToolResponse,
     PlanRefusal,
+    PreviewDesignRequest,
     PreviewDesignResponse,
     PreviewRenderingType,
 )
@@ -66,6 +67,13 @@ def _call_heavy_worker(endpoint: str, payload: dict | BaseModel) -> dict:
 
 def _controller_base_url() -> str | None:
     url = os.getenv(CONTROLLER_URL_ENV)
+    if not url:
+        return None
+    return url.rstrip("/")
+
+
+def _worker_light_base_url() -> str | None:
+    url = os.getenv("WORKER_LIGHT_URL")
     if not url:
         return None
     return url.rstrip("/")
@@ -179,6 +187,31 @@ def _call_controller_script_tool(action: str, payload: dict[str, Any]) -> dict |
             "controller_script_tool_failed",
             action=action,
             error=str(e),
+            session_id=session_id,
+        )
+        raise
+
+
+def _call_worker_light_preview(
+    payload: PreviewDesignRequest, *, session_id: str | None
+) -> PreviewDesignResponse | None:
+    worker_light_url = _worker_light_base_url()
+    if not worker_light_url:
+        return None
+
+    try:
+        with httpx.Client(timeout=300.0) as client:
+            resp = client.post(
+                f"{worker_light_url}/benchmark/preview",
+                json=payload.model_dump(mode="json"),
+                headers={"X-Session-ID": session_id or "default"},
+            )
+            resp.raise_for_status()
+            return PreviewDesignResponse.model_validate(resp.json())
+    except Exception as exc:
+        logger.error(
+            "worker_light_preview_failed",
+            error=str(exc),
             session_id=session_id,
         )
         raise
@@ -522,20 +555,17 @@ def preview(
         objectives=None,
         workspace_root=_workspace_root(),
     )
-    controller_response = _call_controller_script_tool(
-        "preview",
-        {
-            "script_path": "preview_scene.json",
-            "bundle_base64": preview_scene_bundle,
-            "orbit_pitch": orbit_pitch,
-            "orbit_yaw": orbit_yaw,
-            "rendering_type": PreviewRenderingType(str(rendering_type)).value,
-            "agent_role": _script_agent_role(),
-        },
+    preview_request = PreviewDesignRequest(
+        script_path="preview_scene.json",
+        bundle_base64=preview_scene_bundle,
+        orbit_pitch=orbit_pitch,
+        orbit_yaw=orbit_yaw,
+        rendering_type=PreviewRenderingType(str(rendering_type)),
     )
-    if controller_response is not None:
-        response = PreviewDesignResponse.model_validate(controller_response)
-    else:
+    response = _call_worker_light_preview(
+        preview_request, session_id=os.getenv("SESSION_ID")
+    )
+    if response is None:
         response = render_preview(
             bundle_base64=preview_scene_bundle,
             script_path="preview_scene.json",
@@ -547,8 +577,26 @@ def preview(
     if not response.success:
         return response
 
-    materialize_preview_response(response, _preview_output_dir())
-    if response.artifact_path is None and response.image_path is not None:
+    workspace_root = _workspace_root()
+    preview_output_dir = _preview_output_dir()
+    for candidate in (response.artifact_path, response.image_path):
+        if not candidate:
+            continue
+        candidate_path = Path(candidate)
+        if candidate_path.parent == Path("."):
+            continue
+        if candidate_path.is_absolute():
+            preview_output_dir = candidate_path.parent
+        else:
+            preview_output_dir = workspace_root / candidate_path.parent
+        break
+
+    materialized_path = materialize_preview_response(response, preview_output_dir)
+    if materialized_path is not None:
+        local_path = str(materialized_path.relative_to(workspace_root))
+        response.image_path = local_path
+        response.artifact_path = local_path
+    elif response.artifact_path is None and response.image_path is not None:
         response.artifact_path = response.image_path
     if response.manifest_path is None:
         response.manifest_path = str(Path("renders") / "render_manifest.json")

@@ -30,10 +30,6 @@ from shared.workers.schema import (
     RenderManifest,
     RenderSiblingPaths,
 )
-from worker_heavy.utils.build123d_rendering import (
-    PREVIEW_BACKEND_NAME,
-    export_preview_scene_bundle,
-)
 
 logger = structlog.get_logger(__name__)
 
@@ -330,6 +326,10 @@ def prerender_24_views(
     Saves to output_dir.
     """
     from worker_heavy.config import settings
+    from worker_heavy.utils.build123d_rendering import (
+        PREVIEW_BACKEND_NAME,
+        export_preview_scene_bundle,
+    )
 
     if smoke_test_mode is None:
         smoke_test_mode = settings.smoke_test_mode

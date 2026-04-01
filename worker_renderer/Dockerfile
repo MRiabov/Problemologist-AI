@@ -48,7 +48,6 @@ RUN --mount=type=cache,target=/home/agent/.cache/uv,uid=1000 \
     uv sync --project worker_renderer --active --frozen --no-install-project --no-dev
 
 COPY --chown=agent:agent worker_renderer ./worker_renderer
-COPY --chown=agent:agent worker_heavy ./worker_heavy
 COPY --chown=agent:agent shared ./shared
 COPY --chown=agent:agent config ./config
 

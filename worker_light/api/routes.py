@@ -1,5 +1,7 @@
 import asyncio
 import base64
+import json
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -69,6 +71,38 @@ from worker_light.utils.git import (
 
 logger = structlog.get_logger(__name__)
 light_router = APIRouter()
+
+
+def _write_text_atomic(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", dir=str(path.parent), delete=False
+    ) as tmp:
+        tmp.write(content)
+        tmp_path = Path(tmp.name)
+    tmp_path.replace(path)
+
+
+def _rewrite_manifest_preview_paths(
+    manifest_json: str, source_prefix: str, target_prefix: str
+) -> str:
+    def _rewrite(value: Any) -> Any:
+        if isinstance(value, str):
+            return value.replace(source_prefix, target_prefix)
+        if isinstance(value, list):
+            return [_rewrite(item) for item in value]
+        if isinstance(value, dict):
+            return {
+                (
+                    key.replace(source_prefix, target_prefix)
+                    if isinstance(key, str)
+                    else key
+                ): _rewrite(item)
+                for key, item in value.items()
+            }
+        return value
+
+    return json.dumps(_rewrite(json.loads(manifest_json)), indent=2)
 
 
 def _bypass_enabled(requested: bool, system_header: str | None) -> bool:
@@ -167,6 +201,16 @@ async def api_preview(
         if not response.success:
             raise RuntimeError(response.message or "preview request failed")
 
+        source_preview_prefix = None
+        for candidate in (response.artifact_path, response.image_path):
+            if not candidate:
+                continue
+            candidate_path = Path(candidate)
+            if candidate_path.parent == Path("."):
+                continue
+            source_preview_prefix = str(candidate_path.parent)
+            break
+
         preview_renders_dir = (
             workspace_root
             / "renders"
@@ -176,8 +220,24 @@ async def api_preview(
         if image_path is None:
             raise RuntimeError("renderer returned no preview image")
 
-        events = _collect_events(fs_router)
         artifact_path = str(image_path.relative_to(workspace_root))
+        target_preview_prefix = str(Path(artifact_path).parent)
+        if (
+            source_preview_prefix
+            and response.render_manifest_json
+            and source_preview_prefix != target_preview_prefix
+        ):
+            response.render_manifest_json = _rewrite_manifest_preview_paths(
+                response.render_manifest_json,
+                source_preview_prefix,
+                target_preview_prefix,
+            )
+            _write_text_atomic(
+                preview_renders_dir.parent / "render_manifest.json",
+                response.render_manifest_json,
+            )
+
+        events = _collect_events(fs_router)
         logger.info(
             "worker_light_preview_finished",
             session_id=x_session_id,

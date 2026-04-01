@@ -558,7 +558,7 @@ async def api_preview(
                 orbit_pitch=request.orbit_pitch,
                 orbit_yaw=request.orbit_yaw,
             )
-            with bundle_context(request.bundle_base64, workspace_root) as root:
+            with bundle_context(request.bundle_base64, workspace_root):
                 bundle_base64 = (
                     request.bundle_base64
                     or renderer_client.bundle_workspace_base64(workspace_root)
@@ -589,7 +589,7 @@ async def api_preview(
                 logger.info(
                     "worker_heavy_preview_finished",
                     session_id=x_session_id,
-                    artifact_path=str(image_path.relative_to(root)),
+                    artifact_path=str(image_path.relative_to(workspace_root)),
                     manifest_path=str(Path("renders") / "render_manifest.json"),
                     rendering_type=request.rendering_type.value,
                 )
@@ -597,8 +597,8 @@ async def api_preview(
                     success=response.success,
                     message=response.message,
                     status_text=response.status_text,
-                    image_path=str(image_path.relative_to(root)),
-                    artifact_path=str(image_path.relative_to(root)),
+                    image_path=str(image_path.relative_to(workspace_root)),
+                    artifact_path=str(image_path.relative_to(workspace_root)),
                     manifest_path=str(Path("renders") / "render_manifest.json"),
                     rendering_type=request.rendering_type,
                     pitch=request.orbit_pitch,

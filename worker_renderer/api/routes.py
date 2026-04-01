@@ -33,7 +33,7 @@ from shared.workers.schema import (
     SimulationArtifacts,
     SimulationVideoRequest,
 )
-from worker_heavy.utils.build123d_rendering import (
+from worker_renderer.utils.build123d_rendering import (
     _OVERLAY_AXES_COLOR,
     _OVERLAY_EDGE_COLOR,
     _RGB_AXES_COLOR,
@@ -50,8 +50,8 @@ from worker_heavy.utils.build123d_rendering import (
     render_preview_bundle,
     render_preview_scene_bundle,
 )
-from worker_heavy.utils.file_validation import validate_benchmark_definition_yaml
-from worker_heavy.utils.rendering import (
+from worker_renderer.utils.file_validation import validate_benchmark_definition_yaml
+from worker_renderer.utils.rendering import (
     build_render_manifest,
     normalize_render_manifest,
     select_single_preview_render_subdir,

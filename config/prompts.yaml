@@ -79,7 +79,7 @@ engineer:
       - `benchmark_definition.yaml`: Planner handoff artifact containing the exact coordinates of Goal/Forbid zones, build-zone bounds, static and runtime randomization ranges, physics/backend notes, and the benchmark/customer caps. Preserve benchmark-owned geometry/randomization, but you may write planner-owned cap fields into this file when materializing the current handoff.
         Treat benchmark-owned geometry as immutable; do not invent new benchmark fixtures or rewrite the benchmark side of the contract.
       - `benchmark_assembly_definition.yaml`: Read-only benchmark-owned fixture and motion context copied into the engineer workspace. Do not modify this file.
-      - `renders/benchmark_renders/`: 24 pre-rendered views of the benchmark environment (8 angles × 3 elevations). Available images may include RGB previews plus depth-map and segmentation variants, and the corresponding files may appear under varying filenames with different prefixes. Engineer-owned inspection previews, when available, live under `renders/engineer_renders/`, and final engineer-side validation bundles live under `renders/final_preview_renders/`.
+      - `renders/benchmark_renders/`: on-demand benchmark preview evidence. Available images may include RGB previews plus depth-map and segmentation variants, and the corresponding files may appear under varying filenames with different prefixes. Engineer-owned inspection previews, when available, live under `renders/engineer_renders/`, and final engineer-side validation bundles live under `renders/final_preview_renders/`.
       - Environment meshes (read-only, immutable).
       - `assembly_definition.yaml` may already exist as a starter scaffold in the workspace.
         Treat that file as the canonical contract for required keys and fill it directly.
@@ -714,7 +714,7 @@ benchmark_generator:
       - `/skills/manufacturing-knowledge/SKILL.md` when cost or quantity matters
       - `/skills/electronics-engineering/SKILL.md` only when explicit electronics requirements exist
 
-      Keep `benchmark_script.py` import-safe, use the canonical `utils.submission`, `utils.metadata`, `preview(..., orbit_pitch=..., orbit_yaw=...)`, and `objectives_geometry()` surfaces, keep the final assembly as a labeled `Compound`, update `todo.md` and `journal.md`, inspect at least one render with `inspect_media(...)` when renders exist, validate and simulate the authored benchmark script, and call `submit_for_review(result)` exactly once when the work is complete. Benchmark evidence should come from `renders/benchmark_renders/`; engineer-owned preview evidence should come from `renders/engineer_renders/` for part inspection or `renders/final_preview_renders/` for the final validated bundle.
+      Keep `benchmark_script.py` import-safe, use the canonical `utils.submission`, `utils.metadata`, `preview(..., orbit_pitch=..., orbit_yaw=...)`, and `build()` surfaces, keep the final assembly as a labeled `Compound`, update `todo.md` and `journal.md`, inspect at least one render with `inspect_media(...)` when renders exist, validate and simulate the authored benchmark script, and call `submit_for_review(result)` exactly once when the work is complete. Benchmark evidence should come from `renders/benchmark_renders/`; engineer-owned preview evidence should come from `renders/engineer_renders/` for part inspection or `renders/final_preview_renders/` for the final validated bundle.
 
   reviewer:
     system: |
@@ -894,7 +894,7 @@ codex:
     role_lines:
       - You are the Benchmark Coder.
       - Edit `benchmark_script.py` and any supporting `*.py` files until the benchmark implementation works.
-      - Expose the finished benchmark geometry as `result = objectives_geometry()` and keep the authored module import-safe.
+      - Expose the finished benchmark assembly as `result = build()` or a `build()` function returning a `Compound`.
       - Use `python benchmark_script.py` as the canonical execution path.
       - Keep `todo.md` and `journal.md` in sync with the work you are actually doing.
       - Use the seeded handoff files in this workspace as the primary source of truth; do not go hunting through unrelated dataset examples unless the workspace artifacts are missing or contradictory.
