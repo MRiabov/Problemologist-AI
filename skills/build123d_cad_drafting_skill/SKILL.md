@@ -14,6 +14,7 @@ Read this skill and the relevant reference files below before planning any `buil
 3. **MJCF Compliance**: Ensure parts are non-intersecting if they belong to different simulation links.
 4. **Assembly Labels**: Use `.label = "stator"` and `.label = "rotor"` for automatic motor/joint injection in MJCF.
 5. **Label Namespace Hygiene**: Top-level authored labels must be unique and must not be `environment` or start with `zone_`. The simulator reserves those names for the scene root and generated objective bodies, and duplicate labels collide with MJCF mesh/body names.
+6. **Intersection Checks**: For pairwise geometry, use `shape_a.intersect(shape_b)`. For assembly-level overlap checks, wrap the children in `Compound(children=[...])` and call `do_children_intersect()` on the compound. The method name is `do_children_intersect`, not `do_children_intesect`.
 
 ## Placement And Rotation Contract
 
