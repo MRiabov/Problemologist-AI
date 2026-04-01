@@ -38,6 +38,8 @@ from shared.models.schemas import (
     PlannerSubmissionResult,
 )
 from shared.workers.schema import RenderManifest, ValidationResultRecord
+from controller.agent.prompt_manager import PromptManager
+from controller.prompts import load_prompts
 from tests.integration.agent.helpers import repo_git_revision
 from worker_renderer.utils.build123d_rendering import render_preview_view
 
@@ -853,6 +855,96 @@ def test_materialize_seed_workspace_launches_codex_with_expected_sandbox_policy(
     assert expected_fragment in logged_args
     assert unexpected_fragment not in logged_args
     assert workspace_dir.exists()
+
+
+def _build_codex_runtime_context_for_test(item: EvalDatasetItem, agent_name: AgentName) -> str:
+    dataset_note = (
+        f"Seed dataset: {item.seed_dataset}"
+        if item.seed_dataset is not None
+        else "Seed dataset: not provided"
+    )
+    return "\n".join(
+        [
+            "Workspace: current directory",
+            f"Agent: {agent_name.value}",
+            f"Task ID: {item.id}",
+            dataset_note,
+            "",
+            "Task:",
+            item.task.strip(),
+            "",
+            "Workspace contract:",
+            "- Use workspace-relative paths only.",
+            "- The workspace already contains the starter files, role templates, and any copied seed artifacts.",
+            "- Treat `.manifests/` as system-owned and do not edit it directly.",
+            "- If you need a clean retry, run `python .admin/clear_env.py` to restore the seeded workspace in place.",
+        ]
+    )
+
+@pytest.mark.integration_p0
+def test_prompt_source_role_prompts_follow_runtime_order():
+    prompt_source = load_prompts()
+
+    assert list(prompt_source["role_prompts"].keys()) == [
+        "benchmark_planner",
+        "benchmark_plan_reviewer",
+        "benchmark_coder",
+        "benchmark_reviewer",
+        "engineer_planner",
+        "electronics_planner",
+        "electronics_engineer",
+        "engineer_plan_reviewer",
+        "engineer_coder",
+        "electronics_reviewer",
+        "engineer_execution_reviewer",
+        "cots_search",
+        "skill_agent",
+        "journalling_agent",
+        "default",
+    ]
+
+
+@pytest.mark.integration_p0
+def test_prompt_manager_unified_render_uses_shared_source_model(tmp_path: Path):
+    item = _load_dataset_item(
+        "dataset/data/seed/role_based/engineer_coder.json",
+        "ec-001",
+    )
+    workspace_dir = tmp_path / "workspace"
+    materialized = materialize_seed_workspace(
+        item=item,
+        agent_name=AgentName.ENGINEER_CODER,
+        workspace_dir=workspace_dir,
+    )
+
+    prompt_manager = PromptManager()
+    api_prompt = prompt_manager.render(AgentName.ENGINEER_CODER)
+    cli_prompt = prompt_manager.render(
+        AgentName.ENGINEER_CODER,
+        backend_family="cli_based",
+        runtime_context=_build_codex_runtime_context_for_test(
+            item, AgentName.ENGINEER_CODER
+        ),
+    )
+
+    assert "You are the Engineer Coder." in api_prompt
+    assert "You are the Engineer Coder." in cli_prompt
+    assert "Use workspace-relative paths only." in api_prompt
+    assert "Use workspace-relative paths only." in cli_prompt
+    assert api_prompt.index("Use workspace-relative paths only.") < api_prompt.index(
+        "Use controller-managed tools and provider-native tool calls."
+    )
+    assert cli_prompt.index("Use workspace-relative paths only.") < cli_prompt.index(
+        "This is a local Codex workspace."
+    )
+    assert cli_prompt.index("This is a local Codex workspace.") < cli_prompt.index(
+        "Workspace: current directory"
+    )
+    assert cli_prompt.index("Workspace: current directory") < cli_prompt.index(
+        "Available skills you can read:"
+    )
+    assert "common.code_template" not in cli_prompt
+    assert materialized.prompt_text == cli_prompt
 
 
 @pytest.mark.integration_p0

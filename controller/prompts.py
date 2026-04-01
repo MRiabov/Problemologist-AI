@@ -27,31 +27,3 @@ def load_prompts():
             raise ValueError(f"Prompts config is empty at {CONFIG_PATH}")
         return data
 
-
-def get_prompt(key: str) -> str:
-    """
-    Retrieves a prompt template by dot-separated key.
-    Example: get_prompt("cad_agent.planner.system")
-    """
-    data = load_prompts()
-    keys = key.split(".")
-    value = data
-    for k in keys:
-        if isinstance(value, dict) and k in value:
-            value = value[k]
-        else:
-            logger.error(
-                "prompt_key_not_found",
-                key=key,
-                missing_segment=k,
-                session_id="system",
-            )
-            raise KeyError(f"Prompt key '{key}' not found in config.")
-
-    if not isinstance(value, str):
-        logger.error(
-            "prompt_key_not_string", key=key, type=type(value), session_id="system"
-        )
-        raise ValueError(f"Prompt key '{key}' does not point to a string.")
-
-    return value.strip()

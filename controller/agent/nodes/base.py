@@ -2294,7 +2294,7 @@ class BaseNode:
 
         # WP07: Inject system instructions from prompts.yaml into signature
         # Template names are now standardized to match node_type or explicit mappings
-        instructions = self.ctx.pm.render(node_type)
+        instructions = self.ctx.pm.render(node_type, backend_family="api_based")
         if instructions:
             current_instr = signature_cls.instructions
             if current_instr:

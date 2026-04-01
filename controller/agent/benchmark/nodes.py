@@ -372,7 +372,10 @@ class BenchmarkPlannerNode(BaseNode):
         self, inputs: dict[str, Any]
     ) -> list[dict[str, Any]]:
         system_prompt = (
-            self.ctx.pm.render(AgentName.BENCHMARK_PLANNER).strip()
+            self.ctx.pm.render(
+                AgentName.BENCHMARK_PLANNER,
+                backend_family="api_based",
+            ).strip()
             + "\n\n"
             + self._get_runtime_prompt(
                 "benchmark_generator.runtime.native_planner_contract"

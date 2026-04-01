@@ -1,8 +1,10 @@
+from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 import dspy
-import jinja2
 import structlog
+from pydantic import BaseModel, ConfigDict, Field
 
 from shared.enums import AgentName
 from shared.skills import build_skill_catalog_lines
@@ -12,69 +14,91 @@ from ..prompts import load_prompts
 logger = structlog.get_logger(__name__)
 
 
+class PromptBackendFamily(StrEnum):
+    API_BASED = "api_based"
+    CLI_BASED = "cli_based"
+
+
+class PromptAppendices(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    shared: str = ""
+    backend: dict[str, str] = Field(default_factory=dict)
+
+
+class PromptSourceConfig(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    role_prompts: dict[str, str] = Field(default_factory=dict)
+    appendices: PromptAppendices = Field(default_factory=PromptAppendices)
+
+
 class PromptManager:
-    """Manager for Jinja2 templates for the agent."""
+    """Manager for unified prompt assembly across backends."""
 
-    def __init__(self):
-        # Load templates from config/prompts.yaml
-        data = load_prompts()
+    _ROLE_KEY_MAP: dict[str, str] = {
+        AgentName.BENCHMARK_PLANNER.value: "benchmark_planner",
+        AgentName.BENCHMARK_PLAN_REVIEWER.value: "benchmark_plan_reviewer",
+        AgentName.BENCHMARK_CODER.value: "benchmark_coder",
+        AgentName.BENCHMARK_REVIEWER.value: "benchmark_reviewer",
+        AgentName.ENGINEER_PLANNER.value: "engineer_planner",
+        AgentName.ENGINEER_PLAN_REVIEWER.value: "engineer_plan_reviewer",
+        AgentName.ENGINEER_CODER.value: "engineer_coder",
+        AgentName.ENGINEER_EXECUTION_REVIEWER.value: "engineer_execution_reviewer",
+        AgentName.ELECTRONICS_PLANNER.value: "electronics_planner",
+        AgentName.ELECTRONICS_ENGINEER.value: "electronics_engineer",
+        AgentName.ELECTRONICS_REVIEWER.value: "electronics_reviewer",
+        AgentName.COTS_SEARCH.value: "cots_search",
+        AgentName.SKILL_AGENT.value: "skill_agent",
+        AgentName.JOURNALLING_AGENT.value: "journalling_agent",
+    }
 
-        # Mapping from our template names to prompts.yaml paths
-        templates = {
-            # Engineer Agent
-            AgentName.ENGINEER_PLANNER.value: data["engineer"]["planner"]["system"],
-            AgentName.ELECTRONICS_PLANNER.value: data["engineer"][
-                "electronics_planner"
-            ]["system"],
-            AgentName.ENGINEER_CODER.value: data["engineer"]["engineer"]["system"],
-            AgentName.ENGINEER_PLAN_REVIEWER.value: data["engineer"][
-                "engineer_plan_reviewer"
-            ]["system"],
-            AgentName.ELECTRONICS_REVIEWER.value: data["engineer"][
-                "electronics_reviewer"
-            ]["system"],
-            AgentName.ENGINEER_EXECUTION_REVIEWER.value: data["engineer"][
-                "engineer_execution_reviewer"
-            ]["system"],
-            # Benchmark Generator
-            AgentName.BENCHMARK_PLANNER.value: data["benchmark_generator"]["planner"][
-                "system"
-            ],
-            AgentName.BENCHMARK_PLAN_REVIEWER.value: data["benchmark_generator"][
-                "plan_reviewer"
-            ]["system"],
-            AgentName.BENCHMARK_CODER.value: data["benchmark_generator"]["coder"][
-                "system"
-            ],
-            AgentName.BENCHMARK_REVIEWER.value: data["benchmark_generator"]["reviewer"][
-                "system"
-            ],
-            # Subagents
-            AgentName.COTS_SEARCH.value: data["subagents"]["cots_search"]["system"],
-            AgentName.SKILL_AGENT.value: data["subagents"]["skill_learner"]["system"],
-            AgentName.JOURNALLING_AGENT.value: data["subagents"]["token_compressor"][
-                "system"
-            ],
-        }
+    def __init__(self) -> None:
+        self._prompt_source = PromptSourceConfig.model_validate(load_prompts())
+        self._skill_catalog = "\n".join(build_skill_catalog_lines()).strip()
 
-        self.env = jinja2.Environment(loader=jinja2.DictLoader(templates))
+    def _resolve_role_key(self, template_name: str | AgentName) -> str:
+        if isinstance(template_name, AgentName):
+            key = self._ROLE_KEY_MAP.get(template_name.value, template_name.value)
+        else:
+            key = self._ROLE_KEY_MAP.get(str(template_name), str(template_name))
+        if key in self._prompt_source.role_prompts:
+            return key
+        if "default" in self._prompt_source.role_prompts:
+            return "default"
+        raise ValueError(f"Template '{template_name}' not found")
 
-    def render(self, template_name: str | AgentName, **kwargs: Any) -> str:
-        """Render a template with the given context."""
-        try:
-            key = (
-                template_name.value
-                if isinstance(template_name, AgentName)
-                else template_name
-            )
-            template = self.env.get_template(key)
-            rendered = template.render(**kwargs).rstrip()
-            skill_catalog = "\n".join(build_skill_catalog_lines())
-            if rendered:
-                return f"{rendered}\n\n{skill_catalog}\n"
-            return f"{skill_catalog}\n"
-        except jinja2.TemplateNotFound:
-            raise ValueError(f"Template '{template_name}' not found")
+    def render(
+        self,
+        template_name: str | AgentName,
+        *,
+        backend_family: str | PromptBackendFamily = PromptBackendFamily.API_BASED,
+        runtime_context: str | None = None,
+    ) -> str:
+        """Render a prompt with the shared base source model and runtime context."""
+
+        role_key = self._resolve_role_key(template_name)
+        role_prompt = self._prompt_source.role_prompts[role_key].strip()
+
+        backend_key = (
+            backend_family.value
+            if isinstance(backend_family, PromptBackendFamily)
+            else str(backend_family)
+        )
+        backend_appendix = self._prompt_source.appendices.backend.get(backend_key)
+        if backend_appendix is None:
+            raise ValueError(f"Prompt backend family '{backend_family}' not found")
+
+        prompt_sections = [
+            role_prompt,
+            self._prompt_source.appendices.shared.strip(),
+            backend_appendix.strip(),
+        ]
+        if runtime_context and runtime_context.strip():
+            prompt_sections.append(runtime_context.strip())
+        if self._skill_catalog:
+            prompt_sections.append(self._skill_catalog)
+        return "\n\n".join(section for section in prompt_sections if section).rstrip() + "\n"
 
     def get_prompt_value(self, key: str) -> Any:
         """Return a raw value from config/prompts.yaml using dot-separated keys."""
@@ -93,9 +117,6 @@ class PromptManager:
         """
         Loads a compiled DSPy program from config/compiled_prompts/ if it exists.
         """
-        from pathlib import Path
-
-        # Look for compiled prompts in a standard location
         prompt_path = Path("config/compiled_prompts") / f"{agent_name.value}.json"
 
         if prompt_path.exists():

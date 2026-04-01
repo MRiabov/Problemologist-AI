@@ -50,17 +50,17 @@ class AgentModule(dspy.Module):
 
         if agent_name == AgentName.BENCHMARK_PLANNER:
             self.signature = BenchmarkPlannerSignature.with_instructions(
-                self.pm.render(AgentName.BENCHMARK_PLANNER)
+                self.pm.render(AgentName.BENCHMARK_PLANNER, backend_family="api_based")
             )
             self.tools = get_benchmark_planner_tools(self.fs, self.session_id)
         elif agent_name == AgentName.BENCHMARK_CODER:
             self.signature = BenchmarkCoderSignature.with_instructions(
-                self.pm.render(AgentName.BENCHMARK_CODER)
+                self.pm.render(AgentName.BENCHMARK_CODER, backend_family="api_based")
             )
             self.tools = get_benchmark_tools(self.fs, self.session_id)
         elif agent_name == AgentName.ENGINEER_CODER:
             self.signature = CoderSignature.with_instructions(
-                self.pm.render(AgentName.ENGINEER_CODER)
+                self.pm.render(AgentName.ENGINEER_CODER, backend_family="api_based")
             )
             self.tools = get_engineer_tools(self.fs, self.session_id)
         else:
