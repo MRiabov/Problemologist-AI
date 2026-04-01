@@ -33,6 +33,7 @@ from shared.workers.schema import (
     ElectronicsValidationRequest,
     PreviewDesignRequest,
     PreviewDesignResponse,
+    PreviewRenderingType,
     SimulationArtifacts,
     VerificationRequest,
 )
@@ -135,6 +136,21 @@ def _collect_validation_render_artifacts(
         )
 
     return render_paths, render_blobs_base64
+
+
+def _resolve_preview_rendering_type(
+    request: PreviewDesignRequest,
+    response: PreviewDesignResponse | None = None,
+) -> PreviewRenderingType:
+    if response is not None and response.rendering_type is not None:
+        return response.rendering_type
+    if request.rendering_type is not None:
+        return request.rendering_type
+    if request.rgb:
+        return PreviewRenderingType.RGB
+    if request.depth:
+        return PreviewRenderingType.DEPTH
+    return PreviewRenderingType.SEGMENTATION
 
 
 @contextlib.contextmanager
@@ -372,6 +388,17 @@ async def api_simulate(
 
     except HTTPException:
         raise
+    except ValueError as e:
+        logger.warning("api_benchmark_simulate_validation_failed", error=str(e))
+        return BenchmarkToolResponse(
+            success=False,
+            message=str(e),
+            artifacts=SimulationArtifacts(
+                failure=SimulationFailure(
+                    reason=FailureReason.VALIDATION_FAILED, detail=str(e)
+                )
+            ),
+        )
     except Exception as e:
         logger.warning("api_benchmark_simulate_failed", error=str(e))
         return BenchmarkToolResponse(
@@ -593,13 +620,16 @@ async def api_preview(
                 )
                 if image_path is None:
                     raise RuntimeError("renderer returned no preview image")
+                resolved_rendering_type = _resolve_preview_rendering_type(
+                    request, response
+                )
 
                 logger.info(
                     "worker_heavy_preview_finished",
                     session_id=x_session_id,
                     artifact_path=str(image_path.relative_to(workspace_root)),
                     manifest_path=str(Path("renders") / "render_manifest.json"),
-                    rendering_type=request.rendering_type.value,
+                    rendering_type=resolved_rendering_type.value,
                 )
                 return PreviewDesignResponse(
                     success=response.success,
@@ -608,7 +638,7 @@ async def api_preview(
                     image_path=str(image_path.relative_to(workspace_root)),
                     artifact_path=str(image_path.relative_to(workspace_root)),
                     manifest_path=str(Path("renders") / "render_manifest.json"),
-                    rendering_type=request.rendering_type,
+                    rendering_type=resolved_rendering_type,
                     pitch=request.orbit_pitch,
                     yaw=request.orbit_yaw,
                     image_bytes_base64=response.image_bytes_base64,
@@ -624,7 +654,7 @@ async def api_preview(
             success=False,
             message=str(e),
             status_text="Preview generation failed",
-            rendering_type=request.rendering_type,
+            rendering_type=_resolve_preview_rendering_type(request),
             pitch=request.orbit_pitch,
             yaw=request.orbit_yaw,
         )

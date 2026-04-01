@@ -1758,14 +1758,31 @@ def simulate(
         if custom_config_path.exists():
             pricing_config = load_merged_config(custom_config_path)
 
-        cost, weight = calculate_assembly_totals(
-            component,
-            assembly_definition=assembly_definition,
-            electronics=electronics,
-            cots_parts=assembly_definition.cots_parts if assembly_definition else None,
-            manufacturing_config=pricing_config,
-            quantity=requested_quantity if objectives is not None else 1,
-        )
+        try:
+            cost, weight = calculate_assembly_totals(
+                component,
+                assembly_definition=assembly_definition,
+                electronics=electronics,
+                cots_parts=(
+                    assembly_definition.cots_parts if assembly_definition else None
+                ),
+                manufacturing_config=pricing_config,
+                quantity=requested_quantity if objectives is not None else 1,
+            )
+        except ValueError as exc:
+            logger.warning(
+                "simulation_validation_failed",
+                error=str(exc),
+                session_id=session_id,
+            )
+            return SimulationResult(
+                success=False,
+                summary=str(exc),
+                failure=SimulationFailure(
+                    reason=FailureReason.VALIDATION_FAILED, detail=str(exc)
+                ),
+                confidence="high",
+            )
 
         result = SimulationResult(
             success=metrics.success,
@@ -1837,6 +1854,7 @@ def validate(
 
     if smoke_test_mode is None:
         smoke_test_mode = settings.smoke_test_mode
+    working_root = Path(output_dir) if output_dir is not None else Path.cwd()
 
     logger.info(
         "validate_start",
@@ -1868,8 +1886,8 @@ def validate(
 
     # Load build_zone from benchmark_definition.yaml if not provided
     effective_build_zone = build_zone
-    if effective_build_zone is None and output_dir:
-        obj_path = output_dir / "benchmark_definition.yaml"
+    if effective_build_zone is None:
+        obj_path = working_root / "benchmark_definition.yaml"
         if obj_path.exists():
             try:
                 content = obj_path.read_text(encoding="utf-8")
@@ -2014,7 +2032,6 @@ def validate(
                 )
 
     try:
-        working_root = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
         renders_dir = (
             working_root
             / "renders"
