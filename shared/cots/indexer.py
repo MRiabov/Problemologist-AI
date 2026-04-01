@@ -102,7 +102,7 @@ class Indexer:
             elif class_name == "ElectronicRelay":
                 category = "relay"
             elif class_name == "Switch":
-                category = "switch"
+                category = "electronic"
             elif class_name == "Connector":
                 category = "connector"
             elif class_name == "Wire":

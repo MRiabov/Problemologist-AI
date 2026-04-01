@@ -129,7 +129,7 @@ class Switch(COTSPart):
     def __init__(self, size: str = "Rocker-Switch", **kwargs):
         if size not in self.switch_data:
             super().__init__(
-                category="switch", part_number="UNKNOWN", data={}, children=[]
+                category="electronic", part_number="UNKNOWN", data={}, children=[]
             )
             return
 
@@ -138,7 +138,7 @@ class Switch(COTSPart):
         body = Box(l, w, h)
         body.color = Color("red")
         super().__init__(
-            category="switch", part_number=size, data=data, children=[body]
+            category="electronic", part_number=size, data=data, children=[body]
         )
 
 
