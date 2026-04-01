@@ -3,7 +3,7 @@
   "reviewer_stage": "electronics_reviewer",
   "timestamp": "2026-03-10T10:00:00Z",
   "session_id": "seed-erv-004-diverter-gate-power-insufficient",
-  "revision": "5f5fee13a554da8cc56741d98353911eac5e2dff",
+  "revision": "e84439f73d898200ecc300f09b789b8f2c9b64dd",
   "script_path": "solution_script.py",
   "script_sha256": "19435a786642a1d2a47090c396d8b28af7b2552f45b98126f720788b86c4f152",
   "validation_success": true,
