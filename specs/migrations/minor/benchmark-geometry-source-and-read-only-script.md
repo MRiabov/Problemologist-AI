@@ -221,14 +221,14 @@ Use this checklist to track the migration from spec edits through runtime gates,
 
 - [x] Rename the shared engineer starter from `shared/agent_templates/common/script.py` to `shared/agent_templates/common/solution_script.py`.
 - [x] Create or update `shared/assets/template_repos/benchmark_generator/benchmark_script.py` as the benchmark-owned visible geometry script.
-- [ ] Ensure benchmark planner workspaces do not receive `benchmark_script.py` before benchmark plan approval.
+- [x] Ensure benchmark planner workspaces do not receive `benchmark_script.py` before benchmark plan approval.
 - [x] Ensure benchmark coder and benchmark reviewer workspaces do receive `benchmark_script.py` as read-only geometry context after plan approval.
 - [x] Ensure engineering workspaces receive `benchmark_script.py` as read-only context when they need to preview or reason about benchmark geometry.
 - [x] Ensure engineering workspaces use `solution_script.py` as the writable authored implementation source.
 - [x] Update prompt generation in `evals/logic/codex_workspace.py` and related helpers so the prompt text names `solution_script.py` and conditionally names `benchmark_script.py`.
 - [x] Update any submission helper, reviewer helper, or workspace bootstrapper that still assumes a bare `script.py` is the authored source file.
-- [ ] Make sure `objectives_geometry()` is available from the benchmark script and returns the geometry object directly from Python source.
-- [ ] Keep mesh-backed benchmark geometry inline in Python only; do not introduce a separate mesh-file contract or a new authoring pipeline.
+- [x] Make sure `objectives_geometry()` is available from the benchmark script and returns the geometry object directly from Python source.
+- [x] Keep mesh-backed benchmark geometry inline in Python only; do not introduce a separate mesh-file contract or a new authoring pipeline.
 
 ### Validation gates
 
@@ -239,12 +239,12 @@ Use this checklist to track the migration from spec edits through runtime gates,
 - [ ] Verify benchmark coder entry still blocks if the benchmark handoff is incomplete or the benchmark geometry source is missing.
 - [ ] Verify reviewer entry still uses the latest-revision manifest and fails closed on stale or missing artifacts.
 - [ ] Verify `benchmark_assembly_definition.yaml` remains a required benchmark-owned handoff artifact for downstream engineering intake.
-- [ ] Verify `benchmark_script.py` is read-only once copied into downstream engineering or benchmark-review workspaces.
+- [x] Verify `benchmark_script.py` is read-only once copied into downstream engineering or benchmark-review workspaces.
 
 ### Seed and fixture updates
 
 - [x] Add `benchmark_script.py` to every benchmark-backed seed row that claims visible geometry.
-- [ ] Populate `objectives_geometry()` in every benchmark script that needs to render or inspect objective geometry.
+- [x] Populate `objectives_geometry()` in every benchmark script that needs to render or inspect objective geometry.
 - [x] Keep `solution_script.py` as the only authored engineer source in engineer seed artifacts.
 - [x] Rename any seed artifacts or seed JSON metadata that still refer to bare `script.py` as the authored source.
 - [ ] Remove any seed rows that are YAML-only but still claim benchmark geometry.
@@ -284,23 +284,23 @@ Use this checklist to track the migration from spec edits through runtime gates,
 - [ ] Update [tests/integration/frontend/p1/test_int_179.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/frontend/p1/test_int_179.py).
 - [ ] Update [tests/integration/frontend/p1/test_int_180.py](/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/frontend/p1/test_int_180.py).
 - [ ] Rewrite the mock-response fixture trees for the affected INTs: `INT-002`, `INT-003`, `INT-005`, `INT-010`, `INT-014`, `INT-016`, `INT-017`, `INT-025`, `INT-027`, `INT-033`, `INT-034`, `INT-035`, `INT-036`, `INT-037`, `INT-038`, `INT-039`, `INT-040`, `INT-042`, `INT-043`, `INT-045`, `INT-053`, `INT-055`, `INT-058`, `INT-059`, `INT-060`, `INT-075`, `INT-113`, `INT-115`, `INT-129`, `INT-142`, `INT-160`, `INT-161`, `INT-167`, `INT-173`, `INT-174`, `INT-176`, `INT-177`, `INT-179`, `INT-180`, `INT-181`, `INT-182`, `INT-183`, `INT-184`, `INT-185`, `INT-186`, `INT-189`, and `INT-205`.
-- [ ] Update any remaining fixture files that still name `script.py` or `result.py` as the authored source.
+- [x] Update any remaining fixture files that still name `script.py` or `result.py` as the authored source.
 
 ### Rerun matrix
 
-- [ ] Rerun the benchmark planner and benchmark reviewer flows after the fixture rewrite.
-- [ ] Rerun the engineer planner, engineer coder, electronics reviewer, and engineer execution reviewer flows after the fixture rewrite.
+- [x] Rerun the benchmark planner and benchmark reviewer flows after the fixture rewrite.
+- [x] Rerun the engineer planner, engineer coder, electronics reviewer, and engineer execution reviewer flows after the fixture rewrite.
 - [ ] Rerun the preview/render path tests that validate `objectives_geometry()` and the bucketed render layout.
 - [ ] Rerun the frontend code-viewer and `@path` mention tests after the rename.
-- [ ] Rerun the template-loader and Codex workspace-contract tests after the authored-source rename.
+- [x] Rerun the template-loader and Codex workspace-contract tests after the authored-source rename.
 - [ ] Rerun the seed-validation and node-entry-validation paths after the fail-closed geometry check lands.
 - [ ] Rerun the full affected integration slice once the targeted tests are green.
 
 ### Final verification
 
-- [ ] Confirm benchmark planner workspaces never receive `benchmark_script.py` before plan approval.
-- [ ] Confirm benchmark coder and benchmark reviewer workspaces do receive `benchmark_script.py` after plan approval.
-- [ ] Confirm engineer workspaces receive `benchmark_script.py` as read-only context and `solution_script.py` as writable authored code.
+- [x] Confirm benchmark planner workspaces never receive `benchmark_script.py` before plan approval.
+- [x] Confirm benchmark coder and benchmark reviewer workspaces do receive `benchmark_script.py` after plan approval.
+- [x] Confirm engineer workspaces receive `benchmark_script.py` as read-only context and `solution_script.py` as writable authored code.
 - [ ] Confirm no seeded workspace treats bare `script.py` as the authored source file.
 - [ ] Confirm `scripts/validate_eval_seed.py` rejects benchmark-backed rows that are YAML-only.
 - [ ] Confirm `controller/agent/node_entry_validation.py` rejects the same missing-geometry condition.

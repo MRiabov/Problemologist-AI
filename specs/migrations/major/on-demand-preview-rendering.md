@@ -92,7 +92,7 @@ The refactor should make the preview path explicit, direct, and cheap:
 
 1. Introduce a canonical `preview(...)` helper on the authoring/runtime surface
    that accepts a live `Part | Compound`.
-2. Support explicit camera control with `pitch` and `yaw`.
+2. Support explicit camera control with `orbit_pitch` and `orbit_yaw`.
 3. Support an explicit preview modality selector.
 4. Make the worker-light runtime the direct orchestration boundary for preview
    requests.
@@ -107,8 +107,8 @@ The refactor should make the preview path explicit, direct, and cheap:
 ```py
 preview(
     component: Part | Compound,
-    pitch: float = 45,
-    yaw: float = 45,
+    orbit_pitch: float = 45,
+    orbit_yaw: float = 45,
     rendering_type: RenderingType | Literal["rgb", "depth", "segmentation"],
 )
 ```
@@ -124,8 +124,9 @@ preview(
   and user-facing status text.
 - The helper should persist under the workflow-specific preview bundle
   directory, not flatten everything into a single root-level render folder.
-- The helper should keep the current angle naming convention so repeated runs
-  remain visually and textually easy to distinguish in the workspace.
+- The helper should keep a stable orbit-angle naming convention so repeated
+  runs remain visually and textually easy to distinguish in the workspace.
+- The helper should orbit around the component centroid.
 
 ## API Contract Notes
 
@@ -138,9 +139,11 @@ preview selector.
 
 The preview request/response shape should stay small and deterministic:
 
-- input: live component, `pitch`, `yaw`, modality, optional workspace/output
+- input: live component, `orbit_pitch`, `orbit_yaw`, modality, optional workspace/output
   hints,
 - output: persisted artifact path, plus manifest-backed modality metadata.
+
+<!-- Warning: the implementation previously used `pitch` / `yaw` naming instead of `orbit_pitch` / `orbit_yaw`, so updating the names is due. -->
 
 ## Current Call Graph
 
