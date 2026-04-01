@@ -266,7 +266,7 @@ This checklist reflects the current transitional state of the migration. The ren
 
 - [x] Keep `benchmark_script.py` as the benchmark-owned, read-only preview source for downstream workspaces.
 - [x] Keep `solution_script.py` as the writable engineer-authored source.
-- [x] Update prompt/config surfaces so `preview(..., orbit_pitch=..., orbit_yaw=...)` and `objectives_geometry()` are discoverable where live preview is needed.
+- [x] Update prompt/config surfaces so `preview(..., orbit_pitch=..., orbit_yaw=..., rgb=..., depth=..., segmentation=...)` and `objectives_geometry()` are discoverable where live preview is needed.
 - [x] Preserve the current agent-facing preview contract shape, including structured preview job acks, workspace-relative paths, and streamed preview status.
 - [ ] Remove remaining legacy wording or code paths that still imply the old heavy-worker render ownership model.
 

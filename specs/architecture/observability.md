@@ -196,7 +196,7 @@ We define (a growing list of) (aggregate) metrics:
 12. Simulation stability rate: % of solutions with no instabilities, NaNs, penetrations, or joint violations.
 13. Dataset readiness score: % of runs meeting training-dataset criteria (complete artifacts + verified solution + valid reasoning trace).
 14. Cost/weight delta heuristic: if cheaper/lighter alternative was computed (simulated) but final solution is worse, log event.
-15. On-demand preview latency by modality, purpose, and requested view count: median preview time split by requested modality and render purpose.
+15. On-demand preview latency by modality, purpose, and requested view count: median preview time split by requested modality, render purpose, and requested view count.
 16. Visual-evidence usage rate: % of review attempts with available renders that actually called the media-inspection tool and attached media to the model.
 17. Visual-policy compliance rate by role: % of runs where roles configured with `visual_inspection.required=true` satisfied their current `min_images` requirement when render images were available.
 

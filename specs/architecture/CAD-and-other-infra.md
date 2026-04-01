@@ -106,7 +106,7 @@ Preview bundles preserve the workflow that produced them instead of flattening e
 2. single-view engineer inspection previews are persisted under `renders/engineer_renders/`,
 3. final engineer preview evidence is persisted under `renders/final_preview_renders/`.
 
-For build123d/VTK-backed preview renders, the requested modality set is persisted under the selected bundle directory and the manifest records the modality-specific artifact path for each requested view. RGB previews preserve material colors. Depth and segmentation previews remain PNG-based, and segmentation renders carry a legend mapping colors to object identity.
+For build123d/VTK-backed preview renders, the requested modality set is persisted under the selected bundle directory and the manifest records the modality-specific artifact path and request-scoped view index for each requested view. RGB previews preserve material colors. Depth and segmentation previews remain PNG-based, and segmentation renders carry a legend mapping colors to object identity.
 
 Those files are context artifacts for downstream agents and reviewers. They follow the same persistence/discovery flow as the existing preview images rather than introducing a second artifact channel, and the render path itself now encodes whether the evidence belongs to benchmark input, engineer inspection, or final preview review.
 
