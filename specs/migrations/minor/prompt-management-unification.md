@@ -111,7 +111,7 @@ The result is a prompt surface that is functionally working but structurally dup
 - Update the prompt-management architecture doc to describe the unified source model and the backend appendices.
 - Update the agent harness and filesystem docs so they point at the unified prompt-context contract.
 - Update integration coverage to verify that both controller/API and Codex materialize prompts from the same base model.
-- Add or refresh tests that detect legacy `common.code_template` usage in active assembly and confirm any active electronics/helper roles remain represented in the same unified model.
+- Preserve prompt block order as a migration invariant: the unified source should stay ordered by runtime call order, including any active electronics/helper roles if they remain first-class.
 
 ## Detailed Checklist
 
