@@ -65,7 +65,8 @@ This migration sits on top of the existing split architecture in
 The repository already contains several partial preview implementations:
 
 - `worker_heavy.utils.build123d_rendering.render_preview_view(...)` already
-  exports a live `Compound` into a preview bundle and renders a single view.
+  exports a live `Compound` into a preview bundle and renders a single view,
+  which is still a useful lower-level primitive for the new async helper.
 - `worker_heavy.utils.build123d_rendering.render_preview_bundle(...)` already
   renders the full RGB/depth/segmentation preview bundle.
 - `worker_renderer/api/routes.py` already serves `/benchmark/preview`,
@@ -242,6 +243,7 @@ Target on-demand flow:
 - `worker_heavy/utils/preview.py`
 - `worker_heavy/utils/build123d_rendering.py`
 - `worker_renderer/api/routes.py`
+- `tests/integration/architecture_p1/test_script_tools_proxy.py`
 - `config/prompts.yaml`
 - `config/agents_config.yaml`
 - `tests/integration/architecture_p0/test_architecture_p0.py`
@@ -271,8 +273,8 @@ Target on-demand flow:
 
 - Accept scalar-or-list `orbit_pitch` and `orbit_yaw` inputs.
 - Normalize scalar camera inputs to single-item lists at the tool boundary.
-- Zip-pair the camera lists by index and broadcast singleton lists across the
-  longer side.
+- Zip-pair the camera lists by index after normalization and reject
+  incompatible non-singleton length mismatches.
 - Enforce the 64-view cap before the request reaches the renderer worker.
 
 ### Phase 4: Stream preview status
@@ -476,9 +478,16 @@ validation paths.
 
 ### Integration tests
 
-- [ ] Rerun or update `INT-024`, `INT-031`, `INT-032`, `INT-033`, `INT-034`,
-  `INT-039`, `INT-188`, `INT-189`, `INT-190`, `INT-204`, `INT-207`, `INT-208`,
-  `INT-209`, `INT-212`, `INT-213`, `INT-214`, and `INT-215`.
+- [ ] Refresh the preview-surface INT slice:
+  `INT-032`, `INT-033`, `INT-034`, `INT-039`, `INT-040`, `INT-074`, `INT-075`,
+  `INT-181`, `INT-182`, `INT-183`, `INT-185`, `INT-186`, `INT-188`,
+  `INT-189`, `INT-190`, `INT-203`, `INT-204`, `INT-205`, `INT-207`,
+  `INT-208`, `INT-209`, `INT-212`, `INT-213`, `INT-214`, and `INT-215`.
+  Key updates: `INT-033`/`INT-034` add explicit `preview(...)` before
+  `inspect_media(...)`; `INT-188` stays render-free; `INT-212`-`INT-215`
+  cover list-normalized multi-view preview, manifest identity, and websocket
+  status streaming; `INT-204`/`INT-074`/`INT-075` keep the latest-revision
+  review gate aligned with the new preview bundle shape.
 - [ ] Add a dedicated controller/Temporal preview-path integration test if no
   existing INT already exercises the full worker-light -> controller ->
   Temporal -> renderer chain.

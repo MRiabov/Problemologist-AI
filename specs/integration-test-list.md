@@ -18,6 +18,13 @@ geometry are invalid until seed and node-entry validation can see
 `benchmark_script.py`. Preview tests must compose benchmark assembly from
 `build()` and source objective overlays through `objectives_geometry()`.
 
+Preview-helper migration mainly affects this preview-evidence slice of the
+catalog: `INT-032`, `INT-033`, `INT-034`, `INT-039`, `INT-040`, `INT-074`,
+`INT-075`, `INT-181`, `INT-182`, `INT-183`, `INT-185`, `INT-186`,
+`INT-188`, `INT-189`, `INT-190`, `INT-203`, `INT-204`, `INT-205`,
+`INT-207`, `INT-208`, `INT-209`, `INT-212`, `INT-213`, `INT-214`, and
+`INT-215`.
+
 ### P0: Architecture parity baseline
 
 This section is the smallest must-pass set. Keep it narrowly scoped, deterministic, and directly release-blocking.
@@ -366,9 +373,9 @@ benchmark geometry is exposed via `benchmark_script.py`, engineer code lives in
 | INT-209 | Execute `/benchmark/validate` and `/benchmark/preview` through the heavy-worker HTTP boundary with a live workspace bundle; assert `/benchmark/validate` remains render-free while explicit preview artifacts are persisted through the renderer-worker path (`renders/**` plus `renders/render_manifest.json`). | Testing only one route, mocking renderer responses, or asserting artifact paths without exercising the live heavy->renderer handoff. |
 | INT-210 | Run a MuJoCo simulation that captures video frames, assert `VideoRenderer.save()` delegates encoding to `worker-renderer`, and verify the final MP4 is materialized in the session workspace. | Keeping MP4 encoding in-process or asserting only a synthetic video stub. |
 | INT-211 | Run a Genesis-backed simulation that captures render frames and assert the same renderer-worker video path and storage contract are used for the final MP4. | Testing Genesis frame capture without verifying the render handoff or artifact persistence. |
-| INT-212 | Call the exported `utils.preview(...)` helper from a live worker-light runtime session and assert the helper normalizes scalar/list camera inputs, zip-pairs view requests, materializes preview renders under the engineer bucket, writes `renders/render_manifest.json` atomically, and returns a structured preview job ack with workspace-relative paths. | Using a mocked preview helper or skipping the live worker-light/runtime boundary. |
-| INT-213 | Route `POST /api/script-tools/preview` through the controller preview proxy with a live preview bundle, assert the request reaches worker-light directly, and confirm the structured response preserves the resolved artifact path, manifest path, requested modality set, and camera/view metadata. | Exercising only the worker-light helper or skipping the controller preview route. |
-| INT-214 | Call `utils.preview(...)` with multi-view camera lists and assert the helper enforces the 64-view cap, rejects incompatible list lengths, and preserves request-scoped `view_index` metadata in the manifest. | Allowing unchecked cartesian expansion or asserting only a single render artifact. |
+| INT-212 | Call the exported `utils.preview(...)` helper from a live worker-light runtime session and assert the helper normalizes scalar/list camera inputs, zip-pairs view requests, materializes preview renders under the engineer bucket, writes `renders/render_manifest.json` atomically, and returns a structured preview job ack while the eventual completion updates carry workspace-relative paths. | Using a mocked preview helper or skipping the live worker-light/runtime boundary. |
+| INT-213 | Route `POST /api/script-tools/preview` through the controller preview proxy with a live preview bundle, assert the request reaches worker-light directly, and confirm the structured response preserves the requested modality set and camera/view metadata while the queued/view-ready stream remains visible. | Exercising only the worker-light helper or skipping the controller preview route. |
+| INT-214 | Call `utils.preview(...)` with multi-view camera lists and assert the helper enforces the 64-view cap, normalizes scalar camera inputs to lists, zip-pairs camera inputs by index, rejects incompatible non-singleton list lengths, and preserves request-scoped `view_index` metadata in the manifest. | Allowing unchecked cartesian expansion or asserting only a single render artifact. |
 | INT-215 | Exercise the preview websocket/control-plane stream with a queued preview job and assert queued, running, and view-ready updates are visible before the final manifest-backed completion. | Treating preview as a batch-only call or asserting only the final render artifact. |
 | INT-184 | Trigger deterministic node-entry rejection over HTTP (engineer + benchmark paths), assert terminal fail-fast, target-node non-execution, and persisted metadata schema (`node`, `disposition`, `reason_code`, `errors`, `reroute_target` when applicable); engineer planner/electronics planner runs must also fail closed when `benchmark_assembly_definition.yaml` is absent. | Calling `evaluate_node_entry_contract()` directly in-process or asserting only log strings without episode metadata/traces. |
 | INT-120 | Submit circuit via API; call `validate_circuit` endpoint; assert pass/fail controls whether simulate endpoint accepts the run. | Importing `validate_circuit()` and calling in-process. |
