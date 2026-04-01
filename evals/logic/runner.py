@@ -103,6 +103,11 @@ from evals.logic.workspace import (
 from evals.logic.workspace import (
     seed_eval_workspace as _seed_eval_workspace,
 )
+from scripts.internal.eval_run_lock import (
+    EvalRunSelection,
+    acquire_eval_run_lock,
+    release_eval_run_lock,
+)
 from shared.agents.config import load_agents_config
 from shared.enums import (
     AgentName,
@@ -3345,6 +3350,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "--skip-env-up", action="store_true", help="Skip running scripts/env_up.sh"
     )
     parser.add_argument(
+        "--queue",
+        action="store_true",
+        help="Wait for the shared eval lock instead of failing fast when another eval run is active.",
+    )
+    parser.add_argument(
         "--update-manifests",
         dest="update_manifests",
         action=argparse.BooleanOptionalAction,
@@ -3411,6 +3421,21 @@ async def main():
     except ValueError as exc:
         parser.error(str(exc))
 
+    requested_command = [sys.argv[0], *sys.argv[1:]]
+    requested_selection = EvalRunSelection(
+        agent=None if args.agent == "all" else args.agent,
+        task_ids=selected_task_ids,
+        levels=sorted(selected_levels),
+    )
+    lock_lease = acquire_eval_run_lock(
+        queue=args.queue,
+        requested_command=requested_command,
+        requested_selection=requested_selection,
+    )
+    if lock_lease is None:
+        sys.exit(1)
+    atexit.register(release_eval_run_lock, lock_lease)
+
     stack_profile = apply_stack_profile_env("eval", env=os.environ, root=ROOT)
     global CONTROLLER_URL
     global WORKER_LIGHT_URL
@@ -3446,6 +3471,7 @@ async def main():
         log_dir = runs_root / f"{run_name}_{suffix}"
         suffix += 1
     log_dir.mkdir(parents=True, exist_ok=True)
+    lock_lease.update_state(current_log_dir=str(log_dir), current_phase="startup")
 
     now = time.time()
     cutoff_seconds = 24 * 60 * 60
@@ -3525,10 +3551,13 @@ async def main():
     start_time = time.time()
     _console_message(f"Agent evals started: {time.ctime(start_time)}")
 
+    lock_lease.update_state(current_phase="startup_checks")
+
     # Run env_up.sh before checking health or starting evaluations.
     # Codex backend runs locally against the materialized workspace and does not
     # require controller/worker services to be booted for the agent loop.
     if runner_backend == EvalRunnerBackend.CONTROLLER and not args.skip_env_up:
+        lock_lease.update_state(current_phase="env_up")
         logger.info("env_up_start")
         try:
             env_up_path = ROOT / "scripts" / "env_up.sh"
@@ -3543,6 +3572,7 @@ async def main():
                     **os.environ,
                     "LOG_DIR": str(env_up_log_dir),
                     "SKIP_LOG_ARCHIVE": "1",
+                    "PROBLEMOLOGIST_EVAL_LOCK_HELD": "1",
                 },
             )
             # Dump output into the log file at DEBUG level
@@ -3696,6 +3726,8 @@ async def main():
         logger.info("agent_evals_start", agent=agent, count=len(dataset))
         for item in dataset:
             tasks.append((item, agent))
+
+    lock_lease.update_state(current_phase="running")
 
     if tasks and runner_backend == EvalRunnerBackend.CONTROLLER:
         logger.info("eval_seed_preflight_start", total_tasks=len(tasks))

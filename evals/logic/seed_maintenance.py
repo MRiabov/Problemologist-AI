@@ -152,7 +152,18 @@ def refresh_validation_results_script_hashes(
         if not isinstance(result, dict):
             continue
 
-        script_rel_path = str(result.get("script_path") or "script.py")
+        script_rel_path = str(result.get("script_path") or "").strip()
+        if not script_rel_path:
+            for candidate in (
+                "benchmark_script.py",
+                "solution_script.py",
+                "script.py",
+            ):
+                if (result_path.parent / candidate).exists():
+                    script_rel_path = candidate
+                    break
+        if not script_rel_path:
+            continue
         script_path = (result_path.parent / script_rel_path).resolve()
         if not script_path.exists():
             continue

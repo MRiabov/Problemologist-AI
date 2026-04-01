@@ -32,6 +32,21 @@ while [ "$#" -gt 0 ]; do
 done
 export PROBLEMOLOGIST_STACK_PROFILE="$STACK_PROFILE"
 
+EVAL_RUN_LOCK_PATH="${EVAL_RUN_LOCK_PATH:-/tmp/problemologist-eval.lock}"
+if [ "$STACK_PROFILE" = "eval" ] && [ "${PROBLEMOLOGIST_EVAL_LOCK_HELD:-0}" != "1" ]; then
+  exec 9>"$EVAL_RUN_LOCK_PATH"
+  if [ "${PROBLEMOLOGIST_EVAL_LOCK_QUEUE:-0}" = "1" ]; then
+    echo "[eval-env-lock] Waiting for eval lock at $EVAL_RUN_LOCK_PATH..."
+    flock 9
+  elif ! flock -n 9; then
+    echo "Be careful - another eval run is already running." >&2
+    echo "Your requested command: [scripts/env_up.sh --profile eval]" >&2
+    echo "If you want to wait for the shared lock, rerun via the eval runner with --queue." >&2
+    exit 1
+  fi
+  export PROBLEMOLOGIST_EVAL_LOCK_HELD=1
+fi
+
 # Networking for local services (infra is still in Docker but exposed on host).
 # Default to real/manual mode unless explicitly overridden by caller.
 export IS_INTEGRATION_TEST="${IS_INTEGRATION_TEST:-false}"

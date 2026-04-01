@@ -9,6 +9,7 @@ an agent would start from.
 from __future__ import annotations
 
 import argparse
+import atexit
 import json
 import os
 import subprocess
@@ -21,6 +22,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from evals.logic.stack_profiles import apply_stack_profile_env  # noqa: E402
+from scripts.internal.eval_run_lock import (  # noqa: E402
+    EvalRunSelection,
+    acquire_eval_run_lock,
+    release_eval_run_lock,
+)
 
 apply_stack_profile_env("eval", env=os.environ, root=ROOT)
 
@@ -91,6 +97,11 @@ def _parse_args() -> argparse.Namespace:
             "Run scripts/env_up.sh before launching Codex so the controller and "
             "worker services are available on the local ports."
         ),
+    )
+    parser.add_argument(
+        "--queue",
+        action="store_true",
+        help="Wait for the shared eval lock instead of failing fast when another eval run is active.",
     )
     yolo_group = parser.add_mutually_exclusive_group()
     yolo_group.add_argument(
@@ -178,7 +189,7 @@ def _env_up() -> None:
     completed = subprocess.run(
         [str(env_up_path), "--profile", "eval"],
         check=False,
-        env=dict(os.environ),
+        env={**os.environ, "PROBLEMOLOGIST_EVAL_LOCK_HELD": "1"},
     )
     if completed.returncode != 0:
         raise SystemExit(completed.returncode)
@@ -220,8 +231,23 @@ def main() -> None:
     if args.launch_codex and args.open_codex:
         raise SystemExit("Choose only one of --launch-codex or --open-codex.")
 
+    lock_lease = None
     if args.env_up:
+        lock_lease = acquire_eval_run_lock(
+            queue=args.queue,
+            requested_command=[sys.argv[0], *sys.argv[1:]],
+            requested_selection=EvalRunSelection(
+                agent=agent.value,
+                task_ids=[row.id],
+                levels=[],
+            ),
+        )
+        if lock_lease is None:
+            raise SystemExit(1)
+        atexit.register(release_eval_run_lock, lock_lease)
+        lock_lease.update_state(current_phase="env_up")
         _env_up()
+        lock_lease.update_state(current_phase="ready")
         fail_closed_if_integration_test_setup(
             os.getenv("CONTROLLER_URL", "http://localhost:18000"),
             context="seed workspace materializer startup",

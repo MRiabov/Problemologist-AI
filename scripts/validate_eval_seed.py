@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import atexit
 import json
 import os
 import re
@@ -14,6 +15,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from evals.logic.stack_profiles import apply_stack_profile_env  # noqa: E402
+from scripts.internal.eval_run_lock import (  # noqa: E402
+    EvalRunSelection,
+    acquire_eval_run_lock,
+    release_eval_run_lock,
+)
 
 _STACK_PROFILE_NAME = (
     "integration"
@@ -21,10 +27,6 @@ _STACK_PROFILE_NAME = (
     else "eval"
 )
 apply_stack_profile_env(_STACK_PROFILE_NAME, env=os.environ, root=ROOT)
-
-from scripts.internal.eval_seed_renders import (  # noqa: E402
-    update_seed_artifact_renders,
-)
 
 from controller.clients.worker import WorkerClient  # noqa: E402
 from evals.logic.curation import load_dataset_curation_manifest  # noqa: E402
@@ -38,6 +40,9 @@ from evals.logic.workspace import (  # noqa: E402
 )
 from evals.logic.workspace import (  # noqa: E402
     seed_eval_workspace as _seed_eval_workspace,
+)
+from scripts.internal.eval_seed_renders import (  # noqa: E402
+    update_seed_artifact_renders,
 )
 from shared.enums import AgentName  # noqa: E402
 from shared.logging import get_logger  # noqa: E402
@@ -133,6 +138,11 @@ def _parse_args() -> argparse.Namespace:
         "--skip-env-up",
         action="store_true",
         help="Skip running scripts/env_up.sh before validation.",
+    )
+    parser.add_argument(
+        "--queue",
+        action="store_true",
+        help="Wait for the shared eval lock instead of failing fast when another eval run is active.",
     )
     parser.add_argument(
         "--update-manifests",
@@ -359,6 +369,7 @@ def _run_env_up() -> None:
         check=True,
         capture_output=True,
         text=True,
+        env={**os.environ, "PROBLEMOLOGIST_EVAL_LOCK_HELD": "1"},
     )
     if result.stdout.strip():
         print(result.stdout.strip())
@@ -375,7 +386,21 @@ async def _async_main(args: argparse.Namespace) -> int:
     if args.level and not levels:
         raise SystemExit("No valid --level values were parsed.")
 
+    lock_lease = acquire_eval_run_lock(
+        queue=args.queue,
+        requested_command=[sys.argv[0], *sys.argv[1:]],
+        requested_selection=EvalRunSelection(
+            agent=agents[0].value if len(agents) == 1 else None,
+            task_ids=[args.task_id] if args.task_id else [],
+            levels=sorted(levels) if levels else [],
+        ),
+    )
+    if lock_lease is None:
+        return 1
+    atexit.register(release_eval_run_lock, lock_lease)
+
     try:
+        lock_lease.update_state(current_phase="manifest_validation")
         _validate_generated_curation_manifests(errors_only=args.errors_only)
     except Exception as exc:
         print("Generated curation manifest validation failed.", file=sys.stderr)
@@ -383,9 +408,11 @@ async def _async_main(args: argparse.Namespace) -> int:
         return 1
 
     if not args.skip_env_up:
+        lock_lease.update_state(current_phase="env_up")
         _run_env_up()
 
     try:
+        lock_lease.update_state(current_phase="worker_ready")
         await _wait_for_worker_ready(errors_only=args.errors_only)
     except Exception as exc:
         print(
@@ -395,6 +422,8 @@ async def _async_main(args: argparse.Namespace) -> int:
         )
         print(str(exc), file=sys.stderr)
         return 1
+
+    lock_lease.update_state(current_phase="validation")
 
     failures: list[tuple[str, str, str]] = []
     checked = 0

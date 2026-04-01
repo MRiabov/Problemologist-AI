@@ -30,6 +30,18 @@ while [ "$#" -gt 0 ]; do
 done
 export PROBLEMOLOGIST_STACK_PROFILE="$STACK_PROFILE"
 
+EVAL_RUN_LOCK_PATH="${EVAL_RUN_LOCK_PATH:-/tmp/problemologist-eval.lock}"
+if [ "$STACK_PROFILE" = "eval" ] && [ "${PROBLEMOLOGIST_EVAL_LOCK_HELD:-0}" != "1" ]; then
+  exec 9>"$EVAL_RUN_LOCK_PATH"
+  if ! flock -n 9; then
+    echo "Be careful - another eval run is already running." >&2
+    echo "Your requested command: [scripts/env_down.sh --profile eval]" >&2
+    echo "If you want to wait for the shared lock, rerun via the eval runner with --queue." >&2
+    exit 1
+  fi
+  export PROBLEMOLOGIST_EVAL_LOCK_HELD=1
+fi
+
 eval "$(python3 -m evals.logic.stack_profiles --profile "$STACK_PROFILE" --root "$(pwd)" --format shell)"
 
 echo "Stopping Application Servers..."
