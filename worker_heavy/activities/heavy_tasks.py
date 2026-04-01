@@ -273,8 +273,8 @@ async def preview_design_activity(params: HeavyPreviewParams) -> HeavyPreviewRes
         renderer_client.render_preview,
         bundle_base64=params.bundle_base64,
         script_path=params.script_path,
-        pitch=pitch,
-        yaw=yaw,
+        orbit_pitch=pitch,
+        orbit_yaw=yaw,
     )
 
     image_bytes = (

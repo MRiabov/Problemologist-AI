@@ -303,8 +303,8 @@ async def preview_script(
         ) as middleware:
             result = await middleware.preview(
                 payload.script_path,
-                pitch=payload.pitch,
-                yaw=payload.yaw,
+                orbit_pitch=payload.pitch,
+                orbit_yaw=payload.yaw,
                 rendering_type=payload.rendering_type,
                 bundle_base64=payload.bundle_base64,
                 smoke_test_mode=payload.smoke_test_mode,

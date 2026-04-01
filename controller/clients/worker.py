@@ -724,8 +724,8 @@ class WorkerClient:
         self,
         script_path: str = "script.py",
         script_content: str | None = None,
-        pitch: float = -45.0,
-        yaw: float = 45.0,
+        orbit_pitch: float = -45.0,
+        orbit_yaw: float = 45.0,
         rendering_type: PreviewRenderingType | str = PreviewRenderingType.RGB,
         bundle_base64: str | None = None,
         smoke_test_mode: bool | None = None,
@@ -735,8 +735,8 @@ class WorkerClient:
         try:
             payload = {
                 "script_path": script_path,
-                "pitch": pitch,
-                "yaw": yaw,
+                "pitch": orbit_pitch,
+                "yaw": orbit_yaw,
                 "rendering_type": rendering_type,
             }
             if script_content is not None:

@@ -5,6 +5,8 @@ import base64
 import contextlib
 import os
 import tempfile
+import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -236,6 +238,23 @@ def _single_preview_group_key(pitch: float, yaw: float) -> str:
     return f"render_e{abs(int(round(pitch)))}_a{int(round(yaw))}"
 
 
+def _resolve_single_preview_group_key(
+    output_dir: Path, pitch: float, yaw: float
+) -> str:
+    base_key = _single_preview_group_key(pitch, yaw)
+    candidate_paths = (
+        output_dir / f"{base_key}.jpg",
+        output_dir / f"{base_key}_depth.png",
+        output_dir / f"{base_key}_segmentation.png",
+    )
+    if not any(path.exists() for path in candidate_paths):
+        return base_key
+
+    timestamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    suffix = uuid.uuid4().hex[:8]
+    return f"{base_key}_{timestamp}_{suffix}"
+
+
 def _render_single_preview(
     scene: PreviewScene,
     *,
@@ -258,6 +277,7 @@ def _render_single_preview(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     artifacts: dict[str, RenderArtifactMetadata] = {}
+    group_key = _resolve_single_preview_group_key(output_dir, pitch, yaw)
 
     if rendering_type == PreviewRenderingType.RGB:
         bundle = _build_renderer(

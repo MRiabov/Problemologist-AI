@@ -1586,8 +1586,8 @@ def render_preview_view(
     response = render_preview(
         bundle_base64=bundle_base64,
         script_path="preview_scene.json",
-        pitch=pitch,
-        yaw=yaw,
+        orbit_pitch=pitch,
+        orbit_yaw=yaw,
         session_id=os.getenv("SESSION_ID"),
     )
     if not response.success:

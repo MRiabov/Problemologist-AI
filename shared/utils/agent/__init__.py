@@ -504,8 +504,8 @@ def submit_for_review(compound: Compound) -> bool:
 
 def preview(
     component: Any,
-    pitch: float = 45,
-    yaw: float = 45,
+    orbit_pitch: float = 45,
+    orbit_yaw: float = 45,
     rendering_type: PreviewRenderingType | str = PreviewRenderingType.RGB,
 ) -> PreviewDesignResponse:
     """Render an on-demand preview for a live build123d component."""
@@ -527,8 +527,8 @@ def preview(
         {
             "script_path": "preview_scene.json",
             "bundle_base64": preview_scene_bundle,
-            "pitch": pitch,
-            "yaw": yaw,
+            "pitch": orbit_pitch,
+            "yaw": orbit_yaw,
             "rendering_type": PreviewRenderingType(str(rendering_type)).value,
             "agent_role": _script_agent_role(),
         },
@@ -539,8 +539,8 @@ def preview(
         response = render_preview(
             bundle_base64=preview_scene_bundle,
             script_path="preview_scene.json",
-            pitch=pitch,
-            yaw=yaw,
+            orbit_pitch=orbit_pitch,
+            orbit_yaw=orbit_yaw,
             rendering_type=PreviewRenderingType(str(rendering_type)),
             session_id=os.getenv("SESSION_ID"),
         )
@@ -553,9 +553,9 @@ def preview(
     if response.manifest_path is None:
         response.manifest_path = str(Path("renders") / "render_manifest.json")
     if response.pitch is None:
-        response.pitch = pitch
+        response.pitch = orbit_pitch
     if response.yaw is None:
-        response.yaw = yaw
+        response.yaw = orbit_yaw
     if response.status_text is None:
         response.status_text = response.message or "Preview generated successfully"
     return response
