@@ -1,10 +1,15 @@
 from __future__ import annotations
 
-import os
+from shared.runtime.headless import configure_headless_physics
+
+
+def ensure_headless_physics() -> None:
+    """Default the active physics backend to the configured headless GL backend."""
+
+    configure_headless_physics()
 
 
 def ensure_headless_mujoco() -> None:
-    """Default MuJoCo to a headless EGL renderer when no override is set."""
-    os.environ.pop("LIBGL_ALWAYS_SOFTWARE", None)
-    os.environ.setdefault("MUJOCO_GL", "egl")
-    os.environ["PYOPENGL_PLATFORM"] = "egl"
+    """Backward-compatible alias for the physics headless bootstrap."""
+
+    ensure_headless_physics()

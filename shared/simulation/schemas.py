@@ -1,15 +1,38 @@
+from __future__ import annotations
+
 import os
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
 from shared.enums import FailureReason as SimulationFailureMode
 
+if TYPE_CHECKING:
+    from shared.runtime.headless import HeadlessGLBackend
+
 
 class SimulatorBackendType(StrEnum):
     MUJOCO = "MUJOCO"  # Rigid-body only, fast, no FEM/fluids
     GENESIS = "GENESIS"  # FEM + MPM fluids, requires more compute
+
+    def accepted_headless_gl_backends(self) -> tuple[HeadlessGLBackend, ...]:
+        from shared.runtime.headless import HeadlessGLBackend
+
+        if self is SimulatorBackendType.MUJOCO:
+            return (HeadlessGLBackend.EGL,)
+        if self is SimulatorBackendType.GENESIS:
+            return (HeadlessGLBackend.EGL, HeadlessGLBackend.OSMESA)
+        raise ValueError(f"Unknown physics backend type: {self}")
+
+    def default_headless_gl_backend(self) -> HeadlessGLBackend:
+        from shared.runtime.headless import HeadlessGLBackend
+
+        if self is SimulatorBackendType.MUJOCO:
+            return HeadlessGLBackend.EGL
+        if self is SimulatorBackendType.GENESIS:
+            return HeadlessGLBackend.OSMESA
+        raise ValueError(f"Unknown physics backend type: {self}")
 
 
 def get_default_simulator_backend() -> SimulatorBackendType:

@@ -13,11 +13,11 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, Field
 
+from controller.agent.prompt_manager import PromptBackendFamily, PromptManager
 from controller.agent.review_handover import (
     validate_plan_reviewer_handover,
     validate_reviewer_handover,
 )
-from controller.agent.prompt_manager import PromptBackendFamily, PromptManager
 from evals.logic.models import EvalDatasetItem
 from evals.logic.review_checks import (
     parse_review_decision_yaml,
@@ -34,6 +34,7 @@ from shared.agent_templates import (
 from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import ReviewComments, ReviewFrontmatter
+from shared.runtime.headless import load_headless_opengl_config
 from shared.workers.filesystem.backend import FileInfo
 from worker_heavy.utils.file_validation import (
     validate_node_output,
@@ -392,7 +393,9 @@ def _review_prefix(agent_name: AgentName) -> str | None:
     }.get(agent_name)
 
 
-def _build_codex_runtime_context(*, item: EvalDatasetItem, agent_name: AgentName) -> str:
+def _build_codex_runtime_context(
+    *, item: EvalDatasetItem, agent_name: AgentName
+) -> str:
     task = item.task.strip()
     if item.seed_dataset is not None:
         dataset_note = f"Seed dataset: {item.seed_dataset}"
@@ -560,15 +563,10 @@ def build_codex_env(
     env.pop("DISPLAY", None)
     env.pop("XAUTHORITY", None)
     env.pop("WAYLAND_DISPLAY", None)
-    env["LIBGL_ALWAYS_SOFTWARE"] = "1"
-    # MuJoCo's current headless path is EGL-backed. OSMesa currently breaks
-    # import-time OpenGL setup in this workspace, so keep the codex launch env
-    # aligned with the working repo default.
-    env["MUJOCO_GL"] = "egl"
-    env["PYOPENGL_PLATFORM"] = "egl"
-    env["PYVISTA_OFF_SCREEN"] = "true"
-    env["VTK_DEFAULT_OPENGL_WINDOW"] = "vtkEGLRenderWindow"
-    env["PYGLET_HEADLESS"] = "1"
+    env.setdefault("PROBLEMOLOGIST_PHYSICS_GL_BACKEND", "egl")
+    env.setdefault("PROBLEMOLOGIST_RENDER_GL_BACKEND", "osmesa")
+    headless_config = load_headless_opengl_config(env)
+    headless_config.apply(env)
     env["HOME"] = str(codex_home_root)
     env["CODEX_HOME"] = str(codex_home_root / ".codex")
     env["XDG_CACHE_HOME"] = str(codex_home_root / ".cache")

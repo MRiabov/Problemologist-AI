@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from shared.models.schemas import BenchmarkDefinition
 from shared.models.simulation import RendererCapabilities, RenderMode
 from shared.rendering import (
-    configure_headless_vtk_egl,
+    configure_headless_rendering,
     create_headless_vtk_render_window,
 )
 from shared.simulation.backends import RendererBackend
@@ -27,7 +27,7 @@ from shared.workers.schema import SegmentationLegendEntry
 from worker_renderer.utils.scene_builder import CommonAssemblyTraverser, MeshProcessor
 from worker_renderer.utils.workbench_config import load_config, load_merged_config
 
-configure_headless_vtk_egl()
+configure_headless_rendering()
 import vtk
 from vtk.util.numpy_support import vtk_to_numpy
 from vtkmodules.vtkCommonTransforms import vtkTransform
@@ -699,7 +699,7 @@ def _build_renderer(
     edge_color: tuple[float, float, float],
     background: tuple[float, float, float],
 ) -> _RendererBundle:
-    configure_headless_vtk_egl()
+    configure_headless_rendering()
     renderer = vtkRenderer()
     renderer.SetBackground(*background)
     if hasattr(renderer, "SetUseDepthPeeling"):

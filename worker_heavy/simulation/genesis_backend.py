@@ -7,14 +7,13 @@ from typing import TYPE_CHECKING, Any, Optional
 import numpy as np
 import structlog
 
+from shared.runtime.headless import configure_headless_rendering
+
 if TYPE_CHECKING:
     pass
 
 # Force headless mode for pyglet (used by genesis/pyrender)
-os.environ["PYGLET_HEADLESS"] = "1"
-# Force EGL platform for headless rendering if not already set
-if "PYOPENGL_PLATFORM" not in os.environ:
-    os.environ["PYOPENGL_PLATFORM"] = "egl"
+configure_headless_rendering()
 
 try:
     import genesis as gs

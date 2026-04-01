@@ -7,12 +7,19 @@ from worker_renderer.utils.rendering import (
     select_static_preview_render_subdir,
 )
 
-from .headless import configure_headless_vtk_egl, create_headless_vtk_render_window
+from .headless import (
+    configure_headless_rendering,
+    configure_headless_runtime,
+    configure_headless_vtk_egl,
+    create_headless_vtk_render_window,
+)
 from .preview_scene import export_preview_scene_bundle
 
 __all__ = [
     "build_render_manifest",
     "bundle_workspace_base64",
+    "configure_headless_rendering",
+    "configure_headless_runtime",
     "materialize_preview_response",
     "materialize_render_artifacts",
     "configure_headless_vtk_egl",

@@ -9,12 +9,12 @@ from build123d import export_stl
 
 from shared.observability.storage import S3Client, S3Config
 from shared.rendering import (
-    configure_headless_vtk_egl,
+    configure_headless_rendering,
     create_headless_vtk_render_window,
 )
 from shared.workers.loader import load_component_from_script as _load_component
 
-configure_headless_vtk_egl()
+configure_headless_rendering()
 import vtk
 
 logger = structlog.get_logger(__name__)
@@ -41,7 +41,7 @@ def render_selection_snapshot(
     script_p = Path(script_path)
 
     component = _load_component(script_p)
-    configure_headless_vtk_egl()
+    configure_headless_rendering()
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)

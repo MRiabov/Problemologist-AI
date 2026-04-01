@@ -66,11 +66,13 @@ def test_codex_env_defaults_to_headless_rendering(tmp_path: Path, monkeypatch) -
 
     assert "DISPLAY" not in env
     assert "XAUTHORITY" not in env
+    assert env["PROBLEMOLOGIST_PHYSICS_GL_BACKEND"] == "egl"
+    assert env["PROBLEMOLOGIST_RENDER_GL_BACKEND"] == "osmesa"
     assert env["LIBGL_ALWAYS_SOFTWARE"] == "1"
     assert env["MUJOCO_GL"] == "egl"
-    assert env["PYOPENGL_PLATFORM"] == "egl"
+    assert env["PYOPENGL_PLATFORM"] == "osmesa"
     assert env["PYVISTA_OFF_SCREEN"] == "true"
-    assert env["VTK_DEFAULT_OPENGL_WINDOW"] == "vtkEGLRenderWindow"
+    assert env["VTK_DEFAULT_OPENGL_WINDOW"] == "vtkOSOpenGLRenderWindow"
     assert env["PYGLET_HEADLESS"] == "1"
 
 
@@ -111,3 +113,36 @@ def test_codex_env_imports_mujoco_under_headless_defaults(tmp_path: Path) -> Non
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout.strip()
     assert "Traceback" not in completed.stderr
+
+
+def test_codex_env_can_split_mujoco_and_renderer_backends(
+    tmp_path: Path, monkeypatch
+) -> None:
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+
+    auth_source = tmp_path / "auth.json"
+    auth_source.write_text("{}", encoding="utf-8")
+
+    codex_home_root = tmp_path / "codex-home"
+    prepare_codex_home(
+        codex_home_root=codex_home_root,
+        workspace_dir=workspace_dir,
+        source_auth_path=auth_source,
+    )
+
+    monkeypatch.setenv("PROBLEMOLOGIST_PHYSICS_GL_BACKEND", "egl")
+    monkeypatch.setenv("PROBLEMOLOGIST_RENDER_GL_BACKEND", "osmesa")
+
+    env = build_codex_env(
+        task_id="task-001",
+        workspace_dir=workspace_dir,
+        codex_home_root=codex_home_root,
+        session_id="session-001",
+    )
+
+    assert env["PROBLEMOLOGIST_PHYSICS_GL_BACKEND"] == "egl"
+    assert env["PROBLEMOLOGIST_RENDER_GL_BACKEND"] == "osmesa"
+    assert env["MUJOCO_GL"] == "egl"
+    assert env["PYOPENGL_PLATFORM"] == "osmesa"
+    assert env["VTK_DEFAULT_OPENGL_WINDOW"] == "vtkOSOpenGLRenderWindow"

@@ -7,17 +7,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from shared.logging import configure_logging, log_marker_middleware
-from shared.rendering import configure_headless_vtk_egl
+from shared.rendering import configure_headless_runtime
 
 configure_logging("worker-renderer")
-# Force the renderer process onto the OSMesa path even if the image or host
-# environment was built with EGL defaults.
-os.environ["PYOPENGL_PLATFORM"] = "osmesa"
-os.environ["VTK_DEFAULT_OPENGL_WINDOW"] = "vtkOSOpenGLRenderWindow"
-configure_headless_vtk_egl()
+headless_config = configure_headless_runtime()
 logger = structlog.get_logger(__name__)
 logger.info(
     "renderer_bootstrap_headless_env",
+    physics_backend=headless_config.physics_backend.value,
+    physics_gl_backend=headless_config.physics_gl_backend.value,
+    render_backend=headless_config.rendering.value,
     pyopengl_platform=os.environ.get("PYOPENGL_PLATFORM"),
     vtk_default_open_gl_window=os.environ.get("VTK_DEFAULT_OPENGL_WINDOW"),
 )

@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 import structlog
@@ -6,10 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from shared.logging import configure_logging, log_marker_middleware
-from shared.rendering import configure_headless_vtk_egl
+from shared.rendering import configure_headless_runtime
 
 configure_logging("worker-heavy")
-configure_headless_vtk_egl()
+headless_config = configure_headless_runtime()
 from worker_heavy.api.routes import (
     heavy_busy_payload,
     heavy_router,
@@ -18,6 +19,14 @@ from worker_heavy.api.routes import (
 from worker_heavy.runtime.simulation_runner import shutdown_simulation_executor
 
 logger = structlog.get_logger(__name__)
+logger.info(
+    "worker_heavy_bootstrap_headless_env",
+    physics_backend=headless_config.physics_backend.value,
+    physics_gl_backend=headless_config.physics_gl_backend.value,
+    render_backend=headless_config.rendering.value,
+    pyopengl_platform=os.environ.get("PYOPENGL_PLATFORM"),
+    vtk_default_open_gl_window=os.environ.get("VTK_DEFAULT_OPENGL_WINDOW"),
+)
 
 
 @asynccontextmanager

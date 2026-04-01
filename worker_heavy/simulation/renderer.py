@@ -1,9 +1,9 @@
 import zipfile
 from pathlib import Path
 
-from worker_heavy.simulation._mujoco_env import ensure_headless_mujoco
+from worker_heavy.simulation._mujoco_env import ensure_headless_physics
 
-ensure_headless_mujoco()
+ensure_headless_physics()
 
 import ffmpeg
 import mujoco
