@@ -88,7 +88,7 @@ This split is intentional. Preview evidence does not require Genesis runtime fea
 
 Preview renders are context artifacts, not backend-authoritative proof of simulation behavior. Genesis-specific runtime behavior is still established through actual Genesis simulation runs where Genesis behavior is required.
 
-On-demand preview uses the worker-light-facing `preview(...)` helper instead of any validation-time render path. Benchmark callers compose `build()` output with objective overlays reconstructed by `objectives_geometry()` from the `objectives` section of `benchmark_definition.yaml` before previewing benchmark context, while engineer callers preview their solution geometry directly. The helper persists workflow-specific preview artifacts under the existing render buckets and does not imply Genesis parity.
+On-demand preview uses the worker-light-facing `preview(...)` helper instead of any validation-time render path. Benchmark callers compose `build()` output with objective overlays reconstructed by `objectives_geometry()` from the `objectives` section of `benchmark_definition.yaml` before previewing benchmark context, while engineer callers preview their solution geometry directly. The helper accepts modality booleans and multi-view camera inputs, normalizes scalar values into view bundles, returns a job ack, and causes the renderer worker to persist workflow-specific preview artifacts under the existing render buckets without implying Genesis parity.
 
 #### Rendering views
 
@@ -106,7 +106,7 @@ Preview bundles preserve the workflow that produced them instead of flattening e
 2. single-view engineer inspection previews are persisted under `renders/engineer_renders/`,
 3. final engineer preview evidence is persisted under `renders/final_preview_renders/`.
 
-For build123d/VTK-backed preview renders, the requested modality is persisted under the selected bundle directory and the manifest records the modality-specific artifact path. RGB previews preserve material colors. Depth and segmentation previews remain PNG-based, and segmentation renders carry a legend mapping colors to object identity.
+For build123d/VTK-backed preview renders, the requested modality set is persisted under the selected bundle directory and the manifest records the modality-specific artifact path for each requested view. RGB previews preserve material colors. Depth and segmentation previews remain PNG-based, and segmentation renders carry a legend mapping colors to object identity.
 
 Those files are context artifacts for downstream agents and reviewers. They follow the same persistence/discovery flow as the existing preview images rather than introducing a second artifact channel, and the render path itself now encodes whether the evidence belongs to benchmark input, engineer inspection, or final preview review.
 
@@ -116,7 +116,7 @@ The simulation backend still exposes a typed render-capability record so the run
 
 For the RGB preview image, manufactured-part material colors come from the manufacturing material configuration associated with each part's `material_id`. The preview is therefore expected to preserve meaningful color differences between materials, not flatten everything to the same neutral shade.
 
-We also persist a render metadata manifest at `renders/render_manifest.json`. That manifest is the structured companion for `inspect_media(...)` and carries per-image modality metadata.
+We also persist a render metadata manifest at `renders/render_manifest.json`. That manifest is the structured companion for `inspect_media(...)` and carries per-view modality and pose metadata.
 
 For segmentation renders, the manifest must contain a legend mapping rendered colors to object identity. The legend is instance-aware:
 

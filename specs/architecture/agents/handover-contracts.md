@@ -216,8 +216,10 @@ These preview renders are static context artifacts. The default generation polic
 
 1. preview evidence is generated explicitly, not by `/benchmark/validate`,
 2. that preview path uses build123d/VTK by default,
-3. the images are not a proof that Genesis runtime behavior was exercised during validation (intentionally so, as Genesis runtime behavior stays on the simulation path rather than the preview path),
-4. Genesis parity is covered by dedicated backend parity tests and by actual Genesis simulation runs where Genesis behavior is required.
+3. preview jobs may materialize multiple requested views in one bundle, but the
+   caller still inspects the persisted files through `inspect_media(...)`,
+4. the images are not a proof that Genesis runtime behavior was exercised during validation (intentionally so, as Genesis runtime behavior stays on the simulation path rather than the preview path),
+5. Genesis parity is covered by dedicated backend parity tests and by actual Genesis simulation runs where Genesis behavior is required.
 
 Reviewer evidence contract for renders:
 

@@ -168,7 +168,7 @@ The rule is:
 2. The renderer backend exposes a typed capability record that states what artifact modes and view policies it supports.
 3. The runtime-selected simulation render choice is serialized in `simulation_result.json` so reviewers can replay the exact evidence path.
 4. Explicit build123d/VTK preview remains a separate preview contract, executed by the renderer worker, and continues to live in the preview manifest path.
-5. On-demand preview requests use the worker-light-facing `preview(...)` helper, render a composed `Part | Compound` at the requested camera and modality, and persist workflow-specific preview artifacts. They are separate from simulation evidence and from validation results.
+5. On-demand preview requests use the worker-light-facing `preview(...)` helper, normalize scalar/list camera inputs into zip-paired views, render a composed `Part | Compound` at the requested camera and modality set, stream queued/view-ready status over the websocket control path, and persist workflow-specific preview artifacts. They are separate from simulation evidence and from validation results.
 6. The render bundle path itself identifies whether the evidence belongs to benchmark input, engineer inspection, or final validation.
 7. If a backend cannot satisfy the selected render path, the failure should surface as a validation/runtime contract error rather than being hidden behind an unrelated global fallback.
 

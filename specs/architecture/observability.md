@@ -136,9 +136,9 @@ We track the following structured domain events to compute the evaluation metric
 
 28. Reviewer manifest gate failures (`reviewer_manifest_gate_failed`) with reviewer stage, manifest filename, failure class (`missing`, `stale`, `invalid_schema`, `revision_mismatch`), and blocked node id.
 
-29. Preview render request (`preview_render_requested`) with requested modality, orbit angles, selected preview backend, and render purpose (`benchmark_preview`, `engineer_preview`, or `final_preview`).
+29. Preview render request (`preview_render_requested`) with requested modalities, normalized orbit angles, requested view count, selected preview backend, and render purpose (`benchmark_preview`, `engineer_preview`, or `final_preview`). If the job is queued, include queue position or estimated wait where available.
 
-30. Preview render completion (`preview_render_complete`) with preview backend, modality, image count, elapsed render time, and artifact paths.
+30. Preview render completion (`preview_render_complete`) with preview backend, modalities, view count, image count, elapsed render time, and artifact paths. Streaming view-ready updates remain trace-visible through the same episode/session trace even when they are not promoted to a separate event family.
 
 31. Media inspection event (`media_inspection`) for every agent media-view action, with node/reviewer stage, requested path, resolved artifact path, media kind (`image`, `video_frames`), attached image/frame count, and attach result (`attached`, `missing`, `unsupported_format`, `failed`).
 
@@ -196,7 +196,7 @@ We define (a growing list of) (aggregate) metrics:
 12. Simulation stability rate: % of solutions with no instabilities, NaNs, penetrations, or joint violations.
 13. Dataset readiness score: % of runs meeting training-dataset criteria (complete artifacts + verified solution + valid reasoning trace).
 14. Cost/weight delta heuristic: if cheaper/lighter alternative was computed (simulated) but final solution is worse, log event.
-15. On-demand preview latency by modality and purpose: median preview time split by requested modality and render purpose.
+15. On-demand preview latency by modality, purpose, and requested view count: median preview time split by requested modality and render purpose.
 16. Visual-evidence usage rate: % of review attempts with available renders that actually called the media-inspection tool and attached media to the model.
 17. Visual-policy compliance rate by role: % of runs where roles configured with `visual_inspection.required=true` satisfied their current `min_images` requirement when render images were available.
 

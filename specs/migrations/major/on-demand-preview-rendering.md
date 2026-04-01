@@ -404,16 +404,18 @@ validation paths.
   through controller orchestration instead of calling the renderer directly.
 - [ ] Add the Temporal workflow/activity path for preview and keep the live
   chain `worker-light -> controller -> Temporal -> worker-renderer`.
+- [ ] Normalize scalar preview inputs to lists, zip multi-view requests by
+  index, and enforce the 64-view cap before dispatch.
+- [ ] Return the structured preview job ack immediately and keep queue/view-
+  ready status visible while the renderer worker is working.
 - [ ] Remove validation-time preview generation from `/benchmark/validate` and
   retire the 24-view validation bundle contract.
 - [ ] Persist preview workflow state, correlation metadata, and timeout/failure
   reasons so stalled renders fail closed instead of hanging or silently
   degrading.
-- [ ] Return the structured preview response only after the workflow has a
-  resolved artifact path, manifest path, modality, and angle metadata.
 - [ ] Make the preview workflow accept a render request, persist the request
-  context, and return only after the renderer has produced the artifact path and
-  manifest entry.
+  context, and return only after the renderer has produced the final manifest
+  entry for each requested view.
 - [x] Keep any heavy-worker preview bridge as a compatibility path during
   rollout only; the default path must become worker-light driven.
 - [ ] Define timeout and failure behavior in the workflow so a stalled preview
@@ -434,13 +436,17 @@ validation paths.
 
 ### Modality and artifacts
 
-- [x] Thread `rgb`, `depth`, and `segmentation` through the renderer request
+- [ ] Replace `rendering_type` with `rgb`, `depth`, and `segmentation` in the
+  agent-facing helper and worker schema.
+- [ ] Thread `rgb`, `depth`, and `segmentation` through the renderer request
   schema and the manifest record for each render.
-- [x] Update the renderer client, worker schema, and renderer route handlers so
-  the modality enum is carried end to end without lossy conversion.
-- [x] Preserve the existing preview file naming convention, including the angle
-  tags already used in render artifacts.
-- [x] Keep the `render_e15_a45`-style angle family, plus a run-unique suffix or
+- [ ] Update the renderer client, worker schema, and renderer route handlers so
+  the modality set and view list are carried end to end without lossy
+  conversion.
+- [ ] Preserve the existing preview file naming convention, including the angle
+  tags already used in render artifacts, and add request-scoped `view_index`
+  metadata for repeated poses.
+- [ ] Keep the `render_e15_a45`-style angle family, plus a run-unique suffix or
   timestamp where repeated previews need disambiguation.
 - [x] Keep `renders/render_manifest.json` synchronized with each preview write
   using atomic update behavior, not ad hoc agent edits.
@@ -450,6 +456,8 @@ validation paths.
   bucketed directories so workflow provenance stays visible.
 - [x] Preserve the current image format policy for depth and segmentation
   previews.
+- [ ] Stream per-view ready updates over the websocket control path so callers
+  can attach images as they arrive.
 
 ### Prompts and permissions
 
@@ -457,7 +465,7 @@ validation paths.
   `preview(...)` and `objectives_geometry()` are both importable from the agent
   surface.
 - [ ] Update `config/prompts.yaml` and `config/agents_config.yaml` so roles that
-  need preview access can discover the new helper without stale
+  need preview access can discover the async, multi-view helper without stale
   `preview_design(...)` guidance.
 - [ ] Update engineer and benchmark prompts, allowlists, and tool exports so
   the new helper is discoverable where live preview is needed.
@@ -470,7 +478,7 @@ validation paths.
 
 - [ ] Rerun or update `INT-024`, `INT-031`, `INT-032`, `INT-033`, `INT-034`,
   `INT-039`, `INT-188`, `INT-189`, `INT-190`, `INT-204`, `INT-207`, `INT-208`,
-  `INT-209`, `INT-212`, and `INT-213`.
+  `INT-209`, `INT-212`, `INT-213`, `INT-214`, and `INT-215`.
 - [ ] Add a dedicated controller/Temporal preview-path integration test if no
   existing INT already exercises the full worker-light -> controller ->
   Temporal -> renderer chain.

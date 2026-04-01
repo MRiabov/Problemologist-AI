@@ -84,7 +84,7 @@ The worker API is physically split into three specialized services to optimize r
 
 - **Purpose**: Handles all headless rendering jobs.
 - **Responsibilities**:
-  - Explicit preview generation through build123d/VTK.
+  - Explicit preview generation through build123d/VTK, including multi-view bundles and progressive status updates.
   - Simulation video generation and frame extraction.
   - Selection snapshots, depth images, segmentation images, and render-manifest persistence.
   - All render-only post-processing that does not require physics stepping.
@@ -93,7 +93,7 @@ The worker API is physically split into three specialized services to optimize r
 
 ### Routing Contract (Controller -> Workers)
 
-- Controller routes light operations to light worker over the WebSocket control channel. The light worker executes scripts, which can ping the load balancer handling heavy workers.
+- Controller routes light operations to light worker over the WebSocket control channel. The light worker executes scripts, can stream queued/view-ready preview status back over that channel, and can ping the load balancer handling heavy workers.
 - Controller routes heavy operations through Temporal workflows, not directly to `WORKER_HEAVY_URL`.
 - Render jobs are dispatched to `worker-renderer`; the heavy worker does not own the graphics stack.
 - All non-Temporal worker calls are session-scoped with `X-Session-ID`.
@@ -112,7 +112,7 @@ Backend responsibility is split by operation purpose:
 
 1. `/benchmark/simulate` uses the selected physics backend and requests dynamic render/video artifacts from the renderer worker.
 2. `/benchmark/validate` performs fast validation and does not generate preview artifacts.
-3. Explicit preview requests use the renderer worker through the preview helper and remain separate from validation.
+3. Explicit preview requests use the renderer worker through the preview helper, normalize multi-view camera inputs, and remain separate from validation.
 4. `/benchmark/validate` does not add a separate Genesis load/render gate solely for parity checking; Genesis-specific runtime behavior is established by actual Genesis simulation runs where Genesis behavior is required.
 5. Both render-producing paths use the same renderer worker service; only the render job kind differs.
 
@@ -205,6 +205,7 @@ Renderer-worker concurrency is also a single-flight contract:
 - The renderer worker app does not own internal multi-job management (no in-process queue/semaphore/scheduler for multiple external render jobs).
 - If a render request arrives while a job is active, the renderer worker returns a deterministic busy response instead of buffering jobs.
 - Any queueing, retries, and fan-out for concurrent render demand are owned outside `worker-renderer` (Temporal orchestration and infrastructure load balancing), not by renderer-worker internals.
+- Within one admitted preview job, the renderer worker may fan out the requested views internally, but that still counts as one active render job at the service boundary.
 
 ## Persistent state and durable execution
 
