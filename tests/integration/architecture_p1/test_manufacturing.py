@@ -21,6 +21,7 @@ from shared.workers.schema import (
     DeleteFileRequest,
     ExecuteRequest,
     ExecuteResponse,
+    ReadFileRequest,
     ReadFileResponse,
     WriteFileRequest,
 )
@@ -450,6 +451,106 @@ async def test_validate_and_price_round_trips_cots_provenance():
     assert cots_part.catalog_snapshot_id is not None
     assert cots_part.generated_at is not None
     assert enriched.totals.estimated_unit_cost_usd == pytest.approx(1.0)
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_validate_and_price_recomputes_manufactured_weight():
+    """The pricing script must recompute manufactured-part weight deterministically."""
+    session_id = f"INT-033-{uuid.uuid4().hex[:8]}"
+
+    assembly_definition = AssemblyDefinition.model_validate(
+        {
+            "version": "1.0",
+            "constraints": {
+                "benchmark_max_unit_cost_usd": 100.0,
+                "benchmark_max_weight_g": 1000.0,
+                "planner_target_max_unit_cost_usd": 90.0,
+                "planner_target_max_weight_g": 900.0,
+            },
+            "manufactured_parts": [
+                {
+                    "part_name": "weight_probe",
+                    "part_id": "weight_probe",
+                    "manufacturing_method": "3DP",
+                    "material_id": "aluminum_6061",
+                    "quantity": 1,
+                    "part_volume_mm3": 1000.0,
+                    "stock_bbox_mm": {"x": 10.0, "y": 10.0, "z": 10.0},
+                    "stock_volume_mm3": 1000.0,
+                    "removed_volume_mm3": 0.0,
+                    "estimated_unit_cost_usd": 10.0,
+                }
+            ],
+            "cots_parts": [],
+            "final_assembly": [],
+            "totals": {
+                "estimated_unit_cost_usd": 10.0,
+                "estimated_weight_g": 0.0,
+                "estimate_confidence": "high",
+            },
+        }
+    )
+
+    async with AsyncClient(base_url=WORKER_LIGHT_URL, timeout=300.0) as client:
+        headers = {"X-Session-ID": session_id}
+
+        resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="assembly_definition.yaml",
+                content=yaml.safe_dump(
+                    assembly_definition.model_dump(mode="json", by_alias=True),
+                    sort_keys=False,
+                ),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text
+
+        resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="manufacturing_config.yaml",
+                content=REPO_MANUFACTURING_CONFIG,
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text
+
+        exec_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/runtime/execute",
+            json=ExecuteRequest(
+                code=(
+                    "python "
+                    "/home/maksym/Work/proj/Problemologist/Problemologist-AI/"
+                    "skills/manufacturing-knowledge/scripts/validate_and_price.py"
+                ),
+                timeout=120,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert exec_resp.status_code == 200, exec_resp.text
+        exec_data = ExecuteResponse.model_validate(exec_resp.json())
+        assert exec_data.exit_code == 0, exec_data.stderr
+        assert "Total Estimated Weight: 2.70g" in exec_data.stdout
+
+        read_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/read",
+            json=ReadFileRequest(path="assembly_definition.yaml").model_dump(
+                mode="json"
+            ),
+            headers=headers,
+        )
+        assert read_resp.status_code == 200, read_resp.text
+
+    enriched = AssemblyDefinition.model_validate(
+        yaml.safe_load(ReadFileResponse.model_validate(read_resp.json()).content)
+    )
+    assert enriched.totals.estimated_weight_g == pytest.approx(2.7)
+    assert enriched.totals.estimated_unit_cost_usd == pytest.approx(10.0)
 
 
 @pytest.mark.integration_p1

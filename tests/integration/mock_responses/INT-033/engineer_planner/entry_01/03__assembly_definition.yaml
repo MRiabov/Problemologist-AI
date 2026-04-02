@@ -78,6 +78,6 @@ drafting:
 final_assembly: []
 totals:
   estimated_unit_cost_usd: 10.0
-  estimated_weight_g: 0.0
+  estimated_weight_g: 2.7
   estimate_confidence: high
 dfm_suggestions: []
