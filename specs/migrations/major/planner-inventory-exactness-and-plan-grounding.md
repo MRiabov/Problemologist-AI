@@ -12,6 +12,10 @@ scripts must preserve the same labels, repeated quantities, and COTS
 identities as the approved inventory, and downstream coder/reviewer gates must
 enforce the same contract.
 
+This migration also treats two validator gaps as bugs: deterministic weight
+exactness and drafting geometry validity must be fixed, not parked as future
+work.
+
 The target contract is defined in:
 
 - [Agent handovers](../../architecture/agents/handover-contracts.md)
@@ -35,20 +39,22 @@ enforcement is still fragmented.
    assumptions.
 4. Because this contract spans planner, reviewer, and coder boundaries, the
    eval refresh is broad and the integration refresh is the long pole.
-5. The current cost/weight contract is also asymmetric:
+5. The current cost/weight contract is also buggy:
    - declared assembly cost is validated as a deterministic sum,
-   - planner weight is only checked as a cap/ceiling,
-   - manufactured parts do not carry a per-part `weight_g` field,
+   - planner weight is only checked as a cap/ceiling today,
+   - manufactured parts still need their per-part weight contributions carried
+     through the deterministic validation path,
    - COTS parts are the only assembly rows that can optionally carry `weight_g`.
-6. The drafting-artifact validation path is also narrow:
+6. The drafting-artifact validation path is also buggy:
    - `solution_plan_evidence_script.py` and
      `benchmark_plan_evidence_script.py` are validated for inventory grounding,
-     not physical non-overlap,
+     but physical validity must be a hard failure too,
    - `solution_plan_technical_drawing_script.py` and
      `benchmark_plan_technical_drawing_script.py` are validated for structure,
-     inventory grounding, and `TechnicalDrawing` usage only,
-   - physical overlap or intersection checks are not part of that file-level
-     validator path.
+     inventory grounding, and `TechnicalDrawing` usage only, but that is not
+     the full geometry contract,
+   - self-intersection and overlap checks must be treated as bug fixes, not
+     future notes.
 
 ## Current-State Inventory
 
@@ -59,8 +65,8 @@ enforcement is still fragmented.
 | `controller/agent/node_entry_validation.py` | Validates node entry and some handoff constraints. | It needs fail-closed exactness gates for planner handoff packages. |
 | `worker_heavy/utils/file_validation.py` | Validates schema and placeholder hygiene. | It must also participate in exact-mention and inventory-multiset checks where planner artifacts are validated. |
 | `worker_heavy/utils/handover.py` | Collects and packages handoff artifacts. | It must reject mismatched inventory before a coder or reviewer sees it. |
-| `shared/models/schemas.py`, `worker_heavy/utils/dfm.py`, `controller/agent/benchmark/tools.py` | Define and enforce the current cost/weight contract. | They expose the asymmetry that cost is deterministic while weight is only planner-authored estimate/cap data. |
-| `worker_heavy/utils/file_validation.py`, `controller/agent/node_entry_validation.py` | Validate planner-authored evidence and technical-drawing scripts. | They currently stop at inventory/structure checks and do not enforce physical non-overlap for drafting artifacts. |
+| `skills/manufacturing-knowledge/scripts/validate_and_price.py`, `shared/models/schemas.py`, `worker_heavy/utils/dfm.py`, `controller/agent/benchmark/tools.py` | Define and enforce the current cost/weight contract. | They normalize cost but still leave weight as a planner-authored ceiling/estimate instead of a deterministic total. |
+| `worker_heavy/utils/file_validation.py`, `controller/agent/node_entry_validation.py`, `worker_heavy/utils/validation.py` | Validate planner-authored evidence and technical-drawing scripts. | They still need to make physical self-intersection/overlap a first-class handoff failure instead of a follow-up note. |
 | `shared/utils/agent/__init__.py` | Loads scripts and render evidence. | It needs to participate in the exactness contract for planner-authored evidence scripts. |
 | `config/prompts.yaml`, `controller/agent/prompt_manager.py` | Planner prompt assembly does not yet teach exact-mention and inventory-exactness self-checks explicitly enough. | The planner needs the exactness contract in its guidance path so it can self-validate before handoff. |
 | `evals/logic/specs.py`, `evals/logic/codex_workspace.py`, `scripts/validate_eval_seed.py` | Seeded evals still assume older artifact shapes in many rows. | All affected evals need the new contract so stale rows fail during preflight. |
@@ -84,12 +90,12 @@ enforcement is still fragmented.
 5. Technical-drawing rendering and starter-template work remain separate from
    this migration; this migration owns the inventory/grounding contract, not
    the view-generation contract.
-6. The cost/weight contract boundary is documented here as a separate
-   exactness fix so it can be tightened later without being confused with the
+6. The cost/weight bug is fixed here as a separate exactness requirement so
+   future contract work cannot reintroduce the asymmetry or confuse it with
    inventory-exactness work.
-7. The drafting-artifact physical-validation boundary is documented here as a
-   separate issue so later work can add non-overlap checks without conflating
-   them with inventory grounding or `TechnicalDrawing` structure checks.
+7. The drafting-geometry bug is fixed here as a separate requirement so
+   future geometry work cannot relegate self-intersection or overlap checks to
+   follow-up notes.
 
 ## Required Work
 
@@ -140,23 +146,25 @@ enforcement is still fragmented.
 - Ensure `config/prompts.yaml` and `PromptManager` tell planners to
   self-check exact mentions and inventory multiplicity before handoff.
 
-### 6. Document the cost/weight exactness boundary
+### 6. Fix the cost/weight exactness bug
 
-- Keep the current asymmetry explicit until a schema-level weight source exists
-  for manufactured parts.
-- Treat declared assembly cost as exact and planner weight as a cap/estimate
-  contract, not as a per-part recomputation contract.
-- Make the exactness boundary visible in the migration so future schema work
-  can tighten it without reopening the inventory contract.
+- Add or reuse a deterministic weight validator alongside the deterministic
+  cost validator.
+- Compute weight from the actual assembly breakdown, including manufactured-part
+  contributions and COTS weights, instead of treating it as a prose estimate.
+- Keep the planner target cap as an envelope only after deterministic totals are
+  validated.
+- If a schema or script gap blocks exact weight validation, close it in this
+  migration instead of deferring it.
 
-### 7. Document the drafting-artifact physical-validation boundary
+### 7. Fix the drafting-artifact physical-validation bug
 
-- Keep the current file-level validator scope explicit: inventory grounding and
-  `TechnicalDrawing` structure checks are in scope, physical overlap is not.
-- Track the non-overlap gap separately so future geometry validation work can
-  land in the right layer instead of being inferred from drafting-file checks.
-- Make it clear that a passing drafting script does not imply a physically
-  non-intersecting assembly.
+- Make planner-authored drafting geometry fail closed on self-intersection,
+  overlap, and other invalid physical geometry.
+- Keep inventory grounding and `TechnicalDrawing` structure checks, but do not
+  let them stand in for physical validity.
+- If the current file-level validator path misses a geometry case, add it now
+  rather than documenting it as future work.
 
 ## Non-Goals
 
@@ -189,6 +197,11 @@ The safe order is:
    preflight rather than silently passing.
 5. The updated integration suite covers the exact-mention, quantity, label,
    and COTS identity failure modes for both planner families.
+6. A planner handoff fails if the written weight total does not match the
+   deterministic total from the priced assembly breakdown.
+7. Planner-authored drafting artifacts fail if their geometry self-intersects,
+   overlaps, or otherwise violates the physical-validity contract, even when
+   inventory grounding and `TechnicalDrawing` usage pass.
 
 ## Migration Checklist
 
@@ -249,23 +262,23 @@ The safe order is:
 - [ ] Align prompt-side guidance with the exactness contract.
 - [ ] Keep the handoff and role docs in sync with the implemented validator.
 
-### Cost/weight exactness boundary
+### Cost/weight exactness bug
 
-- [ ] Record the current cost-versus-weight asymmetry as an explicit contract
-  boundary in the migration notes.
-- [ ] Keep weight validation scoped to the existing planner estimate/cap
-  fields until a manufactured-part weight source is introduced.
-- [ ] Add follow-up schema work only if the repository introduces a new
-  per-part weight source for manufactured parts or a new exact-weight contract.
+- [ ] Add deterministic exact-weight validation next to the deterministic cost
+  check so planner handoffs fail if the written weight total does not match
+  the computed total.
+- [ ] Keep planner caps as ceilings only after exact weight is established.
+- [ ] Close any schema or script gap needed to compute weight from the actual
+  part breakdown instead of deferring it to a future migration.
 
-### Drafting physical-validation boundary
+### Drafting physical-validation bug
 
-- [ ] Record that the evidence and technical-drawing script validators do not
-  enforce physical non-overlap or intersection checks.
-- [ ] Keep the current validator scope limited to inventory grounding,
-  structural validity, and `TechnicalDrawing` usage.
-- [ ] Add follow-up geometry validation in the appropriate runtime layer if the
-  repository later decides drafting-file validation should prove non-overlap.
+- [ ] Make planner drafting geometry fail closed on self-intersection, overlap,
+  and other invalid geometry cases.
+- [ ] Keep inventory grounding and `TechnicalDrawing` structure checks, but do
+  not treat them as the whole geometry contract.
+- [ ] If the validator path is missing a geometry case, add it here instead of
+  marking it as follow-up.
 
 ### Drafting contract follow-up
 
@@ -278,7 +291,9 @@ The implementation should touch the smallest set of files that enforce the
 new contract:
 
 - `controller/agent/node_entry_validation.py`
+- `skills/manufacturing-knowledge/scripts/validate_and_price.py`
 - `worker_heavy/utils/file_validation.py`
+- `worker_heavy/utils/validation.py`
 - `worker_heavy/utils/handover.py`
 - `shared/utils/agent/__init__.py`
 - `scripts/validate_eval_seed.py`

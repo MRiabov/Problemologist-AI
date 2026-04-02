@@ -307,7 +307,7 @@ Notably, if the plan is higher than the max_unit_cost, it can't proceed and need
 
 At this point, the planner can handoff the documents to the Engineering Coder. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `assembly_definition.yaml` and compute assembly totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
 
-The Engineering Planner also self-validates that `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` preserve the same labels, repeated quantities, and COTS identities as `assembly_definition.yaml` before `submit_plan()`.
+The Engineering Planner also self-validates that `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` preserve the same labels, repeated quantities, and COTS identities as `assembly_definition.yaml`, and that `solution_plan_evidence_script.py` passes the 3D self-intersection and overlap gate before `submit_plan()`.
 The Engineering Planner also ensures every planner-declared inventory label and selected COTS `part_id` appears at least once in `plan.md` as an exact identifier mention; backticks are preferred for the first mention.
 
 ### Unified implementation ownership
