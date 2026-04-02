@@ -6325,6 +6325,7 @@
         "properties": {
           "script_path": {
             "type": "string",
+            "format": "path",
             "title": "Script Path",
             "default": "script.py"
           },

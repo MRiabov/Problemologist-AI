@@ -1606,7 +1606,7 @@ async def test_int_188_validation_preview_keeps_historical_bundles_in_render_ind
             }
             assert len(bundle_ids) >= 2, preview_entries
             assert all(
-                entry["manifest_path"].endswith("render_manifest.json")
+                Path(entry["manifest_path"]) == Path("renders/render_manifest.json")
                 for entry in preview_entries
             )
 

@@ -1,5 +1,6 @@
 import os
 import uuid
+from pathlib import Path
 
 import boto3
 import pytest
@@ -129,13 +130,12 @@ Approved.
 def _assert_manifest_contains(
     manifest: DatasetRowArchiveManifest, required_paths: list[str]
 ) -> None:
-    artifact_paths = [ref.path for ref in manifest.artifact_references]
+    artifact_paths = [Path(ref.path) for ref in manifest.artifact_references]
     assert len(artifact_paths) == len(set(artifact_paths)), artifact_paths
     for required_path in required_paths:
-        assert any(
-            path == required_path or path.endswith(required_path)
-            for path in artifact_paths
-        ), f"Missing {required_path}. Paths: {artifact_paths}"
+        assert any(path == Path(required_path) for path in artifact_paths), (
+            f"Missing {required_path}. Paths: {artifact_paths}"
+        )
 
 
 @pytest.mark.integration_p1
@@ -193,7 +193,7 @@ async def test_dataset_export_benchmark_row_round_trip():
             ],
         )
         assert any(
-            ref.path.startswith("renders/") and ref.path.endswith(".png")
+            Path(ref.path).parent.name == "renders" and Path(ref.path).suffix == ".png"
             for ref in manifest.artifact_references
         ), [ref.path for ref in manifest.artifact_references]
         assert any(
@@ -292,15 +292,15 @@ async def test_dataset_export_solution_row_round_trip():
             ],
         )
         assert any(
-            ref.path.endswith("validation_results.json")
+            Path(ref.path) == Path("validation_results.json")
             for ref in manifest.artifact_references
         )
         assert any(
-            ref.path.endswith("simulation_result.json")
+            Path(ref.path) == Path("simulation_result.json")
             for ref in manifest.artifact_references
         )
         assert any(
-            ref.path.endswith("renders/render_manifest.json")
+            Path(ref.path) == Path("renders/render_manifest.json")
             for ref in manifest.artifact_references
         )
         assert any(

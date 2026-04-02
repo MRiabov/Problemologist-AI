@@ -1,5 +1,6 @@
 import hashlib
 import uuid
+from pathlib import Path
 
 import pytest
 import yaml
@@ -37,6 +38,10 @@ from tests.integration.agent.helpers import (
 CONTROLLER_URL = "http://127.0.0.1:18000"
 
 pytestmark = pytest.mark.xdist_group(name="physics_sims")
+
+
+def _asset_path(asset_path: str | Path) -> Path:
+    return Path(str(asset_path).lstrip("/"))
 
 
 async def _wait_for_planned_or_failed_episode(
@@ -129,7 +134,7 @@ async def test_benchmark_planner_cad_reviewer_path():
             f"Failed to fetch episode assets: {episode_resp.text}"
         )
         episode_data = EpisodeResponse.model_validate(episode_resp.json())
-        artifact_paths = [a.s3_path for a in (episode_data.assets or [])]
+        artifact_paths = [_asset_path(a.s3_path) for a in (episode_data.assets or [])]
         traces = episode_data.traces or []
         submit_plan_traces = [
             t
@@ -142,17 +147,17 @@ async def test_benchmark_planner_cad_reviewer_path():
             if t.trace_type.value == "TOOL_START" and t.name == "inspect_media"
         ]
 
-        assert any(p.endswith("plan.md") for p in artifact_paths), (
+        assert Path("plan.md") in artifact_paths, (
             f"plan.md missing. Artifacts: {artifact_paths}"
         )
-        assert any(p.endswith("benchmark_definition.yaml") for p in artifact_paths), (
+        assert Path("benchmark_definition.yaml") in artifact_paths, (
             f"benchmark_definition.yaml missing. Artifacts: {artifact_paths}"
         )
-        assert any(p.endswith("benchmark_script.py") for p in artifact_paths), (
+        assert Path("benchmark_script.py") in artifact_paths, (
             f"benchmark_script.py missing. Artifacts: {artifact_paths}"
         )
         benchmark_definition_paths = [
-            p for p in artifact_paths if p.endswith("benchmark_definition.yaml")
+            p for p in artifact_paths if p == Path("benchmark_definition.yaml")
         ]
         benchmark_definition_resp = await client.get(
             f"/episodes/{session_id}/assets/{benchmark_definition_paths[0]}"
@@ -197,16 +202,14 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert benchmark_definition.randomization.runtime_jitter_enabled is True
         assert "randomization:" in benchmark_definition_resp.text
         assert "runtime_jitter:" in benchmark_definition_resp.text
-        plan_paths = [p for p in artifact_paths if p.endswith("plan.md")]
+        plan_paths = [p for p in artifact_paths if p == Path("plan.md")]
         plan_resp = await client.get(f"/episodes/{session_id}/assets/{plan_paths[0]}")
         assert plan_resp.status_code == 200, plan_resp.text
-        assert any(
-            p.endswith("benchmark_assembly_definition.yaml") for p in artifact_paths
-        ), f"benchmark_assembly_definition.yaml missing. Artifacts: {artifact_paths}"
+        assert Path("benchmark_assembly_definition.yaml") in artifact_paths, (
+            f"benchmark_assembly_definition.yaml missing. Artifacts: {artifact_paths}"
+        )
         assembly_paths = [
-            p
-            for p in artifact_paths
-            if p.endswith("benchmark_assembly_definition.yaml")
+            p for p in artifact_paths if p == Path("benchmark_assembly_definition.yaml")
         ]
         assembly_resp = await client.get(
             f"/episodes/{session_id}/assets/{assembly_paths[0]}"
@@ -230,51 +233,47 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert any(t.name == "llm_media_attached" for t in traces), (
             "llm_media_attached event missing from benchmark reviewer run."
         )
-        assert any(p.endswith("validation_results.json") for p in artifact_paths), (
+        assert Path("validation_results.json") in artifact_paths, (
             f"validation_results.json missing. Artifacts: {artifact_paths}"
         )
-        assert any(p.endswith("simulation_result.json") for p in artifact_paths), (
+        assert Path("simulation_result.json") in artifact_paths, (
             f"simulation_result.json missing. Artifacts: {artifact_paths}"
         )
         manifest_paths = [
             p
             for p in artifact_paths
-            if p.endswith("benchmark_plan_review_manifest.json")
+            if p == Path(".manifests/benchmark_plan_review_manifest.json")
         ]
         assert manifest_paths, (
             f"benchmark_plan_review_manifest.json missing. Artifacts: {artifact_paths}"
         )
-        assert any(
-            p.endswith("benchmark-plan-review-decision-round-1.yaml")
-            for p in artifact_paths
-        ), (
+        assert Path("benchmark-plan-review-decision-round-1.yaml") in artifact_paths, (
             "benchmark plan review decision file missing from artifacts. "
             f"Artifacts: {artifact_paths}"
         )
-        assert any(
-            p.endswith("benchmark-plan-review-comments-round-1.yaml")
-            for p in artifact_paths
-        ), (
+        assert Path("benchmark-plan-review-comments-round-1.yaml") in artifact_paths, (
             "benchmark plan review comments file missing from artifacts. "
             f"Artifacts: {artifact_paths}"
         )
         manifest_paths = [
-            p for p in artifact_paths if p.endswith("benchmark_review_manifest.json")
+            p
+            for p in artifact_paths
+            if p == Path(".manifests/benchmark_review_manifest.json")
         ]
         assert manifest_paths, (
             f"benchmark_review_manifest.json missing. Artifacts: {artifact_paths}"
         )
         assert not any(
-            p.endswith("engineering_execution_review_manifest.json")
+            p == Path(".manifests/engineering_execution_review_manifest.json")
             for p in artifact_paths
         ), (
             "Benchmark workflow must not emit "
             "'engineering_execution_review_manifest.json'. "
             f"Artifacts: {artifact_paths}"
         )
-        assert any(
-            "/.manifests/" in p or p.startswith(".manifests/") for p in manifest_paths
-        ), f"review manifest must be in .manifests/. Found: {manifest_paths}"
+        assert any(p.parent.name == ".manifests" for p in manifest_paths), (
+            f"review manifest must be in .manifests/. Found: {manifest_paths}"
+        )
         manifest_resp = await client.get(
             f"/episodes/{session_id}/assets/{manifest_paths[0]}"
         )
@@ -296,9 +295,7 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert set(manifest.preview_evidence_paths) == set(manifest.renders)
 
         benchmark_assembly_definition_path = next(
-            p
-            for p in artifact_paths
-            if p.endswith("benchmark_assembly_definition.yaml")
+            p for p in artifact_paths if p == Path("benchmark_assembly_definition.yaml")
         )
         benchmark_assembly_definition_resp = await client.get(
             f"/episodes/{session_id}/assets/{benchmark_assembly_definition_path}"
@@ -355,19 +352,18 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
                         for trace in (candidate.traces or [])
                     )
                     and any(
-                        asset.s3_path.endswith(
-                            "benchmark-plan-review-decision-round-1.yaml"
-                        )
+                        _asset_path(asset.s3_path)
+                        == Path("benchmark-plan-review-decision-round-1.yaml")
                         for asset in (candidate.assets or [])
                     )
                     and any(
-                        asset.s3_path.endswith(
-                            "benchmark-plan-review-comments-round-1.yaml"
-                        )
+                        _asset_path(asset.s3_path)
+                        == Path("benchmark-plan-review-comments-round-1.yaml")
                         for asset in (candidate.assets or [])
                     )
                     and any(
-                        asset.s3_path.endswith("benchmark_plan_review_manifest.json")
+                        _asset_path(asset.s3_path)
+                        == Path(".manifests/benchmark_plan_review_manifest.json")
                         for asset in (candidate.assets or [])
                     )
                 ),
@@ -383,21 +379,23 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
             and "UNSOLVABLE_SCENARIO" in (trace.content or "")
         ]
         rejected_review_trace = max(rejected_traces, key=lambda trace: trace.id)
-        artifact_paths = [asset.s3_path for asset in (latest_episode.assets or [])]
+        artifact_paths = [
+            _asset_path(asset.s3_path) for asset in (latest_episode.assets or [])
+        ]
         decision_paths = [
             path
             for path in artifact_paths
-            if path.endswith("benchmark-plan-review-decision-round-1.yaml")
+            if path == Path("benchmark-plan-review-decision-round-1.yaml")
         ]
         comments_paths = [
             path
             for path in artifact_paths
-            if path.endswith("benchmark-plan-review-comments-round-1.yaml")
+            if path == Path("benchmark-plan-review-comments-round-1.yaml")
         ]
         manifest_paths = [
             path
             for path in artifact_paths
-            if path.endswith("benchmark_plan_review_manifest.json")
+            if path == Path(".manifests/benchmark_plan_review_manifest.json")
         ]
 
         assert rejected_review_trace is not None, (
@@ -409,7 +407,9 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
             for trace in traces
         ), "Benchmark coder must not start after unsolvable benchmark rejection."
 
-        artifact_paths = [asset.s3_path for asset in (latest_episode.assets or [])]
+        artifact_paths = [
+            _asset_path(asset.s3_path) for asset in (latest_episode.assets or [])
+        ]
         assert decision_paths, f"Decision artifact missing. Artifacts: {artifact_paths}"
         assert comments_paths, f"Comments artifact missing. Artifacts: {artifact_paths}"
         assert manifest_paths, f"Manifest artifact missing. Artifacts: {artifact_paths}"
@@ -427,7 +427,7 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
         plan_review_manifest_paths = [
             path
             for path in artifact_paths
-            if path.endswith("benchmark_plan_review_manifest.json")
+            if path == Path(".manifests/benchmark_plan_review_manifest.json")
         ]
         assert plan_review_manifest_paths, (
             f"benchmark_plan_review_manifest.json missing. Artifacts: {artifact_paths}"
@@ -450,7 +450,7 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
         assert comments["checklist"]["review_manifest_revision"], comments
 
         render_manifest_paths = [
-            p for p in artifact_paths if p.endswith("renders/render_manifest.json")
+            p for p in artifact_paths if p == Path("renders/render_manifest.json")
         ]
         assert render_manifest_paths, (
             f"renders/render_manifest.json missing. Artifacts: {artifact_paths}"

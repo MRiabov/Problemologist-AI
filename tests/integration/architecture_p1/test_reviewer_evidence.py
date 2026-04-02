@@ -35,6 +35,10 @@ CONTROLLER_URL = "http://127.0.0.1:18000"
 pytestmark = pytest.mark.xdist_group(name="physics_sims")
 
 
+def _asset_path(asset_path: str | Path) -> Path:
+    return Path(str(asset_path).lstrip("/"))
+
+
 def _has_review_artifacts(
     episode: EpisodeResponse, *, required_checklist_pairs: tuple[tuple[str, str], ...]
 ) -> bool:
@@ -80,21 +84,21 @@ def _benchmark_plan_review_artifacts_ready(episode: EpisodeResponse) -> bool:
         and trace.metadata_vars.decision == ReviewDecision.REJECT_PLAN
         and "UNSOLVABLE_SCENARIO" in (trace.content or "")
     ]
-    artifact_paths = [asset.s3_path for asset in (episode.assets or [])]
+    artifact_paths = [_asset_path(asset.s3_path) for asset in (episode.assets or [])]
     decision_paths = [
         path
         for path in artifact_paths
-        if path.endswith("benchmark-plan-review-decision-round-1.yaml")
+        if path == Path("benchmark-plan-review-decision-round-1.yaml")
     ]
     comments_paths = [
         path
         for path in artifact_paths
-        if path.endswith("benchmark-plan-review-comments-round-1.yaml")
+        if path == Path("benchmark-plan-review-comments-round-1.yaml")
     ]
     manifest_paths = [
         path
         for path in artifact_paths
-        if path.endswith("benchmark_plan_review_manifest.json")
+        if path == Path(".manifests/benchmark_plan_review_manifest.json")
     ]
     return bool(
         rejected_traces and decision_paths and comments_paths and manifest_paths
@@ -218,26 +222,27 @@ async def test_reviewer_evidence_completeness():
         ep_resp = await client.get(f"/episodes/{episode_id}")
         assert ep_resp.status_code == 200, ep_resp.text
         ep_data = EpisodeResponse.model_validate(ep_resp.json())
-        artifact_paths = [a.s3_path for a in (ep_data.assets or [])]
+        artifact_paths = [_asset_path(a.s3_path) for a in (ep_data.assets or [])]
         traces = ep_data.traces or []
 
-        manifest_paths = [p for p in artifact_paths if p.endswith("manifest.json")]
+        manifest_paths = [p for p in artifact_paths if p.suffix == ".json"]
         assert manifest_paths, (
             f"No review manifest artifacts found. Artifacts: {artifact_paths}"
         )
         assert any(
-            p.endswith("benchmark_plan_review_manifest.json") for p in manifest_paths
+            p == Path(".manifests/benchmark_plan_review_manifest.json")
+            for p in manifest_paths
         ), (
             "benchmark_plan_review_manifest.json missing from artifacts. "
             f"Found: {manifest_paths}"
         )
-        assert any(
-            "/.manifests/" in p or p.startswith(".manifests/") for p in manifest_paths
-        ), f"Review manifest must be in .manifests/. Found: {manifest_paths}"
-        assert any(
-            p.endswith("renders/render_manifest.json") for p in artifact_paths
-        ), f"render_manifest.json missing. Artifacts: {artifact_paths}"
-        assert any(p.endswith("solution_script.py") for p in artifact_paths), (
+        assert any(p.parent.name == ".manifests" for p in manifest_paths), (
+            f"Review manifest must be in .manifests/. Found: {manifest_paths}"
+        )
+        assert any(p == Path("renders/render_manifest.json") for p in artifact_paths), (
+            f"render_manifest.json missing. Artifacts: {artifact_paths}"
+        )
+        assert Path("solution_script.py") in artifact_paths, (
             f"solution_script.py missing. Artifacts: {artifact_paths}"
         )
         solution_script_text = await _read_episode_asset_text(
@@ -918,21 +923,23 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
             and "UNSOLVABLE_SCENARIO" in (trace.content or "")
         ]
         rejected_review_trace = max(rejected_traces, key=lambda trace: trace.id)
-        artifact_paths = [asset.s3_path for asset in (latest_episode.assets or [])]
+        artifact_paths = [
+            _asset_path(asset.s3_path) for asset in (latest_episode.assets or [])
+        ]
         decision_paths = [
             path
             for path in artifact_paths
-            if path.endswith("benchmark-plan-review-decision-round-1.yaml")
+            if path == Path("benchmark-plan-review-decision-round-1.yaml")
         ]
         comments_paths = [
             path
             for path in artifact_paths
-            if path.endswith("benchmark-plan-review-comments-round-1.yaml")
+            if path == Path("benchmark-plan-review-comments-round-1.yaml")
         ]
         manifest_paths = [
             path
             for path in artifact_paths
-            if path.endswith("benchmark_plan_review_manifest.json")
+            if path == Path(".manifests/benchmark_plan_review_manifest.json")
         ]
 
         assert latest_episode is not None
@@ -945,10 +952,10 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
             "render bundle before making a decision."
         )
         render_image_paths = {
-            path.lstrip("/")
+            path
             for path in artifact_paths
-            if path.startswith("renders/")
-            and path.lower().endswith((".png", ".jpg", ".jpeg"))
+            if path.parent.name == "renders"
+            and path.suffix.lower() in {".png", ".jpg", ".jpeg"}
         }
         media_event_contents = [
             trace.content or "" for trace in traces if trace.name == "media_inspection"
@@ -1036,7 +1043,7 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
         render_manifest_path = next(
             path
             for path in artifact_paths
-            if path.endswith("renders/render_manifest.json")
+            if path == Path("renders/render_manifest.json")
         )
         render_manifest_resp = await client.get(
             f"/episodes/{session_id}/assets/{render_manifest_path}"
@@ -1107,7 +1114,8 @@ async def test_reviewer_approval_requires_media_inspection():
         assert ep_data is not None
         artifact_paths = [a.s3_path for a in (ep_data.assets or [])]
         assert any(
-            path.endswith(".png") and "renders/" in path for path in artifact_paths
+            path.parent.name == "renders" and path.suffix == ".png"
+            for path in artifact_paths
         ), f"Expected reviewer-visible render artifact. Artifacts: {artifact_paths}"
 
         assert rejected_review_trace is not None, (

@@ -34,6 +34,10 @@ def _enum_value(value):
     return value.value if hasattr(value, "value") else value
 
 
+def _asset_path(asset_path: str | Path) -> Path:
+    return Path(str(asset_path).lstrip("/"))
+
+
 def _write_workspace_file(
     client: httpx.Client,
     *,
@@ -283,17 +287,19 @@ def test_int_189_engineer_run_defaults_to_solution_evidence(page: Page):
     else:
         assert metadata.failure_class is None
 
-    artifact_paths = [asset.s3_path for asset in (episode.assets or [])]
+    artifact_paths = [_asset_path(asset.s3_path) for asset in (episode.assets or [])]
     model_assets = [
-        asset for asset in (episode.assets or []) if asset.s3_path.endswith(".glb")
+        asset
+        for asset in (episode.assets or [])
+        if _asset_path(asset.s3_path).suffix == ".glb"
     ]
-    assert any(path.endswith("simulation_result.json") for path in artifact_paths), (
+    assert Path("simulation_result.json") in artifact_paths, (
         f"simulation_result.json missing. Artifacts: {artifact_paths}"
     )
-    assert any(path.endswith("validation_results.json") for path in artifact_paths), (
+    assert Path("validation_results.json") in artifact_paths, (
         f"validation_results.json missing. Artifacts: {artifact_paths}"
     )
-    assert any(path.endswith("current_simulation.mp4") for path in artifact_paths), (
+    assert Path("current_simulation.mp4") in artifact_paths, (
         f"current_simulation.mp4 missing. Artifacts: {artifact_paths}"
     )
 
@@ -364,7 +370,7 @@ def test_int_189_engineer_run_defaults_to_solution_evidence(page: Page):
     assert terminal_reason, "Expected terminal reason to be visible in workspace."
     assert viewport_state["modelUrlsCount"] == 1, viewport_state
     assert viewport_state["modelAssetPath"] == model_assets[0].s3_path, viewport_state
-    assert viewport_state["videoAssetPath"].endswith("current_simulation.mp4"), (
+    assert Path(viewport_state["videoAssetPath"]) == Path("current_simulation.mp4"), (
         viewport_state
     )
 
@@ -376,7 +382,7 @@ def test_int_189_engineer_run_defaults_to_solution_evidence(page: Page):
         == "simulation_result.json"
     )
     assert artifact_state["activeArtifactName"] == "simulation_result.json"
-    assert artifact_state["activeArtifactPath"].endswith("simulation_result.json")
+    assert Path(artifact_state["activeArtifactPath"]) == Path("simulation_result.json")
     assert len(model_assets) >= 2, (
         f"Expected multiple GLB assets to prove latest-media binding, got: "
         f"{[asset.s3_path for asset in (episode.assets or [])]}"
@@ -388,9 +394,9 @@ def test_int_189_engineer_run_defaults_to_solution_evidence(page: Page):
         artifact_state["latestMediaBundle"]["model"]["name"]
         == Path(model_assets[0].s3_path).name
     )
-    assert artifact_state["latestMediaBundle"]["solutionEvidence"]["path"].endswith(
-        "simulation_result.json"
-    )
+    assert Path(
+        artifact_state["latestMediaBundle"]["solutionEvidence"]["path"]
+    ) == Path("simulation_result.json")
     assert artifact_state["traceEpisodeId"] == viewport_state["mediaEpisodeId"], (
         artifact_state
     )
@@ -437,7 +443,7 @@ def test_int_189_engineer_run_defaults_to_solution_evidence(page: Page):
     image_asset = next(
         asset
         for asset in (episode.assets or [])
-        if asset.s3_path.endswith("render_preview.png")
+        if Path(asset.s3_path) == Path("renders/render_preview.png")
     )
     page.get_by_test_id(f"artifact-entry-{image_asset.id}").click()
     expect(page.get_by_test_id("artifact-media-view")).to_be_visible()

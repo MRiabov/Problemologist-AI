@@ -1487,13 +1487,13 @@ def test_script_tool_request_normalizes_drafting_script_path_by_graph():
         drafting=True,
     )
 
-    assert engineer_request.script_path == "solution_script.py"
+    assert engineer_request.script_path == Path("solution_script.py")
     assert drafting_engineer_request.script_path == (
-        "solution_plan_technical_drawing_script.py"
+        Path("solution_plan_technical_drawing_script.py")
     )
-    assert benchmark_request.script_path == "benchmark_script.py"
+    assert benchmark_request.script_path == Path("benchmark_script.py")
     assert drafting_benchmark_request.script_path == (
-        "benchmark_plan_technical_drawing_script.py"
+        Path("benchmark_plan_technical_drawing_script.py")
     )
 
 

@@ -1,4 +1,5 @@
 import hashlib
+from pathlib import Path
 
 import pytest
 import yaml
@@ -23,6 +24,10 @@ from tests.integration.agent.helpers import repo_git_revision, wait_for_benchmar
 CONTROLLER_URL = "http://127.0.0.1:18000"
 
 pytestmark = pytest.mark.xdist_group(name="physics_sims")
+
+
+def _asset_path(asset_path: str | Path) -> Path:
+    return Path(str(asset_path).lstrip("/"))
 
 
 @pytest.mark.integration_p1
@@ -95,10 +100,10 @@ async def test_benchmark_to_engineer_handoff():
             f"Failed to fetch episode assets: {episode_resp.text}"
         )
         episode_data = EpisodeResponse.model_validate(episode_resp.json())
-        artifact_paths = [a.s3_path for a in (episode_data.assets or [])]
+        artifact_paths = [_asset_path(a.s3_path) for a in (episode_data.assets or [])]
 
         # Check existence of required files
-        assert any("benchmark_definition.yaml" in p for p in artifact_paths), (
+        assert Path("benchmark_definition.yaml") in artifact_paths, (
             f"benchmark_definition.yaml missing. Artifacts: {artifact_paths}"
         )
 
@@ -107,38 +112,41 @@ async def test_benchmark_to_engineer_handoff():
         render_files = [
             p
             for p in artifact_paths
-            if "renders/" in p and (".png" in p or ".jpg" in p)
+            if p.parent.name == "renders"
+            and p.suffix.lower() in {".png", ".jpg", ".jpeg"}
         ]
         assert len(render_files) > 0, f"No renders found. Artifacts: {artifact_paths}"
         render_manifest_paths = [
-            p for p in artifact_paths if p.endswith("renders/render_manifest.json")
+            p for p in artifact_paths if p == Path("renders/render_manifest.json")
         ]
         assert render_manifest_paths, (
             f"renders/render_manifest.json missing. Artifacts: {artifact_paths}"
         )
-        assert any("validation_results.json" in p for p in artifact_paths), (
+        assert Path("validation_results.json") in artifact_paths, (
             f"validation_results.json missing. Artifacts: {artifact_paths}"
         )
-        assert any("simulation_result.json" in p for p in artifact_paths), (
+        assert Path("simulation_result.json") in artifact_paths, (
             f"simulation_result.json missing. Artifacts: {artifact_paths}"
         )
         manifest_paths = [
             p
             for p in artifact_paths
-            if p.endswith("benchmark_plan_review_manifest.json")
+            if p == Path(".manifests/benchmark_plan_review_manifest.json")
         ]
         assert manifest_paths, (
             f"benchmark_plan_review_manifest.json missing. Artifacts: {artifact_paths}"
         )
         manifest_paths = [
-            p for p in artifact_paths if p.endswith("benchmark_review_manifest.json")
+            p
+            for p in artifact_paths
+            if p == Path(".manifests/benchmark_review_manifest.json")
         ]
         assert manifest_paths, (
             f"benchmark_review_manifest.json missing. Artifacts: {artifact_paths}"
         )
-        assert any(
-            "/.manifests/" in p or p.startswith(".manifests/") for p in manifest_paths
-        ), f"review manifest must be in .manifests/. Found: {manifest_paths}"
+        assert any(p.parent.name == ".manifests" for p in manifest_paths), (
+            f"review manifest must be in .manifests/. Found: {manifest_paths}"
+        )
         manifest_resp = await client.get(
             f"/episodes/{session_id}/assets/{manifest_paths[0]}"
         )
@@ -157,9 +165,7 @@ async def test_benchmark_to_engineer_handoff():
         assert manifest.simulation_success is True
         assert manifest.goal_reached is True
         benchmark_assembly_definition_path = next(
-            p
-            for p in artifact_paths
-            if p.endswith("benchmark_assembly_definition.yaml")
+            p for p in artifact_paths if p == Path("benchmark_assembly_definition.yaml")
         )
         benchmark_assembly_definition_resp = await client.get(
             f"/episodes/{session_id}/assets/{benchmark_assembly_definition_path}"
@@ -172,17 +178,19 @@ async def test_benchmark_to_engineer_handoff():
         )
         assert manifest.environment_version == benchmark_assembly_definition["version"]
         assert manifest.preview_evidence_paths
-        assert set(manifest.preview_evidence_paths) == set(manifest.renders)
+        assert {_asset_path(path) for path in manifest.preview_evidence_paths} == {
+            _asset_path(path) for path in manifest.renders
+        }
 
         plan_review_decision_paths = [
             p
             for p in artifact_paths
-            if p.endswith("benchmark-plan-review-decision-round-1.yaml")
+            if p == Path("benchmark-plan-review-decision-round-1.yaml")
         ]
         plan_review_comments_paths = [
             p
             for p in artifact_paths
-            if p.endswith("benchmark-plan-review-comments-round-1.yaml")
+            if p == Path("benchmark-plan-review-comments-round-1.yaml")
         ]
         assert plan_review_decision_paths, (
             f"benchmark-plan-review-decision-round-1.yaml missing. "

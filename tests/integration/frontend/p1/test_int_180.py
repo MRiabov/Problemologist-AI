@@ -436,7 +436,7 @@ def test_int_180_peer_review_card_surfaces_stability_and_review_actions(page: Pa
     simulation_asset = next(
         asset
         for asset in episode.assets or []
-        if asset.s3_path.endswith("simulation_result.json")
+        if Path(asset.s3_path) == Path("simulation_result.json")
     )
     page.get_by_test_id(f"artifact-entry-{simulation_asset.id}").click()
     expect(page.get_by_test_id("artifact-active-file")).to_have_attribute(
@@ -454,7 +454,7 @@ def test_int_180_peer_review_card_surfaces_stability_and_review_actions(page: Pa
     cad_asset = next(
         asset
         for asset in episode.assets or []
-        if asset.s3_path.endswith("cad_preview.png")
+        if Path(asset.s3_path) == Path("renders/cad_preview.png")
     )
     page.get_by_test_id(f"artifact-entry-{cad_asset.id}").click()
     expect(page.get_by_test_id("artifact-media-view")).to_be_visible(timeout=30000)
@@ -465,7 +465,7 @@ def test_int_180_peer_review_card_surfaces_stability_and_review_actions(page: Pa
     simulation_preview_asset = next(
         asset
         for asset in episode.assets or []
-        if asset.s3_path.endswith("simulation_preview.png")
+        if Path(asset.s3_path) == Path("renders/simulation_preview.png")
     )
     page.get_by_test_id(f"artifact-entry-{simulation_preview_asset.id}").click()
     expect(page.get_by_test_id("artifact-media-view")).to_be_visible(timeout=30000)

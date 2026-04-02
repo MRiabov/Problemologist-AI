@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from shared.enums import AgentName
 
 BENCHMARK_SCRIPT_PATH = "benchmark_script.py"
@@ -26,7 +28,11 @@ def _normalize_agent_name(agent_name: AgentName | str | None) -> AgentName | Non
         return None
 
 
-def authored_script_path_for_agent(agent_name: AgentName | str | None) -> str:
+def _as_path(script_path: str) -> Path:
+    return Path(script_path)
+
+
+def authored_script_path_for_agent(agent_name: AgentName | str | None) -> Path:
     normalized = _normalize_agent_name(agent_name)
     if normalized in {
         AgentName.BENCHMARK_PLANNER,
@@ -34,7 +40,7 @@ def authored_script_path_for_agent(agent_name: AgentName | str | None) -> str:
         AgentName.BENCHMARK_CODER,
         AgentName.BENCHMARK_REVIEWER,
     }:
-        return BENCHMARK_SCRIPT_PATH
+        return _as_path(BENCHMARK_SCRIPT_PATH)
     if normalized in {
         AgentName.ENGINEER_CODER,
         AgentName.ENGINEER_EXECUTION_REVIEWER,
@@ -43,13 +49,13 @@ def authored_script_path_for_agent(agent_name: AgentName | str | None) -> str:
         AgentName.ENGINEER_PLAN_REVIEWER,
         AgentName.ELECTRONICS_PLANNER,
     }:
-        return SOLUTION_SCRIPT_PATH
-    return LEGACY_SCRIPT_PATH
+        return _as_path(SOLUTION_SCRIPT_PATH)
+    return _as_path(LEGACY_SCRIPT_PATH)
 
 
 def technical_drawing_script_path_for_agent(
     agent_name: AgentName | str | None,
-) -> str:
+) -> Path:
     normalized = _normalize_agent_name(agent_name)
     if normalized in {
         AgentName.BENCHMARK_PLANNER,
@@ -57,7 +63,7 @@ def technical_drawing_script_path_for_agent(
         AgentName.BENCHMARK_CODER,
         AgentName.BENCHMARK_REVIEWER,
     }:
-        return BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH
+        return _as_path(BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH)
     if normalized in {
         AgentName.ENGINEER_PLANNER,
         AgentName.ENGINEER_PLAN_REVIEWER,
@@ -66,14 +72,14 @@ def technical_drawing_script_path_for_agent(
         AgentName.ELECTRONICS_PLANNER,
         AgentName.ELECTRONICS_REVIEWER,
     }:
-        return SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH
+        return _as_path(SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH)
     return authored_script_path_for_agent(agent_name)
 
 
-def authored_script_path_for_reviewer_stage(reviewer_stage: str | None) -> str:
+def authored_script_path_for_reviewer_stage(reviewer_stage: str | None) -> Path:
     stage = (reviewer_stage or "").strip()
     if stage == "benchmark_reviewer":
-        return BENCHMARK_SCRIPT_PATH
+        return _as_path(BENCHMARK_SCRIPT_PATH)
     if stage in {"engineering_execution_reviewer", "electronics_reviewer"}:
-        return SOLUTION_SCRIPT_PATH
-    return LEGACY_SCRIPT_PATH
+        return _as_path(SOLUTION_SCRIPT_PATH)
+    return _as_path(LEGACY_SCRIPT_PATH)

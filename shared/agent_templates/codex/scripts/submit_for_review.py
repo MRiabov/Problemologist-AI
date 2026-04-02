@@ -32,12 +32,12 @@ def _coder_agent(workspace: Path) -> AgentName | None:
     return None
 
 
-def _script_path_for_agent(agent_name: AgentName) -> str:
+def _script_path_for_agent(agent_name: AgentName) -> Path:
     return authored_script_path_for_agent(agent_name)
 
 
-def _load_solution(script_path: str) -> Compound:
-    module = import_module(Path(script_path).stem)
+def _load_solution(script_path: Path) -> Compound:
+    module = import_module(script_path.stem)
     solution = getattr(module, "build", None)
     if not callable(solution):
         raise ValueError(f"{script_path} must define build()")

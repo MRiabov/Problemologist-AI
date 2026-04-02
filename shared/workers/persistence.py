@@ -39,13 +39,14 @@ def record_validation_result(
     session_root: Path,
     is_valid: bool,
     message: str | None,
-    script_path: str = "script.py",
+    script_path: str | Path = "script.py",
     session_id: str | None = None,
     verification_result: MultiRunResult | None = None,
 ) -> None:
     """Record validation results to satisfy the handover gate."""
     results_path = session_root / "validation_results.json"
-    resolved_script = session_root / script_path
+    script_path_text = str(script_path)
+    resolved_script = session_root / script_path_text
     script_hash: str | None = None
     if resolved_script.exists():
         try:
@@ -57,7 +58,7 @@ def record_validation_result(
             success=is_valid,
             message=message,
             timestamp=time.time(),
-            script_path=script_path,
+            script_path=script_path_text,
             script_sha256=script_hash,
             verification_result=verification_result,
         )

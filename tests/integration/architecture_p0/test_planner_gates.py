@@ -57,6 +57,10 @@ REPO_MANUFACTURING_CONFIG = Path(
 pytestmark = pytest.mark.xdist_group(name="physics_sims")
 
 
+def _asset_path(asset_path: str | Path) -> Path:
+    return Path(str(asset_path).lstrip("/"))
+
+
 def _default_benchmark_parts():
     return [
         {
@@ -304,6 +308,7 @@ async def _wait_for_planned_after_submit_plan_benchmark(
 async def _wait_for_benchmark_asset(
     client: httpx.AsyncClient, session_id: str, suffix: str
 ) -> list[str]:
+    suffix_path = Path(suffix)
     episode = EpisodeResponse.model_validate(
         await wait_for_benchmark_state(
             client,
@@ -311,14 +316,15 @@ async def _wait_for_benchmark_asset(
             timeout_s=90.0,
             terminal_statuses={EpisodeStatus.FAILED},
             predicate=lambda candidate: any(
-                asset.s3_path.endswith(suffix) for asset in (candidate.assets or [])
+                _asset_path(asset.s3_path).name == suffix_path.name
+                for asset in (candidate.assets or [])
             ),
         )
     )
     return [
-        asset.s3_path
+        str(_asset_path(asset.s3_path))
         for asset in (episode.assets or [])
-        if asset.s3_path.endswith(suffix)
+        if _asset_path(asset.s3_path).name == suffix_path.name
     ]
 
 
@@ -625,9 +631,9 @@ async def test_int_114_benchmark_planner_flow_emits_submit_plan_trace():
         episode_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
         assert episode_resp.status_code == 200, episode_resp.text
         episode_data = EpisodeResponse.model_validate(episode_resp.json())
-        artifact_paths = [a.s3_path for a in (episode_data.assets or [])]
+        artifact_paths = [_asset_path(a.s3_path) for a in (episode_data.assets or [])]
 
-        plan_paths = [p for p in artifact_paths if p.endswith("plan.md")]
+        plan_paths = [p for p in artifact_paths if p == Path("plan.md")]
         assert plan_paths, f"plan.md missing. Artifacts: {artifact_paths}"
         plan_resp = await client.get(
             f"{CONTROLLER_URL}/episodes/{episode_id}/assets/{plan_paths[0]}"
@@ -638,7 +644,7 @@ async def test_int_114_benchmark_planner_flow_emits_submit_plan_trace():
         assert "rigid-body" in plan_text
 
         benchmark_definition_paths = [
-            p for p in artifact_paths if p.endswith("benchmark_definition.yaml")
+            p for p in artifact_paths if p == Path("benchmark_definition.yaml")
         ]
         assert benchmark_definition_paths, (
             f"benchmark_definition.yaml missing. Artifacts: {artifact_paths}"
@@ -660,9 +666,7 @@ async def test_int_114_benchmark_planner_flow_emits_submit_plan_trace():
         assert benchmark_definition.moved_object.material_id
 
         assembly_paths = [
-            p
-            for p in artifact_paths
-            if p.endswith("benchmark_assembly_definition.yaml")
+            p for p in artifact_paths if p == Path("benchmark_assembly_definition.yaml")
         ]
         assert assembly_paths, (
             f"benchmark_assembly_definition.yaml missing. Artifacts: {artifact_paths}"
@@ -716,47 +720,45 @@ async def test_int_204_benchmark_plan_reviewer_inspects_latest_revision_renders_
                 predicate=lambda candidate: (
                     candidate.status == EpisodeStatus.PLANNED
                     and any(
-                        asset.s3_path.endswith(
-                            "benchmark-plan-review-decision-round-1.yaml"
-                        )
+                        _asset_path(asset.s3_path)
+                        == Path("benchmark-plan-review-decision-round-1.yaml")
                         for asset in (candidate.assets or [])
                     )
                     and any(
-                        asset.s3_path.endswith(
-                            "benchmark-plan-review-comments-round-1.yaml"
-                        )
+                        _asset_path(asset.s3_path)
+                        == Path("benchmark-plan-review-comments-round-1.yaml")
                         for asset in (candidate.assets or [])
                     )
                 ),
             )
         )
         status = latest_episode.status
-        artifact_paths = [a.s3_path for a in (latest_episode.assets or [])]
+        artifact_paths = [_asset_path(a.s3_path) for a in (latest_episode.assets or [])]
         plan_review_decision_paths = [
             path
             for path in artifact_paths
-            if path.endswith("benchmark-plan-review-decision-round-1.yaml")
+            if path == Path("benchmark-plan-review-decision-round-1.yaml")
         ]
         plan_review_comment_paths = [
             path
             for path in artifact_paths
-            if path.endswith("benchmark-plan-review-comments-round-1.yaml")
+            if path == Path("benchmark-plan-review-comments-round-1.yaml")
         ]
         benchmark_plan_evidence_paths = [
             path
             for path in artifact_paths
-            if path.endswith("benchmark_plan_evidence_script.py")
+            if path == Path("benchmark_plan_evidence_script.py")
         ]
         benchmark_plan_drawing_paths = [
             path
             for path in artifact_paths
-            if path.endswith("benchmark_plan_technical_drawing_script.py")
+            if path == Path("benchmark_plan_technical_drawing_script.py")
         ]
         benchmark_render_paths = [
             path
             for path in artifact_paths
-            if path.startswith("renders/")
-            and Path(path).suffix in {".png", ".jpg", ".jpeg"}
+            if path.parent.name == "renders"
+            and path.suffix in {".png", ".jpg", ".jpeg"}
         ]
 
         assert status == EpisodeStatus.PLANNED, (
@@ -774,14 +776,12 @@ async def test_int_204_benchmark_plan_reviewer_inspects_latest_revision_renders_
             "Expected real render artifacts in benchmark plan reviewer bundle. "
             f"Artifacts: {artifact_paths}"
         )
-        assert any(
-            path.endswith("cad_preview.png") for path in benchmark_render_paths
-        ), (
+        assert any(path.name == "cad_preview.png" for path in benchmark_render_paths), (
             "cad_preview.png missing from benchmark render artifacts. "
             f"Artifacts: {benchmark_render_paths}"
         )
         assert any(
-            path.endswith("simulation_preview.png") for path in benchmark_render_paths
+            path.name == "simulation_preview.png" for path in benchmark_render_paths
         ), (
             "simulation_preview.png missing from benchmark render artifacts. "
             f"Artifacts: {benchmark_render_paths}"
@@ -2525,15 +2525,15 @@ def build():
         assert submit_data.artifacts is not None, submit_data
         assert submit_data.artifacts.render_paths, submit_data.artifacts
         assert all(
-            not path.endswith(".yaml") for path in submit_data.artifacts.render_paths
+            Path(path).suffix != ".yaml" for path in submit_data.artifacts.render_paths
         ), submit_data.artifacts.render_paths
         assert not any(
-            path.endswith("benchmark_definition.yaml")
-            or path.endswith("benchmark_assembly_definition.yaml")
+            Path(path).name == "benchmark_definition.yaml"
+            or Path(path).name == "benchmark_assembly_definition.yaml"
             for path in submit_data.artifacts.render_paths
         ), submit_data.artifacts.render_paths
         assert not any(
-            path.endswith("benchmark_definition.yaml")
-            or path.endswith("benchmark_assembly_definition.yaml")
+            Path(path).name == "benchmark_definition.yaml"
+            or Path(path).name == "benchmark_assembly_definition.yaml"
             for path in submit_data.artifacts.render_blobs_base64
         ), submit_data.artifacts.render_blobs_base64

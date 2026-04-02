@@ -403,13 +403,13 @@ async def test_failed_episode_replay_bundle_contract():
             == "unsupported_validation_preview"
         )
         assert replay.validation_result is not None
-        assert replay.validation_result.script_path == "script.py"
+        assert Path(replay.validation_result.script_path) == Path("script.py")
         assert replay.validation_result.script_sha256
         assert replay.simulation_result is not None
         assert replay.simulation_result.fail_mode == "OUT_OF_BOUNDS"
         assert replay.review_manifests
-        assert replay.review_manifests[0].path.endswith(
-            "engineering_execution_review_manifest.json"
+        assert Path(replay.review_manifests[0].path) == Path(
+            ".manifests/engineering_execution_review_manifest.json"
         )
         assert replay.review_manifests[0].manifest.reviewer_stage == (
             "engineering_execution_reviewer"
@@ -427,19 +427,26 @@ async def test_failed_episode_replay_bundle_contract():
         assert artifact_hashes["simulation_result.json"]
         assert artifact_hashes["script.py"]
         assert any(
-            artifact.path.endswith("engineering_execution_review_manifest.json")
+            Path(artifact.path)
+            == Path(".manifests/engineering_execution_review_manifest.json")
             for artifact in replay.replay_artifacts
         )
         assert any(
-            artifact.path.startswith("reviews/") for artifact in replay.replay_artifacts
+            Path(artifact.path).parent.name == "reviews"
+            for artifact in replay.replay_artifacts
         )
         assert replay.assets
         assert any(
-            asset.s3_path == "validation_results.json" for asset in replay.assets
+            Path(asset.s3_path) == Path("validation_results.json")
+            for asset in replay.assets
         )
-        assert any(asset.s3_path == "simulation_result.json" for asset in replay.assets)
         assert any(
-            asset.s3_path.endswith("engineering_execution_review_manifest.json")
+            Path(asset.s3_path) == Path("simulation_result.json")
+            for asset in replay.assets
+        )
+        assert any(
+            Path(asset.s3_path)
+            == Path(".manifests/engineering_execution_review_manifest.json")
             for asset in replay.assets
         )
 

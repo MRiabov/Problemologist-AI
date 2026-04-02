@@ -41,7 +41,7 @@ router = APIRouter(prefix="/script-tools", tags=["script-tools"])
 
 
 class ScriptToolRequest(BaseModel):
-    script_path: str = Field(default="script.py")
+    script_path: Path = Field(default=Path("script.py"))
     agent_role: AgentName = Field(default=AgentName.ENGINEER_CODER)
     backend: SimulatorBackendType = Field(default_factory=get_default_simulator_backend)
     smoke_test_mode: bool | None = None
@@ -73,7 +73,7 @@ class ScriptToolRequest(BaseModel):
 
     @model_validator(mode="after")
     def normalize_script_path(self) -> "ScriptToolRequest":
-        if self.script_path == "script.py":
+        if self.script_path == Path("script.py"):
             if self.drafting:
                 self.script_path = technical_drawing_script_path_for_agent(
                     self.agent_role
