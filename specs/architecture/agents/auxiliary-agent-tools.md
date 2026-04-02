@@ -10,6 +10,8 @@
 ## Contract boundary
 
 - Auxiliary helpers do not invent new agent abilities. They expose narrower or more specialized ways to reach existing runtime behavior.
+- Render-query helpers must resolve against an immutable bundle-local scene snapshot. Pixel coordinates are only input seeds, not stable identity.
+- Bundle history and render-file layout are owned by the rendering architecture docs, not by this file.
 - Helper names are not a stability guarantee. If a helper mutates benchmark state, it must say which artifact it mutates and whether the artifact is benchmark-owned, engineer-owned, or derived.
 - Post-simulation helpers must require post-simulation artifacts.
 - Skill-loop helpers must stay inside `suggested_skills/`.
@@ -22,6 +24,13 @@
 - The core surfaces that remain documented elsewhere include `validate`, `simulate`, `submit_plan`, `submit_for_review`, `inspect_media`, `inspect_topology`, `search_cots_catalog`, `invoke_cots_search_subagent`, `validate_costing_and_price`, `fastener_hole`, `preview`, and `objectives_geometry`.
 - This file instead tracks helper namespaces and functions that are secondary, role-specific, or experimental.
 
+## Render-query helpers
+
+- `worker_light.utils.render_query` is the planned worker-light helper family for bundle lookup and ray-pick.
+- `pick_preview_pixel(...)` resolves a screen-space click through the persisted render snapshot and returns a structured world-space hit record.
+- `list_render_bundles(...)` and `query_render_bundle(...)` are lookup helpers that sit on top of the render history contract owned by the rendering docs.
+- These helpers are auxiliary. They fail closed when the bundle snapshot, render history, or requested artifact cannot be resolved.
+
 ## Current inventory
 
 | Namespace | Current helper surface | Status | Ownership / notes |
@@ -32,9 +41,16 @@
 | `controller.agent.tools` | `run_validate_and_price_script(fs)` | Internal bridge | Runs the checked-in planner pricing script. The exposed planner gate is `validate_costing_and_price()`, which uses this bridge. |
 | `controller.agent.nodes.skills` | `save_suggested_skill(title, content)` | Skill-loop only | Writes staged skill drafts into `suggested_skills/` and is only available to the `skill_agent`. |
 
+## Planned render-query surfaces
+
+| Namespace | Proposed helper surface | Status | Ownership / notes |
+| -- | -- | -- | -- |
+| `worker_light.utils.render_query` | `pick_preview_pixel(...)`, `list_render_bundles(...)`, `query_render_bundle(...)` | Planned / auxiliary | Worker-light render lookup and ray-pick helper family. Implementation may be re-exported through the public `utils` facade as thin wrappers. |
+
 ## Experimental surfaces
 
 - The current experimental cluster is the fluid/FEM/stress helper set in `worker_heavy.utils.validation`.
+- The next auxiliary cluster is the render-query helper family in `worker_light.utils.render_query`. It depends on the render bundle contract owned by the rendering architecture docs.
 - Those helpers already have dedicated integration coverage in `specs/integration-test-list.md`, including the fluid workflow and stress-heatmap workflow, which is why they remain tracked as real runtime surfaces instead of being treated as throwaway snippets.
 - They are still opt-in helpers. A benchmark or engineering task only uses them when the benchmark contract explicitly requires fluids, deformables, or stress diagnostics.
 - The prompt surface should not advertise them as universal capabilities for every task.
@@ -50,9 +66,11 @@
 
 1. If a helper writes a benchmark-owned file, the ownership must be explicit and the helper must fail closed on missing inputs.
 2. If a helper depends on `simulation_result.json`, `benchmark_definition.yaml`, or `suggested_skills/`, the helper is not a general-purpose prompt primitive.
-3. If a helper is only useful for one role family, the role gate must be visible in the runtime config rather than inferred from prose.
-4. If a helper graduates into the main tool contract, this file keeps only a short cross-reference and removes the repeated detail.
-5. If an experimental helper becomes a prompt default, it needs matching architecture documentation and observability coverage before it is treated as stable.
+3. If a helper reads render history, it must resolve a published bundle through the owning render contract, not through an unnamed latest alias alone.
+4. If a helper is only useful for one role family, the role gate must be visible in the runtime config rather than inferred from prose.
+5. If a helper needs a point coordinate from a render, it must validate the bundle snapshot before returning a world-space hit.
+6. If a helper graduates into the main tool contract, this file keeps only a short cross-reference and removes the repeated detail.
+7. If an experimental helper becomes a prompt default, it needs matching architecture documentation and observability coverage before it is treated as stable.
 
 ## Related docs
 

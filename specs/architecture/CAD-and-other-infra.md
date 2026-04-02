@@ -74,15 +74,15 @@ The project needs to render the models in images (for preview) and for rendering
 
 #### Rendering CAD
 
-All CAD and simulation render jobs are executed by the dedicated headless `worker-renderer` service. The renderer worker owns the graphics backend stack and runs the VTK, EGL, or other render dependencies in its own container; physics workers only supply scene state, camera policy, and artifact metadata.
+All CAD preview render jobs are executed by the dedicated headless `worker-renderer` service.
 
 The renderer worker does not inherit a host X server as its normal execution path. The active physics backend and the renderer each select their own OpenGL backend through explicit env vars, with the renderer defaulting to an OSMesa-backed VTK window class for headless reliability.
 
 The rendering backend is not a single global choice. We split rendering by purpose:
 
-1. Explicit preview renders use build123d/VTK by default inside the renderer worker.
-2. Dynamic simulation artifacts use the active physics backend's render family inside the renderer worker.
-3. Genesis-native visual outputs use Genesis render paths inside the renderer worker when the artifact depends on Genesis-only behavior such as FEM, fluids, or backend-native stress/state output.
+1. Explicit preview renders use build123d/VTK by default inside `worker-renderer`.
+2. Simulation-video rendering is a switchable contract; the current implementation keeps it on `worker-heavy`/MuJoCo because that was the lowest-overhead route.
+3. Genesis-native visual outputs follow the selected simulation backend when the artifact depends on Genesis-only behavior such as FEM, fluids, or backend-native stress/state output.
 
 This split is intentional. Preview evidence does not require Genesis runtime features and therefore stays on the build123d/VTK geometry path, but it is produced only on demand through the dedicated render worker boundary.
 
@@ -110,19 +110,29 @@ For build123d/VTK-backed preview renders, the requested modality set is persiste
 
 Those files are context artifacts for downstream agents and reviewers. They follow the same persistence/discovery flow as the existing preview images rather than introducing a second artifact channel, and the render path itself now encodes whether the evidence belongs to benchmark input, engineer inspection, or final preview review.
 
-Dynamic simulation renders and videos are resolved at runtime from the selected simulation backend and are recorded in `simulation_result.json`; they do not take their camera/view contract from `agents_config.yaml` or from benchmark task metadata. The renderer worker executes those jobs and persists the outputs. See [Simulation and Rendering](./simulation-and-rendering.md#render-profile-ownership) for the ownership split.
+Dynamic simulation renders and videos are resolved at runtime from the selected simulation backend and are recorded in `simulation_result.json`; they do not take their camera/view contract from `agents_config.yaml` or from benchmark task metadata. The heavy worker executes those jobs and persists the outputs. See [Simulation and Rendering](./simulation-and-rendering.md#render-profile-ownership) for the ownership split.
 
 The simulation backend still exposes a typed render-capability record so the runtime can distinguish supported artifact modes from unsupported ones. Static preview emission is separately governed by the YAML render policy in `config/agents_config.yaml`.
 
 For the RGB preview image, manufactured-part material colors come from the manufacturing material configuration associated with each part's `material_id`. The preview is therefore expected to preserve meaningful color differences between materials, not flatten everything to the same neutral shade.
 
-We also persist a render metadata manifest at `renders/render_manifest.json`. That manifest is the structured companion for `inspect_media(...)` and carries per-view modality and pose metadata.
+Render outputs are published as immutable bundle directories under `renders/**`. Each bundle carries a bundle-local render manifest plus any sidecars needed for later lookup. The append-only discovery surface is `renders/render_index.jsonl`, which records `bundle_id`, `created_at`, `revision`, `scene_hash`, bundle path, and primary media paths for each published bundle. `renders/render_manifest.json` may remain as a latest-bundle compatibility alias for current-revision tooling, but the bundle-local manifest and history index are the source of truth for historical lookup.
 
-For segmentation renders, the manifest must contain a legend mapping rendered colors to object identity. The legend is instance-aware:
+Bundle-local sidecars are allowed when they help agent tooling resolve the exact render state:
+
+1. `preview_scene.json` stores the exact build123d scene snapshot used for preview rendering.
+2. `frames.jsonl` stores sparse frame metadata for video evidence.
+3. `objects.parquet` stores dense object pose tables for query helpers.
+
+The worker-light render-query helper family resolves against these bundle-local artifacts when it needs a point coordinate from a render. It does not infer coordinates from the video bytes alone.
+
+For segmentation renders, the bundle-local manifest must contain a legend mapping rendered colors to object identity. The legend is instance-aware:
 
 1. `semantic_label` is the model-facing semantic name,
 2. `instance_id` / `instance_name` distinguishes repeated instances of the same semantic part,
 3. repeated parts therefore appear as multiple legend rows that may share `semantic_label` but must not share `instance_id`.
+
+When `inspect_media(...)` reads a render artifact, it resolves metadata from the bundle-local manifest for that bundle. The global `renders/render_manifest.json` path remains compatibility plumbing for current-revision tooling.
 
 Render-modality emission is config-driven through `config/agents_config.yaml`:
 

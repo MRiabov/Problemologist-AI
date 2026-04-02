@@ -8,17 +8,17 @@
 - Detailed fluids/deformables and electromechanical modality contracts live in [fluids-and-deformables.md](./fluids-and-deformables.md) and [electronics-and-electromechanics.md](./electronics-and-electromechanics.md).
 - Use this file for changes related to simulation semantics, constraints, or rendering logic.
 
-## Dedicated renderer worker
+## Dedicated render services
 
-All render execution runs in a dedicated headless `worker-renderer` container, including:
+Rendering is split by artifact family:
 
-1. explicit preview renders,
-2. dynamic simulation videos and other runtime evidence artifacts,
-3. selection snapshots, depth renders, segmentation renders, and render-manifest generation.
+1. explicit preview renders and preview-style image post-processing run in a dedicated headless `worker-renderer` container,
+2. simulation-video rendering is a switchable contract between `worker-heavy` and `worker-renderer`,
+3. selection snapshots, depth renders, segmentation renders, and preview-manifest generation remain in `worker-renderer`.
 
 Static validation no longer produces preview artifacts by default; explicit preview requests use the same renderer worker boundary instead.
 
-The physics backends do not own render process state. They supply scene state, camera policy, and render-capability metadata; the renderer worker owns the graphics stack and executes the render job inside its own container boundary.
+The physics backends do not own the controller-facing render process state for preview jobs. They supply scene state, camera policy, and render-capability metadata where needed; the renderer worker owns the graphics stack for preview.
 
 The render worker is containerized in every environment, including development, so the graphics stack stays isolated from simulation and from the controller process. That is intentional even when the other workers are launched as bare FastAPI processes during local development: the renderer is the one worker that must not inherit host Wayland/X11 state or ambient EGL quirks.
 The renderer worker is the only service that owns VTK, EGL, OpenGL, and related graphics backend dependencies.
@@ -155,7 +155,7 @@ This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asy
 2. `/benchmark/simulate`
    - runs the selected physics backend,
    - remains the runtime path for Genesis-specific behavior when Genesis is selected.
-   - requests dynamic render/video artifacts through the renderer worker when simulation evidence is needed.
+   - produces dynamic render/video artifacts through the worker-heavy simulation pipeline when simulation evidence is needed.
 
 Genesis-specific runtime behavior is therefore established by actual Genesis simulation runs where Genesis behavior is required, not by duplicating a Genesis render/build check inside fast validation.
 
@@ -165,13 +165,15 @@ The render contract for dynamic simulation evidence is runtime-resolved and reco
 
 The rule is:
 
-1. The selected physics backend determines the renderer family for simulation video, but the render job itself is executed by the renderer worker.
+1. Simulation video is intended to be a backend/service switch. Today it runs on `worker-heavy`/MuJoCo because that path already exists, avoids another HTTP hop, and was the lowest-overhead implementation; moving it later requires a renderer-side video backend such as VTK or an equivalent.
 2. The renderer backend exposes a typed capability record that states what artifact modes and view policies it supports.
 3. The runtime-selected simulation render choice is serialized in `simulation_result.json` so reviewers can replay the exact evidence path.
 4. Explicit build123d/VTK preview remains a separate preview contract, executed by the renderer worker, and continues to live in the preview manifest path.
 5. On-demand preview requests use the worker-light-facing `preview(...)` helper, normalize scalar/list camera inputs into zip-paired views, render a composed `Part | Compound` at the requested camera and modality set, stream queued/view-ready status over the websocket control path, and persist workflow-specific preview artifacts. The canonical RGB preview artifact stem is `{part_name}_render_{angle_1}_{angle_2}`, and the persisted file is `<stem>.png`; `part_name` comes from the rendered component label, so previewing `Part(Box(), label="test_part")` at the default 45/45 orbit uses the unchanged `e45_a45` angle family and produces `test_part_render_e45_a45.png`. They are separate from simulation evidence and from validation results.
-6. The render bundle path itself identifies whether the evidence belongs to benchmark input, engineer inspection, or final validation.
-7. If a backend cannot satisfy the selected render path, the failure should surface as a validation/runtime contract error rather than being hidden behind an unrelated global fallback.
+6. Every render-producing request publishes an immutable bundle directory with a bundle-local manifest. Historical discovery flows through the render bundle contract in [CAD and other infrastructure](./CAD-and-other-infra.md); `renders/render_manifest.json` may remain as a current-bundle compatibility alias.
+7. The `worker_light.utils.render_query` helper family resolves against that bundle-local snapshot when the model needs a point coordinate from a render.
+8. The render bundle path itself identifies whether the evidence belongs to benchmark input, engineer inspection, or final validation.
+9. If a backend cannot satisfy the selected render path, the failure should surface as a validation/runtime contract error rather than being hidden behind an unrelated global fallback.
 
 This keeps MuJoCo and Genesis distinct while still allowing each backend to use its own canonical default view when the runtime resolver allows that.
 

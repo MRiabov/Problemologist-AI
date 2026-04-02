@@ -203,7 +203,7 @@ The test policy stays the same:
 
 - `INT-208`: renderer worker boots headless with no `DISPLAY` and passes `/health` and `/ready`.
 - `INT-209`: `/benchmark/validate` remains render-free while `/benchmark/preview` still produces the expected preview artifacts through `worker-renderer`.
-- `INT-210`: MuJoCo simulation video rendering emits a real MP4 through `worker-renderer` and persists the artifact path or object key without routing raw frame payloads through the controller.
+- `INT-210`: MuJoCo simulation video rendering emits a real MP4 through the simulation pipeline and persists the artifact path or object key without routing raw frame payloads through the controller.
 - `INT-211`: Genesis-backed render jobs use the same renderer service contract and persist bulky render outputs by pointer or object key, not by copying raw bytes through the controller.
 
 ### Tests to remove or rewrite

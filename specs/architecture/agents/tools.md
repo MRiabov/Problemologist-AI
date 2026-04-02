@@ -176,7 +176,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
   - Supported first-line inputs are image files (`.png`, `.jpg`, `.jpeg`).
   - For videos such as `simulation.mp4`, runtime may expose representative extracted frames through the same tool contract when `config/agents_config.yaml render.split_video_renders_to_images=true`. Frame cadence is controlled by `render.video_frame_attachment_stride`, so the tool attaches every Nth frame rather than a fixed cap. That remains a media-inspection action, not a text-file read.
   - The tool returns structured metadata (for example path, media kind, frame/image count, attach success), while the actual image/frame content is attached to the LLM call through the runtime's multimodal message path.
-  - When the inspected file is a render artifact under `renders/benchmark_renders/`, `renders/engineer_renders/`, or `renders/final_preview_renders/`, the tool should also return persisted render metadata from `renders/render_manifest.json` when available.
+  - When the inspected file is a render artifact under `renders/benchmark_renders/`, `renders/engineer_renders/`, or `renders/final_preview_renders/`, the tool should also return persisted render metadata from the bundle-local manifest for that render bundle. The global `renders/render_manifest.json` path remains a compatibility alias for current-bundle tooling when available.
   - For segmentation renders, that metadata must include a color legend mapping rendered colors to object identity.
   - Segmentation legend entries must expose both:
     1. a semantic label the model can reason about (`semantic_label`),

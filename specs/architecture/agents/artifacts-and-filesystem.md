@@ -66,9 +66,10 @@ Manifest ownership summary:
 
 | Artifact | Writer / owner | Trigger | Path |
 | -- | -- | -- | -- |
-| Render metadata manifest | `worker-renderer` | Render job completion for static preview or simulation evidence in `renders/benchmark_renders/`, `renders/engineer_renders/`, or `renders/final_preview_renders/` | `renders/render_manifest.json` |
+| Render bundle index | rendering producer | Render job completion for a published preview or simulation evidence bundle | `renders/render_index.jsonl` |
+| Render metadata manifest | rendering producer | Render job completion for a published preview or simulation evidence bundle | `renders/<bundle>/render_manifest.json` |
 
-<!-- FIXME: consider moving render metadata manifests into `.manifests/` in a future refactor so render metadata and handoff metadata share one backend-owned manifest bucket. -->
+<!-- FIXME: consider moving render metadata manifests into `.manifests/` in a future refactor so render metadata and handoff metadata share one backend-owned manifest bucket. The root renders/render_manifest.json path stays a compatibility alias only. -->
 
 | Benchmark plan-review manifest | backend runtime utility invoked by `submit_plan()` | Successful `Benchmark Planner` `submit_plan()` | `.manifests/benchmark_plan_review_manifest.json` |
 | Engineering plan-review manifest | backend runtime utility invoked by `submit_plan()` | Successful `Engineering Planner` `submit_plan()` | `.manifests/engineering_plan_review_manifest.json` |
