@@ -1,6 +1,6 @@
 ---
 name: render-evidence
-description: Shared render-evidence workflow for Problemologist agents. Use when previewing scenes with `preview(...)`, inspecting render or video media through the runtime's visual-inspection path, selecting benchmark/engineer/final render bundles, or resolving a screen-space pixel to a world-space hit with bundle-local render-query helpers such as `pick_preview_pixel(...)` and `query_render_bundle(...)`.
+description: Shared render-evidence workflow for Problemologist agents. Use when previewing scenes with `preview(...)` or `preview_drawing()`, inspecting render or video media through the runtime's visual-inspection path, selecting benchmark/engineer/final render bundles, or resolving a screen-space pixel to a world-space hit with bundle-local render-query helpers such as `pick_preview_pixel(...)` and `query_render_bundle(...)`.
 ---
 
 # Render Evidence
@@ -21,7 +21,7 @@ The concrete media-inspection tool name depends on the backend. In controller/AP
 
 1. Decide whether you need a fresh render, existing evidence inspection, or a point-pick query.
 2. Select a single bundle and revision for the judgment. Do not mix benchmark, engineer, and final bundles in one decision.
-3. If the view or modality does not exist yet, call `preview(...)` to materialize it.
+3. If the view or modality does not exist yet, call `preview(...)` or `preview_drawing()` to materialize it.
 4. If media already exists, inspect the artifact path itself with the runtime's media-inspection tool.
 5. If the task asks what is under a pixel or how a click maps into world space, use the bundle-local render-query helpers against the immutable bundle snapshot.
 6. Record the bundle identity, revision, view index, and artifact path in notes or review artifacts when evidence matters.
@@ -60,6 +60,6 @@ The concrete media-inspection tool name depends on the backend. In controller/AP
 
 ## Role Notes
 
-- Use this skill from benchmark planner, benchmark coder, benchmark reviewer, engineering planner, engineering coder, engineering plan reviewer, and engineering execution reviewer when render evidence is involved.
+- Use this skill from benchmark planner, benchmark coder, benchmark reviewer, engineering planner, engineering coder, engineering plan reviewer, and engineering execution reviewer when render evidence is involved, including `preview_drawing()` outputs.
 - Load it before making a render-based judgment or before adding render-specific guidance to a handoff.
 - Keep backend-specific tool names out of Codex CLI-facing instructions unless the runtime actually exposes them.

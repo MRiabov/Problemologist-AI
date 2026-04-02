@@ -1,6 +1,6 @@
 ---
 name: benchmark-coder
-description: Benchmark implementation role for turning approved benchmark plans into benchmark_script.py and helper modules, validating and simulating benchmark revisions, handling benchmark-side motion or COTS-backed fixture geometry, and refusing only when the approved plan is infeasible. Use when working as the Benchmark Coder after plan approval, when fixing benchmark validation or simulation failures, when producing review-ready benchmark evidence, or when deciding whether to write plan_refusal.md.
+description: Benchmark implementation role for turning approved benchmark plans into benchmark_script.py and helper modules, validating and simulating benchmark revisions, preserving planner inventory exactness, handling benchmark-side motion or COTS-backed fixture geometry, and refusing only when the approved plan is infeasible. Use when working as the Benchmark Coder after plan approval, when fixing benchmark validation or simulation failures, when producing review-ready benchmark evidence, or when deciding whether to write plan_refusal.md.
 ---
 
 # Benchmark Coder
@@ -85,6 +85,7 @@ Do not invent fallback behavior to paper over contradictions. If the approved pl
 - Prefer passive geometry unless the approved benchmark explicitly requires motion.
 - Never invent benchmark-side motion, fallback labels, hidden constraints, or undeclared fixture behavior.
 - Keep benchmark-owned fixtures and objective overlays read-only and reconstruct them faithfully.
+- Keep planner-authored evidence and technical-drawing scripts grounded in the approved inventory. The labels, repeated quantities, and COTS identities in those scripts and in `plan.md` must match the approved handoff exactly; missing, extra, or relabeled items are contract failures, not implementation freedom.
 - Preserve explicit motion contracts for any moving benchmark fixture: identity, motion kind, axis or path, bounds, trigger, and engineer interaction flag if relevant.
 - Keep authored labels unique and stable.
 - Use the simplest geometry that still satisfies the reviewed plan and the runtime jitter.
@@ -110,6 +111,7 @@ Do not invent fallback behavior to paper over contradictions. If the approved pl
 ## Refusal Path
 
 - Refuse only when the approved benchmark plan is genuinely infeasible or contradictory.
+- If `plan.md` is not exact-grounded or the planner-authored scripts drift from the approved inventory, surface the handoff defect instead of compensating in `benchmark_script.py`.
 - Write `plan_refusal.md` with concrete evidence.
 - Do not silently pivot to a different benchmark.
 

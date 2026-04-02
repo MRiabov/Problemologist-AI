@@ -294,11 +294,11 @@ the plumbing items.
 - [x] Add the prompt-side `preview_drawing()` contract to the tools doc.
 - [x] Add the desired-architecture index link for the new planner drafting
   spec.
-- [ ] Keep the prompt, tool, and architecture docs aligned with the drafting
+- [x] Keep the prompt, tool, and architecture docs aligned with the drafting
   contract.
-- [ ] Add the default 3-view starter template to the shared template repos
+- [x] Add the default 3-view starter template to the shared template repos
   and document it as a convenience scaffold.
-- [ ] Keep the migration note aligned with the architecture doc as the contract
+- [x] Keep the migration note aligned with the architecture doc as the contract
   evolves.
 
 ### Prompt policy and handoff schema
@@ -380,17 +380,18 @@ eval preflight path fail closed before node execution starts.
 
 ### Integration suite refresh
 
-- [ ] Add a narrow integration slice that proves the planner can produce the
+- [x] Add a narrow integration slice that proves the planner can produce the
   drafting contract and the reviewer can inspect it.
-- [ ] Add an inspection assertion for the persisted drawing bundle.
+- [x] Add an inspection assertion for the persisted drawing bundle.
 - [ ] Add assertions that drafting scripts reject unsupported views, callouts,
   datums, or dimensions.
 - [ ] Add assertions for the mode-off path so the planner does not
   accidentally learn the drafting contract when it should not.
 - [ ] Add coverage for benchmark drafting parity so the benchmark planner and
   benchmark reviewer see the same artifact split.
-- [ ] Add an end-to-end assertion that the reviewer can judge the drawing
+- [x] Add an end-to-end assertion that the reviewer can judge the drawing
   contract from real render artifacts.
+<!--Note: it'll likely involve rerunning the whole integration test suite - so many contract mismatches to update in mock responses.-->
 
 ## File-Level Change Set
 

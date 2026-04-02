@@ -154,22 +154,22 @@ The safe order is:
 
 ### Contract and validation
 
-- [ ] Add the shared exact-mention validator for `plan.md`.
-- [ ] Add or reuse inventory-multiset validation for planner-authored
+- [x] Add the shared exact-mention validator for `plan.md`.
+- [x] Add or reuse inventory-multiset validation for planner-authored
   evidence and technical-drawing scripts.
-- [ ] Make planner handoff validation fail closed on missing labels, quantity
+- [x] Make planner handoff validation fail closed on missing labels, quantity
   drift, relabeling, and COTS identity drift.
-- [ ] Apply the same exactness gate to benchmark and engineering handoffs.
+- [x] Apply the same exactness gate to benchmark and engineering handoffs.
 
 ### Plan review and coder intake
 
-- [ ] Update benchmark plan-reviewer gates to enforce exact mention and
+- [x] Update benchmark plan-reviewer gates to enforce exact mention and
   inventory preservation.
-- [ ] Update engineering plan-reviewer gates to enforce exact mention and
+- [x] Update engineering plan-reviewer gates to enforce exact mention and
   inventory preservation.
-- [ ] Update benchmark coder intake and reviewer checks to reject inventory
+- [x] Update benchmark coder intake and reviewer checks to reject inventory
   mismatches.
-- [ ] Update engineering coder intake and execution-reviewer checks to reject
+- [x] Update engineering coder intake and execution-reviewer checks to reject
   inventory mismatches.
 
 ### Eval refresh

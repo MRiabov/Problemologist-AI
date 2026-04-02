@@ -1,6 +1,6 @@
 ---
 name: benchmark-planner
-description: Benchmark planning and handoff authoring for Problemologist. Use when creating or revising benchmark planner artifacts (`plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`), checking benchmark solvability or randomization, defining benchmark-owned fixture motion, or preparing the plan for `submit_plan()`.
+description: Benchmark planning and handoff authoring for Problemologist. Use when creating or revising benchmark planner artifacts (`plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`), checking benchmark solvability or randomization, defining benchmark-owned fixture motion, reviewing planner drafting output with `preview_drawing()`, enforcing exact-grounded inventory mentions, or preparing the plan for `submit_plan()`.
 ---
 
 # Benchmark Planner
@@ -57,7 +57,8 @@ Read these before drafting or revising the handoff:
 
 - Keep `plan.md` narrative-first and specific enough that the benchmark coder can implement without re-deciding the benchmark shape.
 - Keep `todo.md` actionable and ordered for the benchmark coder.
-- Keep `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` aligned with the same geometry and labels as the YAML.
+- Keep `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` aligned with the same geometry, labels, repeated quantities, and COTS identities as the approved inventory, and ensure every planner-declared inventory label and selected COTS `part_id` appears in `plan.md` at least once as an exact identifier mention.
+- When drawings are part of the handoff, inspect the drafted package with `preview_drawing()` before `submit_plan()`.
 - Make the benchmark-owned motion contract explicit if any fixture moves. In this repo, keep each moving fixture to one explicit DOF axis and spell out the controller facts and limits.
 - Keep the moved object inside `build_zone` under static variation plus runtime jitter.
 - Keep goal and forbid zones non-overlapping with the moved object at spawn.
@@ -68,6 +69,7 @@ Read these before drafting or revising the handoff:
 - Goal or forbid zones overlap the moved object path.
 - Runtime AABB escapes the build zone.
 - Labels collide with reserved names or with each other.
+- The inventory is only semantically similar, not exact, across `plan.md`, the YAML, and the planner scripts.
 - A moving benchmark fixture is implied but not declared clearly.
 - The evidence script drifts from the YAML geometry.
 - The handoff assumes a downstream file that does not exist yet.

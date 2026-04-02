@@ -57,6 +57,8 @@ Provide the orthographic drawing companion for the same benchmark geometry.
 Before submission, verify all of the following:
 
 - `plan.md`, `todo.md`, the YAML files, and both scripts use the same object names and labels.
+- Every planner-declared inventory label and selected COTS `part_id` appears in `plan.md` at least once as an exact identifier mention.
+- The evidence and technical-drawing scripts preserve the same labels, repeated quantities, and COTS identities as the YAML inventory.
 - Every top-level authored label is unique and not `environment` or `zone_*`.
 - `moved_object.material_id` is a known material from `manufacturing_config.yaml`.
 - `moved_object.start_position` is a top-level field under `moved_object`.
@@ -65,6 +67,7 @@ Before submission, verify all of the following:
 - Any benchmark-owned moving fixture declares its motion explicitly, with one axis and clear bounds or controller facts.
 - The assembly file stays schema-valid and does not rely on template placeholders.
 - The evidence and technical-drawing scripts match the same geometry and do not drift from the YAML.
+- When drawings are part of the handoff, inspect the drafted package with `preview_drawing()` before `submit_plan()`.
 
 ## Submission Gate
 

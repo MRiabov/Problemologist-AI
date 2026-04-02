@@ -102,6 +102,7 @@ appendices:
       Keep `plan.md` narrative-first and write the machine-readable drafting contract in `assembly_definition.yaml.drafting`.
       Bind views, datums, dimensions, callouts, and notes to the reviewed mechanism only.
       Do not invent new parts, joints, motions, or geometry beyond the existing handoff.
+      Reuse the default three-view orthographic scaffold when it already matches the mechanism instead of authoring a new one.
       Keep `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` aligned with the same preserved geometry.
       Use `preview_drawing()` to inspect the drafted package before calling `submit_plan()`.
     engineer_plan_reviewer: |
@@ -120,6 +121,7 @@ appendices:
       Keep `plan.md` narrative-first and write the machine-readable drafting contract in `benchmark_assembly_definition.yaml.drafting`.
       Bind views, datums, dimensions, callouts, and notes to the reviewed benchmark fixture only.
       Do not invent new benchmark objects, joints, motions, or geometry beyond the existing handoff.
+      Reuse the default three-view orthographic scaffold when it already matches the benchmark mechanism instead of authoring a new one.
       Keep `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` aligned with the same preserved geometry.
       Use `preview_drawing()` to inspect the drafted package before calling `submit_plan()`.
     benchmark_plan_reviewer: |

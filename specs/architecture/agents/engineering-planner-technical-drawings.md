@@ -242,7 +242,11 @@ The planner-authored evidence script and technical-drawing script must preserve 
 
 The starter workspace may ship a default 3-view technical-drawing template for the common case.
 
-The template should present a conventional orthographic trio such as front, top, and side, leave room for a small number of binding dimensions and callouts, and be usable unchanged when it already matches the mechanism. It is a convenience scaffold, not a separate source of truth.
+The template should present a conventional orthographic trio such as front,
+top, and side, leave room for a small number of binding dimensions and
+callouts, and be usable unchanged when it already matches the mechanism. It is
+a convenience scaffold, not a separate source of truth, and it should stay
+lightweight enough to seed workspaces without extra authoring.
 
 ## preview_drawing() contract
 

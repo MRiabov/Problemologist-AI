@@ -27,7 +27,7 @@ The unified prompt manager treats these inputs as authoritative:
 
 - `config/prompts.yaml`: structured role prompts and appendix fragments.
 - `shared/agent_templates/`: prompt-context files, helper scripts, and boilerplate that belong in the workspace context.
-- `shared/assets/template_repos/`: role-scoped starter workspace material copied into the run-local workspace.
+- `shared/assets/template_repos/`: role-scoped starter workspace material copied into the run-local workspace, including the reusable drafting scaffold when the technical-drawing mode is enabled.
 - the checked-in skill tree and its workspace materializations, as described in [agent-skill.md](./agent-skill.md), plus any compact generated index derived from that tree when the backend needs one. Those runtime copies are inputs to the agent, not a separate prompt source.
 - planner-authored drafting scripts, when present, are prompt-context inputs too: `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `solution_plan_evidence_script.py`, and `solution_plan_technical_drawing_script.py`.
 - `worker_light/agent_files/`: legacy compatibility mirror only.

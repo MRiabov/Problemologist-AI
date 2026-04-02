@@ -179,7 +179,7 @@ def _starter_drafting_sheet(target_name: str) -> DraftingSheet:
                 target=target_name,
                 projection="front",
                 scale=1.0,
-                datums=["A"],
+                datums=["A", "B"],
                 dimensions=[
                     DraftingDimension(
                         dimension_id="starter_width",
@@ -204,7 +204,69 @@ def _starter_drafting_sheet(target_name: str) -> DraftingSheet:
                         critical=False,
                     )
                 ],
-            )
+            ),
+            DraftingView(
+                view_id="top",
+                target=target_name,
+                projection="top",
+                scale=1.0,
+                datums=["A", "C"],
+                dimensions=[
+                    DraftingDimension(
+                        dimension_id="starter_depth",
+                        kind="linear",
+                        target=target_name,
+                        value=1.0,
+                        binding=True,
+                        note="Starter placeholder dimension.",
+                    )
+                ],
+                callouts=[
+                    DraftingCallout(
+                        callout_id="2",
+                        label="Starter assembly",
+                        target=target_name,
+                    )
+                ],
+                notes=[
+                    DraftingNote(
+                        note_id="n2",
+                        text="Starter drafting placeholder for the seeded workspace.",
+                        critical=False,
+                    )
+                ],
+            ),
+            DraftingView(
+                view_id="side",
+                target=target_name,
+                projection="side",
+                scale=1.0,
+                datums=["B", "C"],
+                dimensions=[
+                    DraftingDimension(
+                        dimension_id="starter_height",
+                        kind="linear",
+                        target=target_name,
+                        value=1.0,
+                        binding=True,
+                        note="Starter placeholder dimension.",
+                    )
+                ],
+                callouts=[
+                    DraftingCallout(
+                        callout_id="3",
+                        label="Starter assembly",
+                        target=target_name,
+                    )
+                ],
+                notes=[
+                    DraftingNote(
+                        note_id="n3",
+                        text="Starter drafting placeholder for the seeded workspace.",
+                        critical=False,
+                    )
+                ],
+            ),
         ],
     )
 

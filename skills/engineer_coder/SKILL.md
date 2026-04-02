@@ -1,6 +1,6 @@
 ---
 name: engineer_coder
-description: Problemologist engineering implementation role. Use when turning approved engineering handoffs into solution_script.py, solving engineering evals with bounded retries, selecting mechanism patterns, validating and simulating revisions, inspecting render evidence, or refusing an infeasible plan with plan_refusal.md.
+description: Problemologist engineering implementation role. Use when turning approved engineering handoffs into solution_script.py, solving engineering evals with bounded retries, selecting mechanism patterns, validating and simulating revisions, inspecting render evidence, preserving planner inventory exactness, or refusing an infeasible plan with plan_refusal.md.
 ---
 
 # Engineer Coder
@@ -49,6 +49,7 @@ Start with the handoff package:
 - `benchmark_definition.yaml`
 - `benchmark_assembly_definition.yaml` if present
 - `benchmark_script.py` if present
+- `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` when drafting mode is active
 
 Then load specialist knowledge only as needed:
 
@@ -92,11 +93,12 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 03. Every non-static DOF must map to a real mechanism, not a convenience.
 04. Keep the motion contract explicit if the design uses motors, sliders, latches, or other actuated elements.
 05. Keep benchmark-owned fixtures read-only and never reassign their ownership or pricing.
-06. Keep top-level authored labels unique and avoid reserved names such as `environment` and `zone_...`.
-07. Place parts with `Location(...)` or equivalent explicit placement.
-08. Keep COTS components intact when provenance or exact part identity matters.
-09. Keep electronics separate from mechanical guessing; only load electronics logic when the handoff explicitly demands it.
-10. Treat cost, weight, and manufacturability as design constraints, not afterthoughts.
+06. Keep planner-authored evidence and technical-drawing scripts grounded in the approved inventory. The labels, repeated quantities, and COTS identities in `plan.md`, `assembly_definition.yaml`, and any drafting scripts must match exactly; missing, extra, or relabeled items are plan defects, not implementation freedom.
+07. Keep top-level authored labels unique and avoid reserved names such as `environment` and `zone_...`.
+08. Place parts with `Location(...)` or equivalent explicit placement.
+09. Keep COTS components intact when provenance or exact part identity matters.
+10. Keep electronics separate from mechanical guessing; only load electronics logic when the handoff explicitly demands it.
+11. Treat cost, weight, and manufacturability as design constraints, not afterthoughts.
 
 ## Retry Discipline
 
@@ -140,6 +142,7 @@ If the same blocker persists after one targeted fix, record it in `journal.md` a
 Refuse only when the handoff is genuinely infeasible or self-contradictory.
 
 - Write `plan_refusal.md` with concrete evidence.
+- If the planner handoff is not exact-grounded or the drafting scripts drift from the inventory, surface the defect instead of compensating in `solution_script.py`.
 - Keep the refusal specific to the blocked plan.
 - Do not silently pivot to an unrelated solution.
 

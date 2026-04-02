@@ -38,16 +38,21 @@ Signals:
 - `result` not bound correctly
 - Import-time side effects
 - Wrote benchmark-owned files from the engineer side
+- `plan.md` is missing an exact identifier mention for a declared label or selected COTS `part_id`
+- Planner-authored evidence or technical-drawing scripts change labels, quantities, or COTS identities
 
 Likely causes:
 
 - The script contract was not kept import-safe
 - Ownership boundaries were ignored
 - A fallback was invented instead of fixing the source
+- The planner handoff was not exact-grounded
+- The planner scripts drifted from the approved inventory
 
 First fix:
 
 - Restore the file contract and ownership boundaries before changing the design.
+- Stop and surface the handoff defect; do not compensate in `solution_script.py`.
 
 ## Manufacturability and cost
 
