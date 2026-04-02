@@ -19,6 +19,8 @@ Read this skill and the relevant reference files below before planning any `buil
 8. **Intersection Checks**: For pairwise geometry, use `shape_a.intersect(shape_b)`. The returned shape has a `.volume` property; if that volume is greater than zero, the shapes intersect, and you can inspect or render the returned intersection shape for debugging. For grouped children, wrap the parts in `Compound(children=[...])` and call `do_children_intersect()` on the compound; in this runtime it returns `(intersects, (shape_a, shape_b), volume)`, so unpack it for logging.
 9. **COTS Parts**: If the geometry includes catalog-backed components, load `skills/cots-parts/SKILL.md` and keep the concrete COTS instance intact. Do not strip provenance or replace it with anonymous solids when the task still depends on part identity.
 
+For orthographic sheets, title blocks, and vector export, use the companion [build123d-technical-drawing](../build123d-technical-drawing/SKILL.md) skill and the technical-drawing reference below. Keep the 3D model authoritative; drawings are projections, not a second source of truth.
+
 ## Placement And Rotation Contract
 
 - Create top-level authored solids at the origin, then place them with `Location(...)`.
@@ -80,6 +82,12 @@ rail_lower = rail_builder.part.moved(Location((0, -0.06, 0.09), (0, 2, 0)))
 - Repeated datum placement with `Locations(...)`
 - Rotated top-level parts with `Location(...)`
 - Compound assembly placement and overlap checks
+
+### [technical_drawing.md](references/technical_drawing.md) (Technical Drawing)
+
+- `TechnicalDrawing(...)` border/title block setup
+- `project_to_viewport(...)`, `ExtensionLine(...)`, `Text(...)`, and `Draft(...)`
+- `ExportSVG(...)` / `ExportDXF(...)` sheet export and preview workflow
 
 ### [cots-parts](../cots-parts/SKILL.md) (Catalog-Backed Components)
 
