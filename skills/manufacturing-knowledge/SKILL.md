@@ -14,7 +14,7 @@ To get the current material properties, density, and cost constants, use the run
 Use:
 
 - `read_file("config/manufacturing_config.yaml")` for material properties, process costs, and catalog data.
-- Planner roles: `validate_costing_and_price()` to validate and price `assembly_definition.yaml`.
+- Planner roles: `validate_costing_and_price()` to validate, price, and deterministically normalize the cost and weight totals in `assembly_definition.yaml`.
 
 Do not browse `scripts/` or invent helper tools that are not exposed to your role.
 
@@ -66,6 +66,7 @@ ______________________________________________________________________
 - **Method comparison**: Compare candidate methods at the requested quantity, not as single-unit quotes. Use setup/tooling cost separately from per-unit variable cost so the chosen process reflects the real production volume.
 - **Volume Optimization**: Reducing part volume directly reduces material cost and run/cycle time.
 - **Part Reuse**: Using multiple instances of the *same* part ID is significantly cheaper than multiple unique parts due to shared setup/tooling costs (50% discount for CNC setup, 90% discount for IM tooling).
+- **Weight Exactness**: Treat the post-validation weight total as an exact deterministic output from the priced assembly breakdown, not a prose estimate.
 
 ## 5. Technical Design Patterns
 

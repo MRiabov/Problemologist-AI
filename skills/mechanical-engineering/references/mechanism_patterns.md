@@ -82,6 +82,14 @@ Size the support path from the moved object envelope, not only from nominal geom
 - Include runtime jitter.
 - Include enough margin that small contact errors do not eject the object immediately.
 
+### Friction check
+
+For passive ramps and chutes, compare the actual slope to the workspace friction coefficient before spending time on capture details.
+
+- Use `theta > atan(mu_static)` as the first-order check.
+- Pull `mu_static` from the workspace `manufacturing_config.yaml`, not from memory.
+- If `tan(theta)` is below the coefficient, the object may stall even if the geometry validates.
+
 ### Primitive choice
 
 Prefer the least risky primitive family that satisfies the contract.

@@ -21,6 +21,7 @@ dependencies = [
     "spec-kitty-cli==0.16.1",
     "watchdog>=6.0.0",
     "vtk==9.4.2",
+    "pandas>=3.0.2",
 ]
 
 [dependency-groups]
