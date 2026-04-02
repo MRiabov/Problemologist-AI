@@ -53,6 +53,18 @@ Optional follow-up sections may include `Open Questions`, `Risks`, `Test Impact`
 - Keep repeated guidance minimal. If the same rule already appears elsewhere in
   the spec set, reference it instead of restating it.
 
+### Validation Planning
+
+- If a migration changes any agent-facing logic, treat eval updates as required
+  follow-up work. The migration checklist should name each changed
+  agent-facing surface and the eval artifacts that must be updated for it.
+- During feature planning, inventory integration-test impact exhaustively
+  before narrowing scope. As a rule of thumb, expect at least 10 existing
+  integration tests to need updates per feature unless the migration doc
+  explicitly justifies a smaller set.
+- Do not skip early catalog coverage. Treat `INT-001` through `INT-185` as
+  first-class candidates when searching for integration tests to update.
+
 ## Section Guidance
 
 ### Purpose

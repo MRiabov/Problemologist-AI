@@ -3,25 +3,43 @@
 ## Scope summary
 
 - Primary focus: a planner-authored technical-drawing layer for the Engineering Planner.
+- Defines the difference between drafting, which is the authored contract, and drawing, which is the rendered review artifact.
 - The same drafting artifact pattern is mirrored for the Benchmark Planner with benchmark-prefixed filenames.
-- Defines when the planner produces drawings, what the drawing package must say, and how the reviewer validates it.
+- Defines when the planner produces the drafting contract, what the drawing package must say, and how the reviewer validates it.
 - Treats technical drawings as a derived planning artifact, not as a replacement for `plan.md`, `todo.md`, or `assembly_definition.yaml`.
 - Uses build123d-native projection and export capabilities as implementation details, not as architecture terminology.
 - Migration mechanics live in [Engineering Planner Technical Drawings Migration](../../migrations/minor/engineering-planner-technical-drawings-migration.md).
 
-## Purpose
+## Drafting vs drawing
 
-The Engineering Planner currently over-relies on prose and coarse structure when the engineer needs geometric specificity.
+Drafting and drawing are related but not the same artifact.
 
-This spec adds a constrained drafting layer so the planner can communicate:
+| Aspect | Drafting | Drawing |
+| -- | -- | -- |
+| Role in the workflow | Authored planning contract | Rendered inspection artifact |
+| Source of truth | `assembly_definition.yaml.drafting` plus the planner-authored technical-drawing scripts | `preview_drawing()` output, including raster preview and vector sidecars |
+| Primary question | What geometry facts must be preserved? | How does the planner present those facts for review? |
+| Content shape | Structured, machine-checkable interface intent | Projected views, annotations, and reviewable presentation of the same intent |
+| Fidelity rule | Must not invent geometry absent from the handoff | Must not add geometry that is not already supported by the drafting contract |
+| Consumer | Planner, reviewer, and coder as read-only context | Reviewer first, then coder as visual confirmation |
+| Failure mode | The engineer guesses the wrong interface or bound | The reviewer cannot reliably inspect the intended geometry |
 
-- critical dimensions,
-- datums and reference faces,
-- view intent,
-- section intent,
-- clearance and fit constraints,
-- motion envelopes,
-- interface callouts.
+Drafting is the contract. Drawing is the presentation of that contract.
+
+Drafting answers:
+
+- which interface or subassembly matters,
+- which datums define the view,
+- which dimensions are binding,
+- which clearances or fits matter,
+- which callouts point back to plan statements.
+
+Drawing answers:
+
+- what the planner wants the reviewer to see,
+- how the geometry projects in standard views,
+- whether the documented interface is actually legible,
+- whether the annotated geometry matches the authored drafting intent.
 
 The goal is not to make the planner do final CAD implementation.
 The goal is to make the handoff specific enough that the engineer can implement without guessing the geometry.
@@ -67,7 +85,7 @@ Behavior by mode:
    - The planner is not expected to produce drafting annotations or drawing views.
    - Review does not fail because drafting artifacts are absent.
 2. `drafting`
-   - PromptManager instructs the planner to add a minimal technical-drawing layer for the critical interfaces only.
+   - PromptManager instructs the planner to add a minimal drafting contract for the critical interfaces only.
    - Review expects those critical interfaces to be covered by structured drawing views or callouts.
 3. `drawing`
    - PromptManager instructs the planner to produce a fuller technical drawing package with standardized views and annotations.
@@ -101,7 +119,7 @@ Planner drafting is therefore treated as derived intent:
 - `plan.md` explains the mechanism and the rationale.
 - `assembly_definition.yaml` carries the machine-readable structure and budgets.
 - `assembly_definition.yaml.drafting` carries the technical-drawing intent.
-- `preview_drawing()` renders that intent for inspection.
+- `preview_drawing()` renders that intent into the drawing artifact for inspection.
 
 ## Planner-owned drafting contract
 
@@ -264,7 +282,7 @@ The drafting layer is therefore a view of the mechanism, not a second mechanism.
 The public preview contract should gain a companion to `preview()`:
 
 - `preview()` continues to render 3D geometry and assembly context.
-- `preview_drawing()` renders the technical drawing package.
+- `preview_drawing()` renders the technical drawing package from the authored drafting contract.
 
 The implementation may use build123d technical drawing primitives, `project_to_viewport()`, `TechnicalDrawing`, `ExportSVG`, and `ExportDXF`.
 Those names are implementation details, not architecture requirements.
@@ -306,7 +324,7 @@ When render images exist for the current revision, the reviewer must inspect the
 
 The reviewer should answer two questions:
 
-1. Is the drawing specific enough to prevent an implementation guess?
+1. Is the drafting contract specific enough to prevent an implementation guess?
 2. Is the drawing still narrow enough that the engineer retains freedom over manufacturable realization?
 
 If the answer to either question is no, the plan is not ready.

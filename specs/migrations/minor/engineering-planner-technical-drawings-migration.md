@@ -237,37 +237,38 @@ completed or explicitly waived with a written rationale.
 - [x] Keep the Engineering Coder, Benchmark Coder, and execution reviewers
   read-only for the drafting scripts.
 
-### Per-role artifact checklist
+### Per-role eval seed checklist
 
-The items below are the drafting-mode additions on top of each role's existing
-base handoff contract. The exact file enforcement lives in node-entry
-validation; this checklist keeps the migration tracker explicit about who owns
-which drafting artifacts.
+The items below are the eval-side additions to `evals/logic/specs.py` and the
+seeded workspace fixtures. They keep `scripts/validate_eval_seed.py` and the
+eval preflight path fail closed before node execution starts.
 
-- [x] Engineer Planner: `assembly_definition.yaml.drafting` plus
-  `solution_plan_evidence_script.py` and
-  `solution_plan_technical_drawing_script.py`.
-- [x] Engineer Plan Reviewer: `assembly_definition.yaml.drafting` plus
-  `solution_plan_evidence_script.py` and
-  `solution_plan_technical_drawing_script.py`.
-- [x] Engineer Coder: `assembly_definition.yaml.drafting` plus
-  `solution_plan_evidence_script.py` and
-  `solution_plan_technical_drawing_script.py`.
-- [x] Engineer Execution Reviewer: `assembly_definition.yaml.drafting` plus
-  `solution_plan_evidence_script.py` and
-  `solution_plan_technical_drawing_script.py`.
-- [x] Benchmark Planner: `benchmark_assembly_definition.yaml.drafting` plus
+- [x] Engineer Planner eval rows include `assembly_definition.yaml.drafting`,
+  `solution_plan_evidence_script.py`, and
+  `solution_plan_technical_drawing_script.py`; they also include
   `benchmark_plan_evidence_script.py` and
-  `benchmark_plan_technical_drawing_script.py`.
-- [x] Benchmark Plan Reviewer: `benchmark_assembly_definition.yaml.drafting`
-  plus `benchmark_plan_evidence_script.py` and
-  `benchmark_plan_technical_drawing_script.py`.
-- [x] Benchmark Coder: `benchmark_assembly_definition.yaml.drafting` plus
-  `benchmark_plan_evidence_script.py` and
-  `benchmark_plan_technical_drawing_script.py`.
-- [x] Benchmark Reviewer: `benchmark_assembly_definition.yaml.drafting` plus
-  `benchmark_plan_evidence_script.py` and
-  `benchmark_plan_technical_drawing_script.py`.
+  `benchmark_plan_technical_drawing_script.py` when benchmark drafting mode is
+  active.
+- [x] Engineer Plan Reviewer eval rows include the same solution drafting
+  scripts when engineering drafting mode is active.
+- [x] Engineer Coder eval rows include the same solution drafting scripts when
+  engineering drafting mode is active, plus the benchmark drafting scripts
+  when benchmark drafting mode is active.
+- [x] Engineer Execution Reviewer eval rows include the same solution drafting
+  scripts when engineering drafting mode is active.
+- [x] Electronics Planner eval rows stay on the base engineer planning files;
+  they do not gain drafting-specific eval artifacts in this migration.
+- [x] Benchmark Planner eval rows include
+  `benchmark_assembly_definition.yaml.drafting`,
+  `benchmark_plan_evidence_script.py`, and
+  `benchmark_plan_technical_drawing_script.py` when benchmark drafting mode is
+  active.
+- [x] Benchmark Plan Reviewer eval rows include the same benchmark drafting
+  scripts when benchmark drafting mode is active.
+- [x] Benchmark Coder eval rows include the same benchmark drafting scripts
+  when benchmark drafting mode is active.
+- [x] Benchmark Reviewer eval rows include the same benchmark drafting scripts
+  when benchmark drafting mode is active.
 
 ### Integration coverage
 
