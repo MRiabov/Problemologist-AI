@@ -129,7 +129,7 @@ def valid_objectives():
             start_position=(0.0, 0.0, 50.0),
             runtime_jitter=(0.0, 0.0, 0.0),
         ),
-        constraints=Constraints(max_unit_cost=50.0, max_weight_g=1.0),
+        constraints=Constraints(max_unit_cost=50.0, max_weight_g=1000.0),
     )
 
 
@@ -1597,11 +1597,18 @@ def build():
         tight_objectives = valid_objectives.model_copy(deep=True)
         tight_objectives.constraints.max_unit_cost = 0.01
         tight_objectives.constraints.max_weight_g = 0.1
+        tight_cost = valid_cost.model_copy(deep=True)
+        tight_cost.constraints.benchmark_max_unit_cost_usd = 0.01
+        tight_cost.constraints.benchmark_max_weight_g = 0.1
+        tight_cost.constraints.planner_target_max_unit_cost_usd = 0.01
+        tight_cost.constraints.planner_target_max_weight_g = 0.1
+        tight_cost.totals.estimated_unit_cost_usd = 0.0
+        tight_cost.totals.estimated_weight_g = 0.0
         files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "benchmark_definition.yaml": tight_objectives,
-            "benchmark_assembly_definition.yaml": valid_cost,
+            "benchmark_assembly_definition.yaml": tight_cost,
             "manufacturing_config.yaml": REPO_MANUFACTURING_CONFIG,
             "script.py": expensive_script,
         }
@@ -2387,7 +2394,7 @@ equivalent natural-language motion descriptions.
             start_position=(0.0, 0.0, 50.0),
             runtime_jitter=(0.0, 0.0, 0.0),
         ),
-        constraints=Constraints(max_unit_cost=50.0, max_weight_g=1.0),
+        constraints=Constraints(max_unit_cost=50.0, max_weight_g=1000.0),
     )
     assembly_definition = AssemblyDefinition(
         version="1.0",

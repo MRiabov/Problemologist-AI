@@ -830,7 +830,7 @@ result = build()
 @pytest.mark.parametrize(
     ("extra_flags", "expected_fragment", "unexpected_fragment"),
     [
-        ((), "--full-auto", "--dangerously-bypass-approvals-and-sandbox"),
+        (("--no-yolo",), "--full-auto", "--dangerously-bypass-approvals-and-sandbox"),
         (("--yolo",), "--dangerously-bypass-approvals-and-sandbox", "--full-auto"),
     ],
 )
