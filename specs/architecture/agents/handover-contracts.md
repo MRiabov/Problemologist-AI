@@ -16,7 +16,7 @@ Benchmark-side routing rules:
 
 - `Benchmark Plan Reviewer` rejects planner handoff when the plan contains conflicting geometry, ambiguous/randomization-invalid benchmark definitions, or references to nonexistent benchmark objects across planner artifacts. Rejection routes back to `Benchmark Planner`.
 - `Benchmark Coder` can refuse and route back to `Benchmark Planner` when the approved plan is infeasible to implement. Benchmark Coder refusal is valid only for plan infeasibility, not for generic coding failure.
-- `Benchmark Reviewer` routes back to `Benchmark Coder` when the implemented environment CAD model does not adhere to the approved plan, has invalid geometry such as intersections, or is impossible to solve.
+- `Benchmark Reviewer` routes back to `Benchmark Coder` when the implemented environment CAD model does not adhere to the approved plan inventory, has invalid geometry such as intersections, or is impossible to solve.
 
 Benchmark Reviewer "accepts" and passes the environment to the Engineering Planner model. (indirect contact - no actual "communication")
 
@@ -92,6 +92,21 @@ Rules:
 4. Open-ended key/value sections are exception-only and must be explicitly modeled as open-ended in schema (for example, a dedicated metadata map). They are never implicitly accepted by parser defaults.
 5. If a schema intentionally allows extras for a specific field/model, that exception must be explicit in code and documented in architecture/runtime notes.
 
+## Inventory exactness contract
+
+Planner handoff packages are binding inventories, not loose geometry hints.
+
+Rules:
+
+1. The planner-authored evidence script and technical-drawing script must preserve the same multiset of authored labels and quantities as the associated plan/YAML inventory.
+2. Inventory equality is checked by label and COTS-identity multiplicity, not by ordering.
+3. Repeated references in `final_assembly` count as quantity and must survive into the planner drafting scripts and downstream implementation.
+4. The planner must self-validate this exactness before `submit_plan()`; if the evidence or drawing script drifts, the handoff is invalid.
+5. The coder and reviewer must compare the implemented model against the approved inventory and reject missing, extra, or relabeled items.
+6. The technical-drawing companion may be a convenience template, but it may not add, remove, or rename inventory items.
+7. Every planner-declared inventory label and selected COTS `part_id` must appear at least once in `plan.md` as an exact identifier mention. Backticks are preferred for the first mention, but the exact string match is what matters for validation.
+8. For drafting-mode handoffs, the exact-mention rule also applies to the planner-authored drafting scripts: the labels and COTS identities they reference must already be grounded in `plan.md`.
+
 ## Benchmark Planner and Benchmark Plan Reviewer
 
 The Benchmark Generator Planner will submit multiple files to the CAD implementing agent.
@@ -128,15 +143,17 @@ If the user provides explicit benchmark objective overrides (for example `max_un
 
 `Benchmark Plan Reviewer` gate requirements:
 
-- Source of truth contract: benchmark planner handoff artifacts are `plan.md`, `todo.md`, `benchmark_definition.yaml`, benchmark-owned `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py`. `benchmark_script.py` is created later by `Benchmark Coder` after plan approval.
+- Source of truth contract: benchmark planner handoff artifacts are `plan.md`, `todo.md`, `benchmark_definition.yaml`, benchmark-owned `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py`. Those scripts must preserve the benchmark inventory labels, repeated quantities, and COTS identities exactly. `benchmark_script.py` is created later by `Benchmark Coder` after plan approval.
 - Reviewer-stage manifest: `.manifests/benchmark_plan_review_manifest.json`.
 - Entry guard behavior:
   - Reject when the manifest is missing, stale for the latest planner revision, or schema-invalid.
   - Reject when planner artifacts mention benchmark objects, moving parts, joints, or zones that are not declared consistently across the planner handoff package.
+  - Reject when `benchmark_plan_evidence_script.py` or `benchmark_plan_technical_drawing_script.py` diverges from the declared benchmark inventory labels, quantities, or COTS identities.
   - Reject when `moved_object.material_id` is missing, empty, or not known to `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact.
   - Reject when benchmark-owned DOF/control metadata is missing, contradictory, or unsupported by the declared fixture motion.
   - Reject when moving benchmark fixtures are missing motion-visible handoff data needed by engineering intake, such as actuation mode, axis/path or equivalent reference, motion limits or operating envelope, and whether the engineer may rely on the motion.
   - Reject when benchmark-side motion is impossible, unstable, non-deterministic, or cannot be reconstructed from the handoff artifacts and evidence.
+  - Reject when `benchmark_plan_technical_drawing_script.py` introduces unsupported views, callouts, datums, or dimensions that are not grounded in `plan.md`, `benchmark_definition.yaml`, or `benchmark_assembly_definition.yaml`.
 
 <!-- Future work: if benchmark input arrives as STEP, infer candidate motion constraints from the source geometry before explicit benchmark handoff materialization. -->
 
@@ -145,7 +162,7 @@ If the user provides explicit benchmark objective overrides (for example `max_un
 - Approval effect:
   - Only an approved benchmark plan reviewer handoff is allowed to pause in `PLANNED` state and unblock `Benchmark Coder`.
 
-`Benchmark Coder` owns all implementation changes to `benchmark_script.py` and helper implementation modules for the current revision. The benchmark planner's evidence and technical-drawing scripts are read-only context for benchmark coder entry.
+`Benchmark Coder` owns all implementation changes to `benchmark_script.py` and helper implementation modules for the current revision. The benchmark planner's evidence and technical-drawing scripts are read-only context for benchmark coder entry, and the coder must preserve the same benchmark inventory labels, repeated quantities, and COTS identities when materializing `benchmark_script.py`.
 
 ## Benchmark Generator with Engineer handover
 
@@ -275,16 +292,17 @@ Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
 
 - Source of truth contract: `ENGINEER_PLANNER_HANDOFF_ARTIFACTS` in node-entry validation.
 - Required artifacts: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`
+- Those planner-authored scripts must preserve the same labels, repeated quantities, and COTS identities as the approved inventory, and the planner must self-validate that exactness before `submit_plan()`.
 - Reviewer-stage manifest: `.manifests/engineering_plan_review_manifest.json` (planner handoff materialization for the plan-review stage)
 - Entry guard behavior:
   - Reject when the manifest is missing, stale for the latest planner revision, or schema-invalid.
   - Use node-entry validation with an engineering-plan-review custom check (parity with execution-review stale-revision checks).
   - For seeded/direct starts, the controller-owned node-entry validation layer must schema-validate all present schema-backed handoff artifacts in the workspace (not only required-file presence) and fail closed on any typed-parse/contract error.
-  - For seeded/direct starts involving planner artifacts, that same controller validation path must also run the corresponding planner cross-contract semantic checks (engineering: `benchmark_definition.yaml` + `assembly_definition.yaml` attachment/cost checks plus planner drafting script consistency; benchmark: benchmark planner handoff semantic checks plus benchmark drafting script consistency).
+  - For seeded/direct starts involving planner artifacts, that same controller validation path must also run the corresponding planner cross-contract semantic checks (engineering: `benchmark_definition.yaml` + `assembly_definition.yaml` attachment/cost checks plus planner drafting-script inventory consistency; benchmark: benchmark planner handoff semantic checks plus benchmark drafting-script inventory consistency).
   - Evals may trigger seeded preflight, but they must call the controller validation path instead of re-implementing schema/handoff logic inside eval modules.
 - Plan reviewer responsibilities:
   - Reject unsupported/invented system components or mechanisms.
-  - Reject inconsistent, infeasible, ambiguous, or incomplete plans.
+  - Reject inconsistent, infeasible, ambiguous, or incomplete plans, including planner drafting scripts that drift from the approved label/quantity/COTS-identity inventory.
   - Reject missing, contradictory, or unsupported benchmark motion metadata; motion must be explicit and reconstructable from the handoff artifacts, not minimized for convenience.
   - Re-run `skills/manufacturing-knowledge/scripts/validate_and_price.py` (or equivalent wrapped validator tool) and reject on pricing/weight/schema mismatch.
   - Keep cost/weight target scrutiny as a mandatory realism check.
@@ -451,17 +469,20 @@ To reduce cost guessing, the Engineering Planner outputs a machine-readable esti
 
 Expected flow:
 
-1. Planner drafts entries for all planned manufactured parts and COTS components.
-2. Planner defines `final_assembly` (subassemblies, part membership, joints, and per-part motion metadata like `dofs`/`control`); under the hood we:
-   - Calculate as much as possible to prevent the planner from needing to think (e.g.: cooling time in injection molding is autocalculated from wall thickness, 3d print time is autocalculated from volume, setup time is autocalculated etc.)
-   - Estimate part reuse - if the part/subassembly is reused, unit costs go down as per manufacturing rules (making 2 equal parts is cheaper than making 1 due to economics of scale).
-3. Planner runs `skills/manufacturing-knowledge/scripts/validate_and_price.py`.
-   - The script is the canonical calculator for `assembly_definition.yaml`: it validates schema consistency, computes assembly totals to cent precision, and writes normalized numeric totals back into the workspace file.
-   - The planner does not hand-author the final aggregate cost/weight values; those values come from the script output.
-4. If totals exceed `max_unit_cost` (or other numeric constraints), or if node-entry revalidation does not reproduce the same cent-precision totals exactly, planner must re-plan before handoff.
-5. Planner may restate the validated totals in prose, but the written YAML totals remain the source of truth and must match the script output exactly on node entry.
-6. If the solution requires drilling into benchmark-owned fixtures, planner must declare each intended drilled fastener hole under `environment_drill_operations`; undeclared drilling is invalid handoff.
-7. Each declared benchmark drilling operation contributes non-zero static drilling cost. For now that cost is defined centrally in `manufacturing_config.yaml` and must be included in planner pricing totals.
+01. Planner drafts entries for all planned manufactured parts and COTS components.
+02. Planner defines `final_assembly` (subassemblies, part membership, joints, and per-part motion metadata like `dofs`/`control`); under the hood we:
+    - Calculate as much as possible to prevent the planner from needing to think (e.g.: cooling time in injection molding is autocalculated from wall thickness, 3d print time is autocalculated from volume, setup time is autocalculated etc.)
+    - Estimate part reuse - if the part/subassembly is reused, unit costs go down as per manufacturing rules (making 2 equal parts is cheaper than making 1 due to economics of scale).
+03. Planner runs `skills/manufacturing-knowledge/scripts/validate_and_price.py`.
+    - The script is the canonical calculator for `assembly_definition.yaml`: it validates schema consistency, computes assembly totals to cent precision, and writes normalized numeric totals back into the workspace file.
+    - The planner does not hand-author the final aggregate cost/weight values; those values come from the script output.
+04. If totals exceed `max_unit_cost` (or other numeric constraints), or if node-entry revalidation does not reproduce the same cent-precision totals exactly, planner must re-plan before handoff.
+05. Planner may restate the validated totals in prose, but the written YAML totals remain the source of truth and must match the script output exactly on node entry.
+06. If the solution requires drilling into benchmark-owned fixtures, planner must declare each intended drilled fastener hole under `environment_drill_operations`; undeclared drilling is invalid handoff.
+07. Each declared benchmark drilling operation contributes non-zero static drilling cost. For now that cost is defined centrally in `manufacturing_config.yaml` and must be included in planner pricing totals.
+08. The approved planner handoff is a binding inventory for the implemented solution. The Engineering Coder must realize the same planner-declared manufactured-part and COTS inventory as a multiset: labels and quantities must match, including repeated references in `final_assembly`.
+09. Declared COTS components are not advisory. Declared COTS `part_id`s, labels, and quantities must be instantiated in authored geometry with the same counts; missing, extra, or relabeled COTS parts are handoff failures, even if the solution still solves the task.
+10. Internal construction details may change only when the approved inventory, motion contract, and drawing intent remain unchanged.
 
 Minimum motion metadata fields inside `final_assembly.parts` entries:
 

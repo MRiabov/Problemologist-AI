@@ -211,6 +211,8 @@ The drafting layer does three things that `plan.md` does not:
 The drawing layer should not duplicate every sentence from `plan.md`.
 It should extract the geometry-relevant statements and restate them as a structured interface contract.
 
+Every planner-authored object label and selected COTS `part_id` that appears in the drafting package must also appear in `plan.md` as an exact identifier mention. Backticks are preferred for the first mention, but the exact string match is the validator input.
+
 Recommended cross-reference style:
 
 - `plan.md` references `callout 1`, `callout 2`, or `section A-A`.
@@ -229,6 +231,18 @@ That means:
 - the drafting layer must not introduce new parts, joints, or motions.
 
 The drafting layer is therefore a view of the mechanism, not a second mechanism.
+
+## Inventory exactness
+
+The drafting layer is not a second BOM.
+
+The planner-authored evidence script and technical-drawing script must preserve the same multiset of labels, repeated quantities, and COTS identities as the assembly contract they accompany. The planner should self-validate this before handoff, and the downstream coder/reviewer must compare against the approved inventory rather than accepting a visually similar but relabeled model.
+
+## Starter template
+
+The starter workspace may ship a default 3-view technical-drawing template for the common case.
+
+The template should present a conventional orthographic trio such as front, top, and side, leave room for a small number of binding dimensions and callouts, and be usable unchanged when it already matches the mechanism. It is a convenience scaffold, not a separate source of truth.
 
 ## preview_drawing() contract
 
@@ -266,7 +280,7 @@ The Engineering Plan Reviewer validates the drafting layer when the mode is not 
 
 Reviewer responsibilities:
 
-1. Reject drawings that contradict `plan.md`.
+1. Reject drawings that contradict `plan.md` or the assembly inventory, including labels, repeated quantities, and COTS identities.
 2. Reject drawings that introduce unsupported geometry or unstated interfaces.
 3. Reject drawings that omit binding dimensions for critical interfaces.
 4. Reject drawings that claim datums, views, or sections that do not map to the actual assembly intent.
@@ -321,6 +335,7 @@ Minimum validation checks:
 16. If the handoff declares static randomization, runtime jitter, or motion envelopes, the source geometry is validated at the declared extremes rather than only at nominal pose.
 17. If the handoff depends on assembly, insertion, or adjustment access, the drawing validates the necessary access clearance or marks that access as intentionally out of scope.
 18. Callout IDs, datum labels, and feature references are unique and stable across the package.
+19. The planner-authored evidence script and technical-drawing script preserve the same labels, quantities, and COTS identities as the assembly inventory; the planner must self-validate this before handoff.
 
 Warning-only checks:
 

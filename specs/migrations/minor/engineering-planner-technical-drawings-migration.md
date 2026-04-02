@@ -25,9 +25,30 @@ The target contract is:
 8. full GD&T is deferred, and
 9. the migration is verified end to end through real integration tests.
 
+The exact label, quantity, and COTS inventory contract is intentionally split
+into [Planner Inventory Exactness and Plan Grounding
+Migration](../major/planner-inventory-exactness-and-plan-grounding.md).
+
 The migration is intentionally narrow. The planner is not becoming the final
 CAD author; it is becoming more specific about the geometry that the engineer
 must preserve.
+
+## Phased Migration Shape
+
+This migration lands in three tranches after the contract is defined. The
+contract/runtime tranche should stabilize first; the eval refresh is the long
+pole because it touches every seeded row that exercises the new drafting
+contract; the integration refresh is the broadest sweep because most planner,
+reviewer, and coder integration tests need the new artifact shape.
+
+1. Contract and runtime tranche: add the drafting schema, prompt gate,
+   preview path, validation, and starter template.
+2. Eval tranche: update every seeded eval row that exercises planner,
+   reviewer, coder, or render-evidence paths so the new drafting artifacts
+   and benchmark parity are reflected consistently.
+3. Integration tranche: update the affected planner/coder/reviewer
+   integration coverage that touches artifact gates, preview evidence, seed
+   preflight, and mode-on/mode-off behavior.
 
 ## Problem Statement
 
@@ -69,28 +90,32 @@ new CAD language.
 
 ## Proposed Target State
 
-1. `config/agents_config.yaml` controls whether PromptManager injects the
-   drafting appendix. `off` means the planner is not instructed to use
-   drafting; `minimal` and `full` mean the appendix is present and the
-   reviewer expects it.
-2. `assembly_definition.yaml` contains a strict `drafting` section with
-   views, datums, binding dimensions, callouts, and notes.
-3. `plan.md` remains the narrative explanation; the drafting section is the
-   structured geometry contract.
-4. `preview_drawing()` renders the drafting package, produces reviewable
-   image output and vector sidecars, and persists them under the same
-   role-scoped preview bucket model used for other evidence.
-5. The implementation may use build123d technical drawing primitives,
-   `TechnicalDrawing`, `ExportSVG`, `ExportDXF`, and `project_to_viewport()`
-   as implementation details.
-6. If the build123d export path is sufficient, `preview_drawing()` may stay
-   thin and act mostly as a conversion and attachment bridge. It does not
-   need to become a second authoring surface.
-7. `inspect_media(...)` remains the review tool for the resulting render
-   artifacts.
-8. The first release does not add full GD&T.
-9. The migration improves plan specificity, reduces coder ambiguity, and
-   gives the reviewer something concrete to reject or approve.
+01. `config/agents_config.yaml` controls whether PromptManager injects the
+    drafting appendix. `off` means the planner is not instructed to use
+    drafting; `minimal` and `full` mean the appendix is present and the
+    reviewer expects it.
+02. `assembly_definition.yaml` contains a strict `drafting` section with
+    views, datums, binding dimensions, callouts, and notes.
+03. `plan.md` remains the narrative explanation; the drafting section is the
+    structured geometry contract, and the separate planner inventory exactness
+    migration enforces label, quantity, and COTS identity matching across
+    planner and coder handoffs.
+04. `preview_drawing()` renders the drafting package, produces reviewable
+    image output and vector sidecars, and persists them under the same
+    role-scoped preview bucket model used for other evidence.
+05. The implementation may use build123d technical drawing primitives,
+    `TechnicalDrawing`, `ExportSVG`, `ExportDXF`, and `project_to_viewport()`
+    as implementation details.
+06. If the build123d export path is sufficient, `preview_drawing()` may stay
+    thin and act mostly as a conversion and attachment bridge. It does not
+    need to become a second authoring surface.
+07. The starter workspace may include a default 3-view technical-drawing
+    template for the common case so simple planners can reuse it unchanged.
+08. `inspect_media(...)` remains the review tool for the resulting render
+    artifacts.
+09. The first release does not add full GD&T.
+10. The migration improves plan specificity, reduces coder ambiguity, and
+    gives the reviewer something concrete to reject or approve.
 
 ## Required Work
 
@@ -103,6 +128,9 @@ new CAD language.
 - Do not let the drafting section introduce new parts, joints, or motions.
 - Do not let it invent geometry that is absent from `plan.md` or the rest of
   the assembly handoff.
+- Keep the planner-authored evidence and technical-drawing scripts grounded in
+  the approved plan and assembly contract; exact inventory enforcement lives in
+  the separate planner inventory exactness migration.
 - Add the planner-authored evidence and drawing scripts with role-specific
   prefixes: `solution_plan_evidence_script.py` / `solution_plan_technical_drawing_script.py`
   for engineering and `benchmark_plan_evidence_script.py` /
@@ -138,25 +166,78 @@ new CAD language.
   only when the mode requires them.
 - Reject drawings that contradict the plan, invent geometry, or omit binding
   dimensions for critical interfaces.
+- Coordinate with the separate planner inventory exactness migration so the
+  drafting package remains compatible with the inventory contract.
 - Keep the Engineering Coder intake read-only.
 - Keep the Benchmark Coder and both execution reviewers read-only for the
   planner drafting scripts.
 - Keep validation fail closed if the drafting section is missing or malformed
   when the mode requires it.
 
-### 5. Update docs and integration coverage
+### 5. Update docs and starter templates
 
 - Update the prompt, tool, and architecture docs so they describe the drafting
   layer consistently.
+- Add a default 3-view starter template to the shared template repos so the
+  common drafting case can be reused unchanged.
+
+### 6. Refresh the eval suite
+
 - Split the affected seeded eval rows into `*-drawing-[mode]` variants so the
   row id, copied seed directory, and eval log key stay mode-specific instead of
   collapsing back onto the base `ec-001`-style bucket.
+- Refresh the seeded workspace fixtures and mock-response scenarios so every
+  planner, reviewer, coder, and render-evidence row that touches drafting
+  artifacts carries the new contract.
+- Keep the eval changes broad: this tranche is the long pole because it
+  rewires the planner/reviewer/coder contract across the suite rather than
+  only adding a single new happy-path row.
+
+### Eval seed checklist
+
+The items below are the eval-side additions to `evals/logic/specs.py` and the
+seeded workspace fixtures. They keep `scripts/validate_eval_seed.py` and the
+eval preflight path fail closed before node execution starts.
+
+- [x] Engineer Planner eval rows include `assembly_definition.yaml.drafting`,
+  `solution_plan_evidence_script.py`, and
+  `solution_plan_technical_drawing_script.py`; they also include
+  `benchmark_plan_evidence_script.py` and
+  `benchmark_plan_technical_drawing_script.py` when benchmark drafting mode is
+  active.
+- [x] Engineer Plan Reviewer eval rows include the same solution drafting
+  scripts when engineering drafting mode is active.
+- [x] Engineer Coder eval rows include the same solution drafting scripts when
+  engineering drafting mode is active, plus the benchmark drafting scripts
+  when benchmark drafting mode is active.
+- [x] Engineer Execution Reviewer eval rows include the same solution drafting
+  scripts when engineering drafting mode is active.
+- [x] Electronics Planner eval rows stay on the base engineer planning files;
+  they do not gain drafting-specific eval artifacts in this migration.
+- [x] Benchmark Planner eval rows include
+  `benchmark_assembly_definition.yaml.drafting`,
+  `benchmark_plan_evidence_script.py`, and
+  `benchmark_plan_technical_drawing_script.py` when benchmark drafting mode is
+  active.
+- [x] Benchmark Plan Reviewer eval rows include the same benchmark drafting
+  scripts when benchmark drafting mode is active.
+- [x] Benchmark Coder eval rows include the same benchmark drafting scripts
+  when benchmark drafting mode is active.
+- [x] Benchmark Reviewer eval rows include the same benchmark drafting scripts
+  when benchmark drafting mode is active.
+
+### 7. Refresh the integration suite
+
 - Add a narrow integration slice that proves the planner can produce the
   drafting contract and the reviewer can inspect it.
+- Add assertions that drafting scripts reject unsupported views, callouts,
+  datums, or dimensions.
 - Add assertions for the mode-off path so the planner does not accidentally
   learn the drafting contract when it should not.
 - Add coverage for benchmark drafting parity so the benchmark planner and
   benchmark reviewer see the same artifact split.
+- Add an end-to-end assertion that the reviewer can judge the drawing
+  contract from real render artifacts.
 
 ## Non-Goals
 
@@ -174,7 +255,8 @@ The safe order is:
 2. Wire the config-gated appendix into PromptManager.
 3. Add `preview_drawing()` and the vector and raster evidence path.
 4. Tighten validation and reviewer checks.
-5. Add integration coverage and then tune the prompt policy by mode.
+5. Refresh the eval suite.
+6. Refresh the integration suite and then tune the prompt policy by mode.
 
 ## Acceptance Criteria
 
@@ -193,6 +275,8 @@ The safe order is:
    plan contract.
 8. Mode-suffixed eval rows keep their own copied seed directories and log
    buckets so `*-drawing-full` does not overwrite the legacy base task traces.
+9. The starter workspace includes a reusable default 3-view template for the
+   common drafting case.
 
 ## Migration Checklist
 
@@ -200,12 +284,20 @@ Use this checklist to track implementation from prompt policy through runtime
 validation. Do not close the migration until every unchecked item is either
 completed or explicitly waived with a written rationale.
 
+The eval and integration sweeps are the long pole. Track them separately from
+the contract/runtime work so the broad suite refresh does not disappear into
+the plumbing items.
+
 ### Contract and docs
 
 - [x] Add the architecture spec for planner technical drawings.
 - [x] Add the prompt-side `preview_drawing()` contract to the tools doc.
 - [x] Add the desired-architecture index link for the new planner drafting
   spec.
+- [ ] Keep the prompt, tool, and architecture docs aligned with the drafting
+  contract.
+- [ ] Add the default 3-view starter template to the shared template repos
+  and document it as a convenience scaffold.
 - [ ] Keep the migration note aligned with the architecture doc as the contract
   evolves.
 
@@ -242,47 +334,63 @@ completed or explicitly waived with a written rationale.
 - [x] Keep the Engineering Coder, Benchmark Coder, and execution reviewers
   read-only for the drafting scripts.
 
-### Per-role eval seed checklist
+### Eval suite refresh
+
+- [ ] Split the affected seeded eval rows into `*-drawing-[mode]` variants so
+  the row id, copied seed directory, and eval log key stay mode-specific
+  instead of collapsing back onto the base `ec-001`-style bucket.
+- [ ] Refresh the seeded workspace fixtures and mock-response scenarios so
+  every planner, reviewer, coder, and render-evidence row that touches
+  drafting artifacts carries the new contract.
+- [ ] Refresh `evals/logic/specs.py` and any role-scoped seed fixtures that
+  still assume the old handoff shape.
+
+### Eval seed checklist
 
 The items below are the eval-side additions to `evals/logic/specs.py` and the
 seeded workspace fixtures. They keep `scripts/validate_eval_seed.py` and the
 eval preflight path fail closed before node execution starts.
 
-- [x] Engineer Planner eval rows include `assembly_definition.yaml.drafting`,
+- [ ] Engineer Planner eval rows include `assembly_definition.yaml.drafting`,
   `solution_plan_evidence_script.py`, and
   `solution_plan_technical_drawing_script.py`; they also include
   `benchmark_plan_evidence_script.py` and
   `benchmark_plan_technical_drawing_script.py` when benchmark drafting mode is
   active.
-- [x] Engineer Plan Reviewer eval rows include the same solution drafting
+- [ ] Engineer Plan Reviewer eval rows include the same solution drafting
   scripts when engineering drafting mode is active.
-- [x] Engineer Coder eval rows include the same solution drafting scripts when
+- [ ] Engineer Coder eval rows include the same solution drafting scripts when
   engineering drafting mode is active, plus the benchmark drafting scripts
   when benchmark drafting mode is active.
-- [x] Engineer Execution Reviewer eval rows include the same solution drafting
+- [ ] Engineer Execution Reviewer eval rows include the same solution drafting
   scripts when engineering drafting mode is active.
-- [x] Electronics Planner eval rows stay on the base engineer planning files;
+- [ ] Electronics Planner eval rows stay on the base engineer planning files;
   they do not gain drafting-specific eval artifacts in this migration.
-- [x] Benchmark Planner eval rows include
+- [ ] Benchmark Planner eval rows include
   `benchmark_assembly_definition.yaml.drafting`,
   `benchmark_plan_evidence_script.py`, and
   `benchmark_plan_technical_drawing_script.py` when benchmark drafting mode is
   active.
-- [x] Benchmark Plan Reviewer eval rows include the same benchmark drafting
+- [ ] Benchmark Plan Reviewer eval rows include the same benchmark drafting
   scripts when benchmark drafting mode is active.
-- [x] Benchmark Coder eval rows include the same benchmark drafting scripts
+- [ ] Benchmark Coder eval rows include the same benchmark drafting scripts
   when benchmark drafting mode is active.
-- [x] Benchmark Reviewer eval rows include the same benchmark drafting scripts
+- [ ] Benchmark Reviewer eval rows include the same benchmark drafting scripts
   when benchmark drafting mode is active.
 
-### Integration coverage
+### Integration suite refresh
 
-- [x] Add a narrow integration slice for the mode-off path.
-- [x] Add a narrow integration slice for the mode-on path.
-- [x] Add an inspection assertion for the persisted drawing bundle.
+- [ ] Add a narrow integration slice that proves the planner can produce the
+  drafting contract and the reviewer can inspect it.
+- [ ] Add an inspection assertion for the persisted drawing bundle.
+- [ ] Add assertions that drafting scripts reject unsupported views, callouts,
+  datums, or dimensions.
+- [ ] Add assertions for the mode-off path so the planner does not
+  accidentally learn the drafting contract when it should not.
+- [ ] Add coverage for benchmark drafting parity so the benchmark planner and
+  benchmark reviewer see the same artifact split.
 - [ ] Add an end-to-end assertion that the reviewer can judge the drawing
   contract from real render artifacts.
-- [x] Add benchmark drafting parity coverage.
 
 ## File-Level Change Set
 

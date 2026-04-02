@@ -106,6 +106,9 @@ Problems with motors and moving parts are verified more consistently because the
    - Call `submit_plan()` to explicitly submit the planner handoff; completion is accepted only when `submit_plan()` returns `ok=true`.
 ```
 
+The benchmark planner self-validates that `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` preserve the same labels, repeated quantities, and COTS identities as the benchmark inventory before `submit_plan()`.
+The benchmark planner also ensures every benchmark inventory label and selected COTS `part_id` appears at least once in `plan.md` as an exact identifier mention; backticks are preferred for the first mention.
+
 ```yaml
 # benchmark_definition.yaml (draft from Benchmark Planner)
 objectives:
@@ -149,7 +152,7 @@ The benchmark loop has two reviewer stages with different responsibilities.
 `Benchmark Plan Reviewer` responsibilities:
 
 01. Reject plans that mention benchmark objects, moving parts, joints, or objective markers that are not declared consistently across `plan.md`, `benchmark_definition.yaml`, and benchmark-owned `benchmark_assembly_definition.yaml`.
-02. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml`.
+02. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml`, including label/quantity/COTS-identity exactness in `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py`, plus exact identifier mention coverage in `plan.md`.
 03. Validate feasibility of the planned benchmark geometry before implementation starts, including objective clearance, randomization sanity, and that the moved object/runtime jitter contract stays inside benchmark bounds.
 04. Validate non-ambiguity and completeness of planner handoff artifacts.
 05. Reject unsupported benchmark-side mechanisms or metadata outside current benchmark contracts/tooling.
@@ -161,7 +164,7 @@ The benchmark loop has two reviewer stages with different responsibilities.
 
 `Benchmark Reviewer` responsibilities:
 
-1. Verify the implemented benchmark follows the approved plan or has justified, reviewable deviations.
+1. Verify the implemented benchmark follows the approved plan or has justified, reviewable deviations, including the approved benchmark inventory labels, repeated quantities, and COTS identities.
 2. Verify the implemented environment is geometrically valid and simulation-valid for the latest revision.
 3. Verify the benchmark remains solvable, properly randomized, and consistent with the declared motion contract and observed simulation behavior after implementation.
 4. For benchmarks with powered fixtures or moving benchmark-owned parts, require dynamic simulation evidence for the latest revision rather than relying on preview images alone.
@@ -303,6 +306,9 @@ Notably, if the plan is higher than the max_unit_cost, it can't proceed and need
 
 At this point, the planner can handoff the documents to the Engineering Coder. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `assembly_definition.yaml` and compute assembly totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
 
+The Engineering Planner also self-validates that `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` preserve the same labels, repeated quantities, and COTS identities as `assembly_definition.yaml` before `submit_plan()`.
+The Engineering Planner also ensures every planner-declared inventory label and selected COTS `part_id` appears at least once in `plan.md` as an exact identifier mention; backticks are preferred for the first mention.
+
 ### Unified implementation ownership
 
 Implementation is not split into a mechanical coder followed by a separate electronics implementer.
@@ -313,6 +319,9 @@ The architecture rule is:
 2. `Electronics Planner` adds electrical requirements, component choices, and wiring intent when the benchmark declares explicit electronics.
 3. `Engineering Plan Reviewer` approves or rejects the combined planner handoff.
 4. `Engineering Coder` then implements the whole approved solution in one workspace revision, including geometry, controller behavior, electronics definitions, and any wire-routing logic required by the approved plan.
+   - The implementation must preserve the approved planner inventory: manufactured-part labels, repeated quantities, and COTS identities must match the planner-declared multiset.
+   - The coder may refactor internal geometry construction, but missing, extra, or relabeled inventory items are plan violations, not acceptable implementation freedom.
+   - If drafting mode is enabled for the approved plan, the technical-drawing companion is part of the binding plan package and must remain consistent with the implemented inventory.
 5. `Electronics Reviewer` validates the electromechanical implementation when electronics are present.
 
 We choose this because electromechanical implementation is often co-dependent:
@@ -333,7 +342,7 @@ The engineering loop has two reviewer stages with different responsibilities.
 `Engineering Plan Reviewer` responsibilities:
 
 1. Reject plans that propose unsupported components/mechanisms outside the current allowed system/tooling/contracts.
-2. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`.
+2. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`, including label/quantity/COTS-identity exactness in `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py`, plus exact identifier mention coverage in `plan.md`.
 3. Validate feasibility (physics realism, build-zone fit, and planner budgets under benchmark caps).
 4. Validate non-ambiguity and completeness of planner handoff artifacts.
 5. Re-run pricing/weight validation (`skills/manufacturing-knowledge/scripts/validate_and_price.py` or equivalent tool-wrapped validator) against the planner handoff and reject mismatches/failures.
@@ -344,7 +353,7 @@ The engineering loop has two reviewer stages with different responsibilities.
 
 `Engineering Execution Reviewer` responsibilities:
 
-1. Verify implementation follows the approved plan (or has justified, reviewable deviations).
+1. Verify implementation follows the approved plan at the inventory level, including labels, repeated quantities, COTS parts/identities, and any drafting package required by the approved plan. Justified, reviewable deviations are allowed only when they do not change the approved inventory contract.
 2. Verify robustness and non-flakiness of the successful solution, using simulation evidence across runtime randomization.
 3. Execute only after successful validation/simulation handoff artifacts are present (`validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_review_manifest.json` for latest revision). This stage is post-success auditing, not initial simulation pass/fail gating.
 4. Flag execution-time evidence of over-actuated designs (unnecessary moving parts/axes) as a robustness risk, even when single-run success exists.
