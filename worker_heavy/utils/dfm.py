@@ -10,6 +10,7 @@ from shared.workers.workbench_models import (
     CostBreakdown,
     ManufacturingConfig,
     ManufacturingMethod,
+    MaterialDefinition,
     WorkbenchMetadata,
     WorkbenchResult,
 )
@@ -359,6 +360,58 @@ def calculate_declared_assembly_cost(
     return round(manufactured_cost + cots_cost + drilling_cost, 2)
 
 
+def _resolve_declared_material(
+    *,
+    material_id: str,
+    manufacturing_method: ManufacturingMethod,
+    config: ManufacturingConfig,
+) -> MaterialDefinition:
+    material_name = material_id.strip()
+    if not material_name:
+        raise ValueError("manufactured_parts material_id must be a non-empty string")
+
+    method_config = None
+    if manufacturing_method == ManufacturingMethod.CNC:
+        method_config = config.cnc
+    elif manufacturing_method == ManufacturingMethod.INJECTION_MOLDING:
+        method_config = config.injection_molding
+    elif manufacturing_method == ManufacturingMethod.THREE_DP:
+        method_config = config.three_dp
+
+    material_cfg = None
+    if method_config is not None:
+        material_cfg = method_config.materials.get(material_name)
+    if material_cfg is None:
+        material_cfg = config.materials.get(material_name)
+    if material_cfg is None:
+        raise ValueError(
+            f"Unknown material_id '{material_name}' for {manufacturing_method.value} weight calculation"
+        )
+    return material_cfg
+
+
+def calculate_declared_assembly_weight(
+    assembly_definition: AssemblyDefinition,
+    config: ManufacturingConfig,
+) -> float:
+    """Return deterministic planner-declared assembly weight."""
+    manufactured_weight = 0.0
+    for part in assembly_definition.manufactured_parts:
+        material_cfg = _resolve_declared_material(
+            material_id=part.material_id,
+            manufacturing_method=part.manufacturing_method,
+            config=config,
+        )
+        part_weight = (part.part_volume_mm3 / 1000.0) * material_cfg.density_g_cm3
+        manufactured_weight += part_weight * part.quantity
+
+    cots_weight = 0.0
+    for part in assembly_definition.cots_parts:
+        cots_weight += part.weight_g * part.quantity
+
+    return round(manufactured_weight + cots_weight, 2)
+
+
 def validate_declared_assembly_cost(
     assembly_definition: AssemblyDefinition,
     config: ManufacturingConfig,
@@ -387,6 +440,38 @@ def validate_exact_declared_assembly_cost(
             "assembly_definition.totals.estimated_unit_cost_usd "
             f"(${actual_cost:.2f}) must equal the deterministic declared cost "
             f"(${expected_cost:.2f})"
+        ]
+    return []
+
+
+def validate_declared_assembly_weight(
+    assembly_definition: AssemblyDefinition,
+    config: ManufacturingConfig,
+) -> list[str]:
+    """Ensure planner totals include all declared manufactured and COTS weights."""
+    minimum_weight = calculate_declared_assembly_weight(assembly_definition, config)
+    if assembly_definition.totals.estimated_weight_g + 1e-6 < minimum_weight:
+        return [
+            "assembly_definition.totals.estimated_weight_g "
+            f"({assembly_definition.totals.estimated_weight_g:.2f}g) "
+            "must include declared manufactured-part weights and COTS weights "
+            f"(minimum {minimum_weight:.2f}g)"
+        ]
+    return []
+
+
+def validate_exact_declared_assembly_weight(
+    assembly_definition: AssemblyDefinition,
+    config: ManufacturingConfig,
+) -> list[str]:
+    """Ensure planner totals exactly match the deterministic declared weight."""
+    expected_weight = calculate_declared_assembly_weight(assembly_definition, config)
+    actual_weight = round(assembly_definition.totals.estimated_weight_g, 2)
+    if actual_weight != expected_weight:
+        return [
+            "assembly_definition.totals.estimated_weight_g "
+            f"({actual_weight:.2f}g) must equal the deterministic declared weight "
+            f"({expected_weight:.2f}g)"
         ]
     return []
 
