@@ -3,7 +3,7 @@
   "reviewer_stage": "benchmark_reviewer",
   "timestamp": "2026-03-10T09:00:00Z",
   "session_id": "seed-br-013-sideways-ball-overlapping-goal-forbid",
-  "revision": "1e406bee4b0c135a587e040366a9237660b60ed9",
+  "revision": "7a86eed21351b540f65f3023606c4b9ba67ba6b2",
   "script_path": "benchmark_script.py",
   "script_sha256": "312cf70aa4a3b39822ca22eeb768b44e1c7e86dd6128f217521db85f21efd5ae",
   "validation_success": true,
