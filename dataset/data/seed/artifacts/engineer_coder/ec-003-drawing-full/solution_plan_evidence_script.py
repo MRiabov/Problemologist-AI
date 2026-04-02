@@ -70,12 +70,17 @@ def build():
             x=320.0,
             material_id="hdpe",
         ),
-        ServoMotor.from_catalog_id("ServoMotor_DS3218", label="ServoMotor_DS3218").move(
-            Location((-92.0, -68.0, 34.0))
-        ),
+        _build_motor(),
     ]
 
     assembly = Compound(children=children)
     assembly.label = "solution_plan_evidence"
     assembly.metadata = CompoundMetadata()
     return assembly
+
+
+def _build_motor():
+    motor = ServoMotor.from_catalog_id("ServoMotor_DS3218")
+    motor = motor.move(Location((-92.0, -68.0, 34.0)))
+    motor.label = ""
+    return motor

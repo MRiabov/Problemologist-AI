@@ -13,34 +13,19 @@ constraints:
   planner_target_max_weight_g:
 
 manufactured_parts:
-  # Add one item per manufactured part.
-  # Required fields:
-  # - part_name
-  # - part_id
-  # - manufacturing_method
-  # - material_id
-  # - quantity
-  # - part_volume_mm3
-  # - stock_bbox_mm: {x, y, z}
-  # - stock_volume_mm3
-  # - removed_volume_mm3
-  # - estimated_unit_cost_usd
-  # Do NOT replace these with shorthand keys like:
-  # - name
-  # - method
-  # - material
-  # - parameters
-  # Example:
-  # - part_name: bridge_deck
-  #   part_id: bridge_deck
-  #   manufacturing_method: CNC
-  #   material_id: aluminum_6061
-  #   quantity: 1
-  #   part_volume_mm3: 500000.0
-  #   stock_bbox_mm: {x: 500.0, y: 100.0, z: 10.0}
-  #   stock_volume_mm3: 500000.0
-  #   removed_volume_mm3: 0.0
-  #   estimated_unit_cost_usd: 45.0
+  - part_name: solution_plan_evidence
+    part_id: solution_plan_evidence
+    manufacturing_method: 3DP
+    material_id: aluminum_6061
+    quantity: 1
+    part_volume_mm3: 1000.0
+    stock_bbox_mm:
+      x: 10.0
+      y: 10.0
+      z: 10.0
+    stock_volume_mm3: 1000.0
+    removed_volume_mm3: 0.0
+    estimated_unit_cost_usd: 10.0
 
 cots_parts:
   # Add one item per COTS part.
@@ -97,6 +82,57 @@ final_assembly:
   #       type: revolute
   # Do NOT use a list of bare strings here.
   # Use only canonical manufacturing enum values elsewhere in this file: CNC, 3DP, IM.
+
+drafting:
+  sheet_id: sheet-1
+  title: Seeded engineer drafting
+  views:
+    - view_id: front
+      target: solution_plan_evidence
+      projection: front
+      scale: 1.0
+      datums: [A, B]
+      dimensions:
+        - dimension_id: width
+          kind: linear
+          target: solution_plan_evidence
+          value: 10.0
+          binding: true
+      callouts:
+        - callout_id: 1
+          label: solution_plan_evidence
+          target: solution_plan_evidence
+    - view_id: top
+      target: solution_plan_evidence
+      projection: top
+      scale: 1.0
+      datums: [A, C]
+      dimensions:
+        - dimension_id: depth
+          kind: linear
+          target: solution_plan_evidence
+          value: 10.0
+          binding: true
+      callouts:
+        - callout_id: 2
+          label: solution_plan_evidence
+          target: solution_plan_evidence
+    - view_id: side
+      target: solution_plan_evidence
+      projection: side
+      scale: 1.0
+      datums: [B, C]
+      dimensions:
+        - dimension_id: height
+          kind: linear
+          target: solution_plan_evidence
+          value: 10.0
+          binding: true
+      callouts:
+        - callout_id: 3
+          label: solution_plan_evidence
+          target: solution_plan_evidence
+  notes: []
 
 totals:
   # `estimated_unit_cost_usd` must include manufactured parts, COTS parts,
