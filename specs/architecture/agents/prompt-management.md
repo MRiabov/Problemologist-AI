@@ -84,11 +84,11 @@ If a rule is universal but long, it probably belongs in the relevant runtime con
 
 ### Drafting appendices
 
-Drafting appendices are conditional role-scoped additions that only appear when the planner drafting mode is enabled in `config/agents_config.yaml`.
+Drafting appendices are conditional role-scoped additions that only appear when the planner technical drawing mode is enabled in `config/agents_config.yaml`.
 
 They belong in `config/prompts.yaml` and should stay focused on the planner-authored technical drawing contract, the reviewer checks that apply to that contract, and the read-only context the coder should preserve.
 
-If drafting mode is off, PromptManager must omit the appendix entirely so the planner does not learn the drafting contract by accident.
+If technical drawing mode is off, PromptManager must omit the appendix entirely so the planner does not learn the drafting contract by accident.
 
 ### Backend appendices
 

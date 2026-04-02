@@ -3,58 +3,11 @@
 ## Scope summary
 
 - Primary focus: a planner-authored technical-drawing layer for the Engineering Planner.
-- Defines the difference between drafting, which is the authored contract, and drawing, which is the rendered review artifact.
 - The same drafting artifact pattern is mirrored for the Benchmark Planner with benchmark-prefixed filenames.
-- Defines when the planner produces the drafting contract, what the drawing package must say, and how the reviewer validates it.
+- Defines when the planner produces drawings, what the drawing package must say, and how the reviewer validates it.
 - Treats technical drawings as a derived planning artifact, not as a replacement for `plan.md`, `todo.md`, or `assembly_definition.yaml`.
 - Uses build123d-native projection and export capabilities as implementation details, not as architecture terminology.
 - Migration mechanics live in [Engineering Planner Technical Drawings Migration](../../migrations/minor/engineering-planner-technical-drawings-migration.md).
-
-## Drafting vs drawing
-
-Drafting and drawing are related but not the same artifact.
-
-| Aspect | Drafting | Drawing |
-| -- | -- | -- |
-| Role in the workflow | Authored planning contract | Rendered inspection artifact |
-| Source of truth | `assembly_definition.yaml.drafting` plus the planner-authored technical-drawing scripts | `preview_drawing()` output, including raster preview and vector sidecars |
-| Primary question | What geometry facts must be preserved? | How does the planner present those facts for review? |
-| Content shape | Structured, machine-checkable interface intent | Projected views, annotations, and reviewable presentation of the same intent |
-| Fidelity rule | Must not invent geometry absent from the handoff | Must not add geometry that is not already supported by the drafting contract |
-| Consumer | Planner, reviewer, and coder as read-only context | Reviewer first, then coder as visual confirmation |
-| Failure mode | The engineer guesses the wrong interface or bound | The reviewer cannot reliably inspect the intended geometry |
-
-Drafting is the contract. Drawing is the presentation of that contract.
-
-Drafting answers:
-
-- which interface or subassembly matters,
-- which datums define the view,
-- which dimensions are binding,
-- which clearances or fits matter,
-- which callouts point back to plan statements.
-
-Drawing answers:
-
-- what the planner wants the reviewer to see,
-- how the geometry projects in standard views,
-- whether the documented interface is actually legible,
-- whether the annotated geometry matches the authored drafting intent.
-
-The goal is not to make the planner do final CAD implementation.
-The goal is to make the handoff specific enough that the engineer can implement without guessing the geometry.
-
-## Why this exists
-
-The current handoff shape is strong on budgets and general mechanism intent, but weak on geometric specificity.
-That causes three recurring failure modes:
-
-1. The plan is too abstract and the engineer infers the wrong mechanism.
-2. The plan is technically plausible but underspecified at the interfaces that matter.
-3. The engineer overbuilds because the planner did not mark the few dimensions that are actually binding.
-
-Technical drawings are a better fit than freeform sketches for this repo because the system already uses build123d and already supports native 2D projection and vector export.
-The architecture should therefore prefer standardized drawing views over decorative sketch output.
 
 ## Non-goals
 
@@ -75,8 +28,8 @@ The same config gate applies to the mirrored Benchmark Planner drafting appendix
 The mode values are:
 
 - `off`
-- `drafting`
-- `drawing`
+- `minimal`
+- `full`
 
 Behavior by mode:
 
@@ -84,10 +37,10 @@ Behavior by mode:
    - PromptManager omits the drafting appendix.
    - The planner is not expected to produce drafting annotations or drawing views.
    - Review does not fail because drafting artifacts are absent.
-2. `drafting`
-   - PromptManager instructs the planner to add a minimal drafting contract for the critical interfaces only.
+2. `minimal`
+   - PromptManager instructs the planner to add a minimal technical-drawing layer for the critical interfaces only.
    - Review expects those critical interfaces to be covered by structured drawing views or callouts.
-3. `drawing`
+3. `full`
    - PromptManager instructs the planner to produce a fuller technical drawing package with standardized views and annotations.
    - Review expects stronger coverage of interface geometry, including section or detail views when needed.
 
@@ -119,7 +72,7 @@ Planner drafting is therefore treated as derived intent:
 - `plan.md` explains the mechanism and the rationale.
 - `assembly_definition.yaml` carries the machine-readable structure and budgets.
 - `assembly_definition.yaml.drafting` carries the technical-drawing intent.
-- `preview_drawing()` renders that intent into the drawing artifact for inspection.
+- `preview_drawing()` renders that intent for inspection.
 
 ## Planner-owned drafting contract
 
@@ -282,7 +235,7 @@ The drafting layer is therefore a view of the mechanism, not a second mechanism.
 The public preview contract should gain a companion to `preview()`:
 
 - `preview()` continues to render 3D geometry and assembly context.
-- `preview_drawing()` renders the technical drawing package from the authored drafting contract.
+- `preview_drawing()` renders the technical drawing package.
 
 The implementation may use build123d technical drawing primitives, `project_to_viewport()`, `TechnicalDrawing`, `ExportSVG`, and `ExportDXF`.
 Those names are implementation details, not architecture requirements.
@@ -324,7 +277,7 @@ When render images exist for the current revision, the reviewer must inspect the
 
 The reviewer should answer two questions:
 
-1. Is the drafting contract specific enough to prevent an implementation guess?
+1. Is the drawing specific enough to prevent an implementation guess?
 2. Is the drawing still narrow enough that the engineer retains freedom over manufacturable realization?
 
 If the answer to either question is no, the plan is not ready.

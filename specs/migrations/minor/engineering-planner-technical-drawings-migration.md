@@ -71,7 +71,7 @@ new CAD language.
 
 1. `config/agents_config.yaml` controls whether PromptManager injects the
    drafting appendix. `off` means the planner is not instructed to use
-   drafting; `drafting` and `drawing` mean the appendix is present and the
+   drafting; `minimal` and `full` mean the appendix is present and the
    reviewer expects it.
 2. `assembly_definition.yaml` contains a strict `drafting` section with
    views, datums, binding dimensions, callouts, and notes.
