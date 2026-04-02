@@ -29,6 +29,7 @@ The unified prompt manager treats these inputs as authoritative:
 - `shared/agent_templates/`: prompt-context files, helper scripts, and boilerplate that belong in the workspace context.
 - `shared/assets/template_repos/`: role-scoped starter workspace material copied into the run-local workspace.
 - the checked-in skill tree and its workspace materializations, as described in [agent-skill.md](./agent-skill.md), plus any compact generated index derived from that tree when the backend needs one. Those runtime copies are inputs to the agent, not a separate prompt source.
+- planner-authored drafting scripts, when present, are prompt-context inputs too: `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `solution_plan_evidence_script.py`, and `solution_plan_technical_drawing_script.py`.
 - `worker_light/agent_files/`: legacy compatibility mirror only.
 - runtime-generated context: task text, agent identity, task ID, workspace state, backend selection, and tool registration.
 
@@ -56,9 +57,10 @@ It must:
 2. choose the backend family,
 3. render the active role prompt,
 4. add the shared appendix,
-5. add the backend appendix,
-6. append runtime-generated context,
-7. append a compact generated skill index when the backend family needs one.
+5. add the drafting appendix when drafting mode is active for the planner family,
+6. add the backend appendix,
+7. append runtime-generated context,
+8. append a compact generated skill index when the backend family needs one.
 
 The backend choice selects which appendix branch is used. It does not select a different prompt manager or a different prompt source model.
 
@@ -70,7 +72,7 @@ Role prompts define the agent identity and the minimum operating contract for th
 
 They should stay close to the current engineer_coder style: compact, direct, and workspace-aware.
 
-Role prompts should name the authored source file, the read-only context files, and the submission path when that matters for the role. They should not restate the full workflow that already lives in skills or runtime contracts.
+Role prompts should name the authored source file, the read-only context files, the planner drafting evidence/drawing scripts when those are enabled, and the submission path when that matters for the role. They should not restate the full workflow that already lives in skills or runtime contracts.
 
 ### Shared appendices
 
@@ -79,6 +81,14 @@ Shared appendices apply to every role and every backend family.
 They should cover rules such as workspace-relative paths, system-owned metadata, submission hygiene, and common constraints that are universal across the agent runtime.
 
 If a rule is universal but long, it probably belongs in the relevant runtime contract or skill instead of the shared appendix.
+
+### Drafting appendices
+
+Drafting appendices are conditional role-scoped additions that only appear when the planner drafting mode is enabled in `config/agents_config.yaml`.
+
+They belong in `config/prompts.yaml` and should stay focused on the planner-authored technical drawing contract, the reviewer checks that apply to that contract, and the read-only context the coder should preserve.
+
+If drafting mode is off, PromptManager must omit the appendix entirely so the planner does not learn the drafting contract by accident.
 
 ### Backend appendices
 
@@ -124,9 +134,10 @@ The final prompt should read in this order:
 
 1. role prompt
 2. shared appendix
-3. backend appendix
-4. runtime-generated context
-5. compact generated skill index, when needed
+3. drafting appendix, when active
+4. backend appendix
+5. runtime-generated context
+6. compact generated skill index, when needed
 
 That order keeps the base prompt stable while still allowing backend-specific and runtime-specific context to appear in a predictable place.
 

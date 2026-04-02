@@ -117,7 +117,9 @@ The plan will have the following bullet points. The plan will be validated for c
 2. A `todo.md` TODO list from the planner.
 3. A draft of `benchmark_definition.yaml` with rough values filled in.
 4. A draft of `benchmark_assembly_definition.yaml` with per-part motion contracts in `benchmark_assembly.parts` (`dofs`, `control`, and any explicit operating limits). This is benchmark-owned read-only handoff context for downstream engineer stages and must still be a schema-valid full `AssemblyDefinition` artifact, even when the benchmark planner uses a fully free or fully constrained fixture declaration.
-5. An explicit `submit_plan()` handoff action which persists `.manifests/benchmark_plan_review_manifest.json`.
+5. `benchmark_plan_evidence_script.py`, the benchmark-owned build123d evidence script that makes the draft geometry legible as a sketch/previewable scene for the benchmark plan reviewers and downstream engineer intake.
+6. `benchmark_plan_technical_drawing_script.py`, the benchmark-owned technical-drawing companion that renders the same benchmark planning intent into orthographic drawing output.
+7. An explicit `submit_plan()` handoff action which persists `.manifests/benchmark_plan_review_manifest.json`.
 
 <!-- Note: it may be interesting that the Coder could try a few "approaches" on how to reduce costs without actually editing CAD, and would get fast response for cost by just editing YAML. However, it will almost by definition deviate from the plan. -->
 
@@ -126,7 +128,7 @@ If the user provides explicit benchmark objective overrides (for example `max_un
 
 `Benchmark Plan Reviewer` gate requirements:
 
-- Source of truth contract: benchmark planner handoff artifacts are `plan.md`, `todo.md`, `benchmark_definition.yaml`, and benchmark-owned `benchmark_assembly_definition.yaml`. `benchmark_script.py` is created later by `Benchmark Coder` after plan approval.
+- Source of truth contract: benchmark planner handoff artifacts are `plan.md`, `todo.md`, `benchmark_definition.yaml`, benchmark-owned `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py`. `benchmark_script.py` is created later by `Benchmark Coder` after plan approval.
 - Reviewer-stage manifest: `.manifests/benchmark_plan_review_manifest.json`.
 - Entry guard behavior:
   - Reject when the manifest is missing, stale for the latest planner revision, or schema-invalid.
@@ -139,11 +141,11 @@ If the user provides explicit benchmark objective overrides (for example `max_un
 <!-- Future work: if benchmark input arrives as STEP, infer candidate motion constraints from the source geometry before explicit benchmark handoff materialization. -->
 
 - Review-stage behavior:
-  - `Benchmark Plan Reviewer` is read-only with respect to planner-owned artifacts. It inspects, validates, and decides; it does not rewrite `plan.md`, `todo.md`, `benchmark_definition.yaml`, or `benchmark_assembly_definition.yaml`.
+  - `Benchmark Plan Reviewer` is read-only with respect to planner-owned artifacts. It inspects, validates, and decides; it does not rewrite `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, or `benchmark_plan_technical_drawing_script.py`.
 - Approval effect:
   - Only an approved benchmark plan reviewer handoff is allowed to pause in `PLANNED` state and unblock `Benchmark Coder`.
 
-`Benchmark Coder` owns all implementation changes to `benchmark_script.py` and helper implementation modules for the current revision.
+`Benchmark Coder` owns all implementation changes to `benchmark_script.py` and helper implementation modules for the current revision. The benchmark planner's evidence and technical-drawing scripts are read-only context for benchmark coder entry.
 
 ## Benchmark Generator with Engineer handover
 
@@ -185,9 +187,9 @@ The engineer will also receive YAML files with:
 Note that the maximum price and weight are also set by the planner later internally. However, the planner sets their own constraints *under* the maximum price. Here the "maximum prices and weight" are a "customer-specified price and weight" (the "customer" being the benchmark generator), and the planner price and weight are their own price and weight.
     <!-- (in future work) Later on, we will challenge the agent to optimize its previous result. It would have to beat its own solution, by, say, 15%.  -->
 
-The positions of objectives (including a build zone) and runtime randomization are in `benchmark_definition.yaml`. The Benchmark Planner's `benchmark_assembly_definition.yaml` is a required benchmark-owned handoff artifact copied into the engineer session as read-only context. The benchmark-owned assembly geometry is materialized in `benchmark_script.py` by `Benchmark Coder` after plan approval through `build()`, and preview callers compose that assembly output with the objective overlays reconstructed by the importable `utils.objectives_geometry()` helper from the `objectives` section of `benchmark_definition.yaml` before rendering benchmark context.
+The positions of objectives (including a build zone) and runtime randomization are in `benchmark_definition.yaml`. The Benchmark Planner's `benchmark_assembly_definition.yaml` is a required benchmark-owned handoff artifact copied into the engineer session as read-only context. The benchmark-owned assembly geometry is materialized in `benchmark_script.py` by `Benchmark Coder` after plan approval through `build()`, and preview callers compose that assembly output with the objective overlays reconstructed by the importable `utils.objectives_geometry()` helper from the `objectives` section of `benchmark_definition.yaml` before rendering benchmark context. When drafting mode is active, `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` are also copied into downstream engineer workspaces as read-only benchmark planning context.
 
-Engineering may read `benchmark_assembly_definition.yaml`, reason about it, and design against it, but must not modify benchmark-owned fixtures or benchmark motion definitions. Missing `benchmark_assembly_definition.yaml` is a handoff failure, not an optional omission, and the file remains benchmark-owned read-only context rather than an engineer-owned planning artifact. `benchmark_script.py` is also read-only context for engineering intake once it exists.
+Engineering may read `benchmark_assembly_definition.yaml`, reason about it, and design against it, but must not modify benchmark-owned fixtures or benchmark motion definitions. Missing `benchmark_assembly_definition.yaml` is a handoff failure, not an optional omission, and the file remains benchmark-owned read-only context rather than an engineer-owned planning artifact. `benchmark_script.py`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py` are also read-only context for engineering intake once they exist.
 
 If the benchmark includes moving benchmark-owned fixtures, the engineer intake still needs motion-visible facts. Those facts may live in `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml`. The minimum contract for each moving benchmark fixture is:
 
@@ -208,7 +210,10 @@ If a benchmark-owned fixture is meant to be interactable by engineering, the rel
 
 That flag is a permission, not transfer of ownership. The engineer may interact with the intended benchmark-owned surface, but may not redefine benchmark-owned components.
 
-The benchmark-owned geometry source is created in `benchmark_script.py` by `Benchmark Coder` and is copied read-only into downstream engineer workspaces and benchmark execution review. The engineer-owned solution source lives in `solution_script.py`. Benchmark assembly geometry comes from `build()`, while the shared `utils.objectives_geometry()` helper reconstructs the objective overlays declared in the `objectives` section of `benchmark_definition.yaml`.
+The benchmark-owned geometry source is created in `benchmark_script.py` by `Benchmark Coder` and is copied read-only into downstream engineer workspaces and benchmark execution review. The engineer-owned solution source lives in `solution_script.py`. Benchmark assembly geometry comes from `build()`, while the shared `utils.objectives_geometry()` helper reconstructs the objective overlays declared in the `objectives` section of `benchmark_definition.yaml`. Planner-authored drafting evidence and technical-drawing scripts are separate read-only inputs:
+
+- benchmark side: `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`
+- engineer side: `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`
 
 #### Renders
 
@@ -257,23 +262,25 @@ For explicit-electronics tasks, there is also a specialist review gate between c
 2. `Electronics Reviewer` does not own a separate implementation pass. It reviews the unified `Engineering Coder` output.
 3. If electrical issues require implementation changes, routing returns to `Engineering Coder`, not to a separate electrical implementer node.
 
-Engineer sends four files to the coder agent who has to implement the plan:
+Engineer sends the planner handoff files to the coder agent who has to implement the plan:
 
-1. A `plan.md` file The plan.md is a structured document (much like the benchmark generator plan) outlining:
-2. A stripped down `benchmark_definition.yaml` file, except the max price, weight are set by the planner now - and they are under the max weight set by the user/benchmark generator.
+1. A `plan.md` file. The plan.md is a structured document (much like the benchmark generator plan) outlining:
+2. A stripped down `benchmark_definition.yaml` file, except the max price and weight are set by the planner now and remain under the benchmark/customer caps.
 3. A `todo.md` TODO-list.
 4. A `assembly_definition.yaml` file with per-part pricing inputs, `final_assembly` structure, and assembly totals produced by `validate_costing_and_price.py`.
+5. A `solution_plan_evidence_script.py` file that captures the build123d planning evidence for the proposed solution geometry.
+6. A `solution_plan_technical_drawing_script.py` file that captures the planner-authored technical drawing companion for that same solution geometry.
 
 Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
 
 - Source of truth contract: `ENGINEER_PLANNER_HANDOFF_ARTIFACTS` in node-entry validation.
-- Required artifacts: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`
+- Required artifacts: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`
 - Reviewer-stage manifest: `.manifests/engineering_plan_review_manifest.json` (planner handoff materialization for the plan-review stage)
 - Entry guard behavior:
   - Reject when the manifest is missing, stale for the latest planner revision, or schema-invalid.
   - Use node-entry validation with an engineering-plan-review custom check (parity with execution-review stale-revision checks).
   - For seeded/direct starts, the controller-owned node-entry validation layer must schema-validate all present schema-backed handoff artifacts in the workspace (not only required-file presence) and fail closed on any typed-parse/contract error.
-  - For seeded/direct starts involving planner artifacts, that same controller validation path must also run the corresponding planner cross-contract semantic checks (engineering: `benchmark_definition.yaml` + `assembly_definition.yaml` attachment/cost checks; benchmark: benchmark planner handoff semantic checks).
+  - For seeded/direct starts involving planner artifacts, that same controller validation path must also run the corresponding planner cross-contract semantic checks (engineering: `benchmark_definition.yaml` + `assembly_definition.yaml` attachment/cost checks plus planner drafting script consistency; benchmark: benchmark planner handoff semantic checks plus benchmark drafting script consistency).
   - Evals may trigger seeded preflight, but they must call the controller validation path instead of re-implementing schema/handoff logic inside eval modules.
 - Plan reviewer responsibilities:
   - Reject unsupported/invented system components or mechanisms.
@@ -285,7 +292,7 @@ Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
 
 Unified coder contract:
 
-- `Engineering Coder` reads the combined planner handoff, including any planner-owned `assembly_definition.yaml.electronics` section, benchmark `benchmark_definition.yaml.electronics_requirements`, and read-only benchmark geometry context from `benchmark_script.py`.
+- `Engineering Coder` reads the combined planner handoff, including any planner-owned `assembly_definition.yaml.electronics` section, benchmark `benchmark_definition.yaml.electronics_requirements`, read-only benchmark geometry context from `benchmark_script.py`, read-only benchmark drafting context from `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py`, and read-only planner drafting context from `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py`.
 - `Engineering Coder` owns all implementation changes to `solution_script.py` and helper implementation modules for the current revision.
 - `Engineering Coder` may implement both mechanical and electrical details in one pass when the task requires electronics.
 - `Engineering Coder` must not assume that electronics can be deferred to a later dedicated implementation node.

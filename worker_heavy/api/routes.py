@@ -135,7 +135,32 @@ def _collect_validation_render_artifacts(
             base64.b64encode(render_manifest_path.read_bytes()).decode("ascii")
         )
 
+    render_blobs_base64.update(_collect_render_payload_blobs(root))
     return render_paths, render_blobs_base64
+
+
+def _collect_render_payload_blobs(root: Path) -> dict[str, str]:
+    render_blobs_base64: dict[str, str] = {}
+    renders_dir = root / "renders"
+    if not renders_dir.exists():
+        return render_blobs_base64
+
+    for render_path in sorted(renders_dir.rglob("*")):
+        if not render_path.is_file():
+            continue
+        if render_path.name not in {
+            "render_manifest.json",
+            "render_index.jsonl",
+            "preview_scene.json",
+            "frames.jsonl",
+            "objects.parquet",
+        }:
+            continue
+        rel_path = str(render_path.relative_to(root))
+        render_blobs_base64[rel_path] = base64.b64encode(
+            render_path.read_bytes()
+        ).decode("ascii")
+    return render_blobs_base64
 
 
 def _resolve_preview_rendering_type(
@@ -370,6 +395,19 @@ async def api_simulate(
                     render_blobs_base64[rel_path] = base64.b64encode(
                         render_path.read_bytes()
                     ).decode("ascii")
+                bundle_manifest_paths = {
+                    str(Path(rel_path).parent / "render_manifest.json")
+                    for rel_path in artifacts.render_paths
+                    if Path(rel_path).suffix.lower()
+                    in {".png", ".jpg", ".jpeg", ".mp4"}
+                }
+                for manifest_rel_path in sorted(bundle_manifest_paths):
+                    manifest_path = root / manifest_rel_path
+                    if not manifest_path.exists():
+                        continue
+                    render_blobs_base64[manifest_rel_path] = base64.b64encode(
+                        manifest_path.read_bytes()
+                    ).decode("ascii")
                 render_manifest_path = root / "renders" / "render_manifest.json"
                 if render_manifest_path.exists():
                     render_blobs_base64[
@@ -377,6 +415,7 @@ async def api_simulate(
                     ] = base64.b64encode(render_manifest_path.read_bytes()).decode(
                         "ascii"
                     )
+                render_blobs_base64.update(_collect_render_payload_blobs(root))
                 artifacts.render_blobs_base64 = render_blobs_base64
                 return BenchmarkToolResponse(
                     success=result.success,
@@ -629,7 +668,10 @@ async def api_preview(
                     "worker_heavy_preview_finished",
                     session_id=x_session_id,
                     artifact_path=str(image_path.relative_to(workspace_root)),
-                    manifest_path=str(Path("renders") / "render_manifest.json"),
+                    manifest_path=str(
+                        image_path.parent.relative_to(workspace_root)
+                        / "render_manifest.json"
+                    ).replace("\\", "/"),
                     rendering_type=resolved_rendering_type.value,
                 )
                 return PreviewDesignResponse(
@@ -638,7 +680,10 @@ async def api_preview(
                     status_text=response.status_text,
                     image_path=str(image_path.relative_to(workspace_root)),
                     artifact_path=str(image_path.relative_to(workspace_root)),
-                    manifest_path=str(Path("renders") / "render_manifest.json"),
+                    manifest_path=str(
+                        image_path.parent.relative_to(workspace_root)
+                        / "render_manifest.json"
+                    ).replace("\\", "/"),
                     rendering_type=resolved_rendering_type,
                     pitch=request.orbit_pitch,
                     yaw=request.orbit_yaw,
@@ -779,13 +824,6 @@ async def api_submit(
                 artifacts.review_manifests_json = review_manifests
                 render_blobs_base64: dict[str, str] = {}
                 renders_dir = root / "renders"
-                render_manifest_path = renders_dir / "render_manifest.json"
-                if render_manifest_path.exists():
-                    render_blobs_base64[
-                        str(Path("renders") / "render_manifest.json")
-                    ] = base64.b64encode(render_manifest_path.read_bytes()).decode(
-                        "ascii"
-                    )
                 if renders_dir.exists():
                     for render_path in sorted(renders_dir.rglob("*")):
                         if not render_path.is_file():
@@ -802,6 +840,26 @@ async def api_submit(
                         render_blobs_base64[rel_path] = base64.b64encode(
                             render_path.read_bytes()
                         ).decode("ascii")
+                bundle_manifest_paths = {
+                    str(Path(rel_path).parent / "render_manifest.json")
+                    for rel_path in artifacts.render_paths
+                    if Path(rel_path).suffix.lower()
+                    in {".png", ".jpg", ".jpeg", ".mp4"}
+                }
+                for manifest_rel_path in sorted(bundle_manifest_paths):
+                    manifest_path = root / manifest_rel_path
+                    if manifest_path.exists():
+                        render_blobs_base64[manifest_rel_path] = base64.b64encode(
+                            manifest_path.read_bytes()
+                        ).decode("ascii")
+                render_manifest_path = renders_dir / "render_manifest.json"
+                if render_manifest_path.exists():
+                    render_blobs_base64[
+                        str(Path("renders") / "render_manifest.json")
+                    ] = base64.b64encode(render_manifest_path.read_bytes()).decode(
+                        "ascii"
+                    )
+                render_blobs_base64.update(_collect_render_payload_blobs(root))
                 artifacts.render_blobs_base64 = render_blobs_base64
                 return BenchmarkToolResponse(
                     success=success,

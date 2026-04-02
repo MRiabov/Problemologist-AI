@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import uuid
 from pathlib import Path
 from typing import Any, Literal
 
@@ -41,6 +42,8 @@ from shared.observability.events import emit_event
 from shared.observability.schemas import LogicFailureEvent, WireRoutingEvent
 from shared.observability.storage import S3Client, S3Config
 from shared.rendering import (
+    append_render_bundle_index,
+    build_render_bundle_index_entry,
     normalize_render_manifest,
     render_stress_heatmap_artifact,
     select_static_preview_render_subdir,
@@ -1614,7 +1617,9 @@ def simulate(
             logger.warning("failed_to_load_controllers", error=str(e))
 
     try:
-        video_path = renders_dir / "simulation.mp4"
+        simulation_bundle_id = f"{session_id or 'simulation'}-{uuid.uuid4().hex[:12]}"
+        video_bundle_root = renders_dir / "simulation_video" / simulation_bundle_id
+        video_path = video_bundle_root / "simulation.mp4"
         final_video_path: Path | None = video_path
         render_object_store_keys: dict[str, str] = {}
         sim_duration = 0.5 if smoke_test_mode else 30.0
@@ -1750,6 +1755,48 @@ def simulate(
         if final_video_path and final_video_path.exists():
             render_paths.append(str(final_video_path))
         render_paths = _workspace_relative_render_paths(render_paths, working_dir)
+
+        video_render_paths = [
+            path for path in render_paths if Path(path).suffix.lower() == ".mp4"
+        ]
+        if video_render_paths:
+            video_bundle_path = str(Path(video_render_paths[0]).parent).replace(
+                "\\", "/"
+            )
+            video_manifest_path = (
+                working_dir / video_bundle_path / "render_manifest.json"
+            )
+            existing_manifest = None
+            if video_manifest_path.exists():
+                with contextlib.suppress(Exception):
+                    existing_manifest = RenderManifest.model_validate_json(
+                        video_manifest_path.read_text(encoding="utf-8")
+                    )
+
+            manifest = normalize_render_manifest(
+                render_paths=video_render_paths,
+                workspace_root=working_dir,
+                existing_manifest=existing_manifest,
+                episode_id=session_id,
+                worker_session_id=session_id,
+                revision=runtime_revision,
+                environment_version=None,
+                bundle_path=video_bundle_path,
+            )
+            video_manifest_path.write_text(
+                manifest.model_dump_json(indent=2),
+                encoding="utf-8",
+            )
+            append_render_bundle_index(
+                working_dir,
+                build_render_bundle_index_entry(
+                    manifest,
+                    manifest_path=str(
+                        video_manifest_path.relative_to(working_dir)
+                    ).replace("\\", "/"),
+                    primary_media_paths=list(video_render_paths),
+                ),
+            )
 
         mjcf_content = scene_path.read_text() if scene_path.exists() else None
 

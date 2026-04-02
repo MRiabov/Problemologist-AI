@@ -101,6 +101,8 @@ Problems with motors and moving parts are verified more consistently because the
    - Write `todo.md` implementation checklist.
    - Write draft `benchmark_definition.yaml` matching this geometry/constraint data.
    - Write draft `benchmark_assembly_definition.yaml` with per-part DOFs/control in `benchmark_assembly.parts` (benchmark-owned handoff artifact copied into engineer intake as read-only context).
+   - Write `benchmark_plan_evidence_script.py` as the build123d sketch/evidence companion for the benchmark plan.
+   - Write `benchmark_plan_technical_drawing_script.py` as the technical-drawing companion for that same benchmark plan.
    - Call `submit_plan()` to explicitly submit the planner handoff; completion is accepted only when `submit_plan()` returns `ok=true`.
 ```
 
@@ -295,6 +297,8 @@ Notably, if the plan is higher than the max_unit_cost, it can't proceed and need
 - In `plan.md`, include manufacturing method/material choices, assembly strategy (including rigid-connection fastener strategy), and risk mitigations.
 - Create `todo.md` as an implementation checklist for the Engineering Coder (initially `- [ ]` items).
 - Create `assembly_definition.yaml` with per-part costing fields (method-specific) and a `final_assembly` structure for reuse/quantity accounting.
+- Write `solution_plan_evidence_script.py` as the build123d sketch/evidence companion for the drafted solution geometry.
+- Write `solution_plan_technical_drawing_script.py` as the technical-drawing companion for that same solution geometry.
 - Call `submit_plan()` to explicitly submit the planner handoff; completion is accepted only when `submit_plan()` returns `ok=true`.
 
 At this point, the planner can handoff the documents to the Engineering Coder. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `assembly_definition.yaml` and compute assembly totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)

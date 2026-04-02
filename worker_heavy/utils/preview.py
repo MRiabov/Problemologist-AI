@@ -101,7 +101,9 @@ def preview(
     except ValueError:
         response.image_path = str(materialized_path)
     response.artifact_path = response.image_path
-    response.manifest_path = str(Path("renders") / "render_manifest.json")
+    response.manifest_path = str(
+        materialized_path.parent.relative_to(workspace_root) / "render_manifest.json"
+    )
     if isinstance(orbit_pitch, list):
         response.pitch = orbit_pitch[0] if len(orbit_pitch) == 1 else None
     else:

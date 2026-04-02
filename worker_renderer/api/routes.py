@@ -336,7 +336,7 @@ def _collect_render_artifacts(
             )
             if object_store_key is not None:
                 object_store_keys[rel_key] = object_store_key
-            continue
+                continue
         render_blobs_base64[rel_key] = base64.b64encode(
             render_path.read_bytes()
         ).decode("ascii")
@@ -365,6 +365,7 @@ def _collect_render_artifacts(
             or repo_revision(root)
             or repo_revision(Path(__file__).resolve().parents[2])
         )
+        bundle_root = root / Path(normalized_render_paths[0]).parent
         synthesized_manifest = normalize_render_manifest(
             render_paths=normalized_render_paths,
             workspace_root=root,
@@ -373,6 +374,12 @@ def _collect_render_artifacts(
             worker_session_id=session_id,
             revision=resolved_revision,
         )
+        bundle_manifest_rel = str(
+            (bundle_root / "render_manifest.json").relative_to(root)
+        ).replace("\\", "/")
+        render_blobs_base64[bundle_manifest_rel] = base64.b64encode(
+            synthesized_manifest.model_dump_json(indent=2).encode("utf-8")
+        ).decode("ascii")
         render_blobs_base64[str(Path("renders") / "render_manifest.json")] = (
             base64.b64encode(
                 synthesized_manifest.model_dump_json(indent=2).encode("utf-8")
@@ -816,7 +823,7 @@ def _build_preview_manifest(
 
 
 def _encode_simulation_video(
-    root: Path,
+    bundle_root: Path,
     *,
     frame_paths: list[str],
     output_name: str,
@@ -827,11 +834,11 @@ def _encode_simulation_video(
 
     import cv2
 
-    renders_dir = root / "renders"
-    renders_dir.mkdir(parents=True, exist_ok=True)
-    output_path = renders_dir / output_name
+    output_path = bundle_root / output_name
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    workspace_root = bundle_root.parents[2]
 
-    first_frame_path = root / frame_paths[0]
+    first_frame_path = workspace_root / frame_paths[0]
     first_frame = cv2.imread(str(first_frame_path))
     if first_frame is None:
         raise ValueError(f"unable to read simulation frame: {frame_paths[0]}")
@@ -845,7 +852,7 @@ def _encode_simulation_video(
     )
     try:
         for rel_path in frame_paths:
-            frame_path = root / rel_path
+            frame_path = workspace_root / rel_path
             frame = cv2.imread(str(frame_path))
             if frame is None:
                 raise ValueError(f"unable to read simulation frame: {rel_path}")
@@ -1095,7 +1102,9 @@ async def api_preview(
                     view_count=len(view_specs),
                     view_specs=view_specs,
                     artifact_path=str(first_image_path.relative_to(root)),
-                    manifest_path=str(Path("renders") / "render_manifest.json"),
+                    manifest_path=str(
+                        preview_manifest.parent / "render_manifest.json"
+                    ).replace("\\", "/"),
                     rendering_type=resolved_rendering_type,
                     pitch=request.orbit_pitch
                     if isinstance(request.orbit_pitch, float)
@@ -1290,10 +1299,12 @@ async def api_simulation_video(
     try:
         async with render_operation_admission("simulation-video", x_session_id):
             with _bundle_context(request.bundle_base64) as root:
+                bundle_id = uuid.uuid4().hex
+                bundle_root = root / "renders" / "simulation_video" / bundle_id
                 with _event_file_context(root):
                     output_path = await asyncio.to_thread(
                         _encode_simulation_video,
-                        root,
+                        bundle_root,
                         frame_paths=list(request.frame_paths),
                         output_name=request.output_name,
                         fps=request.fps,
@@ -1305,10 +1316,10 @@ async def api_simulation_video(
                 frame_rows = [
                     RenderFrameMetadata(
                         frame_index=index,
-                        source_path=str(Path(frame_path)),
+                        source_path=str(Path(output_rel_path)),
                         timestamp_s=(index / float(request.fps)),
                     ).model_dump(mode="json")
-                    for index, frame_path in enumerate(request.frame_paths)
+                    for index, _ in enumerate(request.frame_paths)
                 ]
                 frames_sidecar.write_text(
                     "\n".join(json.dumps(row, sort_keys=False) for row in frame_rows)

@@ -39,19 +39,19 @@ The agent-specific workspace surface is role-scoped.
 Representative examples:
 
 - Engineering Planner:
-  - read: `skills/**`, `utils/**`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `plan.md`, `todo.md`, `journal.md`, `renders/**`
-  - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml`, `benchmark_definition.yaml`
+  - read: `skills/**`, `utils/**`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`, `plan.md`, `todo.md`, `journal.md`, `renders/**`
+  - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml`, `benchmark_definition.yaml`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`
 - Engineering Coder:
-  - read: `skills/**`, `utils/**`, `benchmark_script.py`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
+  - read: `skills/**`, `utils/**`, `benchmark_script.py`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
   - write: `solution_script.py`, additional `*.py` implementation files, `todo.md`, `journal.md`, `renders/**`, `plan_refusal.md`
 - Benchmark Planner:
-  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `journal.md`, `renders/**`
-  - write: `plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`
+  - read: `skills/**`, `utils/**`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `plan.md`, `todo.md`, `journal.md`, `renders/**`
+  - write: `plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`
 - Benchmark Coder:
-  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `reviews/**`, `renders/**`
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `reviews/**`, `renders/**`
   - write: `benchmark_script.py`, additional `*.py` implementation files, `todo.md`, `journal.md`, `renders/**`, `plan_refusal.md`
 - Reviewer roles:
-  - read: the stage-owned planner/coder artifacts plus the authored source for that stage once it exists (`benchmark_script.py` for benchmark execution review and `solution_script.py` for engineering execution review), `renders/**`, and `journal.md`
+  - read: the stage-owned planner/coder artifacts plus the authored source and planner drafting scripts for that stage once they exist (`benchmark_script.py`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py` for benchmark execution review; `solution_script.py`, `solution_plan_evidence_script.py`, and `solution_plan_technical_drawing_script.py` for engineering execution review), `renders/**`, and `journal.md`
   - write: stage-scoped `reviews/*.yaml` files only
 - COTS Search subagent:
   - read: `parts.db`, COTS query helpers/CLI, and the caller-provided request string
@@ -68,6 +68,10 @@ Manifest ownership summary:
 | -- | -- | -- | -- |
 | Render bundle index | rendering producer | Render job completion for a published preview or simulation evidence bundle | `renders/render_index.jsonl` |
 | Render metadata manifest | rendering producer | Render job completion for a published preview or simulation evidence bundle | `renders/<bundle>/render_manifest.json` |
+| Benchmark plan evidence script | Benchmark Planner | planner drafting submission | `benchmark_plan_evidence_script.py` |
+| Benchmark technical drawing script | Benchmark Planner | planner drafting submission | `benchmark_plan_technical_drawing_script.py` |
+| Engineering plan evidence script | Engineering Planner | planner drafting submission | `solution_plan_evidence_script.py` |
+| Engineering technical drawing script | Engineering Planner | planner drafting submission | `solution_plan_technical_drawing_script.py` |
 
 <!-- FIXME: consider moving render metadata manifests into `.manifests/` in a future refactor so render metadata and handoff metadata share one backend-owned manifest bucket. The root renders/render_manifest.json path stays a compatibility alias only. -->
 
@@ -109,9 +113,11 @@ Before planner submission, planner roles may edit planner-owned files.
 After planner submission is accepted:
 
 1. benchmark-side `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml` become read-only for benchmark Coder/Reviewer,
-2. the same `benchmark_assembly_definition.yaml` and `benchmark_script.py` are also available in engineer intake as read-only context,
-3. engineer-side `assembly_definition.yaml` becomes read-only for engineering Coder/Reviewer,
-4. only replanning can mutate planner-owned files.
+2. `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` become read-only for benchmark Coder/Reviewer and are also available in engineer intake as read-only context,
+3. the same `benchmark_assembly_definition.yaml` and `benchmark_script.py` are also available in engineer intake as read-only context,
+4. engineer-side `assembly_definition.yaml` becomes read-only for engineering Coder/Reviewer,
+5. `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` become read-only for engineering Coder/Reviewer and the Engineering Execution Reviewer,
+6. only replanning can mutate planner-owned files.
 
 ## Template auto-validation
 
@@ -145,12 +151,16 @@ We assert that control files are not edited by coder agents and are edited only 
 
 Control-file ownership split:
 
-1. `benchmark_definition.yaml` owns benchmark/task definition and benchmark fixture metadata (`benchmark_parts`).
-2. `benchmark_assembly_definition.yaml` owns benchmark-owned fixture structure, motion metadata, and benchmark-side implementation details.
-3. `benchmark_script.py` owns benchmark-owned geometry composition and read-only benchmark preview context.
-4. `solution_script.py` owns engineer-planned solution geometry and implementation code.
-5. `assembly_definition.yaml` owns engineer-planned solution structure, costing inputs, and motion metadata.
-6. We do not duplicate engineer solution metadata into `benchmark_definition.yaml`.
+01. `benchmark_definition.yaml` owns benchmark/task definition and benchmark fixture metadata (`benchmark_parts`).
+02. `benchmark_assembly_definition.yaml` owns benchmark-owned fixture structure, motion metadata, and benchmark-side implementation details.
+03. `benchmark_script.py` owns benchmark-owned geometry composition and read-only benchmark preview context.
+04. `benchmark_plan_evidence_script.py` owns benchmark planner drafting evidence geometry.
+05. `benchmark_plan_technical_drawing_script.py` owns benchmark planner technical-drawing exports.
+06. `solution_script.py` owns engineer-planned solution geometry and implementation code.
+07. `solution_plan_evidence_script.py` owns engineering planner drafting evidence geometry.
+08. `solution_plan_technical_drawing_script.py` owns engineering planner technical-drawing exports.
+09. `assembly_definition.yaml` owns engineer-planned solution structure, costing inputs, and motion metadata.
+10. We do not duplicate engineer solution metadata into `benchmark_definition.yaml`.
 
 ## File updates
 
