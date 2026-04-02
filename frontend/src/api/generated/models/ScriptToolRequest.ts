@@ -16,6 +16,7 @@ export type ScriptToolRequest = {
     rgb?: (boolean | null);
     depth?: (boolean | null);
     segmentation?: (boolean | null);
+    drafting?: boolean;
     rendering_type?: (PreviewRenderingType | null);
     reviewer_stage?: ('benchmark_reviewer' | 'engineering_execution_reviewer' | 'electronics_reviewer' | null);
     jitter_range?: (any[] | null);

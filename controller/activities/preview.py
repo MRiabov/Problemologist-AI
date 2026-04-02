@@ -39,6 +39,7 @@ async def preview_render_activity(
         rgb=params.rgb,
         depth=params.depth,
         segmentation=params.segmentation,
+        drafting=params.drafting,
         rendering_type=params.rendering_type,
         bundle_base64=params.bundle_base64,
         smoke_test_mode=params.smoke_test_mode,

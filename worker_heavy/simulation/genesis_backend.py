@@ -41,7 +41,9 @@ from shared.simulation.backends import (
     SiteState,
     StepResult,
     StressField,
+    build_render_bundle_object_pose_records,
 )
+from shared.workers.schema import RenderBundleObjectPoseRecord
 
 logger = structlog.get_logger(__name__)
 
@@ -1411,6 +1413,9 @@ class GenesisBackend(PhysicsRendererBackend):
 
     def get_all_camera_names(self) -> list[str]:
         return list(self.cameras.keys())
+
+    def export_object_pose_records(self) -> list[RenderBundleObjectPoseRecord]:
+        return build_render_bundle_object_pose_records(self)
 
     def check_collision(
         self, body_name: str, site_name: str, env_idx: int | None = None

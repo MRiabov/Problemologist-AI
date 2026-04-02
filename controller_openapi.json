@@ -5576,6 +5576,11 @@
             "$ref": "#/components/schemas/PreviewRenderingType",
             "default": "rgb"
           },
+          "drafting": {
+            "type": "boolean",
+            "title": "Drafting",
+            "default": false
+          },
           "pitch": {
             "anyOf": [
               {
@@ -6414,6 +6419,11 @@
               }
             ],
             "title": "Segmentation"
+          },
+          "drafting": {
+            "type": "boolean",
+            "title": "Drafting",
+            "default": false
           },
           "rendering_type": {
             "anyOf": [

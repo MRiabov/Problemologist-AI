@@ -105,6 +105,7 @@ defaults:
       - '**'
 agents:
   engineer_planner:
+    drafting_mode: "off"
     filesystem_permissions:
       read:
         allow:
@@ -117,6 +118,8 @@ agents:
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
         - assembly_definition.yaml
+        - solution_plan_evidence_script.py
+        - solution_plan_technical_drawing_script.py
         - plan.md
         - todo.md
         - journal.md
@@ -130,6 +133,8 @@ agents:
         - journal.md
         - assembly_definition.yaml
         - benchmark_definition.yaml
+        - solution_plan_evidence_script.py
+        - solution_plan_technical_drawing_script.py
         deny:
         - skills/**
         - utils/**
@@ -142,6 +147,7 @@ agents:
     - list_files
     - read_file
     - inspect_media
+    - preview_drawing
     - write_file
     - edit_file
     - invoke_cots_search_subagent
@@ -369,6 +375,8 @@ agents:
         - manufacturing_config.yaml
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
+        - benchmark_plan_evidence_script.py
+        - benchmark_plan_technical_drawing_script.py
         - plan.md
         - todo.md
         - journal.md
@@ -384,6 +392,8 @@ agents:
         - journal.md
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
+        - benchmark_plan_evidence_script.py
+        - benchmark_plan_technical_drawing_script.py
         - renders/**
         deny:
         - skills/**
@@ -500,6 +510,8 @@ agents:
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
         - assembly_definition.yaml
+        - solution_plan_evidence_script.py
+        - solution_plan_technical_drawing_script.py
         - plan.md
         - todo.md
         - journal.md

@@ -90,6 +90,9 @@ _ALLOWED_BINARY_SUFFIXES = (
 )
 
 _REVISION_MANIFEST_PRIORITY = (
+    "renders/benchmark_renders/render_manifest.json",
+    "renders/engineer_renders/render_manifest.json",
+    "renders/final_preview_renders/render_manifest.json",
     ".manifests/benchmark_review_manifest.json",
     ".manifests/engineering_execution_review_manifest.json",
     ".manifests/engineering_plan_review_manifest.json",
@@ -285,11 +288,17 @@ def _missing_required_artifacts(
     for prefix in review_prefixes:
         if not any(path.startswith(prefix) for path in selected_paths):
             missing.append(prefix)
-    if any(
-        path.startswith("renders/") and path != "renders/render_manifest.json"
-        for path in selected_paths
-    ) and not _has("renders/render_manifest.json"):
-        missing.append("renders/render_manifest.json")
+    render_bundle_manifest_paths = sorted(
+        {
+            str(Path(path).parent / "render_manifest.json")
+            for path in selected_paths
+            if path.startswith("renders/")
+            and Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
+        }
+    )
+    for manifest_path in render_bundle_manifest_paths:
+        if not _has(manifest_path):
+            missing.append(manifest_path)
     return missing
 
 

@@ -208,8 +208,16 @@ def _benchmark_artifact_paths(review_manifest: ReviewManifest) -> list[str]:
     ):
         if path and path not in paths:
             paths.append(path)
-    if has_static_render_images and "renders/render_manifest.json" not in paths:
-        paths.append("renders/render_manifest.json")
+    if has_static_render_images:
+        for manifest_path in sorted(
+            {
+                str(Path(path).parent / "render_manifest.json")
+                for path in review_manifest.renders
+                if Path(path).suffix.lower() in {".png", ".jpg", ".jpeg"}
+            }
+        ):
+            if manifest_path not in paths:
+                paths.append(manifest_path)
     return paths
 
 

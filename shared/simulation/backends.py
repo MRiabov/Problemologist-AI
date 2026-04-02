@@ -9,6 +9,7 @@ from shared.models.simulation import (
     SimulationFailure,
     StressSummary,
 )
+from shared.workers.schema import RenderBundleObjectPoseRecord
 
 
 class BodyState(BaseModel):
@@ -168,6 +169,7 @@ class PhysicsBackend(Protocol):
     def get_all_site_names(self) -> list[str]: ...
     def get_all_tendon_names(self) -> list[str]: ...
     def get_all_camera_names(self) -> list[str]: ...
+    def export_object_pose_records(self) -> list[RenderBundleObjectPoseRecord]: ...
 
     def check_collision(self, body_name: str, site_name: str) -> bool: ...
     def get_tendon_tension(self, tendon_name: str) -> float: ...
@@ -179,6 +181,78 @@ class PhysicsBackend(Protocol):
     def reset(self) -> None: ...
 
     def close(self) -> None: ...
+
+
+def _normalize_pose_body_names(body_names: list[str]) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw_name in body_names:
+        name = str(raw_name).strip()
+        if not name:
+            continue
+        if name in {"world", "0", "mjcf_scene"}:
+            continue
+        if name.startswith("zone_"):
+            continue
+        if name in seen:
+            continue
+        seen.add(name)
+        normalized.append(name)
+    return normalized
+
+
+def _quaternion_wxyz_to_euler_xyz_deg(
+    quat: tuple[float, float, float, float] | list[float] | np.ndarray,
+) -> tuple[float, float, float] | None:
+    try:
+        quat_array = np.asarray(quat, dtype=float)
+    except Exception:
+        return None
+
+    if quat_array.shape != (4,) or not np.all(np.isfinite(quat_array)):
+        return None
+
+    try:
+        from scipy.spatial.transform import Rotation as SciPyRotation
+
+        euler = SciPyRotation.from_quat(
+            [quat_array[1], quat_array[2], quat_array[3], quat_array[0]]
+        ).as_euler("xyz", degrees=True)
+    except Exception:
+        return None
+
+    return tuple(float(value) for value in euler.tolist())
+
+
+def build_render_bundle_object_pose_records(
+    backend: PhysicsBackend,
+) -> list[RenderBundleObjectPoseRecord]:
+    """Materialize a bundle-local snapshot of backend object poses."""
+    records: list[RenderBundleObjectPoseRecord] = []
+    body_names = _normalize_pose_body_names(backend.get_all_body_names())
+
+    for object_id, body_name in enumerate(body_names):
+        try:
+            state = backend.get_body_state(body_name)
+        except Exception:
+            continue
+
+        records.append(
+            RenderBundleObjectPoseRecord(
+                object_id=object_id,
+                object_type="body",
+                label=body_name,
+                instance_id=body_name,
+                instance_name=body_name,
+                semantic_label=body_name,
+                body_name=body_name,
+                geom_name=None,
+                position=state.pos,
+                orientation=_quaternion_wxyz_to_euler_xyz_deg(state.quat),
+            )
+        )
+
+    return records
 
 
 @runtime_checkable

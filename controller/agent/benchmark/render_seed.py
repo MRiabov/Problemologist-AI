@@ -124,9 +124,12 @@ async def seed_benchmark_review_preview_bundle(
         environment_version=environment_version,
     )
     manifest_json = manifest.model_dump_json(indent=2)
+    bundle_manifest_path = (
+        Path(canonical_render_paths[0]).parent / "render_manifest.json"
+    )
     await asyncio.wait_for(
         worker_client.write_file(
-            "renders/render_manifest.json",
+            str(bundle_manifest_path),
             manifest_json,
             overwrite=True,
             bypass_agent_permissions=True,
@@ -135,7 +138,22 @@ async def seed_benchmark_review_preview_bundle(
     )
     await asyncio.wait_for(
         broadcast_file_update(
-            str(session_id), "renders/render_manifest.json", manifest_json
+            str(session_id), str(bundle_manifest_path), manifest_json
         ),
         timeout=2.0,
     )
+    root_manifest_path = "renders/render_manifest.json"
+    if root_manifest_path != str(bundle_manifest_path):
+        await asyncio.wait_for(
+            worker_client.write_file(
+                root_manifest_path,
+                manifest_json,
+                overwrite=True,
+                bypass_agent_permissions=True,
+            ),
+            timeout=5.0,
+        )
+        await asyncio.wait_for(
+            broadcast_file_update(str(session_id), root_manifest_path, manifest_json),
+            timeout=2.0,
+        )

@@ -1223,6 +1223,146 @@ class AssemblyConstraints(StrictContractModel):
         return self
 
 
+class DraftingDimension(StrictContractModel):
+    """One binding or explanatory dimension in the drafting package."""
+
+    dimension_id: str
+    kind: Literal["linear", "angular", "radius", "diameter", "fit", "clearance"]
+    target: str
+    value: float
+    tolerance: str | None = None
+    binding: bool = True
+    note: str | None = None
+    plan_ref: str | None = None
+
+    @field_validator("dimension_id", "target")
+    @classmethod
+    def validate_non_empty_strings(cls, value: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError("must be a non-empty string")
+        return text
+
+    @field_validator("value")
+    @classmethod
+    def validate_positive_value(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError("must be > 0")
+        return value
+
+
+class DraftingCallout(StrictContractModel):
+    """A numbered or named drawing callout."""
+
+    callout_id: str | int
+    label: str
+    target: str
+    plan_ref: str | None = None
+    note: str | None = None
+
+    @field_validator("label", "target")
+    @classmethod
+    def validate_non_empty_strings(cls, value: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError("must be a non-empty string")
+        return text
+
+
+class DraftingNote(StrictContractModel):
+    """An explanatory or critical drawing note."""
+
+    note_id: str
+    text: str
+    critical: bool = False
+    plan_ref: str | None = None
+
+    @field_validator("note_id", "text")
+    @classmethod
+    def validate_non_empty_strings(cls, value: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError("must be a non-empty string")
+        return text
+
+
+class DraftingView(StrictContractModel):
+    """A single drafting view in the planner-authored package."""
+
+    view_id: str
+    target: str
+    projection: Literal["front", "top", "side", "section", "detail", "isometric"]
+    scale: float = 1.0
+    datums: list[str] = Field(default_factory=list)
+    dimensions: list[DraftingDimension] = Field(default_factory=list)
+    callouts: list[DraftingCallout] = Field(default_factory=list)
+    notes: list[DraftingNote] = Field(default_factory=list)
+    section_marker: str | None = None
+    detail_target: str | None = None
+
+    @field_validator("view_id", "target")
+    @classmethod
+    def validate_non_empty_strings(cls, value: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError("must be a non-empty string")
+        return text
+
+    @field_validator("scale")
+    @classmethod
+    def validate_scale(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError("must be > 0")
+        return value
+
+    @field_validator("datums")
+    @classmethod
+    def validate_datums(cls, value: list[str]) -> list[str]:
+        cleaned = [datum.strip() for datum in value if str(datum).strip()]
+        if not cleaned:
+            raise ValueError("must contain at least one datum reference")
+        if len(set(cleaned)) != len(cleaned):
+            raise ValueError("must not contain duplicate datum identifiers")
+        return cleaned
+
+    @model_validator(mode="after")
+    def validate_projection_specific_fields(self) -> "DraftingView":
+        if self.projection == "section" and not (self.section_marker or "").strip():
+            raise ValueError("section views must define section_marker")
+        if self.projection == "detail" and not (self.detail_target or "").strip():
+            raise ValueError("detail views must define detail_target")
+        return self
+
+
+class DraftingSheet(StrictContractModel):
+    """Planner-authored technical drawing package for one assembly."""
+
+    sheet_id: str
+    title: str
+    units: Literal["mm"] = "mm"
+    projection_standard: Literal["orthographic"] = "orthographic"
+    views: list[DraftingView] = Field(default_factory=list)
+    notes: list[DraftingNote] = Field(default_factory=list)
+
+    @field_validator("sheet_id", "title")
+    @classmethod
+    def validate_non_empty_strings(cls, value: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError("must be a non-empty string")
+        return text
+
+    @model_validator(mode="after")
+    def validate_views(self) -> "DraftingSheet":
+        if not self.views:
+            raise ValueError("drafting.views must contain at least one view")
+
+        view_ids = [view.view_id for view in self.views]
+        if len(set(view_ids)) != len(view_ids):
+            raise ValueError("drafting.views must not contain duplicate view_id values")
+        return self
+
+
 # =============================================================================
 # WP3 Assembly Electronics Section
 # =============================================================================
@@ -1309,6 +1449,7 @@ class AssemblyDefinition(StrictContractModel):
     cots_parts: list[CotsPartEstimate] = []
     electronics: ElectronicsSection | None = None
     environment_drill_operations: list[EnvironmentDrillOperation] = []
+    drafting: DraftingSheet | None = None
     final_assembly: list[SubassemblyEstimate | PartConfig] = []
     totals: CostTotals
     dfm_suggestions: list[str] = Field(default_factory=list)

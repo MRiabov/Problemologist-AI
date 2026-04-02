@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import numpy as np
@@ -11,6 +12,7 @@ from shared.models.simulation import (
 from shared.rendering import render_simulation_video_artifact
 from shared.simulation.backends import RendererBackend
 from shared.simulation.schemas import SimulatorBackendType
+from shared.workers.schema import RenderFrameMetadata
 
 logger = structlog.get_logger(__name__)
 
@@ -152,6 +154,20 @@ class MediaRecorder:
             )
             self.video_path.parent.mkdir(parents=True, exist_ok=True)
             self.video_path.write_bytes(rendered.video_bytes)
+            frames_sidecar = self.video_path.parent / "frames.jsonl"
+            frame_rows = [
+                RenderFrameMetadata(
+                    frame_index=index,
+                    source_path=str(self.video_path.name),
+                    timestamp_s=index / 30.0,
+                ).model_dump(mode="json")
+                for index in range(len(self.frames))
+            ]
+            frames_sidecar.write_text(
+                "\n".join(json.dumps(row, sort_keys=False) for row in frame_rows)
+                + ("\n" if frame_rows else ""),
+                encoding="utf-8",
+            )
             logger.info(
                 "video_render_complete",
                 path=str(self.video_path),

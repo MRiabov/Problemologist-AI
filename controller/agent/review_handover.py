@@ -136,66 +136,64 @@ async def _validate_render_manifest_bundle(
     if not expected_render_paths:
         return None
 
-    manifest_candidates = (
-        "renders/render_manifest.json",
-        "workspace/renders/render_manifest.json",
-    )
-    manifest_path = None
-    manifest_raw = None
-    for candidate in manifest_candidates:
-        manifest_raw = await worker_client.read_file_optional(candidate)
-        if manifest_raw is not None:
-            manifest_path = candidate
-            break
+    bundle_roots = {Path(path.lstrip("/")).parent for path in expected_render_paths}
 
-    if manifest_path is None or manifest_raw is None:
-        return "render manifest missing for latest preview bundle: renders/render_manifest.json"
-
-    try:
-        render_manifest = RenderManifest.model_validate_json(manifest_raw)
-    except Exception as exc:
-        return f"{manifest_path} invalid: {exc}"
-
-    if not render_manifest.revision:
-        return f"{manifest_path} revision is missing."
     current_revision = _current_git_revision()
     if current_revision is None:
         return "current repository git revision could not be determined."
-    if render_manifest.revision.strip().lower() != current_revision:
-        return (
-            f"{manifest_path} revision does not match the latest repository "
-            "git revision."
-        )
 
-    actual_render_paths = {
-        _normalize_render_path(path)
-        for path in render_manifest.artifacts.keys()
-        if _is_static_preview_render(path)
-    }
-    if actual_render_paths == expected_render_paths:
-        preview_paths = {
+    for candidate_root in sorted(bundle_roots):
+        manifest_path = candidate_root / "render_manifest.json"
+        manifest_raw = await worker_client.read_file_optional(
+            str(manifest_path), bypass_agent_permissions=True
+        )
+        if manifest_raw is None:
+            continue
+
+        try:
+            render_manifest = RenderManifest.model_validate_json(manifest_raw)
+        except Exception as exc:
+            return f"{manifest_path} invalid: {exc}"
+
+        if not render_manifest.revision:
+            return f"{manifest_path} revision is missing."
+        if render_manifest.revision.strip().lower() != current_revision:
+            return (
+                f"{manifest_path} revision does not match the latest repository "
+                "git revision."
+            )
+
+        actual_render_paths = {
             _normalize_render_path(path)
-            for path in render_manifest.preview_evidence_paths
+            for path in render_manifest.artifacts.keys()
             if _is_static_preview_render(path)
         }
-        if preview_paths == expected_render_paths:
-            return None
+        if actual_render_paths == expected_render_paths:
+            preview_paths = {
+                _normalize_render_path(path)
+                for path in render_manifest.preview_evidence_paths
+                if _is_static_preview_render(path)
+            }
+            if preview_paths == expected_render_paths:
+                return None
+            return (
+                f"{manifest_path} is out of sync with the latest preview bundle: "
+                "preview evidence paths do not match the artifact set."
+            )
+
+        missing = sorted(expected_render_paths - actual_render_paths)
+        unexpected = sorted(actual_render_paths - expected_render_paths)
+        details: list[str] = []
+        if missing:
+            details.append(f"missing entries: {missing}")
+        if unexpected:
+            details.append(f"unexpected entries: {unexpected}")
         return (
             f"{manifest_path} is out of sync with the latest preview bundle: "
-            "preview evidence paths do not match the artifact set."
+            + "; ".join(details)
         )
 
-    missing = sorted(expected_render_paths - actual_render_paths)
-    unexpected = sorted(actual_render_paths - expected_render_paths)
-    details: list[str] = []
-    if missing:
-        details.append(f"missing entries: {missing}")
-    if unexpected:
-        details.append(f"unexpected entries: {unexpected}")
-    return (
-        f"{manifest_path} is out of sync with the latest preview bundle: "
-        + "; ".join(details)
-    )
+    return "bundle-local render_manifest.json missing for latest preview bundle"
 
 
 def _is_binary_review_artifact(path: str) -> bool:
@@ -708,6 +706,7 @@ async def validate_planner_artifacts_cross_contract(
         benchmark_definition=benchmark_definition,
         assembly_definition=assembly_definition,
         manufacturing_config=manufacturing_config,
+        planner_node_type=expected_stage,
     )
     if cross_contract_errors:
         return "; ".join(cross_contract_errors)

@@ -114,6 +114,7 @@ def _preview_workflow_id(
             "rgb": request_model.get("rgb"),
             "depth": request_model.get("depth"),
             "segmentation": request_model.get("segmentation"),
+            "drafting": request_model.get("drafting"),
             "rendering_type": str(request_model.get("rendering_type", "")),
             "script_content": request_model.get("script_content"),
             "smoke_test_mode": request_model.get("smoke_test_mode"),
@@ -134,6 +135,7 @@ def _preview_workflow_id(
             "rgb": getattr(request_model, "rgb", None),
             "depth": getattr(request_model, "depth", None),
             "segmentation": getattr(request_model, "segmentation", None),
+            "drafting": getattr(request_model, "drafting", None),
             "rendering_type": str(getattr(request_model, "rendering_type", "")),
             "script_content": getattr(request_model, "script_content", None),
             "smoke_test_mode": getattr(request_model, "smoke_test_mode", None),
@@ -624,11 +626,9 @@ class RemoteFilesystemMiddleware:
         if render_path.startswith("workspace/"):
             render_path = render_path.removeprefix("workspace/")
 
-        candidate_dirs = []
-        path_obj = Path(render_path)
-        for parent in path_obj.parents:
-            candidate_dirs.append(parent)
-        candidate_dirs.append(Path("renders"))
+        candidate_dirs = [
+            parent for parent in Path(render_path).parents if parent.name != "renders"
+        ]
         seen_candidates: set[str] = set()
         for candidate_dir in candidate_dirs:
             candidate_manifest = candidate_dir / "render_manifest.json"
@@ -890,6 +890,7 @@ class RemoteFilesystemMiddleware:
         rgb: bool | None = None,
         depth: bool | None = None,
         segmentation: bool | None = None,
+        drafting: bool = False,
         rendering_type: str | PreviewRenderingType | None = None,
         bundle_base64: str | None = None,
         smoke_test_mode: bool | None = None,
@@ -958,6 +959,7 @@ class RemoteFilesystemMiddleware:
             rgb=rgb,
             depth=depth,
             segmentation=segmentation,
+            drafting=drafting,
             rendering_type=PreviewRenderingType(str(rendering_type))
             if rendering_type is not None
             else None,
@@ -977,6 +979,25 @@ class RemoteFilesystemMiddleware:
         )
         await _broadcast_preview_phase("view_ready", response=result)
         return result
+
+    async def preview_drawing(
+        self,
+        script_path: str | Path,
+        orbit_pitch: float | list[float] = 45.0,
+        orbit_yaw: float | list[float] = 45.0,
+        bundle_base64: str | None = None,
+        smoke_test_mode: bool | None = None,
+        script_content: str | None = None,
+    ) -> PreviewDesignResponse:
+        return await self.preview(
+            script_path=script_path,
+            orbit_pitch=orbit_pitch,
+            orbit_yaw=orbit_yaw,
+            drafting=True,
+            bundle_base64=bundle_base64,
+            smoke_test_mode=smoke_test_mode,
+            script_content=script_content,
+        )
 
     async def validate(
         self, script_path: str | Path

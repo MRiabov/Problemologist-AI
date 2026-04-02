@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import StrEnum
 from pathlib import Path
 
 import structlog
@@ -9,6 +10,12 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from shared.enums import AgentName
 
 logger = structlog.get_logger(__name__)
+
+
+class DraftingMode(StrEnum):
+    OFF = "off"
+    DRAFTING = "drafting"
+    DRAWING = "drawing"
 
 
 class PathPolicy(BaseModel):
@@ -36,6 +43,7 @@ class AgentPolicy(BaseModel):
     visual_inspection: VisualInspectionPolicy = Field(
         default_factory=VisualInspectionPolicy
     )
+    drafting_mode: DraftingMode = DraftingMode.OFF
 
     @field_validator("allowed_during_unit_eval", mode="before")
     @classmethod
@@ -233,6 +241,13 @@ class AgentsConfig(BaseModel):
         if policy is None:
             return ()
         return tuple(policy.allowed_during_unit_eval)
+
+    def get_drafting_mode(self, agent_role: AgentName | str) -> DraftingMode:
+        key = agent_role.value if isinstance(agent_role, AgentName) else str(agent_role)
+        policy = self.agents.get(key)
+        if policy is None:
+            return self.defaults.drafting_mode
+        return policy.drafting_mode
 
 
 def get_render_resolution(config: AgentsConfig | None = None) -> tuple[int, int]:

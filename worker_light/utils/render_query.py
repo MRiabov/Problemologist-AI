@@ -339,11 +339,14 @@ def list_render_bundles(
     index_path = workspace / "renders" / "render_index.jsonl"
     if index_path.exists():
         try:
-            entries = [
-                RenderBundleIndexEntry.model_validate_json(line)
-                for line in index_path.read_text(encoding="utf-8").splitlines()
-                if line.strip()
-            ]
+            entries: list[RenderBundleIndexEntry] = []
+            for line in index_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    entries.append(RenderBundleIndexEntry.model_validate_json(line))
+                except Exception:
+                    continue
             return entries
         except Exception:
             logger.warning(
@@ -351,37 +354,7 @@ def list_render_bundles(
                 index_path=str(index_path),
             )
 
-    manifests: list[RenderBundleIndexEntry] = []
-    renders_dir = workspace / "renders"
-    if not renders_dir.exists():
-        return manifests
-
-    for manifest_path in sorted(renders_dir.rglob("render_manifest.json")):
-        if manifest_path.parent == renders_dir:
-            continue
-        try:
-            manifest = RenderManifest.model_validate_json(
-                manifest_path.read_text(encoding="utf-8")
-            )
-        except Exception:
-            continue
-        manifests.append(
-            RenderBundleIndexEntry(
-                bundle_id=manifest.bundle_id,
-                created_at=manifest.created_at,
-                revision=manifest.revision,
-                scene_hash=manifest.scene_hash,
-                bundle_path=manifest.bundle_path,
-                manifest_path=str(manifest_path.relative_to(workspace)).replace(
-                    "\\", "/"
-                ),
-                preview_evidence_paths=list(manifest.preview_evidence_paths),
-                primary_media_paths=list(manifest.preview_evidence_paths),
-            )
-        )
-    if manifests:
-        return manifests
-    return manifests
+    return []
 
 
 def query_render_bundle(

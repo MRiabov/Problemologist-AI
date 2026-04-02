@@ -21,10 +21,13 @@ import structlog
 import yaml
 from pydantic import ValidationError
 
+from shared.agents.config import DraftingMode, load_agents_config
 from shared.enums import AgentName, BenchmarkAttachmentMethod, BenchmarkRefusalReason
 from shared.models.schemas import (
     AssemblyDefinition,
     BenchmarkDefinition,
+    CotsPartEstimate,
+    ManufacturedPartEstimate,
     PartConfig,
     PlanRefusalFrontmatter,
     ReviewFrontmatter,
@@ -129,6 +132,110 @@ _SUPPORTED_BENCHMARK_MOTION_TOKENS = {
     "slide_y",
     "slide_z",
 }
+
+
+def _is_drafting_mode_active() -> bool:
+    try:
+        mode = load_agents_config().get_drafting_mode(AgentName.ENGINEER_PLANNER)
+    except Exception:
+        return False
+    return mode in (DraftingMode.DRAFTING, DraftingMode.DRAWING)
+
+
+def _collect_assembly_target_names(assembly_definition: AssemblyDefinition) -> set[str]:
+    names: set[str] = set()
+
+    def _add_name(value: object) -> None:
+        text = str(value).strip()
+        if text:
+            names.add(text)
+
+    def _visit_item(item: object) -> None:
+        if isinstance(item, ManufacturedPartEstimate):
+            _add_name(item.part_name)
+            _add_name(item.part_id)
+        elif isinstance(item, CotsPartEstimate):
+            _add_name(item.part_id)
+        elif isinstance(item, PartConfig):
+            _add_name(item.name)
+        elif isinstance(item, SubassemblyEstimate):
+            _add_name(item.subassembly_id)
+            for part in item.parts:
+                _visit_item(part)
+
+    for part in assembly_definition.manufactured_parts:
+        _visit_item(part)
+    for part in assembly_definition.cots_parts:
+        _visit_item(part)
+    for item in assembly_definition.final_assembly:
+        _visit_item(item)
+    if assembly_definition.electronics:
+        for component in assembly_definition.electronics.components:
+            if component.assembly_part_ref:
+                _add_name(component.assembly_part_ref)
+    return names
+
+
+def _target_matches_known_assembly_target(target: str, known_targets: set[str]) -> bool:
+    normalized = target.strip()
+    if not normalized:
+        return False
+    if normalized in known_targets:
+        return True
+    return any(
+        normalized.startswith(f"{known_target}.")
+        or normalized.startswith(f"{known_target}/")
+        for known_target in known_targets
+    )
+
+
+def _validate_drafting_contract(
+    *,
+    assembly_definition: AssemblyDefinition,
+    planner_node_type: AgentName | str | None,
+) -> list[str]:
+    errors: list[str] = []
+    drafting = assembly_definition.drafting
+    node_key = (
+        planner_node_type.value
+        if isinstance(planner_node_type, AgentName)
+        else str(planner_node_type or "")
+    )
+    drafting_required = _is_drafting_mode_active() and node_key in {
+        AgentName.ENGINEER_PLANNER.value,
+        AgentName.ENGINEER_PLAN_REVIEWER.value,
+    }
+
+    if drafting is None:
+        if drafting_required:
+            errors.append(
+                "assembly_definition.drafting is required when drafting mode is active"
+            )
+        return errors
+
+    known_targets = _collect_assembly_target_names(assembly_definition)
+    for view in drafting.views:
+        if not _target_matches_known_assembly_target(view.target, known_targets):
+            errors.append(
+                "drafting.views: target "
+                f"'{view.target}' is not tied to a declared assembly part"
+            )
+        for dimension in view.dimensions:
+            if not _target_matches_known_assembly_target(
+                dimension.target, known_targets
+            ):
+                errors.append(
+                    "drafting.views.dimensions: target "
+                    f"'{dimension.target}' is not tied to a declared assembly part"
+                )
+        for callout in view.callouts:
+            if not _target_matches_known_assembly_target(callout.target, known_targets):
+                errors.append(
+                    "drafting.views.callouts: target "
+                    f"'{callout.target}' is not tied to a declared assembly part"
+                )
+
+    return errors
 
 
 def _iter_benchmark_motion_configs(
@@ -811,6 +918,7 @@ def validate_planner_handoff_cross_contract(
     benchmark_definition: BenchmarkDefinition,
     assembly_definition: AssemblyDefinition,
     manufacturing_config: ManufacturingConfig,
+    planner_node_type: AgentName | str | None = None,
 ) -> list[str]:
     """Validate planner targets against benchmark caps and reject stale copies."""
     errors: list[str] = []
@@ -897,6 +1005,12 @@ def validate_planner_handoff_cross_contract(
         validate_exact_planner_cost_contract(
             assembly_definition=assembly_definition,
             manufacturing_config=manufacturing_config,
+        )
+    )
+    errors.extend(
+        _validate_drafting_contract(
+            assembly_definition=assembly_definition,
+            planner_node_type=planner_node_type,
         )
     )
     return errors
@@ -1213,6 +1327,7 @@ def validate_node_output(
                 benchmark_definition=benchmark_definition_model,
                 assembly_definition=assembly_definition_model,
                 manufacturing_config=effective_config,
+                planner_node_type=node_type,
             )
             if cross_contract_errors:
                 errors.extend(

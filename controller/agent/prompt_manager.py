@@ -6,6 +6,7 @@ import dspy
 import structlog
 from pydantic import BaseModel, ConfigDict, Field
 
+from shared.agents.config import DraftingMode, load_agents_config
 from shared.enums import AgentName
 from shared.skills import build_skill_catalog_lines
 
@@ -23,6 +24,7 @@ class PromptAppendices(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     shared: str = ""
+    drafting: dict[str, str] = Field(default_factory=dict)
     backend: dict[str, str] = Field(default_factory=dict)
 
 
@@ -55,7 +57,28 @@ class PromptManager:
 
     def __init__(self) -> None:
         self._prompt_source = PromptSourceConfig.model_validate(load_prompts())
+        try:
+            self._agents_config = load_agents_config()
+        except Exception:
+            self._agents_config = None
         self._skill_catalog = "\n".join(build_skill_catalog_lines()).strip()
+
+    def _drafting_mode_active(self) -> bool:
+        if self._agents_config is None:
+            return False
+        try:
+            mode = self._agents_config.get_drafting_mode(AgentName.ENGINEER_PLANNER)
+        except Exception:
+            return False
+        return mode in (DraftingMode.DRAFTING, DraftingMode.DRAWING)
+
+    @staticmethod
+    def _supports_drafting_appendix(role_key: str) -> bool:
+        return role_key in {
+            "engineer_planner",
+            "engineer_plan_reviewer",
+            "engineer_coder",
+        }
 
     def _resolve_role_key(self, template_name: str | AgentName) -> str:
         if isinstance(template_name, AgentName):
@@ -92,8 +115,12 @@ class PromptManager:
         prompt_sections = [
             role_prompt,
             self._prompt_source.appendices.shared.strip(),
-            backend_appendix.strip(),
         ]
+        if self._drafting_mode_active() and self._supports_drafting_appendix(role_key):
+            drafting_appendix = self._prompt_source.appendices.drafting.get(role_key)
+            if drafting_appendix:
+                prompt_sections.append(drafting_appendix.strip())
+        prompt_sections.append(backend_appendix.strip())
         if runtime_context and runtime_context.strip():
             prompt_sections.append(runtime_context.strip())
         # CLI-backed Codex runs already get the skill files through the workspace

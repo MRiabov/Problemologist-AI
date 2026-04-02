@@ -651,6 +651,7 @@ async def _preview_async(
     rgb: bool | None = None,
     depth: bool | None = None,
     segmentation: bool | None = None,
+    drafting: bool = False,
     rendering_type: PreviewRenderingType | str | None = None,
 ) -> PreviewDesignResponse:
     """Render an on-demand preview for a live build123d component."""
@@ -659,6 +660,7 @@ async def _preview_async(
             success=True,
             status_text=SCRIPT_IMPORT_DEFERRED_MESSAGE,
             message=SCRIPT_IMPORT_DEFERRED_MESSAGE,
+            drafting=drafting,
             rendering_type=(
                 PreviewRenderingType(str(rendering_type))
                 if rendering_type is not None
@@ -679,6 +681,7 @@ async def _preview_async(
         rgb=rgb,
         depth=depth,
         segmentation=segmentation,
+        drafting=drafting,
         rendering_type=(
             PreviewRenderingType(str(rendering_type))
             if rendering_type is not None
@@ -699,6 +702,7 @@ async def _preview_async(
             rgb=rgb,
             depth=depth,
             segmentation=segmentation,
+            drafting=drafting,
             rendering_type=(
                 PreviewRenderingType(str(rendering_type))
                 if rendering_type is not None
@@ -732,7 +736,9 @@ async def _preview_async(
     elif response.artifact_path is None and response.image_path is not None:
         response.artifact_path = response.image_path
     if response.manifest_path is None:
-        response.manifest_path = str(Path("renders") / "render_manifest.json")
+        response.manifest_path = str(
+            preview_output_dir.relative_to(workspace_root) / "render_manifest.json"
+        )
     if response.pitch is None:
         if isinstance(orbit_pitch, float):
             response.pitch = orbit_pitch
@@ -766,6 +772,21 @@ def preview(
             depth=depth,
             segmentation=segmentation,
             rendering_type=rendering_type,
+        )
+    )
+
+
+def preview_drawing(
+    component: Part | Compound,
+    orbit_pitch: float | list[float] = 45,
+    orbit_yaw: float | list[float] = 45,
+) -> _PreviewResponseProxy:
+    return _PreviewResponseProxy(
+        lambda: _preview_async(
+            component,
+            orbit_pitch=orbit_pitch,
+            orbit_yaw=orbit_yaw,
+            drafting=True,
         )
     )
 

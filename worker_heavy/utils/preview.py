@@ -28,6 +28,7 @@ def preview(
     rgb: bool | None = None,
     depth: bool | None = None,
     segmentation: bool | None = None,
+    drafting: bool = False,
     rendering_type: PreviewRenderingType | str | None = None,
     output_dir: Path | None = None,
     objectives: BenchmarkDefinition | None = None,
@@ -56,6 +57,7 @@ def preview(
         rgb=rgb,
         depth=depth,
         segmentation=segmentation,
+        drafting=drafting,
         rendering_type=(
             PreviewRenderingType(str(rendering_type))
             if rendering_type is not None
@@ -123,3 +125,24 @@ def preview(
         rendering_type=response.rendering_type.value,
     )
     return response
+
+
+def preview_drawing(
+    component: Part | Compound,
+    orbit_pitch: float | list[float] = 45.0,
+    orbit_yaw: float | list[float] = 45.0,
+    output_dir: Path | None = None,
+    objectives: BenchmarkDefinition | None = None,
+    width: int | None = None,
+    height: int | None = None,
+) -> PreviewDesignResponse:
+    return preview(
+        component,
+        orbit_pitch=orbit_pitch,
+        orbit_yaw=orbit_yaw,
+        drafting=True,
+        output_dir=output_dir,
+        objectives=objectives,
+        width=width,
+        height=height,
+    )

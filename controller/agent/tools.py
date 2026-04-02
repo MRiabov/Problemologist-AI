@@ -186,6 +186,20 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """
         return await fs.inspect_topology(target_id, script_path)
 
+    async def preview_drawing(
+        script_path: str = default_script_path,
+        orbit_pitch: float | list[float] = 45,
+        orbit_yaw: float | list[float] = 45,
+        smoke_test_mode: bool | None = None,
+    ):
+        """Render planner-authored technical drawings for inspection."""
+        return await fs.preview_drawing(
+            script_path,
+            orbit_pitch=orbit_pitch,
+            orbit_yaw=orbit_yaw,
+            smoke_test_mode=smoke_test_mode,
+        )
+
     async def verify(
         script_path: str = default_script_path,
         jitter_range: tuple[float, float, float] | None = None,
@@ -246,6 +260,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         grep,
         execute_command,
         inspect_topology,
+        preview_drawing,
         verify,
         search_cots_catalog,
         invoke_cots_search_subagent,

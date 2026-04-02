@@ -19,6 +19,7 @@ export type PreviewDesignResponse = {
     artifact_path?: (string | null);
     manifest_path?: (string | null);
     rendering_type?: PreviewRenderingType;
+    drafting?: boolean;
     pitch?: (number | null);
     yaw?: (number | null);
     image_path?: (string | null);

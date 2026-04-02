@@ -6,6 +6,7 @@ from pathlib import Path
 import structlog
 from build123d import Compound, export_step
 
+from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition
 from shared.models.simulation import SimulationResult
@@ -491,6 +492,7 @@ def submit_for_review(
         benchmark_definition=objectives_model,
         assembly_definition=estimation,
         manufacturing_config=dfm_config,
+        planner_node_type=AgentName.BENCHMARK_PLANNER,
     )
     if cross_contract_errors:
         logger.warning(

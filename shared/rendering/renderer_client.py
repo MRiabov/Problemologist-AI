@@ -128,6 +128,7 @@ def render_preview(
     depth: bool | None = None,
     segmentation: bool | None = None,
     rendering_type: PreviewRenderingType | None = None,
+    drafting: bool = False,
     session_id: str | None = None,
     agent_role: str | None = None,
     script_content: str | None = None,
@@ -141,6 +142,7 @@ def render_preview(
         rgb=rgb,
         depth=depth,
         segmentation=segmentation,
+        drafting=drafting,
         rendering_type=rendering_type,
         script_content=script_content,
         smoke_test_mode=smoke_test_mode,
@@ -154,6 +156,30 @@ def render_preview(
         timeout=60.0,
     )
     return PreviewDesignResponse.model_validate(data)
+
+
+def render_preview_drawing(
+    *,
+    bundle_base64: str | None,
+    script_path: str,
+    orbit_pitch: float | list[float],
+    orbit_yaw: float | list[float],
+    session_id: str | None = None,
+    agent_role: str | None = None,
+    script_content: str | None = None,
+    smoke_test_mode: bool | None = None,
+) -> PreviewDesignResponse:
+    return render_preview(
+        bundle_base64=bundle_base64,
+        script_path=script_path,
+        orbit_pitch=orbit_pitch,
+        orbit_yaw=orbit_yaw,
+        drafting=True,
+        session_id=session_id,
+        agent_role=agent_role,
+        script_content=script_content,
+        smoke_test_mode=smoke_test_mode,
+    )
 
 
 def render_static_preview(

@@ -66,6 +66,7 @@ from worker_renderer.utils.rendering import (
     select_static_preview_render_subdir,
 )
 from worker_renderer.utils.scene_builder import normalize_preview_label
+from worker_renderer.utils.technical_drawing import render_technical_drawing_preview
 
 logger = structlog.get_logger(__name__)
 renderer_router = APIRouter()
@@ -273,7 +274,7 @@ def _persist_preview_scene_bundle(
     return scene_path
 
 
-def _bundle_sidecar_blobs(bundle_root: Path) -> dict[str, str]:
+def _bundle_sidecar_blobs(bundle_root: Path, *, workspace_root: Path) -> dict[str, str]:
     blobs: dict[str, str] = {}
     for rel_path in (
         "preview_scene.json",
@@ -283,25 +284,25 @@ def _bundle_sidecar_blobs(bundle_root: Path) -> dict[str, str]:
     ):
         sidecar_path = bundle_root / rel_path
         if sidecar_path.exists() and sidecar_path.is_file():
-            blobs[str(sidecar_path.relative_to(bundle_root.parent.parent))] = (
-                base64.b64encode(sidecar_path.read_bytes()).decode("ascii")
-            )
+            blobs[str(sidecar_path.relative_to(workspace_root))] = base64.b64encode(
+                sidecar_path.read_bytes()
+            ).decode("ascii")
 
-    index_path = bundle_root.parent.parent / "renders" / "render_index.jsonl"
+    index_path = workspace_root / "renders" / "render_index.jsonl"
     if index_path.exists() and index_path.is_file():
-        blobs[str(index_path.relative_to(bundle_root.parent.parent))] = (
-            base64.b64encode(index_path.read_bytes()).decode("ascii")
-        )
+        blobs[str(index_path.relative_to(workspace_root))] = base64.b64encode(
+            index_path.read_bytes()
+        ).decode("ascii")
 
-    compat_manifest_path = bundle_root.parent / "render_manifest.json"
+    compat_manifest_path = workspace_root / "renders" / "render_manifest.json"
     if (
         compat_manifest_path.exists()
         and compat_manifest_path.is_file()
         and compat_manifest_path != bundle_root / "render_manifest.json"
     ):
-        blobs[str(compat_manifest_path.relative_to(bundle_root.parent.parent))] = (
-            base64.b64encode(compat_manifest_path.read_bytes()).decode("ascii")
-        )
+        blobs[str(compat_manifest_path.relative_to(workspace_root))] = base64.b64encode(
+            compat_manifest_path.read_bytes()
+        ).decode("ascii")
     return blobs
 
 
@@ -348,7 +349,9 @@ def _collect_render_artifacts(
     }
     for bundle_root in sorted(bundle_roots):
         with contextlib.suppress(Exception):
-            render_blobs_base64.update(_bundle_sidecar_blobs(bundle_root))
+            render_blobs_base64.update(
+                _bundle_sidecar_blobs(bundle_root, workspace_root=root)
+            )
 
     render_manifest_path = root / "renders" / "render_manifest.json"
     existing_manifest = None
@@ -931,6 +934,20 @@ async def api_preview(
         async with render_operation_admission("preview", x_session_id):
             with _bundle_context(request.bundle_base64) as root:
                 with _event_file_context(root):
+                    if request.drafting:
+                        response = await asyncio.to_thread(
+                            render_technical_drawing_preview,
+                            root=root,
+                            script_path=request.script_path,
+                            session_id=x_session_id,
+                            agent_role=x_agent_role,
+                            script_content=request.script_content,
+                        )
+                        response.events = collect_and_cleanup_events(
+                            root, session_id=x_session_id
+                        )
+                        return response
+
                     objectives = _load_workspace_benchmark_definition(
                         root, session_id=x_session_id
                     )

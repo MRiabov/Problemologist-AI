@@ -173,7 +173,7 @@ the same bundle identity.
 - [ ] Remove the root-level `renders/render_manifest.json` path from the
   active contract and route readers directly to bundle-local manifests or the
   append-only index.
-- [ ] Make the bundle-local manifest the authoritative source for one published
+- [x] Make the bundle-local manifest the authoritative source for one published
   bundle.
 - [ ] Keep the manifest compact enough that a model can inspect it without
   reading the full media payload.
@@ -211,7 +211,7 @@ the same bundle identity.
   or frame-level metadata.
 - [ ] Persist `objects.parquet` from the `PhysicsBackend` object-pose export
   path when a bundle needs dense object pose tables for query-time inspection.
-- [ ] Keep the sidecars bundle-local so history lookup does not depend on
+- [x] Keep the sidecars bundle-local so history lookup does not depend on
   mutable root-level files.
 - [ ] Avoid expanding the manifest into a full data store.
 
@@ -234,7 +234,7 @@ the same bundle identity.
 ### 6. Keep historical lookup stable
 
 - [x] Resolve historical bundles through `renders/render_index.jsonl`.
-- [ ] Resolve the bundle-local manifest directly; do not route through the
+- [x] Resolve the bundle-local manifest directly; do not route through the
   legacy root-level manifest path.
 - [x] Keep current-revision discovery working by targeting the bundle-local
   manifest or the append-only index directly.

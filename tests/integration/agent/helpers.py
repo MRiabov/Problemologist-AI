@@ -247,6 +247,10 @@ async def seed_benchmark_assembly_definition(
     estimate_confidence: str = "medium",
 ) -> None:
     """Seed a minimal benchmark handoff file for engineer planner startup."""
+    benchmark_script_content = _fixture_script_content(
+        "INT-005",
+        preferred_path="benchmark_script.py",
+    )
     await _seed_workspace_file(
         client,
         session_id=session_id,
@@ -260,6 +264,13 @@ async def seed_benchmark_assembly_definition(
             estimated_weight_g=estimated_weight_g,
             estimate_confidence=estimate_confidence,
         ),
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="benchmark_script.py",
+        content=benchmark_script_content,
+        bypass_agent_permissions=True,
     )
     await _seed_workspace_file(
         client,

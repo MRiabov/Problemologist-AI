@@ -31,6 +31,7 @@ from worker_heavy.simulation.factory import get_physics_backend
 from worker_heavy.simulation.media import MediaRecorder
 from worker_heavy.simulation.metrics import MetricCollector
 from worker_heavy.simulation.naming import moved_object_scene_name
+from worker_heavy.simulation.object_pose import write_object_pose_parquet
 from worker_heavy.simulation.objectives import ObjectiveEvaluator
 from worker_heavy.utils.dfm import (
     resolve_requested_quantity,
@@ -428,6 +429,21 @@ class SimulationLoop:
         # 7. Finalization
         self.render_provenance = media_recorder.render_provenance
         self.render_object_store_key = media_recorder.save()
+        if media_recorder.video_path is not None and media_recorder.video_path.exists():
+            try:
+                pose_records = self.backend.export_object_pose_records()
+                write_object_pose_parquet(
+                    media_recorder.video_path.parent,
+                    pose_records,
+                    source_path=media_recorder.video_path.name,
+                    session_id=self.session_id,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "object_pose_export_skipped",
+                    error=str(exc),
+                    session_id=self.session_id,
+                )
         self.objective_evaluator.evaluate_final(self.backend, current_time)
 
         return self._build_simulation_metrics(current_time)

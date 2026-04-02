@@ -219,50 +219,6 @@ class BaseNode:
         if not current_revision:
             return []
 
-        manifest_candidates = [
-            "renders/benchmark_renders/render_manifest.json",
-            "renders/engineer_renders/render_manifest.json",
-            "renders/final_preview_renders/render_manifest.json",
-            "renders/render_manifest.json",
-            "workspace/renders/benchmark_renders/render_manifest.json",
-            "workspace/renders/engineer_renders/render_manifest.json",
-            "workspace/renders/final_preview_renders/render_manifest.json",
-            "workspace/renders/render_manifest.json",
-        ]
-        for candidate in manifest_candidates:
-            if not await self.ctx.worker_client.exists(
-                candidate, bypass_agent_permissions=True
-            ):
-                continue
-            try:
-                manifest_raw = await self.ctx.worker_client.read_file(
-                    candidate, bypass_agent_permissions=True
-                )
-                render_manifest = RenderManifest.model_validate_json(manifest_raw)
-            except Exception:
-                continue
-
-            if not render_manifest.revision:
-                continue
-            if render_manifest.revision.strip().lower() != current_revision.lower():
-                continue
-
-            preview_paths = [
-                path.lstrip("/")
-                for path in render_manifest.preview_evidence_paths
-                if path and path.lower().endswith((".png", ".jpg", ".jpeg"))
-            ]
-            if preview_paths:
-                return sorted(dict.fromkeys(preview_paths))
-
-            artifact_paths = [
-                path.lstrip("/")
-                for path in render_manifest.artifacts.keys()
-                if path and path.lower().endswith((".png", ".jpg", ".jpeg"))
-            ]
-            if artifact_paths:
-                return sorted(dict.fromkeys(artifact_paths))
-
         index_candidates = (
             "renders/render_index.jsonl",
             "workspace/renders/render_index.jsonl",
@@ -316,6 +272,48 @@ class BaseNode:
                 ]
                 if artifact_paths:
                     return sorted(dict.fromkeys(artifact_paths))
+
+        manifest_candidates = [
+            "renders/benchmark_renders/render_manifest.json",
+            "renders/engineer_renders/render_manifest.json",
+            "renders/final_preview_renders/render_manifest.json",
+            "workspace/renders/benchmark_renders/render_manifest.json",
+            "workspace/renders/engineer_renders/render_manifest.json",
+            "workspace/renders/final_preview_renders/render_manifest.json",
+        ]
+        for candidate in manifest_candidates:
+            if not await self.ctx.worker_client.exists(
+                candidate, bypass_agent_permissions=True
+            ):
+                continue
+            try:
+                manifest_raw = await self.ctx.worker_client.read_file(
+                    candidate, bypass_agent_permissions=True
+                )
+                render_manifest = RenderManifest.model_validate_json(manifest_raw)
+            except Exception:
+                continue
+
+            if not render_manifest.revision:
+                continue
+            if render_manifest.revision.strip().lower() != current_revision.lower():
+                continue
+
+            preview_paths = [
+                path.lstrip("/")
+                for path in render_manifest.preview_evidence_paths
+                if path and path.lower().endswith((".png", ".jpg", ".jpeg"))
+            ]
+            if preview_paths:
+                return sorted(dict.fromkeys(preview_paths))
+
+            artifact_paths = [
+                path.lstrip("/")
+                for path in render_manifest.artifacts.keys()
+                if path and path.lower().endswith((".png", ".jpg", ".jpeg"))
+            ]
+            if artifact_paths:
+                return sorted(dict.fromkeys(artifact_paths))
 
         return []
 

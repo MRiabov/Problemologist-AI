@@ -589,6 +589,10 @@ class PreviewDesignRequest(BaseModel):
     segmentation: bool | None = Field(
         default=None, description="Request segmentation output."
     )
+    drafting: bool = Field(
+        default=False,
+        description="Request a drafting preview instead of the default 3D modalities.",
+    )
     rendering_type: PreviewRenderingType | None = Field(
         default=None,
         description=(
@@ -603,6 +607,13 @@ class PreviewDesignRequest(BaseModel):
 
     @model_validator(mode="after")
     def normalize_preview_request(self) -> "PreviewDesignRequest":
+        if self.drafting:
+            self.rgb = bool(self.rgb) if self.rgb is not None else False
+            self.depth = bool(self.depth) if self.depth is not None else False
+            self.segmentation = (
+                bool(self.segmentation) if self.segmentation is not None else False
+            )
+            return self
         explicit_modalities = any(
             getattr(self, field) is not None
             for field in ("rgb", "depth", "segmentation")
@@ -647,6 +658,7 @@ class PreviewDesignResponse(BaseModel):
     artifact_path: StrictStr | None = None
     manifest_path: StrictStr | None = None
     rendering_type: PreviewRenderingType = PreviewRenderingType.RGB
+    drafting: StrictBool = False
     pitch: float | None = None
     yaw: float | None = None
     image_path: StrictStr | None = None
@@ -679,6 +691,7 @@ class PreviewWorkflowParams(BaseModel):
     rgb: bool | None = None
     depth: bool | None = None
     segmentation: bool | None = None
+    drafting: bool = False
     rendering_type: PreviewRenderingType | None = Field(
         default=None,
         description="Legacy single-modality preview selector.",
@@ -729,6 +742,7 @@ class HeavyPreviewParams(BaseModel):
     rgb: bool | None = None
     depth: bool | None = None
     segmentation: bool | None = None
+    drafting: bool = False
     rendering_type: PreviewRenderingType | None = None
 
     @field_validator("orbit_pitch", "orbit_yaw", mode="after")
@@ -833,6 +847,8 @@ class RenderSiblingPaths(BaseModel):
     rgb: StrictStr | None = None
     depth: StrictStr | None = None
     segmentation: StrictStr | None = None
+    svg: StrictStr | None = None
+    dxf: StrictStr | None = None
 
     model_config = ConfigDict(extra="forbid")
 

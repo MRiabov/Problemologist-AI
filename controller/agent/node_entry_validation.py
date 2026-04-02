@@ -1013,6 +1013,7 @@ async def validate_seeded_workspace_handoff_artifacts(
                 benchmark_definition=benchmark_definition_model,
                 assembly_definition=benchmark_assembly_definition_model,
                 manufacturing_config=manufacturing_config_model,
+                planner_node_type=AgentName.BENCHMARK_PLAN_REVIEWER,
             )
             errors.extend(
                 _seeded_schema_error(

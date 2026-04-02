@@ -2609,6 +2609,12 @@
             "title": "Segmentation",
             "description": "Request segmentation output."
           },
+          "drafting": {
+            "type": "boolean",
+            "title": "Drafting",
+            "description": "Request a drafting preview instead of the default 3D modalities.",
+            "default": false
+          },
           "rendering_type": {
             "anyOf": [
               {
@@ -2717,6 +2723,11 @@
           "rendering_type": {
             "$ref": "#/components/schemas/PreviewRenderingType",
             "default": "rgb"
+          },
+          "drafting": {
+            "type": "boolean",
+            "title": "Drafting",
+            "default": false
           },
           "pitch": {
             "anyOf": [

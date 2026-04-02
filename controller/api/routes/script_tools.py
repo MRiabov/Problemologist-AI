@@ -54,6 +54,7 @@ class ScriptToolRequest(BaseModel):
     rgb: bool | None = None
     depth: bool | None = None
     segmentation: bool | None = None
+    drafting: bool = False
     rendering_type: PreviewRenderingType | None = None
     reviewer_stage: ReviewerStage | None = None
     jitter_range: tuple[float, float, float] | None = None
@@ -133,12 +134,17 @@ async def _collect_render_blobs(
 ) -> dict[str, str]:
     render_blobs_base64: dict[str, str] = {}
     render_image_paths: list[str] = []
+    manifest_candidates: list[str] = []
 
     for raw_path in render_paths:
         rel_path = str(Path(raw_path))
         suffix = Path(rel_path).suffix.lower()
         if suffix not in {".png", ".jpg", ".jpeg", ".mp4"}:
             continue
+
+        manifest_path = str(Path(rel_path).parent / "render_manifest.json")
+        if manifest_path not in manifest_candidates:
+            manifest_candidates.append(manifest_path)
 
         try:
             if not await middleware.client.exists(rel_path):
@@ -151,14 +157,25 @@ async def _collect_render_blobs(
         except Exception:
             continue
 
-    manifest_path = "renders/render_manifest.json"
-    if await middleware.client.exists(manifest_path):
+    manifest_found = False
+    for manifest_path in manifest_candidates:
+        if not await middleware.client.exists(manifest_path):
+            continue
         render_blobs_base64[manifest_path] = base64.b64encode(
             await middleware.client.read_file_binary(manifest_path)
         ).decode("ascii")
-    elif render_image_paths:
+        manifest_found = True
+
+    if render_image_paths and not manifest_found:
         raise ValueError(
-            "renders/render_manifest.json missing for latest preview bundle"
+            "bundle-local render_manifest.json missing for latest preview bundle"
+        )
+
+    if render_image_paths and not any(
+        path.endswith("render_manifest.json") for path in render_blobs_base64
+    ):
+        raise ValueError(
+            "bundle-local render_manifest.json missing for latest preview bundle"
         )
 
     return render_blobs_base64
@@ -317,6 +334,7 @@ async def preview_script(
                 rgb=payload.rgb,
                 depth=payload.depth,
                 segmentation=payload.segmentation,
+                drafting=payload.drafting,
                 rendering_type=payload.rendering_type,
                 bundle_base64=payload.bundle_base64,
                 smoke_test_mode=payload.smoke_test_mode,

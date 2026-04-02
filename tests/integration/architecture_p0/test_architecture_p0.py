@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import io
 import os
 import tempfile
@@ -257,9 +258,8 @@ def build():
         assert validate_data.success, validate_data.message
         assert validate_data.artifacts is not None
         assert validate_data.artifacts.render_paths, validate_data.artifacts
-        assert "renders/render_manifest.json" in (
-            validate_data.artifacts.render_blobs_base64
-        )
+        preview_manifest_path = Path("renders/engineer_renders/render_manifest.json")
+        assert str(preview_manifest_path) in validate_data.artifacts.render_blobs_base64
 
         preview_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/preview",
@@ -278,7 +278,10 @@ def build():
         assert preview_data.success, preview_data.message
         assert preview_data.image_path is not None
         assert preview_data.image_path.startswith("renders/"), preview_data
-        assert preview_data.manifest_path == "renders/render_manifest.json"
+        assert (
+            preview_data.manifest_path
+            == "renders/engineer_renders/render_manifest.json"
+        )
         assert preview_data.render_manifest_json is not None
         assert "artifacts" in preview_data.render_manifest_json
 
@@ -332,7 +335,15 @@ async def _assert_simulation_video_contract(
 
     render_paths = list(data.artifacts.render_paths)
     assert any(path.endswith(".mp4") for path in render_paths), render_paths
-    assert "renders/render_manifest.json" in data.artifacts.render_blobs_base64
+    manifest_paths = [
+        path
+        for path in data.artifacts.render_blobs_base64
+        if path.endswith("render_manifest.json")
+    ]
+    assert any(
+        path.startswith("renders/benchmark_renders/simulation_video/")
+        for path in manifest_paths
+    ), manifest_paths
     assert data.artifacts.object_store_keys, data.artifacts
     mp4_keys = [
         path for path in data.artifacts.object_store_keys if path.endswith(".mp4")
@@ -349,6 +360,14 @@ async def _assert_simulation_video_contract(
         None,
     )
     assert video_path is not None, render_paths
+
+    objects_path = str(Path(video_path).with_name("objects.parquet"))
+    assert objects_path in data.artifacts.render_blobs_base64, (
+        data.artifacts.render_blobs_base64
+    )
+    objects_bytes = base64.b64decode(data.artifacts.render_blobs_base64[objects_path])
+    assert objects_bytes[:4] == b"PAR1", objects_bytes[:16]
+    assert objects_bytes[-4:] == b"PAR1", objects_bytes[-16:]
 
     object_store_key = data.artifacts.object_store_keys[video_path]
     video_bytes = (
