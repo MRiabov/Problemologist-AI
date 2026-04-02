@@ -4,6 +4,7 @@ import os
 import uuid
 import zipfile
 from typing import Any
+from urllib.parse import urlparse
 
 import boto3
 import structlog
@@ -115,8 +116,17 @@ class BenchmarkStorage:
         await asyncio.to_thread(_upload)
 
     def _get_url(self, bucket: str, key: str) -> str:
-        # If using MinIO or S3, construct URL.
-        endpoint = os.getenv("S3_ENDPOINT_URL", "https://s3.amazonaws.com")
-        if "minio" in endpoint or "localhost" in endpoint:
-            return f"{endpoint}/{bucket}/{key}"
-        return f"https://{bucket}.s3.amazonaws.com/{key}"
+        endpoint = (
+            os.getenv("S3_ENDPOINT_URL")
+            or os.getenv("S3_ENDPOINT")
+            or "https://s3.amazonaws.com"
+        ).rstrip("/")
+        parsed = urlparse(endpoint if "://" in endpoint else f"https://{endpoint}")
+        host = parsed.netloc or parsed.path
+
+        # MinIO-style path endpoints stay path-based. Railway buckets and other
+        # S3-compatible hosts are virtual-hosted style, so the bucket becomes a
+        # subdomain of the configured endpoint.
+        if "minio" in host or "localhost" in host or "127.0.0.1" in host:
+            return f"{parsed.scheme}://{host}/{bucket}/{key}"
+        return f"{parsed.scheme}://{bucket}.{host}/{key}"

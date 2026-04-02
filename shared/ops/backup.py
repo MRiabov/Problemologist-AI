@@ -84,7 +84,12 @@ def backup_s3_files(
         timestamp = datetime.now(UTC).strftime("%Y-%m-%d")
 
         count = 0
+        backup_prefix_root = f"{backup_prefix.rstrip('/')}/"
         for obj in source.objects.all():
+            if source_bucket == backup_bucket and obj.key.startswith(
+                backup_prefix_root
+            ):
+                continue
             copy_source = {"Bucket": source_bucket, "Key": obj.key}
             # Prefix with date to keep snapshots
             dest_key = f"{backup_prefix}/{timestamp}/{obj.key}"
