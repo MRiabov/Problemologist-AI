@@ -18,6 +18,7 @@ from tests.integration.agent.helpers import (
     read_log_segment,
     run_agent_episode,
     seed_benchmark_assembly_definition,
+    seed_engineer_planner_handover,
     seed_execution_reviewer_handover,
     strip_ansi,
     wait_for_episode_terminal,
@@ -201,6 +202,16 @@ async def test_int_182_concurrent_agent_run_isolation_files_traces_context():
         assert write_b.status_code == 200, write_b.text
 
         await asyncio.gather(
+            seed_engineer_planner_handover(
+                client,
+                session_id=workspace_session_a,
+                int_id="INT-182",
+            ),
+            seed_engineer_planner_handover(
+                client,
+                session_id=workspace_session_b,
+                int_id="INT-182",
+            ),
             seed_benchmark_assembly_definition(client, workspace_session_a),
             seed_benchmark_assembly_definition(client, workspace_session_b),
             seed_execution_reviewer_handover(

@@ -31,7 +31,7 @@ from evals.logic.codex_workspace import (
 )
 from evals.logic.models import EvalDatasetItem
 from evals.logic.seed_maintenance import refresh_plan_review_manifest_hashes
-from shared.agents.config import AgentsConfig
+from shared.agents.config import AgentsConfig, DraftingMode
 from shared.enums import AgentName, ManufacturingMethod, ReviewDecision
 from shared.eval_artifacts import plan_artifacts_for_agent
 from shared.models.schemas import (
@@ -83,13 +83,17 @@ def _assert_skills_tree_materialized(workspace_dir: Path) -> None:
     assert (workspace_dir / ".agents" / "skills").is_dir()
 
 
-def _agents_config_with_drafting_mode(
-    mode: str, *, agent_role: str = "engineer_planner"
+def _agents_config_with_technical_drawing_modes(
+    *,
+    engineer_mode: DraftingMode = DraftingMode.OFF,
+    benchmark_mode: DraftingMode = DraftingMode.OFF,
 ) -> AgentsConfig:
     data = yaml.safe_load(AGENTS_CONFIG_PATH.read_text(encoding="utf-8")) or {}
     agents = data.setdefault("agents", {})
-    target_agent = agents.setdefault(agent_role, {})
-    target_agent["drafting_mode"] = mode
+    engineer_agent = agents.setdefault("engineer_planner", {})
+    engineer_agent["technical_drawing_mode"] = engineer_mode
+    benchmark_agent = agents.setdefault("benchmark_planner", {})
+    benchmark_agent["technical_drawing_mode"] = benchmark_mode
     return AgentsConfig.model_validate(data)
 
 
@@ -102,64 +106,126 @@ def _load_agents_config_with_reasoning_effort_enabled(
     return AgentsConfig.model_validate(data)
 
 
-def _engineer_drafting_mode_is_active() -> bool:
-    data = yaml.safe_load(AGENTS_CONFIG_PATH.read_text(encoding="utf-8")) or {}
-    agents = data.get("agents") or {}
-    engineer_planner = agents.get("engineer_planner") or {}
-    return engineer_planner.get("drafting_mode") in {"drafting", "drawing"}
+def _technical_drawing_mode_is_active(agent_name: AgentName) -> bool:
+    config = AgentsConfig.model_validate(
+        yaml.safe_load(AGENTS_CONFIG_PATH.read_text(encoding="utf-8")) or {}
+    )
+    return config.get_technical_drawing_mode(agent_name) in {
+        DraftingMode.MINIMAL,
+        DraftingMode.FULL,
+    }
 
 
 @pytest.mark.integration_p0
-def test_plan_artifacts_for_agent_is_mode_aware(monkeypatch: pytest.MonkeyPatch):
-    off_config = _agents_config_with_drafting_mode("off")
-    engineer_drafting_config = _agents_config_with_drafting_mode("drafting")
-    benchmark_drafting_config = _agents_config_with_drafting_mode(
-        "drafting", agent_role="benchmark_planner"
+@pytest.mark.parametrize(
+    "technical_drawing_mode",
+    [
+        pytest.param(DraftingMode.OFF, id="off"),
+        pytest.param(DraftingMode.MINIMAL, id="minimal"),
+        pytest.param(DraftingMode.FULL, id="full"),
+    ],
+)
+def test_plan_artifacts_for_engineer_roles(
+    monkeypatch: pytest.MonkeyPatch,
+    technical_drawing_mode: DraftingMode,
+):
+    config = _agents_config_with_technical_drawing_modes(
+        engineer_mode=technical_drawing_mode,
+        benchmark_mode=DraftingMode.OFF,
     )
+    monkeypatch.setattr("shared.eval_artifacts.load_agents_config", lambda: config)
 
-    monkeypatch.setattr(
-        "shared.eval_artifacts.load_agents_config",
-        lambda: off_config,
-    )
-    assert plan_artifacts_for_agent(AgentName.ENGINEER_PLANNER) == (
+    expected_engineer_files = (
         "plan.md",
         "todo.md",
         "benchmark_definition.yaml",
         "assembly_definition.yaml",
     )
+    if technical_drawing_mode is not DraftingMode.OFF:
+        expected_engineer_files = expected_engineer_files + (
+            "solution_plan_evidence_script.py",
+            "solution_plan_technical_drawing_script.py",
+        )
 
-    monkeypatch.setattr(
-        "shared.eval_artifacts.load_agents_config",
-        lambda: engineer_drafting_config,
-    )
-    assert plan_artifacts_for_agent(AgentName.ENGINEER_PLANNER) == (
-        "plan.md",
-        "todo.md",
-        "benchmark_definition.yaml",
-        "assembly_definition.yaml",
-        "solution_plan_evidence_script.py",
-        "solution_plan_technical_drawing_script.py",
-    )
-    assert plan_artifacts_for_agent(AgentName.ENGINEER_PLAN_REVIEWER) == (
-        "plan.md",
-        "todo.md",
-        "benchmark_definition.yaml",
-        "assembly_definition.yaml",
-        "solution_plan_evidence_script.py",
-        "solution_plan_technical_drawing_script.py",
-    )
+    for agent_name in (
+        AgentName.ENGINEER_PLANNER,
+        AgentName.ENGINEER_PLAN_REVIEWER,
+        AgentName.ENGINEER_CODER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+    ):
+        assert plan_artifacts_for_agent(agent_name) == expected_engineer_files
 
-    monkeypatch.setattr(
-        "shared.eval_artifacts.load_agents_config",
-        lambda: benchmark_drafting_config,
-    )
     assert plan_artifacts_for_agent(AgentName.BENCHMARK_PLANNER) == (
         "plan.md",
         "todo.md",
         "benchmark_definition.yaml",
         "benchmark_assembly_definition.yaml",
-        "benchmark_plan_evidence_script.py",
-        "benchmark_plan_technical_drawing_script.py",
+    )
+
+
+@pytest.mark.integration_p0
+@pytest.mark.parametrize(
+    "technical_drawing_mode",
+    [
+        pytest.param(DraftingMode.OFF, id="off"),
+        pytest.param(DraftingMode.MINIMAL, id="minimal"),
+        pytest.param(DraftingMode.FULL, id="full"),
+    ],
+)
+def test_plan_artifacts_for_benchmark_roles_and_context(
+    monkeypatch: pytest.MonkeyPatch,
+    technical_drawing_mode: DraftingMode,
+):
+    config = _agents_config_with_technical_drawing_modes(
+        engineer_mode=DraftingMode.OFF,
+        benchmark_mode=technical_drawing_mode,
+    )
+    monkeypatch.setattr("shared.eval_artifacts.load_agents_config", lambda: config)
+
+    expected_benchmark_files = (
+        "plan.md",
+        "todo.md",
+        "benchmark_definition.yaml",
+        "benchmark_assembly_definition.yaml",
+    )
+    if technical_drawing_mode is not DraftingMode.OFF:
+        expected_benchmark_files = expected_benchmark_files + (
+            "benchmark_plan_evidence_script.py",
+            "benchmark_plan_technical_drawing_script.py",
+        )
+
+    for agent_name in (
+        AgentName.BENCHMARK_PLANNER,
+        AgentName.BENCHMARK_PLAN_REVIEWER,
+        AgentName.BENCHMARK_CODER,
+        AgentName.BENCHMARK_REVIEWER,
+    ):
+        assert plan_artifacts_for_agent(agent_name) == expected_benchmark_files
+
+    assert plan_artifacts_for_agent(AgentName.ENGINEER_PLAN_REVIEWER) == (
+        "plan.md",
+        "todo.md",
+        "benchmark_definition.yaml",
+        "assembly_definition.yaml",
+    )
+
+    expected_engineer_context_files = (
+        "plan.md",
+        "todo.md",
+        "benchmark_definition.yaml",
+        "assembly_definition.yaml",
+    )
+    if technical_drawing_mode is not DraftingMode.OFF:
+        expected_engineer_context_files = expected_engineer_context_files + (
+            "benchmark_plan_evidence_script.py",
+            "benchmark_plan_technical_drawing_script.py",
+        )
+
+    assert plan_artifacts_for_agent(AgentName.ENGINEER_PLANNER) == (
+        expected_engineer_context_files
+    )
+    assert plan_artifacts_for_agent(AgentName.ENGINEER_CODER) == (
+        expected_engineer_context_files
     )
 
 
@@ -1482,58 +1548,112 @@ def test_prompt_manager_unified_render_uses_shared_source_model(tmp_path: Path):
 
 
 @pytest.mark.integration_p0
-def test_prompt_manager_injects_drafting_appendix_only_when_enabled(
+@pytest.mark.parametrize(
+    "technical_drawing_mode",
+    [
+        pytest.param(DraftingMode.OFF, id="off"),
+        pytest.param(DraftingMode.MINIMAL, id="minimal"),
+        pytest.param(DraftingMode.FULL, id="full"),
+    ],
+)
+def test_prompt_manager_injects_engineer_drafting_appendix_only_when_enabled(
     monkeypatch: pytest.MonkeyPatch,
+    technical_drawing_mode: DraftingMode,
 ):
-    off_config = _agents_config_with_drafting_mode("off")
-    monkeypatch.setattr(
-        "controller.agent.prompt_manager.load_agents_config",
-        lambda: off_config,
+    config = _agents_config_with_technical_drawing_modes(
+        engineer_mode=technical_drawing_mode,
+        benchmark_mode=DraftingMode.OFF,
     )
-
-    prompt_manager = PromptManager()
-    off_prompt = prompt_manager.render(AgentName.ENGINEER_PLANNER)
-    off_benchmark_prompt = prompt_manager.render(AgentName.BENCHMARK_PLANNER)
-    assert "Drafting mode is active." not in off_prompt
-    assert "Drafting mode is active." not in off_benchmark_prompt
-    assert "assembly_definition.yaml.drafting" not in off_prompt
-    assert "benchmark_assembly_definition.yaml.drafting" not in off_benchmark_prompt
-
-    on_config = _agents_config_with_drafting_mode("drafting")
     monkeypatch.setattr(
         "controller.agent.prompt_manager.load_agents_config",
-        lambda: on_config,
+        lambda: config,
     )
 
     prompt_manager = PromptManager()
     planner_prompt = prompt_manager.render(AgentName.ENGINEER_PLANNER)
     reviewer_prompt = prompt_manager.render(AgentName.ENGINEER_PLAN_REVIEWER)
     coder_prompt = prompt_manager.render(AgentName.ENGINEER_CODER)
+    execution_reviewer_prompt = prompt_manager.render(
+        AgentName.ENGINEER_EXECUTION_REVIEWER
+    )
     benchmark_prompt = prompt_manager.render(AgentName.BENCHMARK_PLANNER)
     benchmark_reviewer_prompt = prompt_manager.render(AgentName.BENCHMARK_PLAN_REVIEWER)
 
-    assert "Drafting mode is active." in planner_prompt
-    assert "Drafting mode is active." in reviewer_prompt
-    assert "assembly_definition.yaml.drafting" in coder_prompt
-    assert "Drafting mode is active." not in benchmark_prompt
-    assert "Drafting mode is active." not in benchmark_reviewer_prompt
+    if technical_drawing_mode is DraftingMode.OFF:
+        assert "Technical drawing mode is active." not in planner_prompt
+        assert "assembly_definition.yaml.drafting" not in planner_prompt
+        assert "assembly_definition.yaml.drafting" not in reviewer_prompt
+        assert "assembly_definition.yaml.drafting" not in coder_prompt
+        assert "assembly_definition.yaml.drafting" not in execution_reviewer_prompt
+    else:
+        assert "Technical drawing mode is active." in planner_prompt
+        assert "Technical drawing mode is active." in reviewer_prompt
+        assert "assembly_definition.yaml.drafting" in planner_prompt
+        assert "assembly_definition.yaml.drafting" in reviewer_prompt
+        assert "drafting section is read-only context for implementation work." in (
+            coder_prompt
+        )
+        assert "assembly_definition.yaml.drafting" in coder_prompt
+    assert "assembly_definition.yaml.drafting" not in execution_reviewer_prompt
 
-    benchmark_config = _agents_config_with_drafting_mode(
-        "drafting", agent_role="benchmark_planner"
+    assert "Technical drawing mode is active." not in benchmark_prompt
+    assert "Technical drawing mode is active." not in benchmark_reviewer_prompt
+
+
+@pytest.mark.integration_p0
+@pytest.mark.parametrize(
+    "technical_drawing_mode",
+    [
+        pytest.param(DraftingMode.OFF, id="off"),
+        pytest.param(DraftingMode.MINIMAL, id="minimal"),
+        pytest.param(DraftingMode.FULL, id="full"),
+    ],
+)
+def test_prompt_manager_injects_benchmark_drafting_appendix_only_when_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+    technical_drawing_mode: DraftingMode,
+):
+    config = _agents_config_with_technical_drawing_modes(
+        engineer_mode=DraftingMode.OFF,
+        benchmark_mode=technical_drawing_mode,
     )
     monkeypatch.setattr(
         "controller.agent.prompt_manager.load_agents_config",
-        lambda: benchmark_config,
+        lambda: config,
     )
 
     prompt_manager = PromptManager()
+    engineer_prompt = prompt_manager.render(AgentName.ENGINEER_PLANNER)
+    engineer_reviewer_prompt = prompt_manager.render(AgentName.ENGINEER_PLAN_REVIEWER)
     benchmark_prompt = prompt_manager.render(AgentName.BENCHMARK_PLANNER)
     benchmark_reviewer_prompt = prompt_manager.render(AgentName.BENCHMARK_PLAN_REVIEWER)
     benchmark_coder_prompt = prompt_manager.render(AgentName.BENCHMARK_CODER)
 
-    assert "Drafting mode is active." in benchmark_prompt
-    assert "benchmark_assembly_definition.yaml.drafting" in (benchmark_reviewer_prompt)
-    assert "benchmark_assembly_definition.yaml.drafting" in benchmark_coder_prompt
+    if technical_drawing_mode is DraftingMode.OFF:
+        assert "Technical drawing mode is active." not in benchmark_prompt
+        assert "benchmark_assembly_definition.yaml.drafting" not in benchmark_prompt
+        assert (
+            "benchmark_assembly_definition.yaml.drafting"
+            not in benchmark_reviewer_prompt
+        )
+        assert (
+            "benchmark_assembly_definition.yaml.drafting" not in benchmark_coder_prompt
+        )
+    else:
+        assert "Technical drawing mode is active." in benchmark_prompt
+        assert "Technical drawing mode is active." in benchmark_reviewer_prompt
+        assert "benchmark_assembly_definition.yaml.drafting" in benchmark_prompt
+        assert (
+            "benchmark_assembly_definition.yaml.drafting" in benchmark_reviewer_prompt
+        )
+        assert (
+            "drafting section is read-only context for implementation work."
+            in benchmark_coder_prompt
+        )
+        assert "benchmark_assembly_definition.yaml.drafting" in benchmark_coder_prompt
+
+    assert "Technical drawing mode is active." not in engineer_prompt
+    assert "Technical drawing mode is active." not in engineer_reviewer_prompt
 
 
 @pytest.mark.integration_p0
@@ -1650,12 +1770,19 @@ async def test_codex_materialized_planner_workspace_submits(
     assert "python .admin/clear_env.py" in materialized.prompt_text
     assert "Available skills you can read:" not in materialized.prompt_text
     assert "/skills/runtime-script-contract/SKILL.md" not in materialized.prompt_text
-    engineer_drafting_active = _engineer_drafting_mode_is_active()
-    if agent_name == AgentName.ENGINEER_PLANNER and engineer_drafting_active:
-        assert "Drafting mode is active." in materialized.prompt_text
-        assert "assembly_definition.yaml.drafting" in materialized.prompt_text
+    if agent_name in {
+        AgentName.ENGINEER_PLANNER,
+        AgentName.BENCHMARK_PLANNER,
+    } and _technical_drawing_mode_is_active(agent_name):
+        assert "Technical drawing mode is active." in materialized.prompt_text
+        if agent_name == AgentName.ENGINEER_PLANNER:
+            assert "assembly_definition.yaml.drafting" in materialized.prompt_text
+        else:
+            assert "benchmark_assembly_definition.yaml.drafting" in (
+                materialized.prompt_text
+            )
     else:
-        assert "Drafting mode is active." not in materialized.prompt_text
+        assert "Technical drawing mode is active." not in materialized.prompt_text
     _assert_skills_tree_materialized(workspace_dir)
     _assert_skills_tree_materialized(mirror_workspace_dir)
     assert any(path.startswith(".agents/skills/") for path in materialized.copied_paths)
@@ -1976,20 +2103,6 @@ async def test_codex_seed_workspace_materialization_is_role_specific_and_determi
     assert "/workspace" not in materialized.prompt_text
     assert "Available skills you can read:" not in materialized.prompt_text
     assert "/skills/runtime-script-contract/SKILL.md" not in materialized.prompt_text
-    engineer_drafting_active = _engineer_drafting_mode_is_active()
-    if (
-        agent_name
-        in {
-            AgentName.ENGINEER_PLAN_REVIEWER,
-            AgentName.ENGINEER_CODER,
-            AgentName.ENGINEER_EXECUTION_REVIEWER,
-        }
-        and engineer_drafting_active
-    ):
-        assert "Drafting mode is active." in materialized.prompt_text
-        assert "assembly_definition.yaml.drafting" in materialized.prompt_text
-    else:
-        assert "Drafting mode is active." not in materialized.prompt_text
     _assert_skills_tree_materialized(workspace_dir)
     _assert_skills_tree_materialized(mirror_workspace_dir)
     assert any(path.startswith(".agents/skills/") for path in materialized.copied_paths)

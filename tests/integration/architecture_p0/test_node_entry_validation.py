@@ -20,7 +20,7 @@ from controller.api.schemas import (
     EpisodeResponse,
 )
 from controller.clients.worker import WorkerClient
-from shared.agents.config import AgentsConfig
+from shared.agents.config import AgentsConfig, DraftingMode
 from shared.enums import AgentName, EntryFailureDisposition, EpisodeStatus, TraceType
 from shared.models.schemas import (
     AssemblyConstraints,
@@ -114,13 +114,17 @@ def _node_start_traces(episode: EpisodeResponse, node_name: str) -> list[str]:
     ]
 
 
-def _agents_config_with_drafting_mode(
-    mode: str, *, agent_role: str = "engineer_planner"
+def _agents_config_with_technical_drawing_modes(
+    *,
+    engineer_mode: DraftingMode = DraftingMode.OFF,
+    benchmark_mode: DraftingMode = DraftingMode.OFF,
 ) -> AgentsConfig:
     data = yaml.safe_load(AGENTS_CONFIG_PATH.read_text(encoding="utf-8")) or {}
     agents = data.setdefault("agents", {})
-    target_agent = agents.setdefault(agent_role, {})
-    target_agent["drafting_mode"] = mode
+    engineer_agent = agents.setdefault("engineer_planner", {})
+    engineer_agent["technical_drawing_mode"] = engineer_mode
+    benchmark_agent = agents.setdefault("benchmark_planner", {})
+    benchmark_agent["technical_drawing_mode"] = benchmark_mode
     return AgentsConfig.model_validate(data)
 
 
@@ -229,14 +233,24 @@ async def test_int_184_seeded_workspace_rejects_mismatched_benchmark_caps():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "technical_drawing_mode",
+    [
+        pytest.param(DraftingMode.MINIMAL, id="minimal"),
+        pytest.param(DraftingMode.FULL, id="full"),
+    ],
+)
 async def test_int_184_seeded_workspace_requires_drafting_when_mode_enabled(
     monkeypatch: pytest.MonkeyPatch,
+    technical_drawing_mode: DraftingMode,
 ):
     """
     INT-184: Seeded engineer-plan-reviewer entry must require drafting when the
     planner drafting mode is enabled.
     """
-    drafting_config = _agents_config_with_drafting_mode("drafting")
+    drafting_config = _agents_config_with_technical_drawing_modes(
+        engineer_mode=technical_drawing_mode,
+    )
     monkeypatch.setattr(
         "worker_heavy.utils.file_validation.load_agents_config",
         lambda: drafting_config,
@@ -350,15 +364,23 @@ async def test_int_184_seeded_workspace_requires_drafting_when_mode_enabled(
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "technical_drawing_mode",
+    [
+        pytest.param(DraftingMode.MINIMAL, id="minimal"),
+        pytest.param(DraftingMode.FULL, id="full"),
+    ],
+)
 async def test_int_184_seeded_benchmark_workspace_requires_drafting_when_mode_enabled(
     monkeypatch: pytest.MonkeyPatch,
+    technical_drawing_mode: DraftingMode,
 ):
     """
     INT-184: Seeded benchmark-plan-reviewer entry must require drafting when the
     benchmark planner drafting mode is enabled.
     """
-    drafting_config = _agents_config_with_drafting_mode(
-        "drafting", agent_role="benchmark_planner"
+    drafting_config = _agents_config_with_technical_drawing_modes(
+        benchmark_mode=technical_drawing_mode,
     )
     monkeypatch.setattr(
         "worker_heavy.utils.file_validation.load_agents_config",

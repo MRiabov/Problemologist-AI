@@ -11,6 +11,7 @@ import yaml
 from PIL import Image
 
 from shared.agents import get_image_render_resolution
+from shared.agents.config import DraftingMode
 from shared.models.schemas import (
     AssemblyConstraints,
     AssemblyDefinition,
@@ -229,12 +230,12 @@ def _set_render_modalities(
     return original
 
 
-def _set_engineer_planner_drafting_mode(mode: str) -> str:
+def _set_engineer_planner_technical_drawing_mode(mode: DraftingMode) -> str:
     original = AGENTS_CONFIG_PATH.read_text(encoding="utf-8")
     data = yaml.safe_load(original) or {}
     agents = data.setdefault("agents", {})
     engineer_planner = agents.setdefault("engineer_planner", {})
-    engineer_planner["drafting_mode"] = mode
+    engineer_planner["technical_drawing_mode"] = mode.value
     AGENTS_CONFIG_PATH.write_text(
         yaml.safe_dump(data, sort_keys=False), encoding="utf-8"
     )
@@ -780,7 +781,7 @@ def build():
 @pytest.mark.asyncio
 async def test_int_188_drafting_preview_persists_vector_sidecars():
     """INT-188: drafting preview should persist PNG, SVG, DXF, and manifest output."""
-    original_config = _set_engineer_planner_drafting_mode("drafting")
+    original_config = _set_engineer_planner_technical_drawing_mode(DraftingMode.MINIMAL)
     try:
         async with httpx.AsyncClient(timeout=300.0) as client:
             session_id = f"INT-188-{uuid.uuid4().hex[:8]}"

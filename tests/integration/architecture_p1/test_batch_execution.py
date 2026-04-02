@@ -12,7 +12,11 @@ from controller.api.schemas import (
     EpisodeResponse,
 )
 from shared.enums import EpisodeStatus
-from tests.integration.agent.helpers import seed_benchmark_assembly_definition
+from tests.integration.agent.helpers import (
+    seed_benchmark_assembly_definition,
+    seed_engineer_planner_handover,
+    seed_execution_reviewer_handover,
+)
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
@@ -30,14 +34,24 @@ async def test_int_043_batch_execution_path():
         for i in range(2):
             session_id = f"INT-043-{uuid.uuid4().hex[:8]}"
             session_ids.append(session_id)
+            await seed_engineer_planner_handover(
+                client,
+                session_id=session_id,
+                int_id="INT-043",
+            )
             await seed_benchmark_assembly_definition(
                 client,
                 session_id,
                 benchmark_max_unit_cost_usd=250.0,
                 planner_target_max_unit_cost_usd=150.0,
             )
+            await seed_execution_reviewer_handover(
+                client,
+                session_id=session_id,
+                int_id="INT-043",
+            )
             request = AgentRunRequest(
-                task=f"Batch execution test task {i}",
+                task=f"INT-043 batch execution test task {i}",
                 session_id=session_id,
             )
             tasks.append(

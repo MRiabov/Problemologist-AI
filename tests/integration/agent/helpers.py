@@ -119,11 +119,52 @@ def _benchmark_assembly_definition_content(
             planner_target_max_unit_cost_usd=planner_target_max_unit_cost_usd,
             planner_target_max_weight_g=planner_target_max_weight_g,
         ),
-        manufactured_parts=[],
+        manufactured_parts=[
+            {
+                "part_name": "fixture_base",
+                "part_id": "fixture_base",
+                "manufacturing_method": "3DP",
+                "material_id": "aluminum_6061",
+                "quantity": 1,
+                "part_volume_mm3": 1000.0,
+                "stock_bbox_mm": {"x": 10.0, "y": 10.0, "z": 10.0},
+                "stock_volume_mm3": 1000.0,
+                "removed_volume_mm3": 0.0,
+                "estimated_unit_cost_usd": 10.0,
+            }
+        ],
         cots_parts=[],
+        drafting={
+            "sheet_id": "sheet-1",
+            "title": "Seeded benchmark drafting",
+            "views": [
+                {
+                    "view_id": "view-1",
+                    "target": "fixture_base",
+                    "projection": "front",
+                    "datums": ["A"],
+                    "dimensions": [
+                        {
+                            "dimension_id": "dim-1",
+                            "kind": "linear",
+                            "target": "fixture_base",
+                            "value": 10.0,
+                            "binding": True,
+                        }
+                    ],
+                    "callouts": [
+                        {
+                            "callout_id": "callout-1",
+                            "label": "fixture_base",
+                            "target": "fixture_base",
+                        }
+                    ],
+                }
+            ],
+        },
         final_assembly=[],
         totals=CostTotals(
-            estimated_unit_cost_usd=estimated_unit_cost_usd,
+            estimated_unit_cost_usd=10.0,
             estimated_weight_g=estimated_weight_g,
             estimate_confidence=estimate_confidence,
         ),
@@ -196,6 +237,87 @@ def _fixture_script_content(
             return fallback_path.read_text(encoding="utf-8")
     raise FileNotFoundError(
         f"No fixture script content found for {int_id} at {fallback_root}"
+    )
+
+
+def _fixture_entry_file_content(
+    int_id: str,
+    *,
+    filename_suffix: str,
+    node: str = "engineer_planner",
+) -> str:
+    entry_root = Path("tests/integration/mock_responses") / int_id / node / "entry_01"
+    matches = sorted(entry_root.glob(f"*__{filename_suffix}"))
+    if matches:
+        return matches[0].read_text(encoding="utf-8")
+    raise FileNotFoundError(
+        f"No fixture content found for {int_id} at {entry_root} matching {filename_suffix}"
+    )
+
+
+async def seed_engineer_planner_handover(
+    client: httpx.AsyncClient,
+    *,
+    session_id: str,
+    int_id: str,
+) -> None:
+    """Seed deterministic planner-entry artifacts for engineer planner runs."""
+
+    for filename in (
+        "plan.md",
+        "todo.md",
+        "assembly_definition.yaml",
+        "benchmark_definition.yaml",
+    ):
+        await _seed_workspace_file(
+            client,
+            session_id=session_id,
+            path=filename,
+            content=_fixture_entry_file_content(int_id, filename_suffix=filename),
+            bypass_agent_permissions=True,
+        )
+
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="solution_plan_evidence_script.py",
+        content=_fixture_entry_file_content(
+            "INT-033",
+            filename_suffix="solution_plan_evidence_script.py",
+        ),
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="solution_plan_technical_drawing_script.py",
+        content=_fixture_entry_file_content(
+            "INT-033",
+            filename_suffix="solution_plan_technical_drawing_script.py",
+        ),
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="benchmark_plan_evidence_script.py",
+        content=_fixture_entry_file_content(
+            "INT-204",
+            filename_suffix="benchmark_plan_evidence_script.py",
+            node="benchmark_planner",
+        ),
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="benchmark_plan_technical_drawing_script.py",
+        content=_fixture_entry_file_content(
+            "INT-204",
+            filename_suffix="benchmark_plan_technical_drawing_script.py",
+            node="benchmark_planner",
+        ),
+        bypass_agent_permissions=True,
     )
 
 
@@ -756,6 +878,11 @@ async def run_agent_episode(
     workspace_session_id = integration_workspace_session_id(task, session_id)
 
     if int_id in {"INT-181", "INT-182", "INT-183", "INT-185", "INT-186"}:
+        await seed_engineer_planner_handover(
+            client,
+            session_id=workspace_session_id,
+            int_id=int_id,
+        )
         await seed_benchmark_assembly_definition(client, workspace_session_id)
     if int_id in {"INT-181", "INT-182", "INT-183", "INT-185", "INT-186"}:
         await seed_execution_reviewer_handover(

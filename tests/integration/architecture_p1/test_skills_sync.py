@@ -18,7 +18,10 @@ from shared.skills import build_skill_catalog_lines
 from shared.skills.catalog import iter_skill_catalog_entries
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.schema import ListFilesRequest, ReadFileRequest, ReadFileResponse
-from tests.integration.agent.helpers import seed_benchmark_assembly_definition
+from tests.integration.agent.helpers import (
+    seed_benchmark_assembly_definition,
+    seed_engineer_planner_handover,
+)
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
@@ -44,6 +47,11 @@ async def test_int_045_skills_sync_lifecycle():
         # 1. Trigger Agent Run
         task = "Write a script that uses a skill"
         session_id = f"INT-045-{uuid.uuid4().hex[:8]}"
+        await seed_engineer_planner_handover(
+            client,
+            session_id=session_id,
+            int_id="INT-045",
+        )
         await seed_benchmark_assembly_definition(client, session_id)
         request = AgentRunRequest(
             task=task,

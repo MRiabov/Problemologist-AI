@@ -12,6 +12,10 @@ from controller.api.schemas import (
     FeedbackRequest,
 )
 from shared.enums import EpisodeStatus
+from tests.integration.agent.helpers import (
+    seed_benchmark_assembly_definition,
+    seed_engineer_planner_handover,
+)
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
@@ -24,9 +28,16 @@ async def test_int_059_langfuse_trace_linkage():
         # 1. Run an episode
         # We use a simple task that might trigger some traces
         task = "Write a hello world python script"
+        session_id = f"INT-059-{uuid.uuid4().hex[:8]}"
+        await seed_engineer_planner_handover(
+            client,
+            session_id=session_id,
+            int_id="INT-059",
+        )
+        await seed_benchmark_assembly_definition(client, session_id)
         request = AgentRunRequest(
             task=task,
-            session_id=f"INT-059-{uuid.uuid4().hex[:8]}",
+            session_id=session_id,
         )
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
@@ -84,9 +95,16 @@ async def test_int_060_langfuse_feedback_contract():
     async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Create an episode and get a trace with langfuse_id
         task = "Test feedback"
+        session_id = f"INT-060-{uuid.uuid4().hex[:8]}"
+        await seed_engineer_planner_handover(
+            client,
+            session_id=session_id,
+            int_id="INT-060",
+        )
+        await seed_benchmark_assembly_definition(client, session_id)
         request = AgentRunRequest(
             task=task,
-            session_id=f"INT-060-{uuid.uuid4().hex[:8]}",
+            session_id=session_id,
         )
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
