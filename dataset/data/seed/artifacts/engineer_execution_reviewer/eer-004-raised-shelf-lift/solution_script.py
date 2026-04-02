@@ -1,5 +1,6 @@
-from build123d import Align, Box, BuildPart, Compound, Cylinder, Location
+from build123d import Align, Box, BuildPart, Compound, Location
 
+from shared.cots.parts.motors import ServoMotor
 from shared.models.schemas import CompoundMetadata, PartMetadata
 
 
@@ -28,11 +29,9 @@ def build() -> Compound:
     part_4_part.label = "handoff_shelf"
     part_4_part.metadata = PartMetadata(material_id="hdpe", fixed=True)
 
-    with BuildPart() as part_5:
-        Cylinder(radius=18, height=48, align=(Align.MIN, Align.CENTER, Align.CENTER))
-    part_5_part = part_5.part.move(Location((-170, -80, 38)))
-    part_5_part.label = "lift_motor"
-    part_5_part.metadata = PartMetadata(material_id="steel_cold_rolled", fixed=True)
+    part_5_part = ServoMotor.from_catalog_id(
+        "ServoMotor_DS3218", label="lift_motor"
+    ).move(Location((-170, -80, 38)))
 
     assembly = Compound(
         label="raised_shelf_lift_review_seed",

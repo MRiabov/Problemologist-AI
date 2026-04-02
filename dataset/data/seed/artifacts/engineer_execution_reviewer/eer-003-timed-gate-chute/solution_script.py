@@ -1,5 +1,6 @@
-from build123d import Align, Box, BuildPart, Compound, Cylinder, Location
+from build123d import Align, Box, BuildPart, Compound, Location
 
+from shared.cots.parts.motors import ServoMotor
 from shared.models.schemas import CompoundMetadata, PartMetadata
 
 
@@ -22,11 +23,9 @@ def build() -> Compound:
     part_3_part.label = "meter_gate"
     part_3_part.metadata = PartMetadata(material_id="hdpe", fixed=False)
 
-    with BuildPart() as part_4:
-        Cylinder(radius=16, height=42, align=(Align.MIN, Align.CENTER, Align.CENTER))
-    part_4_part = part_4.part.move(Location((-92, -68, 34)))
-    part_4_part.label = "gate_motor"
-    part_4_part.metadata = PartMetadata(material_id="steel_cold_rolled", fixed=True)
+    part_4_part = ServoMotor.from_catalog_id(
+        "ServoMotor_DS3218", label="gate_motor"
+    ).move(Location((-92, -68, 34)))
 
     with BuildPart() as part_5:
         Box(130, 110, 45, align=(Align.CENTER, Align.CENTER, Align.MIN))

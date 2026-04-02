@@ -82,6 +82,186 @@ cots_parts:
   unit_cost_usd: 18.0
   quantity: 1
   source: catalog
+drafting:
+  sheet_id: "sheet_1"
+  title: "Sideways transfer technical drawing"
+  units: "mm"
+  projection_standard: "orthographic"
+  views:
+  - view_id: "front_overview"
+    target: "base_plate"
+    projection: "front"
+    scale: 1.0
+    datums: ["A", "B"]
+    dimensions:
+    - dimension_id: "d_front_base_plate_width"
+      kind: "linear"
+      target: "base_plate"
+      value: 170.0
+      tolerance: "nominal"
+      note: "Base plate width carries the lane support."
+      plan_ref: "plan.md#parts-list"
+    - dimension_id: "d_front_entry_funnel_width"
+      kind: "linear"
+      target: "entry_funnel"
+      value: 140.0
+      tolerance: "nominal"
+      note: "Capture mouth absorbs the jitter envelope."
+      plan_ref: "plan.md#assembly-strategy"
+    - dimension_id: "d_front_roller_bed_width"
+      kind: "linear"
+      target: "roller_bed"
+      value: 70.0
+      tolerance: "nominal"
+      note: "Main lane width keeps the ball centered over the driven roller."
+      plan_ref: "plan.md#parts-list"
+    - dimension_id: "d_front_goal_tray_width"
+      kind: "linear"
+      target: "goal_tray"
+      value: 120.0
+      tolerance: "nominal"
+      note: "Landing pocket stays wider than the incoming lane."
+      plan_ref: "plan.md#parts-list"
+    callouts:
+    - callout_id: 1
+      label: "base plate"
+      target: "base_plate"
+      plan_ref: "plan.md#parts-list"
+      note: "Freestanding support plate."
+    - callout_id: 2
+      label: "entry funnel"
+      target: "entry_funnel"
+      plan_ref: "plan.md#assembly-strategy"
+      note: "Capture mouth that absorbs spawn jitter."
+    notes:
+    - note_id: "n_front_overview"
+      text: "Front view shows the capture mouth, lane width, and goal tray width that hold the ball centered."
+      critical: true
+      plan_ref: "plan.md#assembly-strategy"
+  - view_id: "top_overview"
+    target: "base_plate"
+    projection: "top"
+    scale: 1.0
+    datums: ["A", "C"]
+    dimensions:
+    - dimension_id: "d_top_base_plate_length"
+      kind: "linear"
+      target: "base_plate"
+      value: 980.0
+      tolerance: "nominal"
+      note: "Long freestanding span carries the lane and motor mount."
+      plan_ref: "plan.md#parts-list"
+    - dimension_id: "d_top_entry_funnel_length"
+      kind: "linear"
+      target: "entry_funnel"
+      value: 180.0
+      tolerance: "nominal"
+      note: "Capture mouth covers the entry side jitter envelope."
+      plan_ref: "plan.md#parts-list"
+    - dimension_id: "d_top_roller_bed_length"
+      kind: "linear"
+      target: "roller_bed"
+      value: 820.0
+      tolerance: "nominal"
+      note: "Driven lane spans the main transfer distance."
+      plan_ref: "plan.md#parts-list"
+    - dimension_id: "d_top_idler_guide_length"
+      kind: "linear"
+      target: "idler_guide"
+      value: 820.0
+      tolerance: "nominal"
+      note: "Passive guide stays aligned with the roller bed."
+      plan_ref: "plan.md#parts-list"
+    - dimension_id: "d_top_goal_tray_length"
+      kind: "linear"
+      target: "goal_tray"
+      value: 150.0
+      tolerance: "nominal"
+      note: "Goal pocket remains wide enough to settle the ball."
+      plan_ref: "plan.md#parts-list"
+    callouts:
+    - callout_id: 3
+      label: "roller bed"
+      target: "roller_bed"
+      plan_ref: "plan.md#assembly-strategy"
+      note: "Driven lane that transfers the ball laterally."
+    - callout_id: 4
+      label: "idler guide"
+      target: "idler_guide"
+      plan_ref: "plan.md#assembly-strategy"
+      note: "Upper passive guide that keeps the ball centered."
+    notes:
+    - note_id: "n_top_overview"
+      text: "Top view carries the long-axis transfer path and the left-side motor corridor."
+      critical: true
+      plan_ref: "plan.md#assembly-strategy"
+  - view_id: "side_overview"
+    target: "base_plate"
+    projection: "side"
+    scale: 1.0
+    datums: ["A", "B"]
+    dimensions:
+    - dimension_id: "d_side_base_plate_thickness"
+      kind: "linear"
+      target: "base_plate"
+      value: 10.0
+      tolerance: "nominal"
+      note: "Structural plate thickness keeps the base rigid."
+      plan_ref: "plan.md#parts-list"
+    - dimension_id: "d_side_entry_funnel_height"
+      kind: "linear"
+      target: "entry_funnel"
+      value: 40.0
+      tolerance: "nominal"
+      note: "Capture funnel height tapers into the transfer lane."
+      plan_ref: "plan.md#parts-list"
+    - dimension_id: "d_side_roller_bed_height"
+      kind: "linear"
+      target: "roller_bed"
+      value: 28.0
+      tolerance: "nominal"
+      note: "Roller lane height matches the planned roller bed."
+      plan_ref: "plan.md#parts-list"
+    - dimension_id: "d_side_idler_guide_height"
+      kind: "linear"
+      target: "idler_guide"
+      value: 24.0
+      tolerance: "nominal"
+      note: "Upper guide stays above the roller lane."
+      plan_ref: "plan.md#parts-list"
+    - dimension_id: "d_side_goal_tray_height"
+      kind: "linear"
+      target: "goal_tray"
+      value: 35.0
+      tolerance: "nominal"
+      note: "Goal pocket height bleeds off speed at the exit."
+      plan_ref: "plan.md#parts-list"
+    callouts:
+    - callout_id: 5
+      label: "goal tray"
+      target: "goal_tray"
+      plan_ref: "plan.md#assembly-strategy"
+      note: "Landing pocket that contains the ball inside the goal zone."
+    - callout_id: 6
+      label: "motor drive"
+      target: "motor_drive"
+      plan_ref: "plan.md#assembly-strategy"
+      note: "Left-side drive motor keeps wiring out of the lane."
+    notes:
+    - note_id: "n_side_overview"
+      text: "Side view fixes the vertical stack from the base plate through the goal tray."
+      critical: true
+      plan_ref: "plan.md#assembly-strategy"
+  - view_id: "isometric_context"
+    target: "base_plate"
+    projection: "isometric"
+    scale: 1.0
+    datums: ["A", "B", "C"]
+    notes:
+    - note_id: "n_isometric_context"
+      text: "Isometric view is reference-only and supports comprehension of the complete lane layout."
+      critical: false
+      plan_ref: "plan.md#solution-overview"
 final_assembly:
 - name: transfer_lane
   config:

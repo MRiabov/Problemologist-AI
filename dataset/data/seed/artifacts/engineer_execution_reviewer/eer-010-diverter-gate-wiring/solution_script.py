@@ -1,5 +1,6 @@
-from build123d import Align, Box, BuildPart, Compound, Cylinder, Location
+from build123d import Align, Box, BuildPart, Compound, Location
 
+from shared.cots.parts.motors import ServoMotor
 from shared.models.schemas import CompoundMetadata, PartMetadata
 
 CABLE_CORRIDOR_WAYPOINTS = [
@@ -27,13 +28,9 @@ def build() -> Compound:
     gate.part.label = "diverter_gate"
     gate.part.metadata = PartMetadata(material_id="hdpe", fixed=False)
 
-    with BuildPart() as motor_body:
-        Cylinder(
-            radius=12.0, height=35.0, align=(Align.CENTER, Align.CENTER, Align.MIN)
-        )
-    motor_body.part = motor_body.part.move(Location((-82.0, 0.0, 22.0)))
-    motor_body.part.label = "gate_motor"
-    motor_body.part.metadata = PartMetadata(material_id="steel_cold_rolled", fixed=True)
+    gate_motor = ServoMotor.from_catalog_id(
+        "ServoMotor_DS3218", label="gate_motor"
+    ).move(Location((-82.0, 0.0, 22.0)))
 
     assembly = Compound(
         label="diverter_gate_assembly",
@@ -41,7 +38,7 @@ def build() -> Compound:
             base.part,
             bracket.part,
             gate.part,
-            motor_body.part,
+            gate_motor,
         ],
     )
     assembly.metadata = CompoundMetadata(fixed=False)

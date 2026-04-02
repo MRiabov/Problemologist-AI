@@ -1,5 +1,6 @@
-from build123d import Align, Box, BuildPart, Compound, Cylinder, Location
+from build123d import Align, Box, BuildPart, Compound, Location
 
+from shared.cots.parts.motors import ServoMotor
 from shared.models.schemas import CompoundMetadata, PartMetadata
 
 
@@ -34,11 +35,9 @@ def build() -> Compound:
     part_5_part.label = "goal_tray"
     part_5_part.metadata = PartMetadata(material_id="hdpe", fixed=True)
 
-    with BuildPart() as part_6:
-        Cylinder(radius=18, height=55, align=(Align.MIN, Align.CENTER, Align.CENTER))
-    part_6_part = part_6.part.move(Location((-120, -58, 37.5)))
-    part_6_part.label = "ServoMotor_DS3218"
-    part_6_part.metadata = PartMetadata(material_id="steel_cold_rolled", fixed=True)
+    part_6_part = ServoMotor.from_catalog_id(
+        "ServoMotor_DS3218", label="drive_motor"
+    ).move(Location((-120, -58, 37.5)))
 
     assembly = Compound(
         label="sideways_transfer_review_seed",
