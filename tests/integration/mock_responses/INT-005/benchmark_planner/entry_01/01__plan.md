@@ -1,11 +1,11 @@
-## Learning Objective
+## 1. Learning Objective
 
 - Show that a passive rigid-body benchmark can route a sphere into a goal
   zone using only static geometry.
 - Keep the scenario simple enough to validate quickly, but specific enough that
   the geometry, input object, and objective zones are unambiguous.
 
-## Geometry
+## 2. Geometry
 
 - `environment_fixture`: a compact box-like passive scene shell around the
   origin with a floor, side walls, and a center redirecting surface.
@@ -13,7 +13,7 @@
   obstructed enough to require deliberate routing.
 - No benchmark-owned moving fixtures, motors, or fluids are needed.
 
-## Objectives
+## 3. Objectives
 
 - Input object:
   - Shape: `sphere`
@@ -28,8 +28,15 @@
 - Success requires the sphere to reach the goal zone without crossing the
   forbid zone.
 
-## Cost & Weight Budget
+## 4. Randomization
 
-- Planner target unit cost: `$25`
-- Planner target weight: `600 g`
-- Benchmark/customer cap will be copied into the benchmark_definition file.
+- Static randomization is limited to the moved sphere radius.
+- Runtime jitter is limited to the sphere spawn position.
+- The passive fixture remains fixed so the benchmark stays reproducible.
+
+## 5. Implementation Notes
+
+- Keep the drafted benchmark grounded in a single passive environment fixture.
+- The benchmark_definition file will carry the copied customer caps and the
+  exact moved-object contract.
+- No moving benchmark-owned fixtures, motors, or fluids are needed.

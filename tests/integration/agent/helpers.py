@@ -366,6 +366,10 @@ async def seed_engineer_planner_handover(
         ),
         bypass_agent_permissions=True,
     )
+    await seed_current_revision_render_preview(
+        client,
+        session_id=session_id,
+    )
 
 
 async def _seed_workspace_file(
@@ -837,6 +841,8 @@ async def seed_current_revision_render_preview(
     image_name = Path(render_path).name
     depth_name = f"{render_base.name}_depth.png"
     segmentation_name = f"{render_base.name}_segmentation.png"
+    svg_name = f"{render_base.name}.svg"
+    dxf_name = f"{render_base.name}.dxf"
     group_key = Path(render_path).stem
     manifest = RenderManifest(
         version="1.0",
@@ -857,6 +863,8 @@ async def seed_current_revision_render_preview(
                     rgb=render_path,
                     depth=f"{render_base}_depth.png",
                     segmentation=f"{render_base}_segmentation.png",
+                    svg=f"{render_base}.svg",
+                    dxf=f"{render_base}.dxf",
                 ),
             ),
             f"{render_base}_depth.png": RenderArtifactMetadata(
@@ -866,6 +874,8 @@ async def seed_current_revision_render_preview(
                     rgb=render_path,
                     depth=f"{render_base}_depth.png",
                     segmentation=f"{render_base}_segmentation.png",
+                    svg=f"{render_base}.svg",
+                    dxf=f"{render_base}.dxf",
                 ),
                 depth_interpretation=(
                     "Camera-space depth in meters. False-color pixels are scaled "
@@ -881,6 +891,8 @@ async def seed_current_revision_render_preview(
                     rgb=render_path,
                     depth=f"{render_base}_depth.png",
                     segmentation=f"{render_base}_segmentation.png",
+                    svg=f"{render_base}.svg",
+                    dxf=f"{render_base}.dxf",
                 ),
             ),
         },
@@ -896,9 +908,16 @@ root.mkdir(parents=True, exist_ok=True)
 image_path = root / {image_name!r}
 depth_path = root / {depth_name!r}
 segmentation_path = root / {segmentation_name!r}
+svg_path = root / {svg_name!r}
+dxf_path = root / {dxf_name!r}
 Image.new("RGB", (1, 1), (255, 0, 0)).save(image_path)
 Image.new("RGB", (1, 1), (0, 255, 0)).save(depth_path)
 Image.new("RGB", (1, 1), (0, 0, 255)).save(segmentation_path)
+svg_path.write_text(
+    "<svg xmlns='http://www.w3.org/2000/svg' width='1' height='1'></svg>",
+    encoding="utf-8",
+)
+dxf_path.write_text("0\\nSECTION\\n2\\nENTITIES\\n0\\nENDSEC\\n0\\nEOF\\n", encoding="utf-8")
 manifest_json = {manifest.model_dump_json(indent=2)!r}
 (root / "render_manifest.json").write_text(manifest_json, encoding="utf-8")
 for compat_dir in (root / "engineer_renders", root / "benchmark_renders"):

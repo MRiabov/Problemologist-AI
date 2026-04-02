@@ -39,6 +39,12 @@ transcript:
       overwrite: true
       content_file: INT-033/engineer_planner/entry_01/06__solution_plan_technical_drawing_script.py
     expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: renders/engineer_renders/render_manifest.json
+      overwrite: true
+      content_file: INT-033/engineer_planner/entry_01/07__render_manifest.json
+    expected_observation: success
   - thought: Inspect the benchmark render before submission.
     tool_name: inspect_media
     tool_args:

@@ -4,7 +4,11 @@ import os
 from pathlib import Path
 
 from shared.git_utils import repo_revision
-from shared.workers.schema import RenderArtifactMetadata, RenderManifest
+from shared.workers.schema import (
+    RenderArtifactMetadata,
+    RenderManifest,
+    RenderSiblingPaths,
+)
 
 
 def write_render_manifest() -> None:
@@ -30,7 +34,16 @@ def write_render_manifest() -> None:
         preview_evidence_paths=render_paths,
         artifacts={
             path: RenderArtifactMetadata(
-                modality="unknown" if path.endswith(".mp4") else "rgb"
+                modality="unknown" if path.endswith(".mp4") else "rgb",
+                siblings=(
+                    RenderSiblingPaths(
+                        rgb=path,
+                        svg=str(Path(path).with_suffix(".svg")),
+                        dxf=str(Path(path).with_suffix(".dxf")),
+                    )
+                    if path.endswith((".png", ".jpg", ".jpeg"))
+                    else RenderSiblingPaths()
+                ),
             )
             for path in render_paths
         },

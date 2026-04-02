@@ -11,7 +11,13 @@ from build123d import Box
 from shared.enums import ManufacturingMethod
 from shared.models.schemas import PartMetadata
 from shared.models.simulation import MultiRunResult, SimulationMetrics, SimulationResult
-from shared.workers.schema import RenderArtifactMetadata, RenderManifest, ReviewManifest, ValidationResultRecord
+from shared.workers.schema import (
+    RenderArtifactMetadata,
+    RenderManifest,
+    RenderSiblingPaths,
+    ReviewManifest,
+    ValidationResultRecord,
+)
 
 
 _PNG_BYTES = base64.b64decode(
@@ -35,6 +41,17 @@ def _write_png(path: Path) -> None:
     path.write_bytes(_PNG_BYTES)
 
 
+def _write_sidecars(base_path: Path) -> None:
+    base_path.with_suffix(".svg").write_text(
+        "<svg xmlns='http://www.w3.org/2000/svg' width='1' height='1'></svg>",
+        encoding="utf-8",
+    )
+    base_path.with_suffix(".dxf").write_text(
+        "0\nSECTION\n2\nENTITIES\n0\nENDSEC\n0\nEOF\n",
+        encoding="utf-8",
+    )
+
+
 def _seed_execution_review_handoff() -> None:
     script_path = Path(__file__)
     script_sha256 = hashlib.sha256(script_path.read_bytes()).hexdigest()
@@ -55,6 +72,7 @@ def _seed_execution_review_handoff() -> None:
     ]
     for render_path in preview_evidence_paths:
         _write_png(Path(render_path))
+        _write_sidecars(Path(render_path))
 
     render_manifest = RenderManifest(
         episode_id=episode_id,
@@ -62,12 +80,33 @@ def _seed_execution_review_handoff() -> None:
         revision=revision,
         preview_evidence_paths=preview_evidence_paths,
         artifacts={
-            "renders/render_e45_a45.png": RenderArtifactMetadata(modality="rgb"),
+            "renders/render_e45_a45.png": RenderArtifactMetadata(
+                modality="rgb",
+                siblings=RenderSiblingPaths(
+                    rgb="renders/render_e45_a45.png",
+                    svg="renders/render_e45_a45.svg",
+                    dxf="renders/render_e45_a45.dxf",
+                ),
+            ),
             "renders/render_e45_a45_depth.png": RenderArtifactMetadata(
-                modality="depth"
+                modality="depth",
+                siblings=RenderSiblingPaths(
+                    rgb="renders/render_e45_a45.png",
+                    depth="renders/render_e45_a45_depth.png",
+                    segmentation="renders/render_e45_a45_segmentation.png",
+                    svg="renders/render_e45_a45.svg",
+                    dxf="renders/render_e45_a45.dxf",
+                ),
             ),
             "renders/render_e45_a45_segmentation.png": RenderArtifactMetadata(
-                modality="segmentation"
+                modality="segmentation",
+                siblings=RenderSiblingPaths(
+                    rgb="renders/render_e45_a45.png",
+                    depth="renders/render_e45_a45_depth.png",
+                    segmentation="renders/render_e45_a45_segmentation.png",
+                    svg="renders/render_e45_a45.svg",
+                    dxf="renders/render_e45_a45.dxf",
+                ),
             ),
         },
     )

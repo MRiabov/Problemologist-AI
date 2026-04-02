@@ -5,7 +5,7 @@ import httpx
 import pytest
 import yaml
 
-from shared.enums import FailureReason
+from shared.enums import AgentName, FailureReason
 from shared.models.schemas import (
     AssemblyDefinition,
     AssemblyPartConfig,
@@ -151,6 +151,21 @@ def build():
 """
 
 
+def _wrong_label_motor_script_content() -> str:
+    return """
+from build123d import Compound
+from shared.cots.parts.motors import ServoMotor
+from shared.models.schemas import CompoundMetadata
+
+
+def build():
+    motor = ServoMotor.from_catalog_id("ServoMotor_DS3218", label="wrong_motor")
+    assembly = Compound(children=[motor], label="motor_assembly")
+    assembly.metadata = CompoundMetadata()
+    return assembly
+"""
+
+
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
 async def test_int_129_cots_geometry_import_runtime_and_validation():
@@ -171,6 +186,41 @@ async def test_int_129_cots_geometry_import_runtime_and_validation():
             session_id,
             "assembly_definition.yaml",
             _assembly_definition_yaml(),
+        )
+        await _write_file(
+            client,
+            session_id,
+            "plan.md",
+            """# Engineering Plan
+
+## 1. Solution Overview
+Use a catalog-backed `drive_motor` to actuate the gate.
+
+## 2. Parts List
+| Part | Dimensions (mm) | Material | Purpose |
+| -- | -- | -- | -- |
+| drive_motor | catalog `ServoMotor_DS3218` | cots | Primary actuator for the gate |
+
+## 3. Assembly Strategy
+1. Mount `drive_motor` at the rear-left side and keep the cable corridor clear.
+
+## 4. Cost & Weight Budget
+- Keep the solution inside the seeded cost and weight bounds.
+
+## 5. Risk Assessment
+- Avoid routing the motor cable through the sweep path.
+""",
+        )
+        await _write_file(
+            client,
+            session_id,
+            "todo.md",
+            """# Engineering Checklist
+
+- [ ] Confirm the catalog-backed motor selection.
+- [ ] Preserve the rear-left cable corridor.
+- [ ] Re-run validation and simulation before submission.
+""",
         )
         await _write_file(
             client,
@@ -321,4 +371,50 @@ async def test_int_129_cots_geometry_import_runtime_and_validation():
         assert (
             "Declared COTS part(s) were not instantiated in authored geometry"
             in missing_validate_data.artifacts.failure.detail
+        )
+
+        await _write_file(
+            client,
+            session_id,
+            "solution_script.py",
+            _wrong_label_motor_script_content(),
+        )
+
+        wrong_label_validate_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=BenchmarkToolRequest(
+                script_path="solution_script.py",
+                backend=selected_backend(),
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=300.0,
+        )
+        assert wrong_label_validate_resp.status_code == 200, (
+            wrong_label_validate_resp.text
+        )
+        wrong_label_validate_data = BenchmarkToolResponse.model_validate(
+            wrong_label_validate_resp.json()
+        )
+        assert wrong_label_validate_data.success is True, (
+            wrong_label_validate_data.message
+        )
+
+        submit_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=BenchmarkToolRequest(
+                script_path="solution_script.py",
+                reviewer_stage=AgentName.ENGINEER_EXECUTION_REVIEWER,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=300.0,
+        )
+        assert submit_resp.status_code == 200, submit_resp.text
+        submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
+        assert submit_data.success is False
+        assert submit_data.artifacts is not None
+        assert submit_data.artifacts.failure is not None
+        assert submit_data.artifacts.failure.reason == FailureReason.VALIDATION_FAILED
+        assert "exact inventory mismatch for 'drive_motor'" in submit_data.message
+        assert "observed identities: label=wrong_motor, cots_id=ServoMotor_DS3218" in (
+            submit_data.message
         )
