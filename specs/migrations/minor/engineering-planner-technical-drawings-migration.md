@@ -148,6 +148,9 @@ new CAD language.
 
 - Update the prompt, tool, and architecture docs so they describe the drafting
   layer consistently.
+- Split the affected seeded eval rows into `*-drawing-[mode]` variants so the
+  row id, copied seed directory, and eval log key stay mode-specific instead of
+  collapsing back onto the base `ec-001`-style bucket.
 - Add a narrow integration slice that proves the planner can produce the
   drafting contract and the reviewer can inspect it.
 - Add assertions for the mode-off path so the planner does not accidentally
@@ -188,6 +191,8 @@ The safe order is:
    entrypoint.
 7. The feature can be rolled back to `off` without changing the underlying
    plan contract.
+8. Mode-suffixed eval rows keep their own copied seed directories and log
+   buckets so `*-drawing-full` does not overwrite the legacy base task traces.
 
 ## Migration Checklist
 
