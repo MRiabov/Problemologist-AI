@@ -18,6 +18,7 @@ from shared.enums import ManufacturingMethod
 from shared.models.schemas import AssemblyDefinition
 from worker_heavy.utils.dfm import (
     calculate_declared_assembly_cost,
+    calculate_declared_assembly_weight,
     load_planner_manufacturing_config,
 )
 
@@ -129,6 +130,9 @@ def main():
         data["totals"]["estimated_unit_cost_usd"] = calculate_declared_assembly_cost(
             estimation, config
         )
+        data["totals"]["estimated_weight_g"] = calculate_declared_assembly_weight(
+            estimation, config
+        )
         estimation = AssemblyDefinition(**data)
 
         # 3. Write back normalized YAML
@@ -138,7 +142,7 @@ def main():
         # 4. Success Output
         print(f"Success: {file_path.name} validated and updated.")
         print(f"Total Estimated Cost: ${estimation.totals.estimated_unit_cost_usd:.2f}")
-        print(f"Total Estimated Weight: {estimation.totals.estimated_weight_g:.1f}g")
+        print(f"Total Estimated Weight: {estimation.totals.estimated_weight_g:.2f}g")
 
     except ValidationError as e:
         print(f"Validation Error: {e}")
