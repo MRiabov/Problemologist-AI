@@ -17,10 +17,15 @@ from controller.agent.benchmark_handover_validation import (
 from controller.clients.worker import WorkerClient
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode
+from shared.agents.config import DraftingMode, load_agents_config
 from shared.enums import AgentName, EpisodeStatus, EpisodeType, TerminalReason
 from shared.git_utils import repo_revision
 from shared.models.schemas import AssemblyDefinition, EpisodeMetadata
 from shared.models.simulation import SimulationResult
+from shared.script_contracts import (
+    drafting_render_manifest_path_for_agent,
+    technical_drawing_script_path_for_agent,
+)
 from shared.workers.schema import (
     PlanReviewManifest,
     RenderManifest,
@@ -29,8 +34,10 @@ from shared.workers.schema import (
     ValidationResultRecord,
 )
 from worker_heavy.utils.file_validation import (
+    _technical_drawing_script_imports_and_calls_technical_drawing,
     validate_benchmark_assembly_motion_contract,
     validate_benchmark_definition_yaml,
+    validate_drafting_preview_manifest,
     validate_environment_attachment_contract,
     validate_planner_handoff_cross_contract,
 )
@@ -203,6 +210,20 @@ def _is_binary_review_artifact(path: str) -> bool:
 
 def _current_git_revision() -> str | None:
     return repo_revision(Path(__file__).resolve().parents[2])
+
+
+def _planner_role_for_reviewer_stage(reviewer_stage: ReviewerStage) -> AgentName:
+    if reviewer_stage == "benchmark_reviewer":
+        return AgentName.BENCHMARK_PLANNER
+    return AgentName.ENGINEER_PLANNER
+
+
+def _drafting_mode_for_reviewer_stage(reviewer_stage: ReviewerStage) -> DraftingMode:
+    planner_role = _planner_role_for_reviewer_stage(reviewer_stage)
+    try:
+        return load_agents_config().get_technical_drawing_mode(planner_role)
+    except Exception:
+        return DraftingMode.OFF
 
 
 async def _load_review_manifest(
@@ -415,6 +436,41 @@ async def validate_reviewer_handover(
             "validation results do not match review manifest script revision; "
             "re-run validate, simulate, and submit_for_review(compound)."
         )
+
+    drafting_mode = _drafting_mode_for_reviewer_stage(expected_stage)
+    if drafting_mode in (DraftingMode.MINIMAL, DraftingMode.FULL):
+        planner_role = _planner_role_for_reviewer_stage(expected_stage)
+        drafting_script_path = technical_drawing_script_path_for_agent(planner_role)
+        drafting_manifest_path = drafting_render_manifest_path_for_agent(planner_role)
+
+        drafting_script_content = await worker_client.read_file_optional(
+            str(drafting_script_path)
+        )
+        if drafting_script_content is None:
+            return f"{drafting_script_path} missing."
+
+        drafting_manifest_raw = await worker_client.read_file_optional(
+            str(drafting_manifest_path)
+        )
+        if drafting_manifest_raw is None:
+            return f"{drafting_manifest_path} missing."
+
+        drafting_script_errors = (
+            _technical_drawing_script_imports_and_calls_technical_drawing(
+                drafting_script_content,
+                artifact_name=str(drafting_script_path),
+            )
+        )
+        if drafting_script_errors:
+            return "; ".join(drafting_script_errors)
+
+        drafting_manifest_errors = validate_drafting_preview_manifest(
+            manifest_content=drafting_manifest_raw,
+            technical_drawing_script_content=drafting_script_content,
+            artifact_name=str(drafting_manifest_path),
+        )
+        if drafting_manifest_errors:
+            return "; ".join(drafting_manifest_errors)
 
     if require_verification_result is None:
         require_verification_result = expected_stage == "engineering_execution_reviewer"

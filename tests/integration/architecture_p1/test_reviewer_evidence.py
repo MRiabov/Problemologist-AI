@@ -867,7 +867,7 @@ async def test_engineer_execution_reviewer_handover_accepts_preview_evidence_pat
         review_resp = await client.post(
             "http://127.0.0.1:18001/fs/write",
             json={
-                "path": ".manifests/engineering_execution_review_manifest.json",
+                "path": ".manifests/engineering_execution_handoff_manifest.json",
                 "content": review_manifest_json,
                 "overwrite": True,
             },
@@ -877,7 +877,7 @@ async def test_engineer_execution_reviewer_handover_accepts_preview_evidence_pat
         try:
             validation_error = await validate_reviewer_handover(
                 worker_client,
-                manifest_path=".manifests/engineering_execution_review_manifest.json",
+                manifest_path=".manifests/engineering_execution_handoff_manifest.json",
                 expected_stage="engineering_execution_reviewer",
             )
         finally:
@@ -1222,7 +1222,7 @@ async def test_engineer_execution_reviewer_handover_accepts_png_preview_evidence
         review_resp = await client.post(
             "http://127.0.0.1:18001/fs/write",
             json={
-                "path": ".manifests/engineering_execution_review_manifest.json",
+                "path": ".manifests/engineering_execution_handoff_manifest.json",
                 "content": review_manifest_json,
                 "overwrite": True,
             },
@@ -1233,7 +1233,7 @@ async def test_engineer_execution_reviewer_handover_accepts_png_preview_evidence
         try:
             validation_error = await validate_reviewer_handover(
                 worker_client,
-                manifest_path=".manifests/engineering_execution_review_manifest.json",
+                manifest_path=".manifests/engineering_execution_handoff_manifest.json",
                 expected_stage="engineering_execution_reviewer",
             )
         finally:

@@ -29,7 +29,7 @@ from controller.agent.handover_constants import (
     ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
     ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
     ENGINEER_PLANNER_HANDOFF_ARTIFACTS,
-    ENGINEERING_EXECUTION_REVIEW_MANIFEST,
+    ENGINEERING_EXECUTION_HANDOFF_MANIFEST,
     ENGINEERING_EXECUTION_REVIEWER_HANDOFF_ARTIFACTS,
     ENGINEERING_PLAN_REVIEW_MANIFEST,
     SCHEMA_BACKED_HANDOFF_PATHS,
@@ -61,6 +61,7 @@ from shared.script_contracts import (
     SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH,
     SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH,
     authored_script_path_for_reviewer_stage,
+    drafting_render_manifest_path_for_agent,
 )
 from shared.simulation.schemas import CustomObjectives
 from shared.workers.markdown_validator import validate_todo_md
@@ -197,9 +198,43 @@ _ENGINEER_BENCHMARK_DRAFTING_CONTEXT_TARGETS = {
     AgentName.ENGINEER_CODER,
 }
 
+_DRAFTING_PROMPT_TARGETS = {
+    AgentName.BENCHMARK_PLANNER,
+    AgentName.BENCHMARK_PLAN_REVIEWER,
+    AgentName.BENCHMARK_CODER,
+    AgentName.ENGINEER_PLANNER,
+    AgentName.ENGINEER_PLAN_REVIEWER,
+    AgentName.ENGINEER_CODER,
+}
+
 
 def _technical_drawing_mode_active(mode: DraftingMode) -> bool:
     return mode in (DraftingMode.MINIMAL, DraftingMode.FULL)
+
+
+def _technical_drawing_mode_for_node(node_type: AgentName) -> DraftingMode:
+    try:
+        config = load_agents_config()
+    except Exception:
+        return DraftingMode.OFF
+
+    if node_type in {
+        AgentName.BENCHMARK_PLANNER,
+        AgentName.BENCHMARK_PLAN_REVIEWER,
+        AgentName.BENCHMARK_CODER,
+        AgentName.BENCHMARK_REVIEWER,
+    }:
+        return config.get_technical_drawing_mode(AgentName.BENCHMARK_PLANNER)
+    if node_type in {
+        AgentName.ENGINEER_PLANNER,
+        AgentName.ENGINEER_PLAN_REVIEWER,
+        AgentName.ENGINEER_CODER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.ELECTRONICS_PLANNER,
+        AgentName.ELECTRONICS_REVIEWER,
+    }:
+        return config.get_technical_drawing_mode(AgentName.ENGINEER_PLANNER)
+    return DraftingMode.OFF
 
 
 def _node_technical_drawing_artifacts(target_node: AgentName) -> list[str]:
@@ -221,6 +256,9 @@ def _node_technical_drawing_artifacts(target_node: AgentName) -> list[str]:
                 SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH,
             )
         )
+        artifacts.append(
+            str(drafting_render_manifest_path_for_agent(AgentName.ENGINEER_PLANNER))
+        )
 
     if (
         target_node in _ENGINEER_BENCHMARK_DRAFTING_CONTEXT_TARGETS
@@ -232,6 +270,9 @@ def _node_technical_drawing_artifacts(target_node: AgentName) -> list[str]:
                 BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH,
             )
         )
+        artifacts.append(
+            str(drafting_render_manifest_path_for_agent(AgentName.BENCHMARK_PLANNER))
+        )
 
     if target_node in _BENCHMARK_DRAFTING_TARGETS and _technical_drawing_mode_active(
         benchmark_mode
@@ -241,6 +282,9 @@ def _node_technical_drawing_artifacts(target_node: AgentName) -> list[str]:
                 BENCHMARK_PLAN_EVIDENCE_SCRIPT_PATH,
                 BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH,
             )
+        )
+        artifacts.append(
+            str(drafting_render_manifest_path_for_agent(AgentName.BENCHMARK_PLANNER))
         )
 
     return list(dict.fromkeys(artifacts))
@@ -721,7 +765,7 @@ async def _materialize_reviewer_handover(
         try:
             existing_handover_error = await validate_reviewer_handover(
                 client,
-                manifest_path=ENGINEERING_EXECUTION_REVIEW_MANIFEST,
+                manifest_path=ENGINEERING_EXECUTION_HANDOFF_MANIFEST,
                 expected_stage=reviewer_stage,
             )
         except Exception:
@@ -934,6 +978,33 @@ async def validate_seeded_workspace_handoff_artifacts(
         if content is not None:
             contents[rel_path] = content
 
+    drafting_mode = _technical_drawing_mode_for_node(target_node)
+    if target_node in _DRAFTING_PROMPT_TARGETS and _technical_drawing_mode_active(
+        drafting_mode
+    ):
+        prompt_text = await worker_client.read_file_optional("prompt.md")
+        if prompt_text is None:
+            errors.append(
+                _seeded_schema_error(
+                    message=(
+                        "prompt.md missing for drafting-enabled workspace; the "
+                        "prompt must instruct the agent to call preview_drawing()"
+                    ),
+                    artifact_path="prompt.md",
+                )
+            )
+        elif "preview_drawing()" not in prompt_text:
+            errors.append(
+                _seeded_schema_error(
+                    message=(
+                        "prompt.md must instruct the agent to call "
+                        "preview_drawing() before submit_plan() when drafting "
+                        "mode is active"
+                    ),
+                    artifact_path="prompt.md",
+                )
+            )
+
     for rel_path, content in contents.items():
         if rel_path == "plan.md":
             plan_type = _plan_type_for_target(target_node, content)
@@ -1037,7 +1108,7 @@ async def validate_seeded_workspace_handoff_artifacts(
                 PlanReviewManifest.model_validate_json(content)
             elif rel_path in {
                 ".manifests/benchmark_review_manifest.json",
-                ".manifests/engineering_execution_review_manifest.json",
+                ".manifests/engineering_execution_handoff_manifest.json",
                 ".manifests/electronics_review_manifest.json",
             }:
                 ReviewManifest.model_validate_json(content)
@@ -1120,6 +1191,24 @@ async def validate_seeded_workspace_handoff_artifacts(
                 )
                 for message in handover_errors
             )
+
+            if _technical_drawing_mode_active(drafting_mode):
+                drafting_handover_error = (
+                    await validate_planner_artifacts_cross_contract(
+                        worker_client,
+                        expected_stage=AgentName.BENCHMARK_PLAN_REVIEWER,
+                    )
+                )
+                if drafting_handover_error is not None:
+                    errors.append(
+                        _seeded_schema_error(
+                            message=(
+                                "benchmark_assembly_definition.yaml: "
+                                f"{drafting_handover_error}"
+                            ),
+                            artifact_path="benchmark_assembly_definition.yaml",
+                        )
+                    )
 
     render_error = await validate_render_images_non_black(worker_client)
     if render_error is not None:

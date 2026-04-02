@@ -37,13 +37,16 @@ Reviewer outputs are made deterministic by persisting two YAML artifacts per rev
 
 Reviewer handoff manifests are reviewer-scoped at gate boundaries.
 There is no shared/canonical reviewer manifest file.
+For engineering execution, the same file name is used both as the coder's
+submission handoff and as the reviewer entry gate; that shared filename is
+intentional.
 
 Required manifest filenames:
 
 1. Benchmark Plan Reviewer: `.manifests/benchmark_plan_review_manifest.json`
 2. Benchmark Reviewer: `.manifests/benchmark_review_manifest.json`
 3. Engineering Plan Reviewer: `.manifests/engineering_plan_review_manifest.json`
-4. Engineering Execution Reviewer: `.manifests/engineering_execution_review_manifest.json`
+4. Engineering Execution Reviewer: `.manifests/engineering_execution_handoff_manifest.json`
 5. Electronics Reviewer: `.manifests/electronics_review_manifest.json`
 
 Validation rule:
@@ -98,14 +101,16 @@ Planner handoff packages are binding inventories, not loose geometry hints.
 
 Rules:
 
-1. The planner-authored evidence script and technical-drawing script must preserve the same multiset of authored labels and quantities as the associated plan/YAML inventory.
-2. Inventory equality is checked by label and COTS-identity multiplicity, not by ordering.
-3. Repeated references in `final_assembly` count as quantity and must survive into the planner drafting scripts and downstream implementation.
-4. The planner must self-validate this exactness before `submit_plan()`; if the evidence or drawing script drifts, the handoff is invalid.
-5. The coder and reviewer must compare the implemented model against the approved inventory and reject missing, extra, or relabeled items.
-6. The technical-drawing companion may be a convenience template, but it may not add, remove, or rename inventory items.
-7. Every planner-declared inventory label and selected COTS `part_id` must appear at least once in `plan.md` as an exact identifier mention. Backticks are preferred for the first mention, but the exact string match is what matters for validation.
-8. For drafting-mode handoffs, the exact-mention rule also applies to the planner-authored drafting scripts: the labels and COTS identities they reference must already be grounded in `plan.md`.
+01. The planner-authored evidence script and technical-drawing script must preserve the same multiset of authored labels and quantities as the associated plan/YAML inventory.
+02. Inventory equality is checked by label and COTS-identity multiplicity, not by ordering.
+03. Repeated references in `final_assembly` count as quantity and must survive into the planner drafting scripts and downstream implementation.
+04. The planner must self-validate this exactness before `submit_plan()`; if the evidence or drawing script drifts, the handoff is invalid.
+05. The coder and reviewer must compare the implemented model against the approved inventory and reject missing, extra, or relabeled items.
+06. The technical-drawing companion may be a convenience template, but it may not add, remove, or rename inventory items.
+07. Every planner-declared inventory label and selected COTS `part_id` must appear at least once in `plan.md` as an exact identifier mention. Backticks are preferred for the first mention, but the exact string match is what matters for validation.
+08. For drafting-mode handoffs, the exact-mention rule also applies to the planner-authored drafting scripts: the labels and COTS identities they reference must already be grounded in `plan.md`.
+09. Every planner-authored technical-drawing script, including `solution_plan_technical_drawing_script.py` and `benchmark_plan_technical_drawing_script.py`, must structurally import and use build123d `TechnicalDrawing` at least once. Validation must resolve the Python AST or symbol graph, not raw substrings; comments and string literals do not satisfy the contract.
+10. If a technical-drawing script cannot be proven to contain a real `TechnicalDrawing` construction path, the handoff is invalid and routes back to the producing planner.
 
 ## Benchmark Planner and Benchmark Plan Reviewer
 
@@ -604,7 +609,7 @@ Validation requirement:
 
 The Execution Reviewer (`Engineering Execution Reviewer`) is a post-validation/post-simulation stage.
 
-1. Entry is blocked unless latest-revision reviewer handoff artifacts are valid (`solution_script.py`, `validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_review_manifest.json`).
+1. Entry is blocked unless latest-revision reviewer handoff artifacts are valid (`solution_script.py`, `validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_handoff_manifest.json`).
    - Source of truth contracts: `REVIEWER_HANDOFF_ARTIFACTS` + execution-review custom handover check in node-entry validation (using reviewer-scoped manifest filenames from this document).
 2. The Execution Reviewer has read-only access to implementation and evidence files, plus write/edit only to its stage-specific YAML review pair in `reviews/`.
 3. Primary review is robustness and realism: this node runs only after validation + simulation success paths have completed (including minor runtime-randomization pass criteria), then verifies the result is not flaky and is likely repeatable.

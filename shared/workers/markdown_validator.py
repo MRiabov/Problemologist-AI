@@ -16,8 +16,7 @@ class ValidationResult(BaseModel):
     violations: list[str] = Field(default_factory=list)
 
 
-# Required sections for plan.md (engineering plan)
-PLAN_REQUIRED_SECTIONS = [
+ENGINEERING_PLAN_REQUIRED_SECTIONS = [
     "## 1. Solution Overview",
     "## 2. Parts List",
     "## 3. Assembly Strategy",
@@ -26,12 +25,77 @@ PLAN_REQUIRED_SECTIONS = [
 ]
 
 # Strict heading patterns (numbered headings required)
-PLAN_SECTION_PATTERNS = [
+ENGINEERING_PLAN_SECTION_PATTERNS = [
     r"^##\s*1\.\s*Solution\s+Overview\s*$",
     r"^##\s*2\.\s*Parts\s+List\s*$",
     r"^##\s*3\.\s*Assembly\s+Strategy\s*$",
     r"^##\s*4\.\s*Cost\s*[&and]+\s*Weight\s+Budget\s*$",
     r"^##\s*5\.\s*Risk\s+Assessment\s*$",
+]
+
+BENCHMARK_PLAN_VARIANTS = [
+    {
+        "required_sections": [
+            "## 1. Learning Objective",
+            "## 2. Static Geometry",
+            "## 3. Input Object",
+            "## 4. Objectives",
+            "## 5. Design",
+            "## 6. Randomization",
+            "## 7. Build123d Strategy",
+            "## 8. Cost & Weight Envelope",
+            "## 9. Part Metadata",
+        ],
+        "section_patterns": [
+            r"^##\s*1\.\s*Learning\s+Objective\s*$",
+            r"^##\s*2\.\s*Static\s+Geometry\s*$",
+            r"^##\s*3\.\s*Input\s+Object\s*$",
+            r"^##\s*4\.\s*Objectives\s*$",
+            r"^##\s*5\.\s*Design\s*$",
+            r"^##\s*6\.\s*Randomization\s*$",
+            r"^##\s*7\.\s*Build123d\s+Strategy\s*$",
+            r"^##\s*8\.\s*Cost\s*&\s*Weight\s+Envelope\s*$",
+            r"^##\s*9\.\s*Part\s+Metadata\s*$",
+        ],
+    },
+    {
+        "required_sections": [
+            "## 1. Learning Objective",
+            "## 2. Environment Geometry",
+            "## 3. Input Objective",
+            "## 4. Objectives",
+            "## 5. Simulation Bounds",
+            "## 6. Constraints Handed To Engineering",
+            "## 7. Success Criteria",
+            "## 8. Planner Artifacts",
+        ],
+        "section_patterns": [
+            r"^##\s*1\.\s*Learning\s+Objective\s*$",
+            r"^##\s*2\.\s*Environment\s+Geometry\s*$",
+            r"^##\s*3\.\s*Input\s+Objective\s*$",
+            r"^##\s*4\.\s*Objectives\s*$",
+            r"^##\s*5\.\s*Simulation\s+Bounds\s*$",
+            r"^##\s*6\.\s*Constraints\s+Handed\s+To\s+Engineering\s*$",
+            r"^##\s*7\.\s*Success\s+Criteria\s*$",
+            r"^##\s*8\.\s*Planner\s+Artifacts\s*$",
+        ],
+    },
+    {
+        "required_sections": [
+            "## 1. Learning Objective",
+            "## 2. Geometry",
+            "## 3. Objectives",
+            "## 4. Randomization",
+            "## 5. Implementation Notes",
+        ],
+        "section_patterns": [
+            r"^##\s*1\.\s*Learning\s+Objective\s*$",
+            r"^##\s*2\.\s*Geometry\s*$",
+            r"^##\s*3\.\s*Objectives\s*$",
+            r"^##\s*4\.\s*Randomization\s*$",
+            r"^##\s*5\.\s*Implementation\s+Notes\s*$",
+        ],
+    },
 ]
 
 # Valid checkbox patterns for todo.md
@@ -43,15 +107,18 @@ BULLET_LIST_PATTERN = re.compile(r"^\s*[-*+]\s+\S+", re.MULTILINE)
 NUMBERED_LIST_PATTERN = re.compile(r"^\s*\d+\.\s+\S+", re.MULTILINE)
 
 
-def _extract_sections(content: str) -> dict[str, list[str]]:
+def _extract_sections(
+    content: str,
+    *,
+    required_sections: list[str],
+    section_patterns: list[str],
+) -> dict[str, list[str]]:
     """Return a map of section title to body lines (excluding the heading)."""
     lines = content.splitlines()
     heading_matches: list[tuple[int, str]] = []
 
     for idx, line in enumerate(lines):
-        for section, pattern in zip(
-            PLAN_REQUIRED_SECTIONS, PLAN_SECTION_PATTERNS, strict=True
-        ):
+        for section, pattern in zip(required_sections, section_patterns, strict=True):
             if re.match(pattern, line, re.IGNORECASE):
                 heading_matches.append((idx, section))
                 break
@@ -70,6 +137,81 @@ def _extract_sections(content: str) -> dict[str, list[str]]:
     return sections
 
 
+def _plan_spec(plan_type: str) -> tuple[list[str], list[str]]:
+    if plan_type == "engineering":
+        return ENGINEERING_PLAN_REQUIRED_SECTIONS, ENGINEERING_PLAN_SECTION_PATTERNS
+    if plan_type == "benchmark":
+        raise ValueError("Benchmark plan validation uses schema variants")
+    raise ValueError(f"Unsupported plan_type '{plan_type}'")
+
+
+def _validate_plan_md_with_spec(
+    content: str,
+    *,
+    required_sections: list[str],
+    section_patterns: list[str],
+    plan_type: str,
+) -> ValidationResult:
+    violations: list[str] = []
+
+    for section, pattern in zip(required_sections, section_patterns, strict=True):
+        if not re.search(pattern, content, re.IGNORECASE | re.MULTILINE):
+            violations.append(f"Missing required section: {section}")
+
+    sections = _extract_sections(
+        content,
+        required_sections=required_sections,
+        section_patterns=section_patterns,
+    )
+
+    if plan_type == "engineering":
+        parts_lines = sections.get("## 2. Parts List", [])
+        if "## 2. Parts List" in sections and not (
+            _has_table(parts_lines)
+            or BULLET_LIST_PATTERN.search("\n".join(parts_lines))
+        ):
+            violations.append(
+                "Parts List must contain a bullet list or table of parts."
+            )
+
+        assembly_lines = sections.get("## 3. Assembly Strategy", [])
+        if "## 3. Assembly Strategy" in sections and not NUMBERED_LIST_PATTERN.search(
+            "\n".join(assembly_lines)
+        ):
+            violations.append(
+                "Assembly Strategy must contain a numbered list of steps."
+            )
+
+        budget_lines = sections.get("## 4. Cost & Weight Budget", [])
+        if "## 4. Cost & Weight Budget" in sections and not (
+            _has_table(budget_lines)
+            or BULLET_LIST_PATTERN.search("\n".join(budget_lines))
+        ):
+            violations.append(
+                "Cost & Weight Budget must contain a bullet list or table of items."
+            )
+
+        risk_lines = sections.get("## 5. Risk Assessment", [])
+        if "## 5. Risk Assessment" in sections and not (
+            _has_table(risk_lines) or BULLET_LIST_PATTERN.search("\n".join(risk_lines))
+        ):
+            violations.append(
+                "Risk Assessment must contain a bullet list or table of risks."
+            )
+
+    if plan_type == "benchmark":
+        for section in required_sections[1:]:
+            lines = sections.get(section, [])
+            if section in sections and not (
+                _has_table(lines) or BULLET_LIST_PATTERN.search("\n".join(lines))
+            ):
+                violations.append(
+                    f"{section.removeprefix('## ').strip()} must contain a bullet list or table."
+                )
+
+    return ValidationResult(is_valid=len(violations) == 0, violations=violations)
+
+
 def _has_table(lines: list[str]) -> bool:
     for i in range(len(lines) - 1):
         if "|" in lines[i] and re.match(r"^\s*\|?[\s:-]+\|?[\s|:-]*$", lines[i + 1]):
@@ -77,7 +219,7 @@ def _has_table(lines: list[str]) -> bool:
     return False
 
 
-def validate_plan_md(content: str) -> ValidationResult:
+def validate_plan_md(content: str, plan_type: str = "engineering") -> ValidationResult:
     """
     Validate plan.md structure against required sections and list/table requirements.
 
@@ -87,46 +229,28 @@ def validate_plan_md(content: str) -> ValidationResult:
     Returns:
         ValidationResult with is_valid flag and list of violations
     """
-    violations: list[str] = []
+    if plan_type == "benchmark":
+        candidate_results = [
+            _validate_plan_md_with_spec(
+                content,
+                required_sections=variant["required_sections"],
+                section_patterns=variant["section_patterns"],
+                plan_type=plan_type,
+            )
+            for variant in BENCHMARK_PLAN_VARIANTS
+        ]
+        for result in candidate_results:
+            if result.is_valid:
+                return result
+        return min(candidate_results, key=lambda result: len(result.violations))
 
-    for section, pattern in zip(
-        PLAN_REQUIRED_SECTIONS, PLAN_SECTION_PATTERNS, strict=True
-    ):
-        if not re.search(pattern, content, re.IGNORECASE | re.MULTILINE):
-            violations.append(f"Missing required section: {section}")
-
-    sections = _extract_sections(content)
-
-    # Enforce list/table requirements for specific sections
-    parts_lines = sections.get("## 2. Parts List", [])
-    if "## 2. Parts List" in sections and not (
-        _has_table(parts_lines) or BULLET_LIST_PATTERN.search("\n".join(parts_lines))
-    ):
-        violations.append("Parts List must contain a bullet list or table of parts.")
-
-    assembly_lines = sections.get("## 3. Assembly Strategy", [])
-    if "## 3. Assembly Strategy" in sections and not NUMBERED_LIST_PATTERN.search(
-        "\n".join(assembly_lines)
-    ):
-        violations.append("Assembly Strategy must contain a numbered list of steps.")
-
-    budget_lines = sections.get("## 4. Cost & Weight Budget", [])
-    if "## 4. Cost & Weight Budget" in sections and not (
-        _has_table(budget_lines) or BULLET_LIST_PATTERN.search("\n".join(budget_lines))
-    ):
-        violations.append(
-            "Cost & Weight Budget must contain a bullet list or table of items."
-        )
-
-    risk_lines = sections.get("## 5. Risk Assessment", [])
-    if "## 5. Risk Assessment" in sections and not (
-        _has_table(risk_lines) or BULLET_LIST_PATTERN.search("\n".join(risk_lines))
-    ):
-        violations.append(
-            "Risk Assessment must contain a bullet list or table of risks."
-        )
-
-    return ValidationResult(is_valid=len(violations) == 0, violations=violations)
+    required_sections, section_patterns = _plan_spec(plan_type)
+    return _validate_plan_md_with_spec(
+        content,
+        required_sections=required_sections,
+        section_patterns=section_patterns,
+        plan_type=plan_type,
+    )
 
 
 def validate_todo_md(

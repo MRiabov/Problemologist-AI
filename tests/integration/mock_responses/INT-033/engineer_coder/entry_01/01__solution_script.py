@@ -132,7 +132,7 @@ def _seed_execution_review_handoff() -> None:
     )
     manifests_dir = Path(".manifests")
     manifests_dir.mkdir(parents=True, exist_ok=True)
-    (manifests_dir / "engineering_execution_review_manifest.json").write_text(
+    (manifests_dir / "engineering_execution_handoff_manifest.json").write_text(
         manifest.model_dump_json(indent=2),
         encoding="utf-8",
     )

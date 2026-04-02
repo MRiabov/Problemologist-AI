@@ -908,6 +908,8 @@ class RenderManifest(BaseModel):
     scene_hash: StrictStr | None = None
     bundle_path: StrictStr | None = None
     environment_version: StrictStr | None = None
+    drafting: StrictBool = False
+    source_script_sha256: StrictStr | None = None
     preview_evidence_paths: list[StrictStr] = Field(default_factory=list)
     artifacts: dict[StrictStr, RenderArtifactMetadata] = Field(default_factory=dict)
 

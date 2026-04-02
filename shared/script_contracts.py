@@ -76,6 +76,58 @@ def technical_drawing_script_path_for_agent(
     return authored_script_path_for_agent(agent_name)
 
 
+def drafting_script_paths_for_agent(
+    agent_name: AgentName | str | None,
+) -> tuple[Path, Path]:
+    normalized = _normalize_agent_name(agent_name)
+    if normalized in {
+        AgentName.BENCHMARK_PLANNER,
+        AgentName.BENCHMARK_PLAN_REVIEWER,
+        AgentName.BENCHMARK_CODER,
+        AgentName.BENCHMARK_REVIEWER,
+    }:
+        return (
+            _as_path(BENCHMARK_PLAN_EVIDENCE_SCRIPT_PATH),
+            _as_path(BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH),
+        )
+    if normalized in {
+        AgentName.ENGINEER_PLANNER,
+        AgentName.ENGINEER_PLAN_REVIEWER,
+        AgentName.ENGINEER_CODER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.ELECTRONICS_PLANNER,
+        AgentName.ELECTRONICS_REVIEWER,
+    }:
+        return (
+            _as_path(SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH),
+            _as_path(SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH),
+        )
+    return (_as_path(LEGACY_SCRIPT_PATH), _as_path(LEGACY_SCRIPT_PATH))
+
+
+def drafting_render_manifest_path_for_agent(
+    agent_name: AgentName | str | None,
+) -> Path:
+    normalized = _normalize_agent_name(agent_name)
+    if normalized in {
+        AgentName.BENCHMARK_PLANNER,
+        AgentName.BENCHMARK_PLAN_REVIEWER,
+        AgentName.BENCHMARK_CODER,
+        AgentName.BENCHMARK_REVIEWER,
+    }:
+        return Path("renders/benchmark_renders/render_manifest.json")
+    if normalized in {
+        AgentName.ENGINEER_PLANNER,
+        AgentName.ENGINEER_PLAN_REVIEWER,
+        AgentName.ENGINEER_CODER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.ELECTRONICS_PLANNER,
+        AgentName.ELECTRONICS_REVIEWER,
+    }:
+        return Path("renders/engineer_renders/render_manifest.json")
+    return Path("renders/render_manifest.json")
+
+
 def authored_script_path_for_reviewer_stage(reviewer_stage: str | None) -> Path:
     stage = (reviewer_stage or "").strip()
     if stage == "benchmark_reviewer":

@@ -412,7 +412,7 @@ async def test_engineering_full_loop():
             ".manifests/benchmark_plan_review_manifest.json",
             ".manifests/benchmark_review_manifest.json",
             ".manifests/engineering_plan_review_manifest.json",
-            ".manifests/engineering_execution_review_manifest.json",
+            ".manifests/engineering_execution_handoff_manifest.json",
             "renders/render_manifest.json",
             "reviews/engineering-plan-review-decision-round-1.yaml",
             "reviews/engineering-plan-review-comments-round-1.yaml",
@@ -513,7 +513,7 @@ async def test_engineering_full_loop():
         execution_manifest_path = next(
             path
             for path in artifact_paths
-            if path == Path(".manifests/engineering_execution_review_manifest.json")
+            if path == Path(".manifests/engineering_execution_handoff_manifest.json")
         )
         execution_manifest = ReviewManifest.model_validate_json(
             await _read_episode_asset_text(

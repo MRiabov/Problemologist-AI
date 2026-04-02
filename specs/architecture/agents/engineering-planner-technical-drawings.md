@@ -260,6 +260,13 @@ Those names are implementation details, not architecture requirements.
 
 The preview contract may consume either planner graph's drafting scripts, but the generated output remains role-scoped and read-only once materialized.
 
+Drafting-enabled revisions have a mandatory usage gate:
+
+1. The planner that authors the drafting package must call `preview_drawing()` at least once on the current revision before `submit_plan()`.
+2. Any coder or reviewer that is expected to read the drafting package must also call `preview_drawing()` at least once on the current revision before its own completion or approval gate.
+3. Missing recorded calls are deterministic validation failures and route the node back through the normal retry loop.
+4. The same gate applies to the mirrored Benchmark Planner drafting package and its downstream coder/reviewer stages.
+
 The tool contract should support:
 
 - raster preview images for inspection,
@@ -340,6 +347,8 @@ Minimum validation checks:
 17. If the handoff depends on assembly, insertion, or adjustment access, the drawing validates the necessary access clearance or marks that access as intentionally out of scope.
 18. Callout IDs, datum labels, and feature references are unique and stable across the package.
 19. The planner-authored evidence script and technical-drawing script preserve the same labels, quantities, and COTS identities as the assembly inventory; the planner must self-validate this before handoff.
+20. Drafting-enabled revisions are invalid unless the `preview_drawing()` usage gate above has been satisfied on the current revision.
+21. The technical-drawing scripts, `solution_plan_technical_drawing_script.py` and `benchmark_plan_technical_drawing_script.py`, must pass a structural build123d `TechnicalDrawing` import-and-call check. Validation must parse the Python source or resolve its symbols; substring matching is not accepted.
 
 Warning-only checks:
 

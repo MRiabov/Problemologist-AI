@@ -6,9 +6,14 @@ import uuid
 from pathlib import Path
 
 from controller.agent.benchmark.tools import _canonicalize_benchmark_constraints
+from shared.agents.config import DraftingMode, load_agents_config
 from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import PlannerSubmissionResult
+from shared.script_contracts import (
+    drafting_render_manifest_path_for_agent,
+    drafting_script_paths_for_agent,
+)
 from shared.workers.schema import PlanReviewManifest
 from worker_heavy.utils.dfm import (
     load_planner_manufacturing_config_from_text,
@@ -114,6 +119,37 @@ def _manifest_info(agent_name: AgentName) -> tuple[Path, AgentName]:
     )
 
 
+def _planner_role_for_agent(agent_name: AgentName) -> AgentName | None:
+    if agent_name == AgentName.BENCHMARK_PLANNER:
+        return AgentName.BENCHMARK_PLANNER
+    if agent_name in {AgentName.ENGINEER_PLANNER, AgentName.ELECTRONICS_PLANNER}:
+        return AgentName.ENGINEER_PLANNER
+    return None
+
+
+def _drafting_required_files(agent_name: AgentName) -> tuple[str, ...]:
+    planner_role = _planner_role_for_agent(agent_name)
+    if planner_role is None:
+        return ()
+
+    try:
+        drafting_mode = load_agents_config().get_technical_drawing_mode(planner_role)
+    except Exception:
+        drafting_mode = DraftingMode.OFF
+
+    if drafting_mode not in (DraftingMode.MINIMAL, DraftingMode.FULL):
+        return ()
+
+    evidence_path, technical_drawing_path = drafting_script_paths_for_agent(
+        planner_role
+    )
+    return (
+        str(evidence_path),
+        str(technical_drawing_path),
+        str(drafting_render_manifest_path_for_agent(planner_role)),
+    )
+
+
 def _read_workspace_files(workspace: Path, paths: tuple[str, ...]) -> dict[str, str]:
     artifacts: dict[str, str] = {}
     missing: list[str] = []
@@ -150,9 +186,10 @@ def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
             node_type=AgentName.ENGINEER_PLANNER,
         )
 
-    required_files = _required_files(agent_name)
+    required_files = list(_required_files(agent_name))
+    required_files.extend(_drafting_required_files(agent_name))
     try:
-        artifacts = _read_workspace_files(workspace, required_files)
+        artifacts = _read_workspace_files(workspace, tuple(required_files))
     except Exception as exc:
         return PlannerSubmissionResult(
             ok=False,

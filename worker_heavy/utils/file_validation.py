@@ -9,13 +9,16 @@ Validates the structure and content of:
 """
 
 # T015: Hashing for immutability checks
+import ast
 import hashlib
 import io
 import re
+import shutil
 import subprocess
 import tokenize
-from pathlib import Path
+import uuid
 from collections import Counter
+from pathlib import Path
 from typing import Any
 
 import structlog
@@ -36,8 +39,14 @@ from shared.models.schemas import (
 )
 from shared.observability.events import emit_event
 from shared.observability.schemas import LintFailureDocsEvent, LogicFailureEvent
-from shared.script_contracts import BENCHMARK_SCRIPT_PATH, SOLUTION_SCRIPT_PATH
+from shared.script_contracts import (
+    BENCHMARK_SCRIPT_PATH,
+    SOLUTION_SCRIPT_PATH,
+    drafting_render_manifest_path_for_agent,
+    technical_drawing_script_path_for_agent,
+)
 from shared.simulation.schemas import SimulatorBackendType
+from shared.workers.schema import RenderManifest
 from shared.workers.workbench_models import ManufacturingConfig
 from worker_heavy.utils.dfm import (
     validate_declared_assembly_cost,
@@ -175,7 +184,9 @@ def _assembly_script_expected_tokens(
     return expected
 
 
-def _planner_drafting_script_names_for_node(node_type: AgentName | str | None) -> list[str]:
+def _planner_drafting_script_names_for_node(
+    node_type: AgentName | str | None,
+) -> list[str]:
     node_value = (
         node_type.value if isinstance(node_type, AgentName) else str(node_type or "")
     )
@@ -219,21 +230,37 @@ def _validate_exact_identifier_mentions(
     return errors
 
 
-def _validate_exact_identifier_counts(
+def _validate_drafting_artifact_inventory_exactness(
     *,
     artifact_name: str,
     content: str,
     expected_tokens: Counter[str],
 ) -> list[str]:
-    errors: list[str] = []
-    for token, expected_count in _token_counts_to_list(expected_tokens):
-        actual_count = _count_exact_identifier_mentions(content, token)
-        if actual_count != expected_count:
-            errors.append(
-                f"{artifact_name}: exact identifier count mismatch for '{token}' "
-                f"(expected {expected_count}, found {actual_count})"
-            )
-    return errors
+    from shared.workers.loader import load_component_from_script
+
+    repo_root = Path(__file__).resolve().parents[2]
+    tmp_root = repo_root / ".tmp_planner_drafting" / uuid.uuid4().hex
+    try:
+        tmp_root.mkdir(parents=True, exist_ok=False)
+        script_path = tmp_root / artifact_name
+        script_path.write_text(content, encoding="utf-8")
+        component = load_component_from_script(
+            script_path=script_path,
+            session_root=repo_root,
+        )
+    except Exception as exc:
+        return [
+            f"{artifact_name}: unable to load drafted component for inventory "
+            f"validation: {exc}"
+        ]
+    finally:
+        shutil.rmtree(tmp_root, ignore_errors=True)
+
+    return validate_component_inventory_exactness(
+        component=component,
+        expected_tokens=expected_tokens,
+        artifact_name=artifact_name,
+    )
 
 
 def _collect_component_identity_counts(component: Any) -> Counter[str]:
@@ -467,6 +494,177 @@ def _validate_drafting_contract(
                     f"'{callout.target}' is not tied to a declared assembly part"
                 )
 
+    return errors
+
+
+def _drafting_script_paths_for_node(
+    node_type: AgentName | str | None,
+) -> tuple[str, str]:
+    node_value = (
+        node_type.value if isinstance(node_type, AgentName) else str(node_type or "")
+    )
+    if node_value in {
+        AgentName.BENCHMARK_PLANNER.value,
+        AgentName.BENCHMARK_PLAN_REVIEWER.value,
+        AgentName.BENCHMARK_CODER.value,
+        AgentName.BENCHMARK_REVIEWER.value,
+    }:
+        return (
+            "benchmark_plan_evidence_script.py",
+            "benchmark_plan_technical_drawing_script.py",
+        )
+    if node_value in {
+        AgentName.ENGINEER_PLANNER.value,
+        AgentName.ENGINEER_PLAN_REVIEWER.value,
+        AgentName.ENGINEER_CODER.value,
+        AgentName.ENGINEER_EXECUTION_REVIEWER.value,
+        AgentName.ELECTRONICS_PLANNER.value,
+        AgentName.ELECTRONICS_REVIEWER.value,
+    }:
+        return (
+            "solution_plan_evidence_script.py",
+            "solution_plan_technical_drawing_script.py",
+        )
+    return ("", "")
+
+
+def _drafting_render_manifest_path_for_node(
+    node_type: AgentName | str | None,
+) -> str:
+    node_value = (
+        node_type.value if isinstance(node_type, AgentName) else str(node_type or "")
+    )
+    if node_value in {
+        AgentName.BENCHMARK_PLANNER.value,
+        AgentName.BENCHMARK_PLAN_REVIEWER.value,
+        AgentName.BENCHMARK_CODER.value,
+        AgentName.BENCHMARK_REVIEWER.value,
+    }:
+        return str(drafting_render_manifest_path_for_agent(AgentName.BENCHMARK_PLANNER))
+    if node_value in {
+        AgentName.ENGINEER_PLANNER.value,
+        AgentName.ENGINEER_PLAN_REVIEWER.value,
+        AgentName.ENGINEER_CODER.value,
+        AgentName.ENGINEER_EXECUTION_REVIEWER.value,
+        AgentName.ELECTRONICS_PLANNER.value,
+        AgentName.ELECTRONICS_REVIEWER.value,
+    }:
+        return str(drafting_render_manifest_path_for_agent(AgentName.ENGINEER_PLANNER))
+    return ""
+
+
+def _technical_drawing_script_imports_and_calls_technical_drawing(
+    content: str,
+    *,
+    artifact_name: str,
+) -> list[str]:
+    try:
+        tree = ast.parse(content)
+    except SyntaxError as exc:
+        return [f"{artifact_name}: invalid Python syntax: {exc}"]
+
+    direct_import_names: set[str] = set()
+    module_aliases: set[str] = set()
+    imported_from_build123d = False
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module:
+            module_root = node.module.split(".", 1)[0]
+            if module_root == "build123d":
+                imported_from_build123d = True
+                for alias in node.names:
+                    if alias.name == "TechnicalDrawing":
+                        direct_import_names.add(alias.asname or alias.name)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "build123d":
+                    module_aliases.add(alias.asname or alias.name)
+
+    if not imported_from_build123d:
+        return [
+            f"{artifact_name}: must import build123d TechnicalDrawing before using it"
+        ]
+
+    class _TechnicalDrawingCallVisitor(ast.NodeVisitor):
+        def __init__(self) -> None:
+            self.found = False
+
+        def visit_Call(self, node: ast.Call) -> Any:  # type: ignore[override]
+            func = node.func
+            if isinstance(func, ast.Name) and func.id in direct_import_names:
+                self.found = True
+            elif (
+                isinstance(func, ast.Attribute)
+                and isinstance(func.value, ast.Name)
+                and func.value.id in module_aliases
+                and func.attr == "TechnicalDrawing"
+            ):
+                self.found = True
+            self.generic_visit(node)
+
+    visitor = _TechnicalDrawingCallVisitor()
+    visitor.visit(tree)
+    if not visitor.found:
+        return [
+            f"{artifact_name}: must construct build123d TechnicalDrawing at least once"
+        ]
+    return []
+
+
+def validate_drafting_preview_manifest(
+    *,
+    manifest_content: str,
+    technical_drawing_script_content: str,
+    artifact_name: str,
+) -> list[str]:
+    try:
+        manifest = RenderManifest.model_validate_json(manifest_content)
+    except Exception as exc:
+        return [f"{artifact_name}: invalid render manifest: {exc}"]
+
+    errors: list[str] = []
+    if not manifest.drafting:
+        errors.append(
+            f"{artifact_name}: drafting preview manifest must set drafting=true"
+        )
+    if not manifest.source_script_sha256:
+        errors.append(
+            f"{artifact_name}: drafting preview manifest is missing source_script_sha256"
+        )
+    else:
+        expected_sha256 = hashlib.sha256(
+            technical_drawing_script_content.encode("utf-8")
+        ).hexdigest()
+        if manifest.source_script_sha256 != expected_sha256:
+            errors.append(
+                f"{artifact_name}: drafting preview manifest source_script_sha256 "
+                "does not match the current technical drawing script revision"
+            )
+    if not manifest.preview_evidence_paths:
+        errors.append(
+            f"{artifact_name}: drafting preview manifest must include preview_evidence_paths"
+        )
+    if not manifest.artifacts:
+        errors.append(f"{artifact_name}: drafting preview manifest artifacts are empty")
+    else:
+        for path, metadata in manifest.artifacts.items():
+            if not path.endswith(".png"):
+                errors.append(
+                    f"{artifact_name}: drafting preview manifest artifact '{path}' "
+                    "must be a PNG preview image"
+                )
+                continue
+            siblings = metadata.siblings
+            if not (siblings.svg or "").strip():
+                errors.append(
+                    f"{artifact_name}: drafting preview manifest artifact '{path}' is "
+                    "missing an SVG sidecar reference"
+                )
+            if not (siblings.dxf or "").strip():
+                errors.append(
+                    f"{artifact_name}: drafting preview manifest artifact '{path}' is "
+                    "missing a DXF sidecar reference"
+                )
     return errors
 
 
@@ -1226,8 +1424,15 @@ def validate_planner_handoff_cross_contract(
         for artifact_name, content in sorted(drafting_artifacts.items()):
             if not content.strip():
                 continue
+            if artifact_name.endswith("_technical_drawing_script.py"):
+                errors.extend(
+                    _technical_drawing_script_imports_and_calls_technical_drawing(
+                        content,
+                        artifact_name=artifact_name,
+                    )
+                )
             errors.extend(
-                _validate_exact_identifier_counts(
+                _validate_drafting_artifact_inventory_exactness(
                     artifact_name=artifact_name,
                     content=content,
                     expected_tokens=script_tokens,
@@ -1448,7 +1653,9 @@ def validate_node_output(
     assembly_definition_models: dict[str, AssemblyDefinition] = {}
     effective_config = manufacturing_config
     try:
-        node_enum = node_type if isinstance(node_type, AgentName) else AgentName(node_type)
+        node_enum = (
+            node_type if isinstance(node_type, AgentName) else AgentName(node_type)
+        )
     except Exception:
         node_enum = None
 
@@ -1545,6 +1752,27 @@ def validate_node_output(
             ],
         }.get(node_type, [])
 
+    drafting_mode = _technical_drawing_mode_for_node(
+        node_enum if node_enum is not None else node_type
+    )
+    drafting_required = drafting_mode in (DraftingMode.MINIMAL, DraftingMode.FULL)
+    drafting_manifest_path = ""
+    if drafting_required:
+        drafting_script_a, drafting_script_b = _drafting_script_paths_for_node(
+            node_enum if node_enum is not None else node_type
+        )
+        drafting_manifest_path = _drafting_render_manifest_path_for_node(
+            node_enum if node_enum is not None else node_type
+        )
+        required_files = list(required_files)
+        for path in (
+            drafting_script_a,
+            drafting_script_b,
+            drafting_manifest_path,
+        ):
+            if path and path not in required_files:
+                required_files.append(path)
+
     for req_file in required_files:
         if _missing_file(req_file):
             errors.append(f"Missing required file: {req_file}")
@@ -1623,6 +1851,30 @@ def validate_node_output(
                     )
                     if motion_errors:
                         errors.extend([f"{filename}: {e}" for e in motion_errors])
+        elif drafting_required and filename.endswith("_technical_drawing_script.py"):
+            errors.extend(
+                _technical_drawing_script_imports_and_calls_technical_drawing(
+                    content,
+                    artifact_name=filename,
+                )
+            )
+        elif drafting_required and filename == drafting_manifest_path:
+            drafting_script_path = technical_drawing_script_path_for_agent(
+                node_enum if node_enum is not None else node_type
+            )
+            script_content = files_content_map.get(str(drafting_script_path))
+            if script_content is None:
+                errors.append(
+                    f"{filename}: missing current technical drawing script content"
+                )
+            else:
+                errors.extend(
+                    validate_drafting_preview_manifest(
+                        manifest_content=content,
+                        technical_drawing_script_content=script_content,
+                        artifact_name=filename,
+                    )
+                )
         elif filename == "plan_refusal.md":
             is_valid, refusal_res = validate_plan_refusal(
                 content, session_id=session_id
@@ -1679,7 +1931,7 @@ def validate_plan_md_structure(
     if plan_type == "engineering":
         from shared.workers.markdown_validator import validate_plan_md
 
-        result = validate_plan_md(content)
+        result = validate_plan_md(content, plan_type=plan_type)
         if not result.is_valid:
             logger.error(
                 "plan_md_missing_sections",
@@ -1693,25 +1945,18 @@ def validate_plan_md_structure(
         logger.info("plan_md_valid", plan_type=plan_type, session_id=session_id)
         return True, []
 
-    required_sections = BENCHMARK_PLAN_REQUIRED_SECTIONS
+    from shared.workers.markdown_validator import validate_plan_md
 
-    # Extract all headings from markdown
-    heading_pattern = r"^#{1,3}\s+(.+)$"
-    headings = re.findall(heading_pattern, content, re.MULTILINE)
-    headings_lower = [h.lower().strip() for h in headings]
-
-    missing = []
-    for section in required_sections:
-        # Check if any heading contains the required section name
-        if not any(section.lower() in h for h in headings_lower):
-            missing.append(section)
-
-    if missing:
-        logger.error("plan_md_missing_sections", missing=missing, session_id=session_id)
-        errors = [f"Missing required section: {s}" for s in missing]
-        for error in errors:
+    result = validate_plan_md(content, plan_type=plan_type)
+    if not result.is_valid:
+        logger.error(
+            "plan_md_missing_sections",
+            missing=result.violations,
+            session_id=session_id,
+        )
+        for error in result.violations:
             emit_event(LintFailureDocsEvent(file_path="plan.md", errors=[error]))
-        return False, errors
+        return False, result.violations
 
     logger.info("plan_md_valid", plan_type=plan_type, session_id=session_id)
     return True, []

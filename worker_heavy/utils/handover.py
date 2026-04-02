@@ -6,10 +6,15 @@ from pathlib import Path
 import structlog
 from build123d import Compound, export_step
 
+from shared.agents.config import DraftingMode, load_agents_config
 from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition
 from shared.models.simulation import SimulationResult
+from shared.script_contracts import (
+    drafting_render_manifest_path_for_agent,
+    technical_drawing_script_path_for_agent,
+)
 from shared.workers.schema import (
     BenchmarkAttachmentPolicySummary,
     RenderManifest,
@@ -24,8 +29,10 @@ from worker_heavy.utils.dfm import (
 from worker_heavy.utils.file_validation import (
     _assembly_script_expected_tokens,
     _benchmark_script_expected_tokens,
-    validate_declared_planner_cost_contract,
+    _technical_drawing_script_imports_and_calls_technical_drawing,
     validate_component_inventory_exactness,
+    validate_declared_planner_cost_contract,
+    validate_drafting_preview_manifest,
     validate_environment_attachment_contract,
     validate_planner_handoff_cross_contract,
 )
@@ -203,6 +210,20 @@ def _resolve_submission_assembly_definition(
     else:
         rel_path = "assembly_definition.yaml"
     return cwd / rel_path, rel_path
+
+
+def _planner_role_for_reviewer_stage(reviewer_stage: ReviewerStage) -> AgentName:
+    if reviewer_stage == "benchmark_reviewer":
+        return AgentName.BENCHMARK_PLANNER
+    return AgentName.ENGINEER_PLANNER
+
+
+def _drafting_mode_for_reviewer_stage(reviewer_stage: ReviewerStage) -> DraftingMode:
+    planner_role = _planner_role_for_reviewer_stage(reviewer_stage)
+    try:
+        return load_agents_config().get_technical_drawing_mode(planner_role)
+    except Exception:
+        return DraftingMode.OFF
 
 
 def submit_for_review(
@@ -421,8 +442,7 @@ def submit_for_review(
             session_id=session_id,
         )
         raise ValueError(
-            "Submission rejected (Inventory exactness): "
-            + "; ".join(inventory_errors)
+            "Submission rejected (Inventory exactness): " + "; ".join(inventory_errors)
         )
 
     build_zone = objectives_model.objectives.build_zone
@@ -522,6 +542,43 @@ def submit_for_review(
         if normalized_stage == "engineering_execution_reviewer"
         else AgentName.ELECTRONICS_PLANNER
     )
+
+    drafting_mode = _drafting_mode_for_reviewer_stage(normalized_stage)
+    if drafting_mode in (DraftingMode.MINIMAL, DraftingMode.FULL):
+        planner_role = _planner_role_for_reviewer_stage(normalized_stage)
+        drafting_script_path = cwd / technical_drawing_script_path_for_agent(
+            planner_role
+        )
+        drafting_manifest_path = cwd / drafting_render_manifest_path_for_agent(
+            planner_role
+        )
+        if not drafting_script_path.exists():
+            raise ValueError(
+                f"{drafting_script_path.name} is missing (required for submission)"
+            )
+        if not drafting_manifest_path.exists():
+            raise ValueError(
+                f"{drafting_manifest_path.name} is missing (required for submission)"
+            )
+
+        drafting_script_content = drafting_script_path.read_text(encoding="utf-8")
+        drafting_manifest_content = drafting_manifest_path.read_text(encoding="utf-8")
+        drafting_script_errors = (
+            _technical_drawing_script_imports_and_calls_technical_drawing(
+                drafting_script_content,
+                artifact_name=str(drafting_script_path.relative_to(cwd)),
+            )
+        )
+        if drafting_script_errors:
+            raise ValueError("; ".join(drafting_script_errors))
+
+        drafting_manifest_errors = validate_drafting_preview_manifest(
+            manifest_content=drafting_manifest_content,
+            technical_drawing_script_content=drafting_script_content,
+            artifact_name=str(drafting_manifest_path.relative_to(cwd)),
+        )
+        if drafting_manifest_errors:
+            raise ValueError("; ".join(drafting_manifest_errors))
 
     cross_contract_errors = validate_planner_handoff_cross_contract(
         benchmark_definition=objectives_model,
@@ -654,7 +711,7 @@ def submit_for_review(
     # 5. Create reviewer-stage manifest
     stage_to_manifest = {
         "benchmark_reviewer": "benchmark_review_manifest.json",
-        "engineering_execution_reviewer": "engineering_execution_review_manifest.json",
+        "engineering_execution_reviewer": "engineering_execution_handoff_manifest.json",
         "electronics_reviewer": "electronics_review_manifest.json",
     }
     manifest_name = stage_to_manifest[normalized_stage]

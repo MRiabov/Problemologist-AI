@@ -566,7 +566,7 @@ class ExecutionReviewerNode(BaseNode):
     async def _ensure_submit_for_review_succeeded(self) -> str | None:
         handoff_err = await validate_reviewer_handover(
             self.ctx.worker_client,
-            manifest_path=".manifests/engineering_execution_review_manifest.json",
+            manifest_path=".manifests/engineering_execution_handoff_manifest.json",
             expected_stage="engineering_execution_reviewer",
         )
         if not handoff_err:
@@ -634,7 +634,7 @@ class ExecutionReviewerNode(BaseNode):
 
         post_submit_err = await validate_reviewer_handover(
             self.ctx.worker_client,
-            manifest_path=".manifests/engineering_execution_review_manifest.json",
+            manifest_path=".manifests/engineering_execution_handoff_manifest.json",
             expected_stage="engineering_execution_reviewer",
         )
         if post_submit_err:

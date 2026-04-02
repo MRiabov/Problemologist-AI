@@ -17,7 +17,7 @@ from controller.agent.handover_constants import (
     ENGINEER_BENCHMARK_HANDOVER_CHECK,
     ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
     ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
-    ENGINEERING_EXECUTION_REVIEW_MANIFEST,
+    ENGINEERING_EXECUTION_HANDOFF_MANIFEST,
 )
 from controller.agent.node_entry_validation import (
     NodeEntryValidationError,
@@ -228,7 +228,7 @@ async def _evaluate_engineer_node_entry(target_node: AgentName, state: AgentStat
             lambda *, contract, state: reviewer_handover_custom_check_from_session_id(  # noqa: ARG005
                 session_id=getattr(state, "session_id", None),
                 reviewer_label="Execution",
-                manifest_path=ENGINEERING_EXECUTION_REVIEW_MANIFEST,
+                manifest_path=ENGINEERING_EXECUTION_HANDOFF_MANIFEST,
                 expected_stage="engineering_execution_reviewer",
                 agent_role=AgentName.ENGINEER_EXECUTION_REVIEWER,
             )

@@ -115,7 +115,7 @@ def main() -> int:
     validation_ok = False
     simulation_success = False
     manifest_path = (
-        workspace / ".manifests" / "engineering_execution_review_manifest.json"
+        workspace / ".manifests" / "engineering_execution_handoff_manifest.json"
     )
 
     with _capture_submission_output(log_path):

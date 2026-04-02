@@ -76,7 +76,7 @@ transcript:
         \ encoding=\"utf-8\"\n)\nPath(\"simulation_result.json\").write_text(\n  \
         \  simulation.model_dump_json(indent=2), encoding=\"utf-8\"\n)\nmanifests_dir\
         \ = Path(\".manifests\")\nmanifests_dir.mkdir(parents=True, exist_ok=True)\n\
-        (manifests_dir / \"engineering_execution_review_manifest.json\").write_text(\n\
+        (manifests_dir / \"engineering_execution_handoff_manifest.json\").write_text(\n\
         \    manifest.model_dump_json(indent=2), encoding=\"utf-8\"\n)\nprint(\"handoff\
         \ seeded\")\nPY\n"
     expected_observation: handoff seeded

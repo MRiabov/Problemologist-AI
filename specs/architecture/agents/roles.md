@@ -108,6 +108,7 @@ Problems with motors and moving parts are verified more consistently because the
 
 The benchmark planner self-validates that `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` preserve the same labels, repeated quantities, and COTS identities as the benchmark inventory before `submit_plan()`.
 The benchmark planner also ensures every benchmark inventory label and selected COTS `part_id` appears at least once in `plan.md` as an exact identifier mention; backticks are preferred for the first mention.
+Benchmark `plan.md` uses exact heading matching for the active benchmark-family schema; substring-only heading matches are not accepted.
 
 ```yaml
 # benchmark_definition.yaml (draft from Benchmark Planner)
@@ -152,7 +153,7 @@ The benchmark loop has two reviewer stages with different responsibilities.
 `Benchmark Plan Reviewer` responsibilities:
 
 01. Reject plans that mention benchmark objects, moving parts, joints, or objective markers that are not declared consistently across `plan.md`, `benchmark_definition.yaml`, and benchmark-owned `benchmark_assembly_definition.yaml`.
-02. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml`, including label/quantity/COTS-identity exactness in `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py`, plus exact identifier mention coverage in `plan.md`.
+02. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml`, including label/quantity/COTS-identity exactness in `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py`, a structural build123d `TechnicalDrawing` import-and-call check, plus exact identifier mention coverage in `plan.md`.
 03. Validate feasibility of the planned benchmark geometry before implementation starts, including objective clearance, randomization sanity, and that the moved object/runtime jitter contract stays inside benchmark bounds.
 04. Validate non-ambiguity and completeness of planner handoff artifacts.
 05. Reject unsupported benchmark-side mechanisms or metadata outside current benchmark contracts/tooling.
@@ -342,7 +343,7 @@ The engineering loop has two reviewer stages with different responsibilities.
 `Engineering Plan Reviewer` responsibilities:
 
 1. Reject plans that propose unsupported components/mechanisms outside the current allowed system/tooling/contracts.
-2. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`, including label/quantity/COTS-identity exactness in `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py`, plus exact identifier mention coverage in `plan.md`.
+2. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`, including label/quantity/COTS-identity exactness in `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py`, a structural build123d `TechnicalDrawing` import-and-call check, plus exact identifier mention coverage in `plan.md`.
 3. Validate feasibility (physics realism, build-zone fit, and planner budgets under benchmark caps).
 4. Validate non-ambiguity and completeness of planner handoff artifacts.
 5. Re-run pricing/weight validation (`skills/manufacturing-knowledge/scripts/validate_and_price.py` or equivalent tool-wrapped validator) against the planner handoff and reject mismatches/failures.
@@ -355,7 +356,7 @@ The engineering loop has two reviewer stages with different responsibilities.
 
 1. Verify implementation follows the approved plan at the inventory level, including labels, repeated quantities, COTS parts/identities, and any drafting package required by the approved plan. Justified, reviewable deviations are allowed only when they do not change the approved inventory contract.
 2. Verify robustness and non-flakiness of the successful solution, using simulation evidence across runtime randomization.
-3. Execute only after successful validation/simulation handoff artifacts are present (`validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_review_manifest.json` for latest revision). This stage is post-success auditing, not initial simulation pass/fail gating.
+3. Execute only after successful validation/simulation handoff artifacts are present (`validation_results.json`, `simulation_result.json`, and the coder-written `.manifests/engineering_execution_handoff_manifest.json` for the latest revision). This stage is post-success auditing, not initial simulation pass/fail gating.
 4. Flag execution-time evidence of over-actuated designs (unnecessary moving parts/axes) as a robustness risk, even when single-run success exists.
 5. Optional code-quality review is secondary and non-blocking unless it reveals concrete safety/correctness risk.
 6. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
@@ -370,7 +371,11 @@ Engineer-side visual-inspection policy:
 Reviewer manifest naming in engineering:
 
 - Plan reviewer stage: `.manifests/engineering_plan_review_manifest.json`
-- Execution reviewer stage: `.manifests/engineering_execution_review_manifest.json`
+- Execution reviewer stage: `.manifests/engineering_execution_handoff_manifest.json`
+
+Note: the execution-review manifest is produced by coder submission and then
+consumed by the execution reviewer. The reviewer does not invent a separate
+file with a different name.
 
 Reviewer persistence naming in engineering:
 

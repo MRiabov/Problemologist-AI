@@ -62,7 +62,7 @@ Runtime conversations use four message roles: `system`, `user`, `assistant`, and
 | Benchmark planner submission | `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml` | `.manifests/benchmark_plan_review_manifest.json` | N/A |
 | Benchmark execution review | Latest validated `script.py` and benchmark artifacts | `.manifests/benchmark_review_manifest.json` | `reviews/benchmark-execution-review-decision-round-<n>.yaml`, `reviews/benchmark-execution-review-comments-round-<n>.yaml` |
 | Engineering planner submission | `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml` | `.manifests/engineering_plan_review_manifest.json` | N/A |
-| Engineering execution review | Latest validated `script.py` and engineering artifacts | `.manifests/engineering_execution_review_manifest.json` | `reviews/engineering-execution-review-decision-round-<n>.yaml`, `reviews/engineering-execution-review-comments-round-<n>.yaml` |
+| Engineering execution review | Latest validated `script.py` and engineering artifacts; coder-written handoff manifest shared with the reviewer gate | `.manifests/engineering_execution_handoff_manifest.json` | `reviews/engineering-execution-review-decision-round-<n>.yaml`, `reviews/engineering-execution-review-comments-round-<n>.yaml` |
 | Electronics review | Unified electromechanical implementation artifacts | `.manifests/electronics_review_manifest.json` | `reviews/electronics-review-decision-round-<n>.yaml`, `reviews/electronics-review-comments-round-<n>.yaml` |
 
 ### Handover rules

@@ -239,7 +239,7 @@ async def _seed_replay_episode(
             AssetType.OTHER,
         )
         await _add_asset(
-            ".manifests/engineering_execution_review_manifest.json",
+            ".manifests/engineering_execution_handoff_manifest.json",
             review_manifest.model_dump_json(indent=2),
             AssetType.OTHER,
         )
@@ -327,7 +327,7 @@ async def _seed_replay_episode(
         "plan.md": episode.plan,
         "journal.md": episode.journal,
         "todo.md": "completed: false\n",
-        ".manifests/engineering_execution_review_manifest.json": review_manifest.model_dump_json(
+        ".manifests/engineering_execution_handoff_manifest.json": review_manifest.model_dump_json(
             indent=2
         ),
         "reviews/engineering-execution-review-decision-round-1.yaml": yaml.safe_dump(
@@ -409,7 +409,7 @@ async def test_failed_episode_replay_bundle_contract():
         assert replay.simulation_result.fail_mode == "OUT_OF_BOUNDS"
         assert replay.review_manifests
         assert Path(replay.review_manifests[0].path) == Path(
-            ".manifests/engineering_execution_review_manifest.json"
+            ".manifests/engineering_execution_handoff_manifest.json"
         )
         assert replay.review_manifests[0].manifest.reviewer_stage == (
             "engineering_execution_reviewer"
@@ -428,7 +428,7 @@ async def test_failed_episode_replay_bundle_contract():
         assert artifact_hashes["script.py"]
         assert any(
             Path(artifact.path)
-            == Path(".manifests/engineering_execution_review_manifest.json")
+            == Path(".manifests/engineering_execution_handoff_manifest.json")
             for artifact in replay.replay_artifacts
         )
         assert any(
@@ -446,7 +446,7 @@ async def test_failed_episode_replay_bundle_contract():
         )
         assert any(
             Path(asset.s3_path)
-            == Path(".manifests/engineering_execution_review_manifest.json")
+            == Path(".manifests/engineering_execution_handoff_manifest.json")
             for asset in replay.assets
         )
 

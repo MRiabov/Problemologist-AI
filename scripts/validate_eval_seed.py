@@ -103,7 +103,11 @@ async def _wait_for_worker_ready(
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Validate seeded eval entry contracts without running full evals."
+        description=(
+            "Validate seeded eval entry contracts, including planner inventory "
+            "exactness, plan grounding, and drafting prompt/script gates, "
+            "without running full evals."
+        )
     )
     parser.add_argument(
         "--agent",
@@ -155,7 +159,8 @@ def _parse_args() -> argparse.Namespace:
         default=True,
         help=(
             "Repair deterministic seed-manifest drift before validation "
-            "(default: enabled)."
+            "(default: enabled). Seed validation still fails closed on "
+            "inventory exactness or plan-grounding mismatches."
         ),
     )
     parser.add_argument(
@@ -410,6 +415,8 @@ async def _validate_item(
             logger=item_logger,
             update_manifests=update_manifests,
         )
+        # The shared preflight now also enforces the drafting prompt gate and
+        # TechnicalDrawing structural checks for mode-enabled rows.
         await _preflight_seeded_entry_contract(
             item=item,
             session_id=session_id,

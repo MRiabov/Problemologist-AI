@@ -570,7 +570,7 @@ class WorkerClient:
             # Backward compatibility: keep honoring single-manifest payloads.
             writes.append(
                 (
-                    ".manifests/engineering_execution_review_manifest.json",
+                    ".manifests/engineering_execution_handoff_manifest.json",
                     artifacts.review_manifest_json,
                 )
             )

@@ -685,7 +685,7 @@ async def preflight_seeded_entry_contract(
             lambda *, contract, state: reviewer_handover_custom_check_from_session_id(  # noqa: ARG005
                 session_id=session_id,
                 reviewer_label="Execution",
-                manifest_path=".manifests/engineering_execution_review_manifest.json",
+                manifest_path=".manifests/engineering_execution_handoff_manifest.json",
                 expected_stage="engineering_execution_reviewer",
             )
         ),

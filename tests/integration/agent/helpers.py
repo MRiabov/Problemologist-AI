@@ -566,7 +566,7 @@ async def seed_execution_reviewer_handover(
     await _seed_workspace_file(
         client,
         session_id=session_id,
-        path=".manifests/engineering_execution_review_manifest.json",
+        path=".manifests/engineering_execution_handoff_manifest.json",
         content=review_manifest.model_dump_json(indent=2),
         bypass_agent_permissions=True,
     )

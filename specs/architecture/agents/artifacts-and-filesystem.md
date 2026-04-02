@@ -78,19 +78,26 @@ Manifest ownership summary:
 | Benchmark plan-review manifest | backend runtime utility invoked by `submit_plan()` | Successful `Benchmark Planner` `submit_plan()` | `.manifests/benchmark_plan_review_manifest.json` |
 | Engineering plan-review manifest | backend runtime utility invoked by `submit_plan()` | Successful `Engineering Planner` `submit_plan()` | `.manifests/engineering_plan_review_manifest.json` |
 | Benchmark review manifest | backend runtime utility invoked by `submit_for_review(...)` | Successful benchmark `submit_for_review(...)` | `.manifests/benchmark_review_manifest.json` |
-| Engineering execution-review manifest | backend runtime utility invoked by `submit_for_review(...)` | Successful engineering `submit_for_review(...)` | `.manifests/engineering_execution_review_manifest.json` |
+| Engineering execution-review handoff manifest | backend runtime utility invoked by `submit_for_review(...)` | Successful engineering `submit_for_review(...)` | `.manifests/engineering_execution_handoff_manifest.json` |
 | Electronics review manifest | backend runtime utility invoked by `submit_for_review(...)` | Successful electronics `submit_for_review(...)` | `.manifests/electronics_review_manifest.json` |
 
 The agent-facing tools are the submission triggers. The actual manifest write
 happens in the backend runtime utility, and `.manifests/**` remains
 inaccessible to LLM roles.
 
+The engineering execution-review manifest is the same file on both sides of
+the handoff:
+
+- the coder writes it by successfully calling `submit_for_review(...)`
+- the Engineering Execution Reviewer later reads it as the latest-revision
+  entry gate
+
 Reviewer-stage manifest filenames are explicit and role-scoped:
 
 1. `.manifests/benchmark_plan_review_manifest.json`
 2. `.manifests/benchmark_review_manifest.json`
 3. `.manifests/engineering_plan_review_manifest.json`
-4. `.manifests/engineering_execution_review_manifest.json`
+4. `.manifests/engineering_execution_handoff_manifest.json`
 5. `.manifests/electronics_review_manifest.json`
 
 Reviewer persistence filenames are explicit and role-scoped:

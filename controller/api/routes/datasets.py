@@ -94,7 +94,7 @@ _REVISION_MANIFEST_PRIORITY = (
     "renders/engineer_renders/render_manifest.json",
     "renders/final_preview_renders/render_manifest.json",
     ".manifests/benchmark_review_manifest.json",
-    ".manifests/engineering_execution_review_manifest.json",
+    ".manifests/engineering_execution_handoff_manifest.json",
     ".manifests/engineering_plan_review_manifest.json",
     ".manifests/electronics_review_manifest.json",
     ".manifests/benchmark_plan_review_manifest.json",
@@ -274,7 +274,7 @@ def _missing_required_artifacts(
             ".manifests/benchmark_review_manifest.json",
             ".manifests/benchmark_plan_review_manifest.json",
             ".manifests/engineering_plan_review_manifest.json",
-            ".manifests/engineering_execution_review_manifest.json",
+            ".manifests/engineering_execution_handoff_manifest.json",
         ]
         review_prefixes = [
             "reviews/engineering-plan-review-decision-round-",

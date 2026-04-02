@@ -71,7 +71,7 @@ AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
         required_trace_names=(AgentName.ENGINEER_CODER,),
         start_node=AgentName.ENGINEER_CODER,
         required_reviewer_handover_manifest=(
-            ".manifests/engineering_execution_review_manifest.json"
+            ".manifests/engineering_execution_handoff_manifest.json"
         ),
         required_reviewer_stage="engineering_execution_reviewer",
         materialize_reviewer_handover=True,

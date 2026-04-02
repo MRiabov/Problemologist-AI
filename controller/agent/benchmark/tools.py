@@ -14,9 +14,14 @@ from controller.agent.tools import (
     run_validate_and_price_script,
 )
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from shared.agents.config import DraftingMode, load_agents_config
 from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import PlannerSubmissionResult
+from shared.script_contracts import (
+    drafting_render_manifest_path_for_agent,
+    drafting_script_paths_for_agent,
+)
 from shared.workers.schema import PlanReviewManifest
 
 BENCHMARK_ESTIMATE_HEADROOM_MULTIPLIER = 1.5
@@ -39,6 +44,16 @@ def _workspace_environment_version(content: str) -> str | None:
         return None
     version_text = str(version).strip()
     return version_text or None
+
+
+def _benchmark_planner_drafting_required() -> bool:
+    try:
+        drafting_mode = load_agents_config().get_technical_drawing_mode(
+            AgentName.BENCHMARK_PLANNER
+        )
+    except Exception:
+        return False
+    return drafting_mode in (DraftingMode.MINIMAL, DraftingMode.FULL)
 
 
 def _canonicalize_benchmark_constraints(
@@ -214,6 +229,20 @@ def get_benchmark_planner_tools(
             "benchmark_definition.yaml",
             "benchmark_assembly_definition.yaml",
         ]
+        if _benchmark_planner_drafting_required():
+            required_files.extend(
+                [
+                    str(path)
+                    for path in drafting_script_paths_for_agent(
+                        AgentName.BENCHMARK_PLANNER
+                    )
+                ]
+            )
+            required_files.append(
+                str(
+                    drafting_render_manifest_path_for_agent(AgentName.BENCHMARK_PLANNER)
+                )
+            )
         artifacts: dict[str, str] = {}
         missing_files: list[str] = []
 

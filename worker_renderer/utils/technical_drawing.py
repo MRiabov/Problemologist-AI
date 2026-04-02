@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -93,6 +94,16 @@ def _load_assembly_definition(root: Path) -> AssemblyDefinition:
             "assembly_definition.yaml.drafting is required when drafting preview is requested"
         )
     return definition
+
+
+def _script_source_sha256(
+    script_path: Path,
+    *,
+    script_content: str | None = None,
+) -> str:
+    if script_content is not None:
+        return hashlib.sha256(script_content.encode("utf-8")).hexdigest()
+    return hashlib.sha256(script_path.read_bytes()).hexdigest()
 
 
 def _project_edges(
@@ -217,6 +228,15 @@ def render_technical_drawing_preview(
         session_root=root,
         script_content=script_content,
     )
+    source_script_path = (
+        (root / script_path)
+        if not Path(script_path).is_absolute()
+        else Path(script_path)
+    )
+    source_script_sha256 = _script_source_sha256(
+        source_script_path,
+        script_content=script_content,
+    )
 
     render_policy = load_agents_config().render
     render_width = render_policy.image_resolution.width
@@ -301,6 +321,8 @@ def render_technical_drawing_preview(
         episode_id=session_id,
         worker_session_id=session_id,
         preview_evidence_paths=png_paths,
+        drafting=True,
+        source_script_sha256=source_script_sha256,
     )
     manifest_path = output_dir / "render_manifest.json"
     manifest_path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")

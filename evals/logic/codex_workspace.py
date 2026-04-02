@@ -796,7 +796,7 @@ def _review_contract(agent_name: AgentName) -> tuple[str, AgentName]:
     if agent_name == AgentName.BENCHMARK_CODER:
         return ".manifests/benchmark_review_manifest.json", AgentName.BENCHMARK_REVIEWER
     return (
-        ".manifests/engineering_execution_review_manifest.json",
+        ".manifests/engineering_execution_handoff_manifest.json",
         AgentName.ENGINEER_EXECUTION_REVIEWER,
     )
 
@@ -1560,7 +1560,7 @@ async def verify_reviewer_workspace(
         manifest_path = (
             ".manifests/benchmark_review_manifest.json"
             if agent_name == AgentName.BENCHMARK_REVIEWER
-            else ".manifests/engineering_execution_review_manifest.json"
+            else ".manifests/engineering_execution_handoff_manifest.json"
             if agent_name == AgentName.ENGINEER_EXECUTION_REVIEWER
             else ".manifests/electronics_review_manifest.json"
         )

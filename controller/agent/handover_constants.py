@@ -48,8 +48,8 @@ ENGINEER_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
 BENCHMARK_PLAN_REVIEW_MANIFEST = ".manifests/benchmark_plan_review_manifest.json"
 ENGINEERING_PLAN_REVIEW_MANIFEST = ".manifests/engineering_plan_review_manifest.json"
 BENCHMARK_REVIEW_MANIFEST = ".manifests/benchmark_review_manifest.json"
-ENGINEERING_EXECUTION_REVIEW_MANIFEST = (
-    ".manifests/engineering_execution_review_manifest.json"
+ENGINEERING_EXECUTION_HANDOFF_MANIFEST = (
+    ".manifests/engineering_execution_handoff_manifest.json"
 )
 ELECTRONICS_REVIEW_MANIFEST = ".manifests/electronics_review_manifest.json"
 
@@ -68,6 +68,8 @@ SCHEMA_BACKED_HANDOFF_PATHS: tuple[str, ...] = (
     "benchmark_definition.yaml",
     "assembly_definition.yaml",
     "benchmark_assembly_definition.yaml",
+    "renders/benchmark_renders/render_manifest.json",
+    "renders/engineer_renders/render_manifest.json",
     BENCHMARK_SCRIPT_PATH,
     SOLUTION_SCRIPT_PATH,
     "validation_results.json",
@@ -75,7 +77,7 @@ SCHEMA_BACKED_HANDOFF_PATHS: tuple[str, ...] = (
     BENCHMARK_PLAN_REVIEW_MANIFEST,
     ENGINEERING_PLAN_REVIEW_MANIFEST,
     BENCHMARK_REVIEW_MANIFEST,
-    ENGINEERING_EXECUTION_REVIEW_MANIFEST,
+    ENGINEERING_EXECUTION_HANDOFF_MANIFEST,
     ELECTRONICS_REVIEW_MANIFEST,
 )
 
@@ -98,7 +100,7 @@ __all__ = [
     "ENGINEERING_EXECUTION_REVIEWER_HANDOFF_ARTIFACTS",
     "ENGINEER_PLANNER_HANDOFF_ARTIFACTS",
     "ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK",
-    "ENGINEERING_EXECUTION_REVIEW_MANIFEST",
+    "ENGINEERING_EXECUTION_HANDOFF_MANIFEST",
     "ENGINEERING_PLAN_REVIEW_MANIFEST",
     "SCHEMA_BACKED_HANDOFF_PATHS",
 ]

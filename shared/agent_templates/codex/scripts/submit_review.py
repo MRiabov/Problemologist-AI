@@ -23,7 +23,7 @@ _MANIFEST_BY_AGENT: dict[AgentName, str] = {
     AgentName.BENCHMARK_PLAN_REVIEWER: ".manifests/benchmark_plan_review_manifest.json",
     AgentName.BENCHMARK_REVIEWER: ".manifests/benchmark_review_manifest.json",
     AgentName.ENGINEER_PLAN_REVIEWER: ".manifests/engineering_plan_review_manifest.json",
-    AgentName.ENGINEER_EXECUTION_REVIEWER: ".manifests/engineering_execution_review_manifest.json",
+    AgentName.ENGINEER_EXECUTION_REVIEWER: ".manifests/engineering_execution_handoff_manifest.json",
     AgentName.ELECTRONICS_REVIEWER: ".manifests/electronics_review_manifest.json",
 }
 

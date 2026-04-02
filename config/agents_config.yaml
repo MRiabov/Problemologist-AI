@@ -199,6 +199,8 @@ agents:
         - plan_refusal.md
         - plan.md
         - assembly_definition.yaml
+        - reviews/engineering-plan-review-decision-round-*.yaml
+        - reviews/engineering-plan-review-comments-round-*.yaml
         deny:
         - skills/**
         - utils/**

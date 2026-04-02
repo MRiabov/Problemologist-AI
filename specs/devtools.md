@@ -17,7 +17,7 @@ The developer instrumentation layer is split into a small set of canonical entry
 | Integration orchestration | `scripts/run_integration_tests.sh`, `scripts/internal/integration_runner.py` | Run the canonical integration suite through the real stack and the real HTTP/system boundaries | Public wrapper, internal implementation |
 | Eval orchestration | `dataset/evals/run_evals.py`, `evals/logic/runner.py`, `dataset/evals/materialize_seed_workspace.py` | Run evals, materialize seeded workspaces, and expose the Codex-debug path | Public wrapper plus internal implementation |
 | Eval coordination | `scripts/internal/eval_run_lock.py`, `scripts/internal/eval_seed_renders.py` | Serialize eval runs and regenerate deterministic seed render bundles | Internal helper modules |
-| Seed and fixture validation | `scripts/validate_eval_seed.py`, `scripts/validate_integration_mock_response_preflight.py`, `scripts/normalize_integration_mock_responses.py` | Validate seeded eval rows, validate integration mock-response scenarios, and repair deterministic fixture drift | Public maintenance utilities |
+| Seed and fixture validation | `scripts/validate_eval_seed.py`, `scripts/validate_integration_mock_response_preflight.py`, `scripts/normalize_integration_mock_responses.py` | Validate seeded eval rows against the current seeded-entry contract, including planner inventory exactness and plan grounding; validate integration mock-response scenarios; repair deterministic fixture drift | Public maintenance utilities |
 | Derived artifact regeneration | `scripts/generate_openapi.py`, `scripts/persist_test_results.py` | Regenerate API schemas and persist test-history outputs | Public utilities |
 | Compatibility and environment helpers | `scripts/ensure_docker_vfs.sh`, `scripts/ensure_ngspice.sh`, `scripts/cleanup_local_s3.py` | Make the local stack runnable in constrained environments and clear object-store state before runs | Public support scripts |
 | Experimental probes | `scripts/experiments/**` | Measure or compare runtime behavior without defining the stable contract | Non-contractual |
@@ -146,6 +146,7 @@ The validation helpers are developer tooling, not product behavior.
 
 - This script validates seeded eval entry contracts without running the full eval loop.
 - It seeds the local workspace through the real helper path and validates the row against the current contract set.
+- For planner rows, that contract includes exact inventory preservation, exact identifier mention coverage in `plan.md`, and the latest handoff cross-contract checks from the controller validation path.
 - It can refresh deterministic seed manifests and render bundles when asked.
 - It can optionally run the eval runner in judge mode after validation, using the codex backend by default.
 - If `--run-judge` is requested for more than 10 selected seed rows, the script requires `-y` before it will launch the expensive judge pass.

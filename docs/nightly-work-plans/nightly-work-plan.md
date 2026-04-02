@@ -9,14 +9,14 @@
 Summary
 The engineer coder can build the sideways-transfer geometry, but the eval does not complete because the run never cleanly
 reaches the execution-review manifest step. The earlier run failed explicitly with a missing .manifests/
-engineering_execution_review_manifest.json, and the agent then spent time chasing renderer/display workarounds that are not
+engineering_execution_handoff_manifest.json, and the agent then spent time chasing renderer/display workarounds that are not
 valid in this shell. I removed the bad WORKER_RENDERER_LOCAL_RENDER hint from the seed, but the underlying structural issue
 remains: the workflow is blocked before submit_for_review can complete.
 
 Observed Behavior
 
 - The failed session at run_20260330_182344 ended with:
-  - .manifests/engineering_execution_review_manifest.json missing; call submit_for_review(compound) first.
+  - .manifests/engineering_execution_handoff_manifest.json missing; call submit_for_review(compound) first.
   - See logs/evals/runs/run_20260330_182344/sessions/ec-001/session_metadata.json
 - The transcript shows the agent reached validation/simulation probing, then concluded the handoff was blocked by renderer/
   MuJoCo display permissions in the shell.
@@ -52,7 +52,7 @@ I have already started editing an exiting int-033 to make it much closer to the 
 
 <!--Agent: write the progress on the task below-->
 
-1. Restored the deleted INT-033 coder fixture script and aligned the mocked coder handoff to `python script.py`, which is what actually seeds `.manifests/engineering_execution_review_manifest.json`.
+1. Restored the deleted INT-033 coder fixture script and aligned the mocked coder handoff to `python script.py`, which is what actually seeds `.manifests/engineering_execution_handoff_manifest.json`.
 2. Verified the narrow `test_engineering_full_loop` slice passes on a fresh integration run (`run_20260330_214602`).
 
 \[x\] - definitely completed?

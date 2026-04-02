@@ -91,6 +91,7 @@ The canonical prompt rules are:
 08. The prompt includes the task text, agent name, task ID, and seed dataset name when available.
 09. The prompt does not need to describe repository-level import paths or module layout.
 10. All starter, non-DSPy-optimized prompt fragments live in `config/prompts.yaml` and `shared/agent_templates/`; see [prompt-management.md](./prompt-management.md) for the unified prompt-source model and [agent-skill.md](./agent-skill.md) for the skill-tree contract.
+11. When drafting mode is active, the prompt instructs the role that authors the drafting package and any downstream role that reads it to call `preview_drawing()` at least once on the current revision before its completion or approval gate; missing usage is a hard validation failure and the normal retry loop applies.
 
 PromptManager is the canonical merge point for that prompt text; runtime code such as `evals/logic/codex_workspace.py` only supplies runtime context or template variables.
 
