@@ -44,7 +44,8 @@ from worker_heavy.workbenches.config import load_config, load_merged_config
 
 ROOT = Path(__file__).resolve().parents[2]
 _CODEX_RUNTIME_ROOT_NAME = "codex-runtime"
-SKILL_ROOT = ROOT / "skills"
+SKILL_SOURCE_ROOT = ROOT / "skills"
+CODEX_SKILL_TREE_ROOT = Path(".agents") / "skills"
 
 _TEXT_SUFFIXES = {
     ".cfg",
@@ -222,7 +223,9 @@ def _workspace_files_to_validate(workspace_dir: Path) -> dict[str, str]:
     files: dict[str, str] = {}
     for path in sorted(p for p in workspace_dir.rglob("*") if p.is_file()):
         relative_parts = path.relative_to(workspace_dir).parts
-        if relative_parts and relative_parts[0] == "skills":
+        if relative_parts and (
+            relative_parts[0] == "skills" or relative_parts[:2] == (".agents", "skills")
+        ):
             continue
         if any(part == "__pycache__" for part in path.parts):
             continue
@@ -259,9 +262,12 @@ def _copy_tree(src_root: Path, dst_root: Path) -> list[str]:
 
 
 def _copy_skills_tree(dst_root: Path) -> list[str]:
-    if not SKILL_ROOT.exists():
-        raise FileNotFoundError(f"Skill repository not found: {SKILL_ROOT}")
-    return [f"skills/{path}" for path in _copy_tree(SKILL_ROOT, dst_root / "skills")]
+    if not SKILL_SOURCE_ROOT.exists():
+        raise FileNotFoundError(f"Skill repository not found: {SKILL_SOURCE_ROOT}")
+    return [
+        f"{CODEX_SKILL_TREE_ROOT.as_posix()}/{path}"
+        for path in _copy_tree(SKILL_SOURCE_ROOT, dst_root / CODEX_SKILL_TREE_ROOT)
+    ]
 
 
 def copy_workspace_contents(

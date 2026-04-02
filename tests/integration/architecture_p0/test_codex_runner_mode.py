@@ -74,11 +74,18 @@ def _workspace_snapshot(workspace_dir: Path) -> dict[str, str]:
 
 
 def _assert_skills_tree_materialized(workspace_dir: Path) -> None:
-    assert (workspace_dir / "skills").is_dir()
-    assert (workspace_dir / "skills" / "runtime-script-contract" / "SKILL.md").is_file()
+    assert (workspace_dir / ".agents" / "skills").is_dir()
     assert (
-        workspace_dir / "skills" / "build123d_cad_drafting_skill" / "SKILL.md"
+        workspace_dir / ".agents" / "skills" / "runtime-script-contract" / "SKILL.md"
     ).is_file()
+    assert (
+        workspace_dir
+        / ".agents"
+        / "skills"
+        / "build123d_cad_drafting_skill"
+        / "SKILL.md"
+    ).is_file()
+    assert not (workspace_dir / "skills").exists()
 
 
 @pytest.mark.integration_p0
@@ -1091,8 +1098,10 @@ async def test_codex_materialized_planner_workspace_submits(
     )
     _assert_skills_tree_materialized(workspace_dir)
     _assert_skills_tree_materialized(mirror_workspace_dir)
-    assert any(path.startswith("skills/") for path in materialized.copied_paths)
-    assert any(path.startswith("skills/") for path in mirror_materialized.copied_paths)
+    assert any(path.startswith(".agents/skills/") for path in materialized.copied_paths)
+    assert any(
+        path.startswith(".agents/skills/") for path in mirror_materialized.copied_paths
+    )
     assert materialized.prompt_text == mirror_materialized.prompt_text
     assert materialized.copied_paths == mirror_materialized.copied_paths
     assert _workspace_snapshot(workspace_dir) == _workspace_snapshot(
@@ -1408,8 +1417,10 @@ async def test_codex_seed_workspace_materialization_is_role_specific_and_determi
     )
     _assert_skills_tree_materialized(workspace_dir)
     _assert_skills_tree_materialized(mirror_workspace_dir)
-    assert any(path.startswith("skills/") for path in materialized.copied_paths)
-    assert any(path.startswith("skills/") for path in mirror_materialized.copied_paths)
+    assert any(path.startswith(".agents/skills/") for path in materialized.copied_paths)
+    assert any(
+        path.startswith(".agents/skills/") for path in mirror_materialized.copied_paths
+    )
     for fragment in prompt_fragments:
         assert fragment in materialized.prompt_text
     for rel_path in expected_files:
