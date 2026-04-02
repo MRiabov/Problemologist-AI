@@ -22,7 +22,10 @@ from worker_heavy.utils.dfm import (
     validate_and_price_assembly,
 )
 from worker_heavy.utils.file_validation import (
+    _assembly_script_expected_tokens,
+    _benchmark_script_expected_tokens,
     validate_declared_planner_cost_contract,
+    validate_component_inventory_exactness,
     validate_environment_attachment_contract,
     validate_planner_handoff_cross_contract,
 )
@@ -235,6 +238,7 @@ def submit_for_review(
 
     # plan.md
     plan_path = cwd / "plan.md"
+    plan_content: str | None = None
     if plan_path.exists():
         from .file_validation import validate_plan_md_structure
 
@@ -396,6 +400,31 @@ def submit_for_review(
             session_id=session_id,
         )
         raise ValueError("Pricing contract violation: " + "; ".join(cost_errors))
+
+    component_inventory_tokens = (
+        _benchmark_script_expected_tokens(
+            benchmark_definition=objectives_model,
+            assembly_definition=estimation,
+        )
+        if normalized_stage == "benchmark_reviewer"
+        else _assembly_script_expected_tokens(estimation)
+    )
+    inventory_errors = validate_component_inventory_exactness(
+        component=component,
+        expected_tokens=component_inventory_tokens,
+        artifact_name=script_path.name,
+    )
+    if inventory_errors:
+        logger.warning(
+            "submission_inventory_exactness_failed",
+            violations=inventory_errors,
+            session_id=session_id,
+        )
+        raise ValueError(
+            "Submission rejected (Inventory exactness): "
+            + "; ".join(inventory_errors)
+        )
+
     build_zone = objectives_model.objectives.build_zone
     constraints = objectives_model.constraints
 
@@ -486,11 +515,36 @@ def submit_for_review(
             "Prior validation is stale for current script revision. Re-run validate."
         )
 
+    planner_node_type = (
+        AgentName.BENCHMARK_PLANNER
+        if normalized_stage == "benchmark_reviewer"
+        else AgentName.ENGINEER_PLANNER
+        if normalized_stage == "engineering_execution_reviewer"
+        else AgentName.ELECTRONICS_PLANNER
+    )
+
     cross_contract_errors = validate_planner_handoff_cross_contract(
         benchmark_definition=objectives_model,
         assembly_definition=estimation,
         manufacturing_config=dfm_config,
-        planner_node_type=AgentName.BENCHMARK_PLANNER,
+        planner_node_type=planner_node_type,
+        plan_text=plan_content,
+        drafting_artifacts={
+            name: (cwd / name).read_text(encoding="utf-8")
+            for name in (
+                (
+                    "benchmark_plan_evidence_script.py",
+                    "benchmark_plan_technical_drawing_script.py",
+                )
+                if normalized_stage == "benchmark_reviewer"
+                else (
+                    "solution_plan_evidence_script.py",
+                    "solution_plan_technical_drawing_script.py",
+                )
+            )
+            if (cwd / name).exists()
+        }
+        or None,
     )
     if cross_contract_errors:
         logger.warning(

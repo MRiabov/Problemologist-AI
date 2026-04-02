@@ -702,11 +702,31 @@ async def validate_planner_artifacts_cross_contract(
     except Exception as e:
         return f"planner handoff pricing-config parse failure: {e}"
 
+    plan_text = await worker_client.read_file_optional("plan.md")
+    drafting_artifacts: dict[str, str] = {}
+    script_names = (
+        (
+            "benchmark_plan_evidence_script.py",
+            "benchmark_plan_technical_drawing_script.py",
+        )
+        if expected_stage == AgentName.BENCHMARK_PLAN_REVIEWER
+        else (
+            "solution_plan_evidence_script.py",
+            "solution_plan_technical_drawing_script.py",
+        )
+    )
+    for artifact_name in script_names:
+        artifact_text = await worker_client.read_file_optional(artifact_name)
+        if artifact_text is not None:
+            drafting_artifacts[artifact_name] = artifact_text
+
     cross_contract_errors = validate_planner_handoff_cross_contract(
         benchmark_definition=benchmark_definition,
         assembly_definition=assembly_definition,
         manufacturing_config=manufacturing_config,
         planner_node_type=expected_stage,
+        plan_text=plan_text,
+        drafting_artifacts=drafting_artifacts or None,
     )
     if cross_contract_errors:
         return "; ".join(cross_contract_errors)

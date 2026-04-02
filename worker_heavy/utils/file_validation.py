@@ -15,6 +15,7 @@ import re
 import subprocess
 import tokenize
 from pathlib import Path
+from collections import Counter
 from typing import Any
 
 import structlog
@@ -79,6 +80,201 @@ TEMPLATE_PLACEHOLDERS = [
 _MISSING_FILE_ERROR_RE = re.compile(
     r"^Error:\s*File\s+'(?P<path>[^']+)'\s+not found\.?$", re.IGNORECASE
 )
+
+
+def _exact_identifier_pattern(identifier: str) -> re.Pattern[str]:
+    escaped = re.escape(identifier.strip())
+    return re.compile(
+        rf"(?<![A-Za-z0-9_]){escaped}(?![A-Za-z0-9_])",
+    )
+
+
+def _count_exact_identifier_mentions(content: str, identifier: str) -> int:
+    if not identifier.strip():
+        return 0
+    return len(_exact_identifier_pattern(identifier).findall(content))
+
+
+def _token_counts_to_list(tokens: Counter[str]) -> list[tuple[str, int]]:
+    return sorted(tokens.items(), key=lambda item: item[0])
+
+
+def _merge_token_count_maps(*maps: Counter[str]) -> Counter[str]:
+    merged: Counter[str] = Counter()
+    for mapping in maps:
+        for token, count in mapping.items():
+            if not token.strip() or count <= 0:
+                continue
+            merged[token] += count
+    return merged
+
+
+def _planner_plan_grounding_tokens_from_benchmark(
+    benchmark_definition: BenchmarkDefinition,
+) -> Counter[str]:
+    tokens: Counter[str] = Counter()
+    for benchmark_part in benchmark_definition.benchmark_parts:
+        if benchmark_part.label.strip():
+            tokens[benchmark_part.label.strip()] += 1
+        cots_id = (benchmark_part.metadata.cots_id or "").strip()
+        if cots_id:
+            tokens[cots_id] += 1
+    return tokens
+
+
+def _planner_plan_grounding_tokens_from_assembly(
+    assembly_definition: AssemblyDefinition,
+) -> Counter[str]:
+    tokens: Counter[str] = Counter()
+    for part in assembly_definition.manufactured_parts:
+        if part.part_name.strip():
+            tokens[part.part_name.strip()] += 1
+    for cots_part in assembly_definition.cots_parts:
+        if cots_part.part_id.strip():
+            tokens[cots_part.part_id.strip()] += 1
+    for item in assembly_definition.final_assembly:
+        if isinstance(item, SubassemblyEstimate):
+            if item.subassembly_id.strip():
+                tokens[item.subassembly_id.strip()] += 1
+            for part in item.parts:
+                if part.name.strip():
+                    tokens[part.name.strip()] += 1
+        elif isinstance(item, PartConfig) and item.name.strip():
+            tokens[item.name.strip()] += 1
+    return tokens
+
+
+def _benchmark_script_expected_tokens(
+    *,
+    benchmark_definition: BenchmarkDefinition,
+    assembly_definition: AssemblyDefinition | None = None,
+) -> Counter[str]:
+    expected = _planner_plan_grounding_tokens_from_benchmark(benchmark_definition)
+    if assembly_definition is None:
+        return expected
+
+    assembly_counts = _planner_plan_grounding_tokens_from_assembly(assembly_definition)
+    return Counter(
+        {
+            token: max(expected.get(token, 0), assembly_counts.get(token, 0))
+            for token in set(expected) | set(assembly_counts)
+        }
+    )
+
+
+def _assembly_script_expected_tokens(
+    assembly_definition: AssemblyDefinition,
+) -> Counter[str]:
+    expected: Counter[str] = Counter()
+    for part in assembly_definition.manufactured_parts:
+        if part.part_name.strip():
+            expected[part.part_name.strip()] += part.quantity
+    for cots_part in assembly_definition.cots_parts:
+        if cots_part.part_id.strip():
+            expected[cots_part.part_id.strip()] += cots_part.quantity
+    return expected
+
+
+def _planner_drafting_script_names_for_node(node_type: AgentName | str | None) -> list[str]:
+    node_value = (
+        node_type.value if isinstance(node_type, AgentName) else str(node_type or "")
+    )
+    if node_value in {
+        AgentName.BENCHMARK_PLANNER.value,
+        AgentName.BENCHMARK_PLAN_REVIEWER.value,
+        AgentName.BENCHMARK_CODER.value,
+        AgentName.BENCHMARK_REVIEWER.value,
+    }:
+        return [
+            "benchmark_plan_evidence_script.py",
+            "benchmark_plan_technical_drawing_script.py",
+        ]
+    if node_value in {
+        AgentName.ENGINEER_PLANNER.value,
+        AgentName.ENGINEER_PLAN_REVIEWER.value,
+        AgentName.ELECTRONICS_PLANNER.value,
+        AgentName.ELECTRONICS_REVIEWER.value,
+    }:
+        return [
+            "solution_plan_evidence_script.py",
+            "solution_plan_technical_drawing_script.py",
+        ]
+    return []
+
+
+def _validate_exact_identifier_mentions(
+    *,
+    artifact_name: str,
+    content: str,
+    required_tokens: Counter[str],
+) -> list[str]:
+    errors: list[str] = []
+    for token, expected_count in _token_counts_to_list(required_tokens):
+        actual_count = _count_exact_identifier_mentions(content, token)
+        if actual_count < expected_count:
+            errors.append(
+                f"{artifact_name}: missing exact identifier mention '{token}' "
+                f"(expected at least {expected_count}, found {actual_count})"
+            )
+    return errors
+
+
+def _validate_exact_identifier_counts(
+    *,
+    artifact_name: str,
+    content: str,
+    expected_tokens: Counter[str],
+) -> list[str]:
+    errors: list[str] = []
+    for token, expected_count in _token_counts_to_list(expected_tokens):
+        actual_count = _count_exact_identifier_mentions(content, token)
+        if actual_count != expected_count:
+            errors.append(
+                f"{artifact_name}: exact identifier count mismatch for '{token}' "
+                f"(expected {expected_count}, found {actual_count})"
+            )
+    return errors
+
+
+def _collect_component_identity_counts(component: Any) -> Counter[str]:
+    counts: Counter[str] = Counter()
+
+    def _visit(node: Any, *, is_root: bool) -> None:
+        children = getattr(node, "children", ()) or ()
+        label = getattr(node, "label", None)
+        metadata = getattr(node, "metadata", None)
+
+        if not (is_root and children):
+            if isinstance(label, str) and label.strip():
+                counts[label.strip()] += 1
+            cots_id = getattr(metadata, "cots_id", None)
+            if isinstance(cots_id, str) and cots_id.strip():
+                counts[cots_id.strip()] += 1
+
+        for child in children:
+            _visit(child, is_root=False)
+
+    _visit(component, is_root=True)
+    return counts
+
+
+def validate_component_inventory_exactness(
+    *,
+    component: Any,
+    expected_tokens: Counter[str],
+    artifact_name: str,
+) -> list[str]:
+    observed_tokens = _collect_component_identity_counts(component)
+    errors: list[str] = []
+    for token in sorted(set(observed_tokens) | set(expected_tokens)):
+        expected_count = expected_tokens.get(token, 0)
+        observed_count = observed_tokens.get(token, 0)
+        if observed_count != expected_count:
+            errors.append(
+                f"{artifact_name}: exact inventory mismatch for '{token}' "
+                f"(expected {expected_count}, found {observed_count})"
+            )
+    return errors
 
 
 def _find_template_placeholders(filename: str, content: str) -> list[str]:
@@ -146,6 +342,8 @@ _BENCHMARK_DRAFTING_NODE_TYPES = {
     AgentName.BENCHMARK_CODER.value,
     AgentName.BENCHMARK_REVIEWER.value,
 }
+
+_SUPPORTED_DRAFTING_PROJECTIONS = {"front", "top", "side"}
 
 
 def _technical_drawing_mode_for_node(
@@ -243,6 +441,12 @@ def _validate_drafting_contract(
 
     known_targets = _collect_assembly_target_names(assembly_definition)
     for view in drafting.views:
+        if view.projection not in _SUPPORTED_DRAFTING_PROJECTIONS:
+            errors.append(
+                "drafting.views: projection "
+                f"'{view.projection}' is not supported by the current "
+                "orthographic drafting contract"
+            )
         if not _target_matches_known_assembly_target(view.target, known_targets):
             errors.append(
                 "drafting.views: target "
@@ -947,9 +1151,88 @@ def validate_planner_handoff_cross_contract(
     assembly_definition: AssemblyDefinition,
     manufacturing_config: ManufacturingConfig,
     planner_node_type: AgentName | str | None = None,
+    plan_text: str | None = None,
+    drafting_artifacts: dict[str, str] | None = None,
 ) -> list[str]:
     """Validate planner targets against benchmark caps and reject stale copies."""
     errors: list[str] = []
+    planner_node_value = (
+        planner_node_type.value
+        if isinstance(planner_node_type, AgentName)
+        else str(planner_node_type or "")
+    )
+    is_benchmark_planner = planner_node_value in {
+        AgentName.BENCHMARK_PLANNER.value,
+        AgentName.BENCHMARK_PLAN_REVIEWER.value,
+        AgentName.BENCHMARK_CODER.value,
+        AgentName.BENCHMARK_REVIEWER.value,
+    }
+    is_engineer_planner = planner_node_value in {
+        AgentName.ENGINEER_PLANNER.value,
+        AgentName.ENGINEER_PLAN_REVIEWER.value,
+        AgentName.ENGINEER_CODER.value,
+        AgentName.ENGINEER_EXECUTION_REVIEWER.value,
+        AgentName.ELECTRONICS_PLANNER.value,
+        AgentName.ELECTRONICS_REVIEWER.value,
+    }
+
+    if plan_text is not None:
+        if is_benchmark_planner:
+            plan_tokens = Counter(
+                {
+                    token: 1
+                    for token in set(
+                        _planner_plan_grounding_tokens_from_benchmark(
+                            benchmark_definition
+                        ).keys()
+                    )
+                    | set(
+                        _planner_plan_grounding_tokens_from_assembly(
+                            assembly_definition
+                        ).keys()
+                    )
+                }
+            )
+        elif is_engineer_planner:
+            plan_tokens = Counter(
+                {
+                    token: 1
+                    for token in _planner_plan_grounding_tokens_from_assembly(
+                        assembly_definition
+                    )
+                }
+            )
+        else:
+            plan_tokens = Counter()
+        errors.extend(
+            _validate_exact_identifier_mentions(
+                artifact_name="plan.md",
+                content=plan_text,
+                required_tokens=plan_tokens,
+            )
+        )
+
+    if drafting_artifacts:
+        if is_benchmark_planner:
+            script_tokens = _benchmark_script_expected_tokens(
+                benchmark_definition=benchmark_definition,
+                assembly_definition=assembly_definition,
+            )
+        elif is_engineer_planner:
+            script_tokens = _assembly_script_expected_tokens(assembly_definition)
+        else:
+            script_tokens = Counter()
+
+        for artifact_name, content in sorted(drafting_artifacts.items()):
+            if not content.strip():
+                continue
+            errors.extend(
+                _validate_exact_identifier_counts(
+                    artifact_name=artifact_name,
+                    content=content,
+                    expected_tokens=script_tokens,
+                )
+            )
 
     planner_cap_pairs = (
         (
@@ -1164,6 +1447,10 @@ def validate_node_output(
     benchmark_definition_model: BenchmarkDefinition | None = None
     assembly_definition_models: dict[str, AssemblyDefinition] = {}
     effective_config = manufacturing_config
+    try:
+        node_enum = node_type if isinstance(node_type, AgentName) else AgentName(node_type)
+    except Exception:
+        node_enum = None
 
     def _missing_file(path: str) -> bool:
         content = files_content_map.get(path)
@@ -1351,11 +1638,20 @@ def validate_node_output(
         if effective_config is None:
             effective_config = load_config()
         for filename, assembly_definition_model in assembly_definition_models.items():
+            drafting_artifacts = {
+                artifact_name: files_content_map[artifact_name]
+                for artifact_name in _planner_drafting_script_names_for_node(
+                    node_enum if node_enum is not None else node_type
+                )
+                if artifact_name in files_content_map
+            }
             cross_contract_errors = validate_planner_handoff_cross_contract(
                 benchmark_definition=benchmark_definition_model,
                 assembly_definition=assembly_definition_model,
                 manufacturing_config=effective_config,
                 planner_node_type=node_type,
+                plan_text=files_content_map.get("plan.md"),
+                drafting_artifacts=drafting_artifacts or None,
             )
             if cross_contract_errors:
                 errors.extend(

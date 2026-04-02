@@ -1331,6 +1331,18 @@ class DraftingView(StrictContractModel):
             raise ValueError("section views must define section_marker")
         if self.projection == "detail" and not (self.detail_target or "").strip():
             raise ValueError("detail views must define detail_target")
+
+        dimension_ids = [dimension.dimension_id for dimension in self.dimensions]
+        if len(set(dimension_ids)) != len(dimension_ids):
+            raise ValueError("drafting view dimensions must not repeat dimension_id")
+
+        callout_ids = [str(callout.callout_id).strip() for callout in self.callouts]
+        if len(callout_ids) != len(set(callout_ids)):
+            raise ValueError("drafting view callouts must not repeat callout_id")
+
+        note_ids = [note.note_id for note in self.notes]
+        if len(set(note_ids)) != len(note_ids):
+            raise ValueError("drafting view notes must not repeat note_id")
         return self
 
 
