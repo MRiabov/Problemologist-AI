@@ -5,8 +5,8 @@ constraints:
   planner_target_max_unit_cost_usd: 200.0
   planner_target_max_weight_g: 500.0
 manufactured_parts:
-- part_name: fixture_base
-  part_id: fixture_base
+- part_name: environment_fixture
+  part_id: environment_fixture
   manufacturing_method: CNC
   material_id: aluminum_6061
   quantity: 1
@@ -26,7 +26,7 @@ drafting:
   title: Fixture base drawing
   views:
   - view_id: front
-    target: fixture_base
+    target: environment_fixture
     projection: front
     scale: 1.0
     datums:
@@ -34,13 +34,13 @@ drafting:
     dimensions:
     - dimension_id: width
       kind: linear
-      target: fixture_base
+      target: environment_fixture
       value: 100.0
       binding: true
     callouts:
     - callout_id: 1
       label: fixture base
-      target: fixture_base
+      target: environment_fixture
     notes:
     - note_id: n1
       text: Fixture base drawing for integration validation.

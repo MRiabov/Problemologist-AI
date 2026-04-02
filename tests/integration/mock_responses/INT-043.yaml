@@ -26,6 +26,30 @@ transcript:
       overwrite: true
       content_file: INT-043/engineer_planner/entry_01/04__benchmark_definition.yaml
     expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: solution_plan_evidence_script.py
+      overwrite: true
+      content_file: INT-043/engineer_planner/entry_01/05__solution_plan_evidence_script.py
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: solution_plan_technical_drawing_script.py
+      overwrite: true
+      content_file: INT-043/engineer_planner/entry_01/06__solution_plan_technical_drawing_script.py
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_plan_evidence_script.py
+      overwrite: true
+      content_file: INT-043/engineer_planner/entry_01/07__benchmark_plan_evidence_script.py
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_plan_technical_drawing_script.py
+      overwrite: true
+      content_file: INT-043/engineer_planner/entry_01/08__benchmark_plan_technical_drawing_script.py
+    expected_observation: success
   - tool_name: submit_plan
     expected_observation: submitted
   - finished: true

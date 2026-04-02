@@ -799,6 +799,28 @@ def test_run_evals_codex_readable_logs_mirror_imported_transcript(
 
 
 @pytest.mark.integration_p0
+def test_run_evals_resolve_eval_log_key_preserves_drawing_mode_suffix():
+    from evals.logic.runner import _resolve_eval_log_key
+
+    assert _resolve_eval_log_key(task_id="ec-001") == "ec-001"
+    assert _resolve_eval_log_key(task_id="ec-001-drawing-full") == (
+        "ec-001-drawing-full"
+    )
+
+
+@pytest.mark.integration_p0
+def test_eval_dataset_item_requires_mode_for_split_rows():
+    with pytest.raises(ValueError, match="technical_drawing_mode"):
+        EvalDatasetItem.model_validate(
+            {
+                "id": "ec-001-drawing-full",
+                "task": "Split row without an explicit drawing mode.",
+                "complexity_level": 1,
+            }
+        )
+
+
+@pytest.mark.integration_p0
 def test_run_evals_level_filter_parser_accepts_repeated_and_bracketed_values():
     from evals.logic.runner import _parse_level_filters
 

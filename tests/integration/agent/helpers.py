@@ -121,8 +121,8 @@ def _benchmark_assembly_definition_content(
         ),
         manufactured_parts=[
             {
-                "part_name": "fixture_base",
-                "part_id": "fixture_base",
+                "part_name": "environment_fixture",
+                "part_id": "environment_fixture",
                 "manufacturing_method": "3DP",
                 "material_id": "aluminum_6061",
                 "quantity": 1,
@@ -140,14 +140,14 @@ def _benchmark_assembly_definition_content(
             "views": [
                 {
                     "view_id": "view-1",
-                    "target": "fixture_base",
+                    "target": "environment_fixture",
                     "projection": "front",
                     "datums": ["A"],
                     "dimensions": [
                         {
                             "dimension_id": "dim-1",
                             "kind": "linear",
-                            "target": "fixture_base",
+                            "target": "environment_fixture",
                             "value": 10.0,
                             "binding": True,
                         }
@@ -155,8 +155,8 @@ def _benchmark_assembly_definition_content(
                     "callouts": [
                         {
                             "callout_id": "callout-1",
-                            "label": "fixture_base",
-                            "target": "fixture_base",
+                            "label": "environment_fixture",
+                            "target": "environment_fixture",
                         }
                     ],
                 }
