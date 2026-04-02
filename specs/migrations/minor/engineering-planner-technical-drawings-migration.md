@@ -206,45 +206,45 @@ completed or explicitly waived with a written rationale.
 
 ### Prompt policy and handoff schema
 
-- [ ] Add the planner drafting appendix to `config/prompts.yaml`.
-- [ ] Wire the mode gate into `PromptManager` so the appendix is injected or
+- [x] Add the planner drafting appendix to `config/prompts.yaml`.
+- [x] Wire the mode gate into `PromptManager` so the appendix is injected or
   omitted from the final prompt.
-- [ ] Add the strict `drafting` section to `assembly_definition.yaml` and
+- [x] Add the strict `drafting` section to `assembly_definition.yaml` and
   `benchmark_assembly_definition.yaml`.
-- [ ] Ensure the drafting section cannot introduce unsupported parts, joints,
+- [x] Ensure the drafting section cannot introduce unsupported parts, joints,
   motions, or geometry claims.
-- [ ] Add the planner-authored evidence and drawing scripts for both planner
+- [x] Add the planner-authored evidence and drawing scripts for both planner
   graphs with the agreed role prefixes.
 
 ### 2D preview plumbing
 
-- [ ] Add `preview_drawing()` to the runtime tool surface.
-- [ ] Decide whether the implementation is a dedicated renderer branch or a
+- [x] Add `preview_drawing()` to the runtime tool surface.
+- [x] Decide whether the implementation is a dedicated renderer branch or a
   thin conversion bridge over build123d export output.
-- [ ] Persist raster inspection images and vector sidecars for drawing
+- [x] Persist raster inspection images and vector sidecars for drawing
   previews.
-- [ ] Keep the current 3D preview path unchanged.
-- [ ] Keep the preview contract compatible with the benchmark and engineering
+- [x] Keep the current 3D preview path unchanged.
+- [x] Keep the preview contract compatible with the benchmark and engineering
   planner script pairs.
 
 ### Validation and review
 
-- [ ] Update the planner and reviewer gates so drafting is required only when
+- [x] Update the planner and reviewer gates so drafting is required only when
   the mode requires it.
-- [ ] Keep `inspect_media(...)` as the only visual-evidence path.
-- [ ] Reject drafting packages that contradict the plan or omit binding
+- [x] Keep `inspect_media(...)` as the only visual-evidence path.
+- [x] Reject drafting packages that contradict the plan or omit binding
   geometry.
-- [ ] Keep the Engineering Coder, Benchmark Coder, and execution reviewers
+- [x] Keep the Engineering Coder, Benchmark Coder, and execution reviewers
   read-only for the drafting scripts.
 
 ### Integration coverage
 
-- [ ] Add a narrow integration slice for the mode-off path.
-- [ ] Add a narrow integration slice for the mode-on path.
-- [ ] Add an inspection assertion for the persisted drawing bundle.
+- [x] Add a narrow integration slice for the mode-off path.
+- [x] Add a narrow integration slice for the mode-on path.
+- [x] Add an inspection assertion for the persisted drawing bundle.
 - [ ] Add an end-to-end assertion that the reviewer can judge the drawing
   contract from real render artifacts.
-- [ ] Add benchmark drafting parity coverage.
+- [x] Add benchmark drafting parity coverage.
 
 ## File-Level Change Set
 

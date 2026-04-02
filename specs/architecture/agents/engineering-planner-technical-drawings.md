@@ -332,22 +332,87 @@ Validation should be strict and fail closed.
 
 Minimum validation checks:
 
-1. The drafting section is schema-valid.
-2. Every view targets a real assembly element or interface.
-3. Every binding dimension references a valid target.
-4. Every callout maps back to the plan or assembly contract.
-5. The drafting layer does not add unsupported parts, joints, or motions.
-6. The drafting layer is absent when the mode is `off`.
-7. The drafting layer is present when the mode requires it.
-8. The planner-authored evidence and technical-drawing scripts exist when the drafting mode requires them.
+01. The drafting section is schema-valid.
+02. Every view targets a real assembly element or interface.
+03. Every binding dimension references a valid target.
+04. Every callout maps back to the plan or assembly contract.
+05. The drafting layer does not add unsupported parts, joints, or motions.
+06. The drafting layer is absent when the mode is `off`.
+07. The drafting layer is present when the mode requires it.
+08. The planner-authored evidence and technical-drawing scripts exist when the drafting mode requires them.
+09. Every projected outline or section curve is geometrically valid: no self-intersections, no zero-length segments, and no zero-area closed loops.
+10. Every binding dimension is measurable against authored geometry: dimension endpoints, faces, edges, or datums must resolve to real drawing targets, and numeric values must be finite and positive where the dimension type requires it.
+11. Every section or detail view must reference a real cut, parent view, or target region, and the referenced view must actually reveal geometry that is hidden or ambiguous in the base view.
+12. Every stated clearance, fit, or envelope note must be consistent with the geometry it describes; the drawing may be approximate, but it may not claim a gap or interface that the projected geometry cannot support.
+13. Drafting geometry must not contradict the source assembly bounds, part counts, motion limits, or datum references already declared in `plan.md` and `assembly_definition.yaml`.
+14. Units, scale, and handedness are explicit and consistent across all views, dimensions, and drafting metadata.
+15. The drawing is generated from a recorded source snapshot or revision hash so the 2D package can be tied back to the exact 3D model it projected.
+16. If the handoff declares static randomization, runtime jitter, or motion envelopes, the source geometry is validated at the declared extremes rather than only at nominal pose.
+17. If the handoff depends on assembly, insertion, or adjustment access, the drawing validates the necessary access clearance or marks that access as intentionally out of scope.
+18. Callout IDs, datum labels, and feature references are unique and stable across the package.
 
-Optional but recommended checks:
+Warning-only checks:
 
 - view count sanity,
-- dimension completeness for critical interfaces,
-- section-view presence for hidden interfaces,
+- dimension completeness for non-critical interfaces,
 - drawing-to-plan keyword consistency,
+- datum-reuse consistency so the same datum name does not drift between views,
+- part and assembly bounding-box sanity,
+- non-zero volume for solid parts that are meant to be solids,
+- inter-part clearance sampling where the plan depends on a gap,
+- projection consistency across standard views,
 - vector-export generation sanity.
+
+Warnings do not block handoff, but the reviewer should see them in the generated validation report.
+
+## Geometric validity scope
+
+The planner drawing gate is intentionally lighter than the benchmark CAD gate.
+
+It should verify that the sketch package is truthful and internally consistent, not that it is simulation-ready or manufacturable end-to-end. In practice, that means:
+
+- no invalid 2D sketch topology,
+- no contradictory dimension or datum claims,
+- no section/detail callouts to missing geometry,
+- no hidden interface being documented only by a perspective view,
+- no claimed clearances or fits that are impossible to measure from the authored view set.
+
+## Backing 3D Geometry
+
+Because the drawings are projections of a 3D source model, the validator must check the 3D backing geometry as well as the 2D views.
+
+Minimum 3D checks:
+
+1. Every view target resolves to a real 3D part, subassembly, face, edge, datum, or interface in the authored model.
+2. Every solid target is a valid 3D body or compound: finite bounds, non-zero extent, and no obvious self-intersections, non-manifold shells, or open-solid artifacts unless the object is intentionally a reference surface.
+3. Unintended inter-part overlap is rejected. Contact is only acceptable when the handoff explicitly describes a mate, joint, fused body, or other intentional interface.
+4. Section and detail views must be anchored to real 3D cut planes or feature regions and must produce non-empty geometry in the intended area of the source model.
+5. Binding dimensions that reference a feature in the drawing must map back to a measurable 3D relationship in the source model, such as face-to-face distance, hole-center spacing, axis alignment, or feature extent.
+6. Claimed clearances, fits, envelopes, and motion envelopes are validated against the 3D source geometry, not only against the projected 2D outline.
+7. The drawing must be generated from the same 3D source snapshot that the planner claims in `plan.md` and `assembly_definition.yaml`; a cleaner surrogate model with different topology is not acceptable.
+
+## Constraint Parity
+
+The drawing gate should mirror the spatial rules that the downstream coder in the same graph will be required to satisfy.
+
+For the benchmark graph, that means validating the same benchmark-owned keep-out contract that `benchmark_coder` later inherits.
+For the engineering graph, that means validating the benchmark keep-outs plus any planner-owned build-zone, interface, or motion-envelope constraints that the engineer coder must preserve.
+
+Minimum parity checks:
+
+1. The 3D source geometry must not intersect any declared forbid zone or keep-out volume, except where the plan explicitly says the geometry is an intentional mate or capture surface.
+2. The 3D source geometry must remain inside the applicable build zone or workspace envelope for the handoff.
+3. Any moving part, swept feature, or motion envelope must clear all forbid zones across its declared operating range.
+4. Any interface that is meant to be preserved by the downstream coder must be identifiable in the drawing and must correspond to a stable 3D feature, datum, edge, face, or axis.
+5. Goal-zone or target-zone overlap is only acceptable when the plan explicitly states that the geometry is intended to capture, occupy, or reference that zone.
+6. Benchmark-owned read-only fixtures and objective markers may be referenced, but the drafting layer may not redefine them or move them into a different spatial contract.
+
+Recommended parity checks:
+
+- minimum clearance to forbid zones,
+- swept-envelope sampling for moving geometry,
+- proximity sampling for interfaces that sit near keep-outs,
+- explicit validation of preserved datums against the 3D source snapshot.
 
 ## Rollout strategy
 
@@ -376,10 +441,16 @@ If the drafting layer does not improve solve rate or review quality, keep the pr
 
 Possible follow-ons are intentionally deferred:
 
+- automatic feature-to-view coverage for critical interfaces,
+- section-plane hit confirmation for section views,
+- projection clipping and annotation crowding checks,
+- explicit tagging for reference-only geometry so surfaces, axes, and centerlines are not mistaken for solids,
+- tool-access clearance volumes for drawings that imply fasteners or serviceability,
+- duplicate-dimension contradiction detection on the same feature,
 - full GD&T,
 - deeper cross-checking between callouts and YAML notes,
 - richer section/detail automation,
-- future benchmark-specific drafting semantics beyond the mirrored artifact split.
+- future benchmark-specific drafting semantics beyond the mirrored artifact split,
 - limited GD&T for hole position and fit control,
 - automatic dimension extraction from model features,
 - detail-view templates for common mechanisms,

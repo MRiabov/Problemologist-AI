@@ -170,9 +170,9 @@ the same bundle identity.
 - [x] Define the bundle identity fields that must exist for every published
   render artifact: `bundle_id`, `created_at`, `revision`, `scene_hash`, and
   bundle path.
-- [ ] Remove the root-level `renders/render_manifest.json` path from the
-  active contract and route readers directly to bundle-local manifests or the
-  append-only index.
+- [x] Remove the root-level `renders/render_manifest.json` path from the
+  active reader contract and route readers directly to bundle-local manifests
+  or the append-only index.
 - [x] Make the bundle-local manifest the authoritative source for one published
   bundle.
 - [ ] Keep the manifest compact enough that a model can inspect it without
@@ -197,7 +197,7 @@ the same bundle identity.
 - [x] Write each preview bundle into its own immutable bundle directory.
 - [x] Write each MuJoCo simulation-video bundle into its own immutable bundle
   directory.
-- [ ] Emit the bundle-local manifest only after the bundle contents are fully
+- [x] Emit the bundle-local manifest only after the bundle contents are fully
   materialized.
 - [x] Append one row per published bundle to `renders/render_index.jsonl`.
 - [x] Include bundle-local paths to the preview scene snapshot and any
@@ -209,7 +209,7 @@ the same bundle identity.
   snapshot used to render the image.
 - [x] Persist `frames.jsonl` for simulation bundles that contain video evidence
   or frame-level metadata.
-- [ ] Persist `objects.parquet` from the `PhysicsBackend` object-pose export
+- [x] Persist `objects.parquet` from the `PhysicsBackend` object-pose export
   path when a bundle needs dense object pose tables for query-time inspection.
 - [x] Keep the sidecars bundle-local so history lookup does not depend on
   mutable root-level files.
@@ -238,7 +238,7 @@ the same bundle identity.
   legacy root-level manifest path.
 - [x] Keep current-revision discovery working by targeting the bundle-local
   manifest or the append-only index directly.
-- [ ] Prevent older bundles from being hidden or overwritten when a newer
+- [x] Prevent older bundles from being hidden or overwritten when a newer
   render is published.
 - [x] Make `inspect_media(...)` resolve the correct bundle-local manifest when
   the inspected file belongs to a published bundle.
