@@ -23,6 +23,7 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 - [Agent handovers and contracts](./architecture/agents/handover-contracts.md): file-level handoff contracts and refusal/review routing.
 - [Agent harness](./architecture/agents/agent-harness.md): DSPy/LangGraph runtime, debug Codex backend, workspace/prompt/runner contract, and skill-loading policy.
 - [Prompt management](./architecture/agents/prompt-management.md): unified prompt-source model, backend appendices, shared template context, and the skills-versus-prompts boundary.
+- [Agent skills](./architecture/agents/agent-skill.md): canonical skill-tree source, authoring contract, workspace materialization, and skill-improvement loop.
 - [Agent artifacts and filesystem](./architecture/agents/artifacts-and-filesystem.md): artifact surfaces, file ownership, and path-permission policy.
 - [Agent tools](./architecture/agents/tools.md): ReAct-callable tool surface, Python utility functions, checked-in shell-script bridges for custom command-like operations, and reviewer/planner submission gates. Custom command-like behavior is defined by shell scripts, not newly invented ReAct endpoints.
 - [Definitions of success and failure](./architecture/agents/definitions-of-success-and-failure.md): objective AABB rules, runtime randomization, benchmark-side motion exception, and failure taxonomy.
