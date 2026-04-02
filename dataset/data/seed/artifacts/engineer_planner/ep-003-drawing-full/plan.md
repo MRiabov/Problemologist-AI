@@ -4,6 +4,8 @@
 
 Use a passive offset rail path that routes the projectile ball around the seeded central blocker and into the far goal zone. The mechanism widens the capture area near spawn, steers the ball around the blocker on the positive-Y side, and settles it into a downstream goal tray.
 
+The approved final assembly is `routed_transfer`.
+
 ## 2. Parts List
 
 | Part | Dimensions (mm) | Material | Purpose |

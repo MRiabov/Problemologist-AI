@@ -157,3 +157,24 @@ async def seed_benchmark_review_preview_bundle(
             broadcast_file_update(str(session_id), root_manifest_path, manifest_json),
             timeout=2.0,
         )
+
+    benchmark_bundle_manifest_path = "renders/benchmark_renders/render_manifest.json"
+    if benchmark_bundle_manifest_path not in {
+        str(bundle_manifest_path),
+        root_manifest_path,
+    }:
+        await asyncio.wait_for(
+            worker_client.write_file(
+                benchmark_bundle_manifest_path,
+                manifest_json,
+                overwrite=True,
+                bypass_agent_permissions=True,
+            ),
+            timeout=5.0,
+        )
+        await asyncio.wait_for(
+            broadcast_file_update(
+                str(session_id), benchmark_bundle_manifest_path, manifest_json
+            ),
+            timeout=2.0,
+        )

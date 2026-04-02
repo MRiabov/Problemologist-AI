@@ -899,7 +899,13 @@ segmentation_path = root / {segmentation_name!r}
 Image.new("RGB", (1, 1), (255, 0, 0)).save(image_path)
 Image.new("RGB", (1, 1), (0, 255, 0)).save(depth_path)
 Image.new("RGB", (1, 1), (0, 0, 255)).save(segmentation_path)
-(root / "render_manifest.json").write_text({manifest.model_dump_json(indent=2)!r}, encoding="utf-8")
+manifest_json = {manifest.model_dump_json(indent=2)!r}
+(root / "render_manifest.json").write_text(manifest_json, encoding="utf-8")
+for compat_dir in (root / "engineer_renders", root / "benchmark_renders"):
+    compat_dir.mkdir(parents=True, exist_ok=True)
+    (compat_dir / "render_manifest.json").write_text(
+        manifest_json, encoding="utf-8"
+    )
 PY
 """
     resp = await client.post(

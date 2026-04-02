@@ -5,7 +5,7 @@ units:
   mass: "g"
   currency: "USD"
 constraints:
-  benchmark_max_unit_cost_usd: 110.0
+  benchmark_max_unit_cost_usd: 120.0
   benchmark_max_weight_g: 2200.0
   planner_target_max_unit_cost_usd: 83.0
   planner_target_max_weight_g: 1700.0
@@ -92,6 +92,79 @@ final_assembly:
 - name: landing_pocket
   config:
     dofs: []
+drafting:
+  sheet_id: sheet_1
+  title: Passive gap bridge technical drawing
+  units: mm
+  projection_standard: orthographic
+  views:
+  - view_id: front_bridge_base
+    target: base_frame
+    projection: front
+    scale: 1.0
+    datums: [A, B]
+    dimensions:
+    - dimension_id: d_front_base_frame_length
+      kind: linear
+      target: base_frame
+      value: 560.0
+      tolerance: nominal
+      binding: true
+      note: Base frame spans the support footprint.
+      plan_ref: plan.md#parts-list
+    - dimension_id: d_front_bridge_deck_length
+      kind: linear
+      target: bridge_deck
+      value: 300.0
+      tolerance: nominal
+      binding: true
+      note: Deck spans the gap corridor.
+      plan_ref: plan.md#parts-list
+  - view_id: top_bridge_run
+    target: bridge_deck
+    projection: top
+    scale: 1.0
+    datums: [A, C]
+    dimensions:
+    - dimension_id: d_top_left_fence_length
+      kind: linear
+      target: left_fence
+      value: 300.0
+      tolerance: nominal
+      binding: true
+      note: Left fence tracks the bridge run.
+      plan_ref: plan.md#parts-list
+    - dimension_id: d_top_right_fence_length
+      kind: linear
+      target: right_fence
+      value: 300.0
+      tolerance: nominal
+      binding: true
+      note: Right fence tracks the bridge run.
+      plan_ref: plan.md#parts-list
+  - view_id: side_goal_capture
+    target: landing_pocket
+    projection: side
+    scale: 1.0
+    datums: [B, C]
+    dimensions:
+    - dimension_id: d_side_landing_pocket_height
+      kind: linear
+      target: landing_pocket
+      value: 30.0
+      tolerance: nominal
+      binding: true
+      note: Pocket height damps the transfer cube.
+      plan_ref: plan.md#parts-list
+    - dimension_id: d_side_base_frame_height
+      kind: linear
+      target: base_frame
+      value: 12.0
+      tolerance: nominal
+      binding: true
+      note: Base frame thickness preserves clearance from the floor gap.
+      plan_ref: plan.md#assembly-strategy
+  notes: []
 totals:
   estimated_unit_cost_usd: 57.5
   estimated_weight_g: 1320.0

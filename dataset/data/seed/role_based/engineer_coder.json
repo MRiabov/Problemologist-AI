@@ -35,37 +35,38 @@
   },
   {
     "id": "ec-002",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the gap-bridge solution in `solution_script.py`. Respect the seeded build-zone and gap constraints, keep the reviewed planner files coherent, and only diverge from the plan when the workspace evidence justifies it.",
+    "task": "Use the seeded, planner-reviewed engineering handoff package in the workspace to implement the passive gap-bridge solution in `solution_script.py`. Respect the read-only benchmark fixtures (`left_start_deck`, `right_goal_deck`, `bridge_reference_table`, `gap_floor_guard`), keep the reviewed planner files coherent, and only diverge from the plan when the workspace evidence justifies it.",
     "complexity_level": 0,
+    "technical_drawing_mode": "off",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-002-gap-bridge",
-    "expected_criteria": "Engineer coder begins with planner-reviewed artifacts, implements the bridge package in `solution_script.py`, and updates execution artifacts without breaking the planner contract."
+    "expected_criteria": "Engineer coder begins with planner-reviewed artifacts, implements the passive bridge package in `solution_script.py`, and updates execution artifacts without breaking the planner contract."
   },
   {
     "id": "ec-002-drawing-off",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the gap-bridge solution in `solution_script.py`. Respect the seeded build-zone and gap constraints, keep the reviewed planner files coherent, and only diverge from the plan when the workspace evidence justifies it. Split variant for `ec-002`. Technical drawing mode: off.",
+    "task": "Use the seeded, planner-reviewed engineering handoff package in the workspace to implement the passive gap-bridge solution in `solution_script.py`. Respect the read-only benchmark fixtures (`left_start_deck`, `right_goal_deck`, `bridge_reference_table`, `gap_floor_guard`), keep the reviewed planner files coherent, and only diverge from the plan when the workspace evidence justifies it. Split variant for `ec-002`. Technical drawing mode: off.",
     "complexity_level": 0,
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-002-drawing-off",
     "technical_drawing_mode": "off",
     "split_source_task_id": "ec-002",
-    "expected_criteria": "Engineer coder begins with planner-reviewed artifacts, implements the bridge package in `solution_script.py`, and updates execution artifacts without breaking the planner contract. Split variant for `ec-002`. Technical drawing mode: off."
+    "expected_criteria": "Engineer coder begins with planner-reviewed artifacts, implements the passive bridge package in `solution_script.py`, and updates execution artifacts without breaking the planner contract. Split variant for `ec-002`. Technical drawing mode: off."
   },
   {
     "id": "ec-002-drawing-minimal",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the gap-bridge solution in `solution_script.py`. Respect the seeded build-zone and gap constraints, keep the reviewed planner files coherent, and only diverge from the plan when the workspace evidence justifies it. Split variant for `ec-002`. Technical drawing mode: minimal.",
+    "task": "Use the seeded, planner-reviewed engineering handoff package in the workspace to implement the passive gap-bridge solution in `solution_script.py`. Respect the read-only benchmark fixtures (`left_start_deck`, `right_goal_deck`, `bridge_reference_table`, `gap_floor_guard`), keep the reviewed planner files coherent, and only diverge from the plan when the workspace evidence justifies it. Split variant for `ec-002`. Technical drawing mode: minimal.",
     "complexity_level": 0,
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-002-drawing-minimal",
     "technical_drawing_mode": "minimal",
     "split_source_task_id": "ec-002",
-    "expected_criteria": "Engineer coder begins with planner-reviewed artifacts, implements the bridge package in `solution_script.py`, and updates execution artifacts without breaking the planner contract. Split variant for `ec-002`. Technical drawing mode: minimal."
+    "expected_criteria": "Engineer coder begins with planner-reviewed artifacts, implements the passive bridge package in `solution_script.py`, and updates execution artifacts without breaking the planner contract. Split variant for `ec-002`. Technical drawing mode: minimal."
   },
   {
     "id": "ec-002-drawing-full",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the gap-bridge solution in `solution_script.py`. Respect the seeded build-zone and gap constraints, keep the reviewed planner files coherent, and only diverge from the plan when the workspace evidence justifies it. Split variant for `ec-002`. Technical drawing mode: full.",
+    "task": "Use the seeded, planner-reviewed engineering handoff package in the workspace to implement the passive gap-bridge solution in `solution_script.py`. Respect the read-only benchmark fixtures (`left_start_deck`, `right_goal_deck`, `bridge_reference_table`, `gap_floor_guard`), keep the reviewed planner files coherent, and only diverge from the plan when the workspace evidence justifies it. Split variant for `ec-002`. Technical drawing mode: full.",
     "complexity_level": 0,
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-002-drawing-full",
     "technical_drawing_mode": "full",
     "split_source_task_id": "ec-002",
-    "expected_criteria": "Engineer coder begins with planner-reviewed artifacts, implements the bridge package in `solution_script.py`, and updates execution artifacts without breaking the planner contract. Split variant for `ec-002`. Technical drawing mode: full."
+    "expected_criteria": "Engineer coder begins with planner-reviewed artifacts, implements the passive bridge package in `solution_script.py`, and updates execution artifacts without breaking the planner contract. Split variant for `ec-002`. Technical drawing mode: full."
   },
   {
     "id": "ec-003",

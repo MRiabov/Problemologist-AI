@@ -1336,7 +1336,7 @@ from shared.models.schemas import PartMetadata
 from shared.workers.workbench_models import ManufacturingMethod
 def build():
     p = Box(1, 1, 1).translate((15, 15, 15))
-    p.label = "ball"
+    p.label = "environment_fixture"
     p.metadata = PartMetadata(
         manufacturing_method=ManufacturingMethod.CNC, material_id="aluminum-6061"
     )

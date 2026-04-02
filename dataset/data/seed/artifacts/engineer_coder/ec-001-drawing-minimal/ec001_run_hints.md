@@ -32,7 +32,7 @@ Quick reference from the most useful prior `ec-001` runs.
 
   - Geometry was revised again, but the blocker looked like a validation/render path issue rather than a brand-new layout idea.
   - Useful note: do not churn geometry if the submission helper is failing for environment reasons.
-  - The earlier failed session never produced `.manifests/engineering_execution_review_manifest.json`; make sure `bash scripts/submit_for_review.sh` runs all the way through the handoff step.
+  - The earlier failed session never produced `.manifests/engineering_execution_handoff_manifest.json`; make sure `bash scripts/submit_for_review.sh` runs all the way through the handoff step.
 
 ## Contract Reminders
 
@@ -41,4 +41,4 @@ Quick reference from the most useful prior `ec-001` runs.
 - Preserve the left-side motor/wiring corridor and keep the goal tray overlapping the goal zone start at `x=430 mm`.
 - For catalog-backed motor geometry, use `ServoMotor.from_catalog_id("ServoMotor_DS3218")` so the seed path matches the class-aware factory contract.
 - Prefer the simplest static compound that satisfies the planner handoff before adding extra mechanism details.
-- Do not stop at local validation/simulation; the run is incomplete until `bash scripts/submit_for_review.sh` writes `.manifests/engineering_execution_review_manifest.json`.
+- Do not stop at local validation/simulation; the run is incomplete until `bash scripts/submit_for_review.sh` writes `.manifests/engineering_execution_handoff_manifest.json`.

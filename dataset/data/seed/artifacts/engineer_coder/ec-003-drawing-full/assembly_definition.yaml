@@ -99,6 +99,87 @@ final_assembly:
   config:
     dofs:
     - rotate_z
+drafting:
+  sheet_id: sheet_1
+  title: Timed gate metering technical drawing
+  units: mm
+  projection_standard: orthographic
+  views:
+  - view_id: front_gate_overview
+    target: base_plate
+    projection: front
+    scale: 1.0
+    datums: [A, B]
+    dimensions:
+    - dimension_id: d_front_base_plate_length
+      kind: linear
+      target: base_plate
+      value: 520.0
+      tolerance: nominal
+      binding: true
+      note: Base plate spans the support footprint.
+      plan_ref: plan.md#parts-list
+    - dimension_id: d_front_metering_wheel_guard_length
+      kind: linear
+      target: metering_wheel_guard
+      value: 140.0
+      tolerance: nominal
+      binding: true
+      note: Guard length keeps the metering wheel outside the keep-out.
+      plan_ref: plan.md#assembly-strategy
+  - view_id: top_transfer_path
+    target: guide_rail
+    projection: top
+    scale: 1.0
+    datums: [A, C]
+    dimensions:
+    - dimension_id: d_top_settling_chute_length
+      kind: linear
+      target: settling_chute
+      value: 220.0
+      tolerance: nominal
+      binding: true
+      note: Settling chute length defines the inlet path.
+      plan_ref: plan.md#parts-list
+    - dimension_id: d_top_guide_rail_length
+      kind: linear
+      target: guide_rail
+      value: 150.0
+      tolerance: nominal
+      binding: true
+      note: Guide rail length holds the release line.
+      plan_ref: plan.md#assembly-strategy
+    - dimension_id: d_top_post_gate_channel_length
+      kind: linear
+      target: post_gate_channel
+      value: 220.0
+      tolerance: nominal
+      binding: true
+      note: Post gate channel length carries the ball into the goal zone.
+      plan_ref: plan.md#assembly-strategy
+  - view_id: side_goal_capture
+    target: goal_cup
+    projection: side
+    scale: 1.0
+    datums: [B, C]
+    dimensions:
+    - dimension_id: d_side_goal_cup_height
+      kind: linear
+      target: goal_cup
+      value: 35.0
+      tolerance: nominal
+      binding: true
+      note: Goal cup height damps rebound after the gate release.
+      plan_ref: plan.md#parts-list
+    - dimension_id: d_side_base_plate_thickness
+      kind: linear
+      target: base_plate
+      value: 10.0
+      tolerance: nominal
+      binding: true
+      note: Base plate thickness preserves clearance from the floor.
+      plan_ref: plan.md#assembly-strategy
+  notes: []
 totals:
   estimated_unit_cost_usd: 69.0
   estimated_weight_g: 980.0

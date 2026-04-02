@@ -12,11 +12,26 @@ objectives:
   fluid_objectives: []
   stress_objectives: []
 benchmark_parts:
-  - part_id: environment_fixture
-    label: environment_fixture
+  - part_id: entry_ramp
+    label: entry_ramp
     metadata:
       fixed: true
       material_id: aluminum_6061
+  - part_id: gate_housing
+    label: gate_housing
+    metadata:
+      fixed: true
+      material_id: aluminum_6061
+  - part_id: gate_pivot_arm
+    label: gate_pivot_arm
+    metadata:
+      fixed: false
+      material_id: steel_cold_rolled
+  - part_id: exit_tray
+    label: exit_tray
+    metadata:
+      fixed: true
+      material_id: hdpe
 
 physics:
   backend: GENESIS
@@ -35,6 +50,8 @@ moved_object:
   start_position: [-220.0, 0.0, 120.0]
   runtime_jitter: [6.0, 6.0, 4.0]
 constraints:
+  estimated_solution_cost_usd: 70.0
+  estimated_solution_weight_g: 1133.333333333333
   max_unit_cost: 105.0
   max_weight_g: 1700.0
 randomization:

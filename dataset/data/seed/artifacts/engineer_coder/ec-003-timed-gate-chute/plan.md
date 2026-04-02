@@ -2,7 +2,14 @@
 
 ## 1. Solution Overview
 
-Use a compact single-motor metering wheel ahead of the rotating gate so the seeded ball reaches the gate only when the opening is available, then capture it with a short post-gate channel into the goal. The mechanism stays inside the seeded keep-out and reserves a clean left-side wiring corridor for downstream electronics work.
+Use a compact single `ServoMotor_DS3218`-driven metering wheel ahead of the benchmark `gate_housing` so the seeded `projectile_ball` is released only when the benchmark-owned `gate_pivot_arm` is in its open window. The benchmark fixtures - `entry_ramp`, `gate_housing`, `gate_pivot_arm`, and `exit_tray` - are read-only context, and the engineer-owned solution stays outside the `gate_swing_keepout` while reserving a clean left-side wiring corridor for the motor and return wire.
+
+- `entry_ramp` conditions the ball before the gate timing window.
+- `gate_housing` and `gate_pivot_arm` define the only benchmark motion, a single `rotate_z` axis.
+- `exit_tray` receives the released ball after the gate opens.
+- `goal_zone` must be reached without touching `gate_swing_keepout`.
+- The engineer-owned stage is named `timed_metering_stage`.
+- The only COTS motor in the plan is `ServoMotor_DS3218`.
 
 ## 2. Parts List
 
@@ -14,17 +21,18 @@ Use a compact single-motor metering wheel ahead of the rotating gate so the seed
 | guide_rail | 150 x 18 x 24 | hdpe | Keeps the released ball on line toward the gate opening |
 | post_gate_channel | 220 x 70 x 30 | hdpe | Captures the ball after the gate and steers it into the goal zone |
 | goal_cup | 95 x 95 x 35 | hdpe | Final receiver that contains the ball once it exits the gate corridor |
-| drive_motor | catalog gearmotor | cots | Single motorized DOF for the metering wheel |
+| drive_motor | catalog `ServoMotor_DS3218` motor | cots | Single motorized DOF for the metering wheel |
 
 **Estimated Total Weight**: 980 g
-**Estimated Total Cost**: $67.50
+**Estimated Total Cost**: $69.00
 
 ## 3. Assembly Strategy
 
-1. Place `base_plate` entirely within the seeded build zone and outside the gate swing keep-out volume.
+1. Place `base_plate` entirely within `build_zone` and outside the `gate_swing_keepout` volume.
 2. Mount `settling_chute` on the spawn side so the ball enters the metering wheel pocket with repeatable speed and orientation.
-3. Mount `metering_wheel_guard` and `drive_motor` left of the gate keep-out, keeping the wheel tangent to the release line while reserving the seeded wire corridor.
-4. Mount `guide_rail` and `post_gate_channel` immediately downstream of the release point, then terminate the path in `goal_cup` whose interior overlaps the seeded goal zone.
+3. Mount `metering_wheel_guard` and `drive_motor` on the left side of the gate and keep the wiring corridor outside the keep-out.
+4. Mount `guide_rail` and `post_gate_channel` immediately downstream of the release point, then terminate the path in `goal_cup` whose interior overlaps `goal_zone`.
+5. Preserve the benchmark-owned `entry_ramp`, `gate_housing`, `gate_pivot_arm`, and `exit_tray` geometry as read-only context while checking the release path against the gate opening.
 
 ## 4. Cost & Weight Budget
 
@@ -36,19 +44,19 @@ Use a compact single-motor metering wheel ahead of the rotating gate so the seed
 | guide_rail | 6.5 | 6.2 | 5.00 |
 | post_gate_channel | 15.4 | 14.8 | 8.50 |
 | goal_cup | 12.0 | 11.5 | 7.00 |
-| drive_motor | n/a | 18.0 | 16.50 |
-| **TOTAL** | 127.0 | 256.9 | **67.50** |
+| drive_motor | n/a | 18.0 | 18.00 |
+| **TOTAL** | 127.0 | 256.9 | **69.00** |
 
-**Budget Margin**: 15% remaining versus the planner target.
+**Budget Margin**: 13% remaining versus the planner target.
 
 ## 5. Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 | -- | -- | -- | -- |
-| Metering wheel or wiring enters the gate swing keep-out | Low | High | Reference all powered geometry and wire routing from the seeded keep-out AABB and hold the motor on the left side only |
+| Metering wheel or wiring enters the gate swing keep-out | Low | High | Reference the seeded `gate_swing_keepout` AABB and keep the motor on the left side only |
 | Ball releases at the wrong phase and misses the gate opening | Medium | High | Use the metering wheel to hold a single ball and release only near the opening window |
 | Ball exits the gate but rebounds out of the goal | Medium | Medium | Terminate the post-gate channel in a goal cup with a small drop for energy absorption |
-| Power budget is too tight for the chosen motor | Low | Medium | Keep to one small gearmotor and reserve the seeded supply headroom in `assembly_definition.yaml` |
+| Power budget is too tight for the chosen motor | Low | Medium | Keep to one small servo-grade motor and preserve the seeded supply headroom in `assembly_definition.yaml` |
 
 ### Jitter Robustness Check
 

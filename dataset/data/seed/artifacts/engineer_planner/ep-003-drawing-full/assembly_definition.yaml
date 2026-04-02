@@ -93,6 +93,79 @@ final_assembly:
 - name: routed_transfer
   config:
     dofs: []
+drafting:
+  sheet_id: sheet_1
+  title: Routed transfer technical drawing
+  units: mm
+  projection_standard: orthographic
+  views:
+  - view_id: front_overview
+    target: route_base
+    projection: front
+    scale: 1.0
+    datums: [A, B]
+    dimensions:
+    - dimension_id: d_front_route_base_width
+      kind: linear
+      target: route_base
+      value: 150.0
+      tolerance: nominal
+      binding: true
+      note: Base plate width carries the lane support.
+      plan_ref: plan.md#parts-list
+    - dimension_id: d_front_entry_catcher_width
+      kind: linear
+      target: entry_catcher
+      value: 140.0
+      tolerance: nominal
+      binding: true
+      note: Capture mouth absorbs the jitter envelope.
+      plan_ref: plan.md#assembly-strategy
+  - view_id: top_route
+    target: outer_rail
+    projection: top
+    scale: 1.0
+    datums: [A, C]
+    dimensions:
+    - dimension_id: d_top_outer_rail_length
+      kind: linear
+      target: outer_rail
+      value: 560.0
+      tolerance: nominal
+      binding: true
+      note: Outer rail length follows the routed path.
+      plan_ref: plan.md#parts-list
+    - dimension_id: d_top_inner_rail_length
+      kind: linear
+      target: inner_rail
+      value: 520.0
+      tolerance: nominal
+      binding: true
+      note: Inner rail length holds the ball away from the blocker.
+      plan_ref: plan.md#parts-list
+  - view_id: side_goal
+    target: goal_tray
+    projection: side
+    scale: 1.0
+    datums: [B, C]
+    dimensions:
+    - dimension_id: d_side_goal_tray_height
+      kind: linear
+      target: goal_tray
+      value: 35.0
+      tolerance: nominal
+      binding: true
+      note: Goal tray height captures the settled ball.
+      plan_ref: plan.md#parts-list
+    - dimension_id: d_side_blocker_skirt_height
+      kind: linear
+      target: blocker_skirt
+      value: 60.0
+      tolerance: nominal
+      binding: true
+      note: Clearance wall blocks clipping at the routed turn.
+      plan_ref: plan.md#assembly-strategy
+  notes: []
 totals:
   estimated_unit_cost_usd: 48.5
   estimated_weight_g: 1120.0
