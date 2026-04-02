@@ -116,10 +116,6 @@ def _validate_render_manifest_bundle(
             manifest_path = candidate_manifest
             break
     if manifest_path is None:
-        compat_manifest_path = renders_dir / "render_manifest.json"
-        if compat_manifest_path.exists():
-            manifest_path = compat_manifest_path
-    if manifest_path is None:
         missing_render_files = sorted(
             path
             for path in expected_render_paths
@@ -138,10 +134,10 @@ def _validate_render_manifest_bundle(
             manifest_path.read_text(encoding="utf-8")
         )
     except Exception as exc:
-        raise ValueError(f"renders/render_manifest.json is invalid: {exc}") from exc
+        raise ValueError(f"bundle-local render_manifest.json is invalid: {exc}") from exc
 
     if not render_manifest.revision:
-        raise ValueError("renders/render_manifest.json revision missing")
+        raise ValueError("bundle-local render_manifest.json revision missing")
     current_revision = _latest_git_revision(renders_dir.parent)
     if not current_revision:
         raise ValueError(

@@ -626,8 +626,13 @@ class RemoteFilesystemMiddleware:
         if render_path.startswith("workspace/"):
             render_path = render_path.removeprefix("workspace/")
 
+        # Bundle-local manifests are the authoritative source. Avoid falling
+        # back to the workspace-root alias here so media inspection stays
+        # tied to the published bundle that produced the render artifact.
         candidate_dirs = [
-            parent for parent in Path(render_path).parents if parent.name != "renders"
+            parent
+            for parent in Path(render_path).parents
+            if parent.name != "renders" and parent != Path(".")
         ]
         seen_candidates: set[str] = set()
         for candidate_dir in candidate_dirs:

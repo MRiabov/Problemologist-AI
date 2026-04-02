@@ -82,6 +82,7 @@ from worker_light.utils.git import (
 from worker_light.utils.render_query import (
     list_render_bundles,
     pick_preview_pixel,
+    pick_preview_pixels,
     query_render_bundle,
 )
 
@@ -983,6 +984,27 @@ async def pick_render_bundle_pixel_route(
             "api_render_bundle_pick_failed",
             bundle_path=request.bundle_path,
             manifest_path=request.manifest_path,
+            error=str(exc),
+        )
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@light_router.post("/render/pick/batch", response_model=list[RenderBundlePointPickResult])
+async def pick_render_bundle_pixels_route(
+    requests: list[RenderBundlePointPickRequest],
+    fs_router=Depends(get_router),
+):
+    """Resolve multiple screen-space clicks as one request object per pick."""
+    try:
+        return pick_preview_pixels(requests, workspace_root=fs_router.local_backend.root)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.warning(
+            "api_render_bundle_pick_batch_failed",
+            pick_count=len(requests),
             error=str(exc),
         )
         raise HTTPException(status_code=500, detail=str(exc)) from exc

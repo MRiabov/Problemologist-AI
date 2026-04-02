@@ -880,6 +880,67 @@
         }
       }
     },
+    "/render/pick/batch": {
+      "post": {
+        "tags": [
+          "worker-light"
+        ],
+        "summary": "Pick Render Bundle Pixels Route",
+        "description": "Resolve multiple screen-space clicks as one request object per pick.",
+        "operationId": "pick_render_bundle_pixels_route_render_pick_batch_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/RenderBundlePointPickRequest"
+                },
+                "title": "Requests"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RenderBundlePointPickResult"
+                  },
+                  "title": "Response Pick Render Bundle Pixels Route Render Pick Batch Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/fs/delete": {
       "post": {
         "tags": [

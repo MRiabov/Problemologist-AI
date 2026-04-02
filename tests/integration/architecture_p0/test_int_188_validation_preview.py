@@ -36,6 +36,7 @@ from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
     BenchmarkToolRequest,
     BenchmarkToolResponse,
+    DeleteFileRequest,
     ListFilesRequest,
     PreviewDesignRequest,
     PreviewDesignResponse,
@@ -1671,5 +1672,84 @@ async def test_int_188_validation_preview_keeps_historical_bundles_in_render_ind
             assert pick_result.world_point is not None, pick_result
             assert pick_result.object_identity is not None, pick_result
             assert pick_result.object_identity.label is not None, pick_result
+
+            bad_manifest_path = Path(second_preview.manifest_path).with_name(
+                "render_manifest_scene_hash_mismatch.json"
+            )
+            try:
+                assert second_preview.render_manifest_json is not None
+                bad_manifest_data = json.loads(second_preview.render_manifest_json)
+                bad_manifest_data["scene_hash"] = "deadbeef"
+                write_resp = await client.post(
+                    f"{WORKER_LIGHT_URL}/fs/write",
+                    json=WriteFileRequest(
+                        path=str(bad_manifest_path),
+                        content=json.dumps(bad_manifest_data, indent=2),
+                        overwrite=True,
+                    ).model_dump(mode="json"),
+                    headers=headers,
+                    timeout=60.0,
+                )
+                assert write_resp.status_code == 200, write_resp.text
+
+                mismatch_resp = await client.post(
+                    f"{WORKER_LIGHT_URL}/render/pick",
+                    json=RenderBundlePointPickRequest(
+                        bundle_path=bundle_path,
+                        manifest_path=str(bad_manifest_path),
+                        bundle_id=bundle_id,
+                        pixel_x=image_width // 2,
+                        pixel_y=image_height // 2,
+                        image_width=image_width,
+                        image_height=image_height,
+                    ).model_dump(mode="json"),
+                    headers=headers,
+                    timeout=60.0,
+                )
+                assert mismatch_resp.status_code == 422, mismatch_resp.text
+
+                batch_resp = await client.post(
+                    f"{WORKER_LIGHT_URL}/render/pick/batch",
+                    json=[
+                        RenderBundlePointPickRequest(
+                            bundle_path=bundle_path,
+                            manifest_path=second_preview.manifest_path,
+                            bundle_id=bundle_id,
+                            pixel_x=image_width // 2,
+                            pixel_y=image_height // 2,
+                            image_width=image_width,
+                            image_height=image_height,
+                        ).model_dump(mode="json"),
+                        RenderBundlePointPickRequest(
+                            bundle_path=bundle_path,
+                            manifest_path=second_preview.manifest_path,
+                            bundle_id=bundle_id,
+                            pixel_x=image_width // 2,
+                            pixel_y=image_height // 2,
+                            image_width=image_width,
+                            image_height=image_height,
+                        ).model_dump(mode="json"),
+                    ],
+                    headers=headers,
+                    timeout=60.0,
+                )
+                assert batch_resp.status_code == 200, batch_resp.text
+                batch_results = [
+                    RenderBundlePointPickResult.model_validate(item)
+                    for item in batch_resp.json()
+                ]
+                assert len(batch_results) == 2, batch_results
+                assert all(result.bundle_id == bundle_id for result in batch_results)
+                assert all(result.hit for result in batch_results)
+            finally:
+                await client.post(
+                    f"{WORKER_LIGHT_URL}/fs/delete",
+                    json=DeleteFileRequest(
+                        path=str(bad_manifest_path),
+                        bypass_agent_permissions=True,
+                    ).model_dump(mode="json"),
+                    headers=headers,
+                    timeout=60.0,
+                )
     finally:
         AGENTS_CONFIG_PATH.write_text(original_config, encoding="utf-8")

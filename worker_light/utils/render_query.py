@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import math
 from pathlib import Path
 from typing import Any
@@ -170,6 +171,13 @@ def _load_preview_scene(bundle_root: Path) -> PreviewScene:
             for mesh_path in entity.mesh_paths
         ]
     return scene
+
+
+def _preview_scene_hash(bundle_root: Path) -> str | None:
+    scene_path = bundle_root / "preview_scene.json"
+    if not scene_path.exists():
+        return None
+    return hashlib.sha256(scene_path.read_bytes()).hexdigest()
 
 
 def _normalize_vector(value: np.ndarray) -> np.ndarray:
@@ -374,7 +382,6 @@ def query_render_bundle(
             "render bundle id mismatch: "
             f"requested={requested_bundle_id} resolved={resolution.manifest.bundle_id}"
         )
-    scene = _load_preview_scene(resolution.bundle_root)
 
     frames: list[RenderFrameMetadata] = []
     frame_path = resolution.bundle_root / "frames.jsonl"
@@ -402,6 +409,18 @@ def query_render_bundle(
             )
 
     if isinstance(request, RenderBundlePointPickRequest):
+        scene = _load_preview_scene(resolution.bundle_root)
+        if resolution.manifest.scene_hash is None:
+            raise ValueError("render bundle scene hash missing")
+        bundle_scene_hash = _preview_scene_hash(resolution.bundle_root)
+        if bundle_scene_hash is None:
+            raise ValueError("render bundle preview scene snapshot missing")
+        if bundle_scene_hash != resolution.manifest.scene_hash:
+            raise ValueError(
+                "render bundle scene snapshot hash mismatch: "
+                f"manifest={resolution.manifest.scene_hash} "
+                f"snapshot={bundle_scene_hash}"
+            )
         origin, direction = _camera_ray(
             scene,
             pixel_x=request.pixel_x,
@@ -457,6 +476,19 @@ def query_render_bundle(
         frames=frames,
         objects=objects,
     )
+
+
+def pick_preview_pixels(
+    requests: list[RenderBundlePointPickRequest],
+    *,
+    workspace_root: Path | str | None = None,
+) -> list[RenderBundlePointPickResult]:
+    """Resolve a batch of point-picks, one request object per pick."""
+
+    return [
+        pick_preview_pixel(request, workspace_root=workspace_root)
+        for request in requests
+    ]
 
 
 def pick_preview_pixel(

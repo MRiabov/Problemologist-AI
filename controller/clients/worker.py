@@ -1,6 +1,5 @@
 import asyncio
 import base64
-import contextlib
 import os
 import tempfile
 import uuid
@@ -33,7 +32,6 @@ from shared.workers.schema import (
     InspectTopologyResponse,
     PreviewDesignResponse,
     PreviewRenderingType,
-    RenderManifest,
     ReviewerStage,
     WorkerLightRpcAction,
     WorkerLightRpcRequest,
@@ -42,25 +40,10 @@ from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
 
 logger = structlog.get_logger(__name__)
 
-_STATIC_PREVIEW_BUNDLES = {
-    "benchmark_renders",
-    "engineer_renders",
-    "final_preview_renders",
-}
-
 
 def _default_smoke_test_mode() -> bool:
     return resolve_default_smoke_test_mode(
         integration_enabled=settings.is_integration_test
-    )
-
-
-def _is_static_preview_bundle_path(path: str) -> bool:
-    parts = Path(path).parts
-    return (
-        len(parts) >= 2
-        and parts[0] == "renders"
-        and parts[1] in _STATIC_PREVIEW_BUNDLES
     )
 
 
@@ -569,48 +552,6 @@ class WorkerClient:
             return
 
         artifacts = response.artifacts
-        render_manifest_path = "renders/render_manifest.json"
-        incoming_manifest_is_preview = False
-        incoming_manifest_json = artifacts.render_blobs_base64.get(render_manifest_path)
-        if incoming_manifest_json:
-            with contextlib.suppress(Exception):
-                incoming_manifest = RenderManifest.model_validate_json(
-                    base64.b64decode(incoming_manifest_json).decode("utf-8")
-                )
-                incoming_manifest_is_preview = any(
-                    _is_static_preview_bundle_path(path)
-                    for path in (
-                        list(incoming_manifest.artifacts.keys())
-                        + list(incoming_manifest.preview_evidence_paths)
-                    )
-                )
-
-        current_manifest_is_preview = False
-        if incoming_manifest_is_preview:
-            current_manifest_json = await self.read_file_optional(
-                render_manifest_path, bypass_agent_permissions=True
-            )
-            if current_manifest_json:
-                with contextlib.suppress(Exception):
-                    current_manifest = RenderManifest.model_validate_json(
-                        current_manifest_json
-                    )
-                    current_manifest_is_preview = any(
-                        _is_static_preview_bundle_path(path)
-                        for path in (
-                            list(current_manifest.artifacts.keys())
-                            + list(current_manifest.preview_evidence_paths)
-                        )
-                    )
-            if current_manifest_json and not current_manifest_is_preview:
-                logger.info(
-                    "handover_render_sync_skipped",
-                    path=render_manifest_path,
-                    reason="existing_final_manifest",
-                )
-                # Preserve the final render manifest once it has been written.
-                incoming_manifest_json = None
-
         writes: list[tuple[str, str]] = []
         if artifacts.validation_results_json:
             writes.append(
@@ -647,21 +588,11 @@ class WorkerClient:
                 logger.info("handover_artifact_synced", path=path)
 
         for path, encoded in artifacts.render_blobs_base64.items():
-            if path == render_manifest_path:
-                if incoming_manifest_json is None:
-                    continue
-                ok = await self.write_file(
-                    path,
-                    base64.b64decode(encoded).decode("utf-8"),
-                    overwrite=True,
-                    bypass_agent_permissions=True,
-                )
-            else:
-                ok = await self.upload_file(
-                    path,
-                    base64.b64decode(encoded),
-                    bypass_agent_permissions=True,
-                )
+            ok = await self.upload_file(
+                path,
+                base64.b64decode(encoded),
+                bypass_agent_permissions=True,
+            )
             if not ok:
                 logger.warning("handover_render_sync_upload_failed", path=path)
             else:

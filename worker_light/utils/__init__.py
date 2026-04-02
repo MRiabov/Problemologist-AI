@@ -6,12 +6,17 @@ from typing import Any
 __all__ = [
     "list_render_bundles",
     "pick_preview_pixel",
+    "pick_preview_pixels",
     "query_render_bundle",
 ]
 
 _LAZY_ATTRS: dict[str, tuple[str, str]] = {
     "list_render_bundles": ("worker_light.utils.render_query", "list_render_bundles"),
     "pick_preview_pixel": ("worker_light.utils.render_query", "pick_preview_pixel"),
+    "pick_preview_pixels": (
+        "worker_light.utils.render_query",
+        "pick_preview_pixels",
+    ),
     "query_render_bundle": ("worker_light.utils.render_query", "query_render_bundle"),
 }
 

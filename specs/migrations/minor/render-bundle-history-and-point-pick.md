@@ -227,8 +227,8 @@ the same bundle identity.
   coordinates from image bytes.
 - [x] Return a typed hit record with bundle identity, view identity, pixel
   coordinates, ray data, world-space coordinates, and object identity fields.
-- [ ] Make batch queries use one request object per pick.
-- [ ] Keep the helper fail-closed when the bundle snapshot or scene hash does
+- [x] Make batch queries use one request object per pick.
+- [x] Keep the helper fail-closed when the bundle snapshot or scene hash does
   not match the requested artifact.
 
 ### 6. Keep historical lookup stable
@@ -250,7 +250,7 @@ the same bundle identity.
 - [x] Add integration coverage for historical-bundle lookup through the append
   only index.
 - [x] Add integration coverage for bundle-local manifest resolution.
-- [ ] Add integration coverage for point-pick query responses.
+- [x] Add integration coverage for point-pick query responses.
 - [x] Add integration coverage for simulation-video frame attachment and review
   slicing.
 - [ ] Confirm that the docs in the owning architecture sections describe the

@@ -98,7 +98,6 @@ _REVISION_MANIFEST_PRIORITY = (
     ".manifests/engineering_plan_review_manifest.json",
     ".manifests/electronics_review_manifest.json",
     ".manifests/benchmark_plan_review_manifest.json",
-    "renders/render_manifest.json",
 )
 
 

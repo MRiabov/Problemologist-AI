@@ -294,15 +294,6 @@ def _bundle_sidecar_blobs(bundle_root: Path, *, workspace_root: Path) -> dict[st
             index_path.read_bytes()
         ).decode("ascii")
 
-    compat_manifest_path = workspace_root / "renders" / "render_manifest.json"
-    if (
-        compat_manifest_path.exists()
-        and compat_manifest_path.is_file()
-        and compat_manifest_path != bundle_root / "render_manifest.json"
-    ):
-        blobs[str(compat_manifest_path.relative_to(workspace_root))] = base64.b64encode(
-            compat_manifest_path.read_bytes()
-        ).decode("ascii")
     return blobs
 
 
@@ -353,13 +344,7 @@ def _collect_render_artifacts(
                 _bundle_sidecar_blobs(bundle_root, workspace_root=root)
             )
 
-    render_manifest_path = root / "renders" / "render_manifest.json"
     existing_manifest = None
-    if render_manifest_path.exists():
-        with contextlib.suppress(Exception):
-            existing_manifest = RenderManifest.model_validate_json(
-                render_manifest_path.read_text(encoding="utf-8")
-            )
 
     if normalized_render_paths:
         resolved_revision = (
@@ -369,6 +354,12 @@ def _collect_render_artifacts(
             or repo_revision(Path(__file__).resolve().parents[2])
         )
         bundle_root = root / Path(normalized_render_paths[0]).parent
+        bundle_manifest_path = bundle_root / "render_manifest.json"
+        if bundle_manifest_path.exists():
+            with contextlib.suppress(Exception):
+                existing_manifest = RenderManifest.model_validate_json(
+                    bundle_manifest_path.read_text(encoding="utf-8")
+                )
         synthesized_manifest = normalize_render_manifest(
             render_paths=normalized_render_paths,
             workspace_root=root,
@@ -383,11 +374,6 @@ def _collect_render_artifacts(
         render_blobs_base64[bundle_manifest_rel] = base64.b64encode(
             synthesized_manifest.model_dump_json(indent=2).encode("utf-8")
         ).decode("ascii")
-        render_blobs_base64[str(Path("renders") / "render_manifest.json")] = (
-            base64.b64encode(
-                synthesized_manifest.model_dump_json(indent=2).encode("utf-8")
-            ).decode("ascii")
-        )
 
     artifacts = SimulationArtifacts(render_paths=normalized_render_paths)
     artifacts.render_blobs_base64 = render_blobs_base64
@@ -813,9 +799,6 @@ def _build_preview_manifest(
     )
     manifest_path = bundle_root / "render_manifest.json"
     _write_text_atomic(manifest_path, manifest.model_dump_json(indent=2))
-    compat_manifest_path = root / "renders" / "render_manifest.json"
-    if compat_manifest_path != manifest_path:
-        _write_text_atomic(compat_manifest_path, manifest.model_dump_json(indent=2))
     index_entry = build_render_bundle_index_entry(
         manifest,
         manifest_path=str(manifest_path.relative_to(root)).replace("\\", "/"),
@@ -1357,11 +1340,6 @@ async def api_simulation_video(
                 )
                 manifest_path = bundle_root / "render_manifest.json"
                 _write_text_atomic(manifest_path, manifest.model_dump_json(indent=2))
-                compat_manifest_path = root / "renders" / "render_manifest.json"
-                if compat_manifest_path != manifest_path:
-                    _write_text_atomic(
-                        compat_manifest_path, manifest.model_dump_json(indent=2)
-                    )
                 append_render_bundle_index(
                     root,
                     build_render_bundle_index_entry(
@@ -1427,11 +1405,6 @@ async def api_stress_heatmap(
                 )
                 manifest_path = bundle_root / "render_manifest.json"
                 _write_text_atomic(manifest_path, manifest.model_dump_json(indent=2))
-                compat_manifest_path = root / "renders" / "render_manifest.json"
-                if compat_manifest_path != manifest_path:
-                    _write_text_atomic(
-                        compat_manifest_path, manifest.model_dump_json(indent=2)
-                    )
                 append_render_bundle_index(
                     root,
                     build_render_bundle_index_entry(
