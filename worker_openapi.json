@@ -727,6 +727,159 @@
         }
       }
     },
+    "/render/bundles": {
+      "get": {
+        "tags": [
+          "worker-light"
+        ],
+        "summary": "List Render Bundle History",
+        "description": "List published render bundles from the append-only discovery index.",
+        "operationId": "list_render_bundle_history_render_bundles_get",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RenderBundleIndexEntry"
+                  },
+                  "title": "Response List Render Bundle History Render Bundles Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/render/query": {
+      "post": {
+        "tags": [
+          "worker-light"
+        ],
+        "summary": "Query Render Bundle Route",
+        "description": "Resolve compact metadata for one published render bundle.",
+        "operationId": "query_render_bundle_route_render_query_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenderBundleQueryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenderBundleQueryResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/render/pick": {
+      "post": {
+        "tags": [
+          "worker-light"
+        ],
+        "summary": "Pick Render Bundle Pixel Route",
+        "description": "Resolve a screen-space click against one published render bundle.",
+        "operationId": "pick_render_bundle_pixel_route_render_pick_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenderBundlePointPickRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenderBundlePointPickResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/fs/delete": {
       "post": {
         "tags": [
@@ -2713,6 +2866,785 @@
         ],
         "title": "ReadFileResponse",
         "description": "Response from reading a file."
+      },
+      "RenderBundleIndexEntry": {
+        "properties": {
+          "bundle_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Id"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "scene_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scene Hash"
+          },
+          "bundle_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Path"
+          },
+          "manifest_path": {
+            "type": "string",
+            "title": "Manifest Path"
+          },
+          "preview_evidence_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Preview Evidence Paths"
+          },
+          "primary_media_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Primary Media Paths"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "manifest_path"
+        ],
+        "title": "RenderBundleIndexEntry",
+        "description": "Append-only discovery row for one published render bundle."
+      },
+      "RenderBundleObjectIdentity": {
+        "properties": {
+          "object_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Object Type"
+          },
+          "object_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Object Id"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Id"
+          },
+          "instance_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Name"
+          },
+          "semantic_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Semantic Label"
+          },
+          "body_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Name"
+          },
+          "geom_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geom Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RenderBundleObjectIdentity",
+        "description": "Identity fields returned by point-pick queries."
+      },
+      "RenderBundleObjectPoseRecord": {
+        "properties": {
+          "frame_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frame Index"
+          },
+          "object_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Object Id"
+          },
+          "object_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Object Type"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Id"
+          },
+          "instance_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Name"
+          },
+          "semantic_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Semantic Label"
+          },
+          "body_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Name"
+          },
+          "geom_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geom Name"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "orientation": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orientation"
+          },
+          "source_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Path"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RenderBundleObjectPoseRecord",
+        "description": "Compact object pose row for query helpers.\n\nOrientation is stored as XYZ Euler degrees in bundle space."
+      },
+      "RenderBundlePointPickRequest": {
+        "properties": {
+          "bundle_path": {
+            "type": "string",
+            "title": "Bundle Path"
+          },
+          "pixel_x": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Pixel X"
+          },
+          "pixel_y": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Pixel Y"
+          },
+          "image_width": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Image Width"
+          },
+          "image_height": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Image Height"
+          },
+          "orbit_pitch": {
+            "type": "number",
+            "title": "Orbit Pitch",
+            "default": 45.0
+          },
+          "orbit_yaw": {
+            "type": "number",
+            "title": "Orbit Yaw",
+            "default": 45.0
+          },
+          "view_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "View Index",
+            "default": 0
+          },
+          "bundle_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Id"
+          },
+          "manifest_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Path"
+          },
+          "rendering_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PreviewRenderingType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "bundle_path",
+          "pixel_x",
+          "pixel_y",
+          "image_width",
+          "image_height"
+        ],
+        "title": "RenderBundlePointPickRequest",
+        "description": "Request for a single point-pick query against one render bundle."
+      },
+      "RenderBundlePointPickResult": {
+        "properties": {
+          "bundle_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Id"
+          },
+          "bundle_path": {
+            "type": "string",
+            "title": "Bundle Path"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "scene_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scene Hash"
+          },
+          "manifest_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Path"
+          },
+          "view_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "View Index"
+          },
+          "pixel_x": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Pixel X"
+          },
+          "pixel_y": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Pixel Y"
+          },
+          "image_width": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Image Width"
+          },
+          "image_height": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Image Height"
+          },
+          "orbit_pitch": {
+            "type": "number",
+            "title": "Orbit Pitch"
+          },
+          "orbit_yaw": {
+            "type": "number",
+            "title": "Orbit Yaw"
+          },
+          "ray_origin": {
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Ray Origin"
+          },
+          "ray_direction": {
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Ray Direction"
+          },
+          "hit": {
+            "type": "boolean",
+            "title": "Hit"
+          },
+          "distance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance"
+          },
+          "world_point": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "World Point"
+          },
+          "object_identity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RenderBundleObjectIdentity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "bundle_path",
+          "view_index",
+          "pixel_x",
+          "pixel_y",
+          "image_width",
+          "image_height",
+          "orbit_pitch",
+          "orbit_yaw",
+          "ray_origin",
+          "ray_direction",
+          "hit"
+        ],
+        "title": "RenderBundlePointPickResult",
+        "description": "World-space hit record returned by point-pick queries."
+      },
+      "RenderBundleQueryRequest": {
+        "properties": {
+          "bundle_path": {
+            "type": "string",
+            "title": "Bundle Path"
+          },
+          "manifest_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Path"
+          },
+          "bundle_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Id"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "bundle_path"
+        ],
+        "title": "RenderBundleQueryRequest",
+        "description": "Request for a compact render-bundle metadata query."
+      },
+      "RenderBundleQueryResult": {
+        "properties": {
+          "bundle_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Id"
+          },
+          "bundle_path": {
+            "type": "string",
+            "title": "Bundle Path"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "scene_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scene Hash"
+          },
+          "manifest_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Path"
+          },
+          "preview_evidence_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Preview Evidence Paths"
+          },
+          "frames": {
+            "items": {
+              "$ref": "#/components/schemas/RenderFrameMetadata"
+            },
+            "type": "array",
+            "title": "Frames"
+          },
+          "objects": {
+            "items": {
+              "$ref": "#/components/schemas/RenderBundleObjectPoseRecord"
+            },
+            "type": "array",
+            "title": "Objects"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "bundle_path"
+        ],
+        "title": "RenderBundleQueryResult",
+        "description": "Compact bundle-level query response."
+      },
+      "RenderFrameMetadata": {
+        "properties": {
+          "frame_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Frame Index"
+          },
+          "source_path": {
+            "type": "string",
+            "title": "Source Path"
+          },
+          "timestamp_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp S"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "frame_index",
+          "source_path"
+        ],
+        "title": "RenderFrameMetadata",
+        "description": "Sparse frame metadata for a published video bundle."
       },
       "ResponseStatus": {
         "type": "string",

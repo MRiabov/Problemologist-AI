@@ -52,6 +52,7 @@ Start with the handoff package:
 
 Then load specialist knowledge only as needed:
 
+- [render-evidence](../render-evidence/SKILL.md) when the task needs preview generation, media inspection, bundle selection, or point-pick queries
 - [runtime-script-contract](../runtime-script-contract/SKILL.md)
 - [build123d_cad_drafting_skill](../build123d_cad_drafting_skill/SKILL.md)
 - [mechanical-engineering](../mechanical-engineering/SKILL.md)

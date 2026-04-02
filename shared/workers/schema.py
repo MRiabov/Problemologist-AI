@@ -919,7 +919,10 @@ class RenderFrameMetadata(BaseModel):
 
 
 class RenderBundleObjectPoseRecord(BaseModel):
-    """Compact object pose row for query helpers."""
+    """Compact object pose row for query helpers.
+
+    Orientation is stored as XYZ Euler degrees in bundle space.
+    """
 
     frame_index: StrictInt | None = None
     object_id: StrictInt | None = None

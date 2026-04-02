@@ -46,11 +46,7 @@ def _normalize_bundle_path(bundle_path: str | Path) -> str:
 
 
 def _candidate_manifest_paths(bundle_root: Path) -> list[Path]:
-    paths = [
-        bundle_root / "render_manifest.json",
-        bundle_root.parent / "render_manifest.json",
-    ]
-    return list(dict.fromkeys(paths))
+    return [bundle_root / "render_manifest.json"]
 
 
 def _load_manifest_from_index(
@@ -361,6 +357,8 @@ def list_render_bundles(
         return manifests
 
     for manifest_path in sorted(renders_dir.rglob("render_manifest.json")):
+        if manifest_path.parent == renders_dir:
+            continue
         try:
             manifest = RenderManifest.model_validate_json(
                 manifest_path.read_text(encoding="utf-8")
@@ -381,6 +379,8 @@ def list_render_bundles(
                 primary_media_paths=list(manifest.preview_evidence_paths),
             )
         )
+    if manifests:
+        return manifests
     return manifests
 
 
@@ -395,6 +395,12 @@ def query_render_bundle(
         workspace_root=workspace,
         manifest_path=getattr(request, "manifest_path", None),
     )
+    requested_bundle_id = getattr(request, "bundle_id", None)
+    if requested_bundle_id and resolution.manifest.bundle_id != requested_bundle_id:
+        raise ValueError(
+            "render bundle id mismatch: "
+            f"requested={requested_bundle_id} resolved={resolution.manifest.bundle_id}"
+        )
     scene = _load_preview_scene(resolution.bundle_root)
 
     frames: list[RenderFrameMetadata] = []
@@ -411,10 +417,10 @@ def query_render_bundle(
     objects_path = resolution.bundle_root / "objects.parquet"
     if objects_path.exists():
         try:
-            import pandas as pd
+            import pyarrow.parquet as pq
 
-            table = pd.read_parquet(objects_path)
-            for record in table.to_dict(orient="records"):
+            table = pq.read_table(objects_path)
+            for record in table.to_pylist():
                 objects.append(RenderBundleObjectPoseRecord.model_validate(record))
         except Exception:
             logger.warning(

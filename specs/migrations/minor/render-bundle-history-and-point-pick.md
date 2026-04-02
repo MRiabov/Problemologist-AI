@@ -64,8 +64,9 @@ history/query system.
     preview rendering.
 06. `frames.jsonl` stores sparse frame metadata for MuJoCo simulation evidence.
 07. `objects.parquet` stores dense object pose tables for query helpers.
-    Simulation bundles usually get those tables from `worker-heavy`, while
-    preview bundles may not need them.
+    The table is produced by the active `PhysicsBackend` implementation for
+    the bundle, so both MuJoCo and Genesis can emit it. Preview bundles may
+    not need the table.
 08. `worker_light.utils.render_query` exposes the planned helper family:
     - `pick_preview_pixel(...)`
     - `list_render_bundles(...)`
@@ -97,8 +98,8 @@ history/query system.
   rendering.
 - Persist `frames.jsonl` for frame-level MuJoCo video metadata when a bundle
   includes `mp4` evidence.
-- Persist `objects.parquet` when the bundle needs object pose tables for
-  query-time inspection.
+- Persist `objects.parquet` from the `PhysicsBackend` object-pose export
+  path when the bundle needs query-time inspection.
 - Keep the sidecar format small and query-oriented. Do not promote the bundle
   manifest into a full data lake.
 
@@ -166,7 +167,7 @@ the same bundle identity.
 
 ### 1. Freeze the bundle contract
 
-- [ ] Define the bundle identity fields that must exist for every published
+- [x] Define the bundle identity fields that must exist for every published
   render artifact: `bundle_id`, `created_at`, `revision`, `scene_hash`, and
   bundle path.
 - [ ] Remove the root-level `renders/render_manifest.json` path from the
@@ -176,7 +177,7 @@ the same bundle identity.
   bundle.
 - [ ] Keep the manifest compact enough that a model can inspect it without
   reading the full media payload.
-- [ ] Preserve the existing preview contract while the new index lands, so
+- [x] Preserve the existing preview contract while the new index lands, so
   current-bundle lookups continue to work during the transition.
 
 ### 2. Separate the render producers
@@ -193,38 +194,38 @@ the same bundle identity.
 
 ### 3. Publish immutable bundles
 
-- [ ] Write each preview bundle into its own immutable bundle directory.
-- [ ] Write each MuJoCo simulation-video bundle into its own immutable bundle
+- [x] Write each preview bundle into its own immutable bundle directory.
+- [x] Write each MuJoCo simulation-video bundle into its own immutable bundle
   directory.
 - [ ] Emit the bundle-local manifest only after the bundle contents are fully
   materialized.
-- [ ] Append one row per published bundle to `renders/render_index.jsonl`.
-- [ ] Include bundle-local paths to the preview scene snapshot and any
+- [x] Append one row per published bundle to `renders/render_index.jsonl`.
+- [x] Include bundle-local paths to the preview scene snapshot and any
   per-bundle sidecars.
 
 ### 4. Persist query sidecars
 
-- [ ] Persist `preview_scene.json` for preview bundles as the exact scene
+- [x] Persist `preview_scene.json` for preview bundles as the exact scene
   snapshot used to render the image.
-- [ ] Persist `frames.jsonl` for simulation bundles that contain video evidence
+- [x] Persist `frames.jsonl` for simulation bundles that contain video evidence
   or frame-level metadata.
-- [ ] Persist `objects.parquet` when a bundle needs dense object pose tables
-  for query-time inspection.
+- [ ] Persist `objects.parquet` from the `PhysicsBackend` object-pose export
+  path when a bundle needs dense object pose tables for query-time inspection.
 - [ ] Keep the sidecars bundle-local so history lookup does not depend on
   mutable root-level files.
 - [ ] Avoid expanding the manifest into a full data store.
 
 ### 5. Implement worker-light point picking
 
-- [ ] Add `worker_light.utils.render_query` as the render-query helper
+- [x] Add `worker_light.utils.render_query` as the render-query helper
   namespace.
-- [ ] Implement `pick_preview_pixel(...)` so it resolves one pixel against one
+- [x] Implement `pick_preview_pixel(...)` so it resolves one pixel against one
   bundle-local scene snapshot.
-- [ ] Convert the screen-space click into a world-space ray using the same
+- [x] Convert the screen-space click into a world-space ray using the same
   camera math as preview rendering.
-- [ ] Raycast against the persisted build123d geometry instead of inferring
+- [x] Raycast against the persisted build123d geometry instead of inferring
   coordinates from image bytes.
-- [ ] Return a typed hit record with bundle identity, view identity, pixel
+- [x] Return a typed hit record with bundle identity, view identity, pixel
   coordinates, ray data, world-space coordinates, and object identity fields.
 - [ ] Make batch queries use one request object per pick.
 - [ ] Keep the helper fail-closed when the bundle snapshot or scene hash does
@@ -232,25 +233,25 @@ the same bundle identity.
 
 ### 6. Keep historical lookup stable
 
-- [ ] Resolve historical bundles through `renders/render_index.jsonl`.
+- [x] Resolve historical bundles through `renders/render_index.jsonl`.
 - [ ] Resolve the bundle-local manifest directly; do not route through the
   legacy root-level manifest path.
-- [ ] Keep current-revision discovery working by targeting the bundle-local
+- [x] Keep current-revision discovery working by targeting the bundle-local
   manifest or the append-only index directly.
 - [ ] Prevent older bundles from being hidden or overwritten when a newer
   render is published.
-- [ ] Make `inspect_media(...)` resolve the correct bundle-local manifest when
+- [x] Make `inspect_media(...)` resolve the correct bundle-local manifest when
   the inspected file belongs to a published bundle.
 
 ### 7. Verify the migration boundary
 
-- [ ] Add integration coverage for current-bundle lookup through the live
+- [x] Add integration coverage for current-bundle lookup through the live
   worker boundary.
-- [ ] Add integration coverage for historical-bundle lookup through the append
+- [x] Add integration coverage for historical-bundle lookup through the append
   only index.
-- [ ] Add integration coverage for bundle-local manifest resolution.
+- [x] Add integration coverage for bundle-local manifest resolution.
 - [ ] Add integration coverage for point-pick query responses.
-- [ ] Add integration coverage for simulation-video frame attachment and review
+- [x] Add integration coverage for simulation-video frame attachment and review
   slicing.
 - [ ] Confirm that the docs in the owning architecture sections describe the
   same bundle contract and the same simulation-video backend switch.
@@ -265,7 +266,9 @@ the same bundle identity.
    tuple.
 5. The hit record includes bundle identity, view identity, pixel coordinates,
    ray data, world-space coordinates, and object identity fields.
-6. `objects.parquet` is the dense object-state format for bundle queries.
+6. `objects.parquet` is the dense object-state format for bundle queries, and
+   it is emitted by the active `PhysicsBackend` implementation rather than a
+   MuJoCo-only branch.
 7. There is no root-level manifest fallback path in the active contract; tools
    resolve bundle-local manifests or `renders/render_index.jsonl` directly.
 8. The integration suite can prove current-bundle lookup, historical lookup,

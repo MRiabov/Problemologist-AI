@@ -17,9 +17,14 @@ def test_submission_artifact_collection_preserves_bucketed_render_paths(tmp_path
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(b"not-a-real-image-but-good-enough-for-path-collection")
 
-    render_manifest_path = root / "renders" / "render_manifest.json"
+    render_manifest_path = (
+        root / "renders" / "benchmark_renders" / "render_manifest.json"
+    )
     render_manifest_path.parent.mkdir(parents=True, exist_ok=True)
     render_manifest_path.write_text("{}", encoding="utf-8")
+
+    objects_path = root / "renders" / "benchmark_renders" / "objects.parquet"
+    objects_path.write_bytes(b"PAR1not-a-real-parquet-payloadPAR1")
 
     artifacts = _collect_submission_artifacts(root)
 
@@ -32,6 +37,10 @@ def test_submission_artifact_collection_preserves_bucketed_render_paths(tmp_path
     assert expected_paths.issubset(set(artifacts.render_blobs_base64)), (
         artifacts.render_blobs_base64
     )
-    assert "renders/render_manifest.json" in artifacts.render_blobs_base64, (
-        artifacts.render_blobs_base64
-    )
+    assert (
+        "renders/benchmark_renders/render_manifest.json"
+        in artifacts.render_blobs_base64
+    ), artifacts.render_blobs_base64
+    assert (
+        "renders/benchmark_renders/objects.parquet" in artifacts.render_blobs_base64
+    ), artifacts.render_blobs_base64

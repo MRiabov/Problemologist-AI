@@ -57,6 +57,11 @@ from shared.workers.schema import (
     PreviewRenderingType,
     ReadFileRequest,
     ReadFileResponse,
+    RenderBundleIndexEntry,
+    RenderBundlePointPickRequest,
+    RenderBundlePointPickResult,
+    RenderBundleQueryRequest,
+    RenderBundleQueryResult,
     StatusResponse,
     WorkerLightRpcError,
     WorkerLightRpcRequest,
@@ -73,6 +78,11 @@ from worker_light.utils.git import (
     init_workspace_repo,
     resolve_conflict_ours,
     resolve_conflict_theirs,
+)
+from worker_light.utils.render_query import (
+    list_render_bundles,
+    pick_preview_pixel,
+    query_render_bundle,
 )
 
 logger = structlog.get_logger(__name__)
@@ -265,7 +275,7 @@ async def api_preview(
             "worker_light_preview_finished",
             session_id=x_session_id,
             artifact_path=artifact_path,
-            manifest_path=str(Path("renders") / "render_manifest.json"),
+            manifest_path=str(Path(artifact_path).parent / "render_manifest.json"),
             rendering_type=(
                 request.rendering_type.value if request.rendering_type else None
             ),
@@ -280,7 +290,7 @@ async def api_preview(
             view_count=response.view_count,
             view_specs=response.view_specs,
             artifact_path=artifact_path,
-            manifest_path=str(Path("renders") / "render_manifest.json"),
+            manifest_path=str(Path(artifact_path).parent / "render_manifest.json"),
             rendering_type=response.rendering_type,
             pitch=request.orbit_pitch
             if isinstance(request.orbit_pitch, float)
@@ -923,6 +933,56 @@ async def bundle_session(fs_router=Depends(get_router)):
         media_type="application/x-gzip",
         headers={"Content-Disposition": "attachment; filename=session.tar.gz"},
     )
+
+
+@light_router.get("/render/bundles", response_model=list[RenderBundleIndexEntry])
+async def list_render_bundle_history(fs_router=Depends(get_router)):
+    """List published render bundles from the append-only discovery index."""
+    return list_render_bundles(fs_router.local_backend.root)
+
+
+@light_router.post("/render/query", response_model=RenderBundleQueryResult)
+async def query_render_bundle_route(
+    request: RenderBundleQueryRequest,
+    fs_router=Depends(get_router),
+):
+    """Resolve compact metadata for one published render bundle."""
+    try:
+        return query_render_bundle(request, workspace_root=fs_router.local_backend.root)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.warning(
+            "api_render_bundle_query_failed",
+            bundle_path=request.bundle_path,
+            manifest_path=request.manifest_path,
+            error=str(exc),
+        )
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@light_router.post("/render/pick", response_model=RenderBundlePointPickResult)
+async def pick_render_bundle_pixel_route(
+    request: RenderBundlePointPickRequest,
+    fs_router=Depends(get_router),
+):
+    """Resolve a screen-space click against one published render bundle."""
+    try:
+        return pick_preview_pixel(request, workspace_root=fs_router.local_backend.root)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.warning(
+            "api_render_bundle_pick_failed",
+            bundle_path=request.bundle_path,
+            manifest_path=request.manifest_path,
+            error=str(exc),
+        )
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @light_router.post("/fs/delete", response_model=StatusResponse)
