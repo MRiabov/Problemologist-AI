@@ -129,7 +129,7 @@ This role should behave like a high-confidence solver, not a wandering explorer.
 3. Manufacturability failure: fix process choice, stock assumptions, wall thickness, access, or tool reach first.
 4. Cost or weight failure: simplify the mechanism or change the part family before inventing a workaround.
 5. Robustness failure: widen tolerances to runtime jitter and remove exact-seed dependence.
-6. Directional motion failure: verify slope sign, handedness, and capture path from the actual simulation media before changing more geometry.
+6. Directional motion failure: verify slope sign, handedness, and capture path from the actual simulation media before changing more geometry. Also check whether the preview is a front or rear view: preview yaw is clockwise from front, so rear views naturally swap left/right on screen and are not automatically an X-axis mirror.
 7. Reviewer failure: resolve the valid checklist items directly and ignore non-applicable demands.
 
 If the same blocker persists after one targeted fix, record it in `journal.md` and stop widening the search.

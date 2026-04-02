@@ -1,6 +1,6 @@
 ---
 name: build123d_cad_drafting_skill
-description: Expert CAD modeling using build123d. Includes builder modes, semantic selectors, and MJCF-compatible boolean strategies.
+description: Use this skill when you need do CAD modeling using build123d. Includes builder modes, semantic selectors, and MJCF-compatible boolean strategies, and everything you need to know about build123d syntax.
 ---
 
 # build123d CAD Drafting Expert
@@ -9,13 +9,15 @@ Read this skill and the relevant reference files below before planning any `buil
 
 ## Core Directives
 
-1. **Builder Dominance**: Prefer `with BuildPart()`, `with BuildSketch()`, and `with BuildLine()`.
+1. **Solid Modeling**: Prefer `with BuildPart()` plus primitives, booleans, fillets, chamfers, and shells for solid modeling. Use constraint helpers when they reduce manual coordinate tweaking.
 2. **Semantic Selectors**: Avoid indices. Use `faces()`, `edges()`, `vertices()` with `sort_by(Axis.Z)` or `last()`/`first()`.
-3. **MJCF Compliance**: Ensure parts are non-intersecting if they belong to different simulation links.
-4. **Assembly Labels**: Use `.label = "stator"` and `.label = "rotor"` for automatic motor/joint injection in MJCF.
-5. **Label Namespace Hygiene**: Top-level authored labels must be unique and must not be `environment` or start with `zone_`. The simulator reserves those names for the scene root and generated objective bodies, and duplicate labels collide with MJCF mesh/body names.
-6. **Intersection Checks**: For pairwise geometry, use `shape_a.intersect(shape_b)`. The returned shape has a `.volume` property; if that volume is greater than zero, the shapes intersect, and you can inspect or render the returned intersection shape for debugging. For grouped children, wrap the parts in `Compound(children=[...])` and call `do_children_intersect()` on the compound; in this runtime it returns `(intersects, (shape_a, shape_b), volume)`, so unpack it for logging.
-7. **COTS Parts**: If the geometry includes catalog-backed components, load `skills/cots-parts/SKILL.md` and keep the concrete COTS instance intact. Do not strip provenance or replace it with anonymous solids when the task still depends on part identity.
+3. **2D Constraint Sketching**: When a sketch is defined by tangency, fixed radius, or datum relationships, use the constrained line/arc helpers instead of hand-tuning vertices. These helpers are for CAD sketch layout, not MJCF joints or simulation constraints. See [2d_constraints.md](references/2d_constraints.md).
+4. **3D Placement Constraints**: When assembly layout depends on repeated, mirrored, or rotated placement, use `Location`, `Locations`, `.move(...)`, `.moved(...)`, `Align`, and `Compound(children=[...])` placement patterns instead of hand-deriving every coordinate. See [3d_constraints.md](references/3d_constraints.md).
+5. **MJCF Compliance**: Ensure parts are non-intersecting if they belong to different simulation links.
+6. **Assembly Labels**: Use `.label = "stator"` and `.label = "rotor"` for automatic motor/joint injection in MJCF.
+7. **Label Namespace Hygiene**: Top-level authored labels must be unique and must not be `environment` or start with `zone_`. The simulator reserves those names for the scene root and generated objective bodies, and duplicate labels collide with MJCF mesh/body names.
+8. **Intersection Checks**: For pairwise geometry, use `shape_a.intersect(shape_b)`. The returned shape has a `.volume` property; if that volume is greater than zero, the shapes intersect, and you can inspect or render the returned intersection shape for debugging. For grouped children, wrap the parts in `Compound(children=[...])` and call `do_children_intersect()` on the compound; in this runtime it returns `(intersects, (shape_a, shape_b), volume)`, so unpack it for logging.
+9. **COTS Parts**: If the geometry includes catalog-backed components, load `skills/cots-parts/SKILL.md` and keep the concrete COTS instance intact. Do not strip provenance or replace it with anonymous solids when the task still depends on part identity.
 
 ## Placement And Rotation Contract
 
@@ -38,6 +40,8 @@ rail_lower = rail_builder.part.moved(Location((0, -0.06, 0.09), (0, 2, 0)))
 - If you first wrote `rail = rail_builder.part.move(...)` and later realize you need a mirrored or rotated companion rail, stop and rebuild that section with `.moved(...)` copies. Do not mutate the same builder result twice.
 
 - Do not rely on `part.rotate(...)` as the final pose step for top-level exported parts. That can leave `child.location.orientation` unchanged, which makes the exported MJCF/scene appear unrotated even if the local build123d object looked rotated.
+
+- Preview yaw is measured clockwise from front. If a rear camera angle makes the model look mirrored on X, confirm the camera direction and world-space placement before changing geometry; the image may only be a back-side view.
 
 ## Build-Zone Checks For Sloped Parts
 
@@ -64,6 +68,18 @@ rail_lower = rail_builder.part.moved(Location((0, -0.06, 0.09), (0, 2, 0)))
 - Bearings & Fasteners (L59)
 - Environment Zones (Goal/Forbid) (L75)
 - Collision Best Practices (L82)
+
+### [2d_constraints.md](references/2d_constraints.md) (2D Constraints)
+
+- Tangent bridge between repeated features
+- Fixed-radius tangent arcs
+- Dimension and extension lines
+
+### [3d_constraints.md](references/3d_constraints.md) (3D Constraints)
+
+- Repeated datum placement with `Locations(...)`
+- Rotated top-level parts with `Location(...)`
+- Compound assembly placement and overlap checks
 
 ### [cots-parts](../cots-parts/SKILL.md) (Catalog-Backed Components)
 
