@@ -698,7 +698,7 @@ benchmark_generator:
       - `## 6. Randomization`:
          - **Static**: Scale factors, obstacle repositioning (up to 40% inward).
          - **Runtime**: Position jitter for robustness testing.
-      - `## 7. Build123d Strategy`: CSG vs sketches, patterns to use.
+      - `## 7. Build123d Strategy`: solid modeling, sketch-driven layout, and placement patterns.
       - `## 8. Cost & Weight Envelope`:
          - `totals.estimated_unit_cost_usd`
          - `totals.estimated_weight_g`
@@ -986,6 +986,7 @@ codex:
       - Keep `todo.md` and `journal.md` in sync with the work you are actually doing.
       - Use the seeded handoff files in this workspace as the primary source of truth; do not go hunting through unrelated dataset examples unless the workspace artifacts are missing or contradictory.
       - Prefer the simplest geometry that satisfies the reviewed plan and the benchmark constraints; do not over-engineer alternate mechanisms.
+      - Use build123d modeling tools, including primitives, booleans, and 2D/3D constraint helpers, when they reduce manual coordinate tweaking; the drafting skill includes concrete examples for sketch layout and placement.
       - After a quick pass over the handoff files, start writing the implementation instead of continuing to browse references.
       - Do not spend more than a few tool calls on exploratory reading before producing a first implementation draft.
       - Do not stop at a merely stable smoke test; the latest revision must pass validation and simulation for the intended task before you hand it off.
@@ -1001,6 +1002,7 @@ codex:
       - Keep `todo.md` and `journal.md` in sync with the work you are actually doing.
       - Use the seeded handoff files in this workspace as the primary source of truth; do not go hunting through unrelated dataset examples unless the workspace artifacts are missing or contradictory.
       - Prefer the simplest geometry that satisfies the reviewed plan and the benchmark constraints; do not over-engineer alternate mechanisms.
+      - Use build123d modeling tools, including primitives, booleans, and 2D/3D constraint helpers, when they reduce manual coordinate tweaking; the drafting skill includes concrete examples for sketch layout and placement.
       - After a quick pass over the handoff files, start writing the implementation instead of continuing to browse references.
       - Do not spend more than a few tool calls on exploratory reading before producing a first implementation draft.
       - Do not stop at a merely stable smoke test; the latest revision must pass validation and simulation for the intended task before you hand it off.
@@ -1046,6 +1048,17 @@ codex:
     role_lines:
       - You are operating as `{agent_name.value}`.
       - Use the workspace files directly and follow the seeded task instructions.
+  skill_loop:
+    self_analysis: |
+      Continue the same Codex session on a failed or stalled run.
+      Analyze the workspace using `journal.md`, `prompt.md`, the session trace, `validation_results.json`, and `simulation_result.json` if it exists.
+      Write a concise postmortem into `journal.md` with the failure mode, the blocked attempt, and the reusable skills or procedures worth adding.
+      Do not edit canonical `skills/` yet.
+    skill_update: |
+      Continue the same Codex session.
+      Using the postmortem and workspace artifacts, draft narrow skill updates into `suggested_skills/` as reviewable markdown files.
+      Keep the edits incremental and avoid overwriting canonical `skills/`.
+      If no skill update is warranted, record that in `journal.md` and stop.
 
 # -----------------------------------------------------------------------------
 # COMMON TEMPLATES
@@ -1080,7 +1093,7 @@ common:
         extrude, revolve, loft, sweep, offset
     )
 
-    # Builders (Use BuildPart for CSG)
+    # Builders (BuildPart for solid modeling)
     from build123d import BuildPart, BuildSketch, BuildLine
 
     # Utils

@@ -21,9 +21,11 @@ from controller.prompts import load_prompts
 from evals.logic import runner
 from evals.logic.codex_session_trace import CodexSessionTraceArtifact
 from evals.logic.codex_workspace import (
+    CodexExecRunResult,
     build_codex_env,
     materialize_seed_workspace,
     prepare_codex_home,
+    resume_codex_exec,
     verify_planner_workspace,
 )
 from evals.logic.models import EvalDatasetItem
@@ -109,6 +111,7 @@ def test_run_evals_help_exposes_codex_backend():
     assert re.search(r"default:\s*1\s*smoke-\s*test\s*item", completed.stdout)
     assert re.search(r"default:\s*1\s*for\s*smoke-\s*test\s*runs", completed.stdout)
     assert "codex" in normalized_stdout
+    assert "--codex-skill-loop" in normalized_stdout
 
 
 @pytest.mark.integration_p0
@@ -229,6 +232,65 @@ def test_run_evals_codex_exec_help_exposes_workspace_write_sandbox():
 
 
 @pytest.mark.integration_p0
+def test_resume_codex_exec_uses_codex_exec_resume_command(tmp_path: Path, monkeypatch):
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+
+    fake_home = tmp_path / "home"
+    auth_path = fake_home / ".codex" / "auth.json"
+    auth_path.parent.mkdir(parents=True, exist_ok=True)
+    auth_path.write_text(
+        json.dumps(
+            {
+                "OPENAI_API_KEY": None,
+                "tokens": {"account_id": "acct-1", "access_token": "token-1"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex_args_log = tmp_path / "codex-resume-args.log"
+    codex_script = fake_bin / "codex"
+    codex_script.write_text(
+        '#!/bin/sh\nprintf \'%s\\n\' "$@" > "$CODEX_ARGS_LOG"\nexit 0\n',
+        encoding="utf-8",
+    )
+    codex_script.chmod(0o755)
+
+    codex_home_root = tmp_path / "codex-home"
+    prepare_codex_home(
+        codex_home_root=codex_home_root,
+        workspace_dir=workspace_dir,
+        source_auth_path=auth_path,
+    )
+
+    monkeypatch.setenv("HOME", str(fake_home))
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}")
+    monkeypatch.setenv("CODEX_ARGS_LOG", str(codex_args_log))
+
+    result = resume_codex_exec(
+        workspace_dir=workspace_dir,
+        prompt_text="self-analyze the failed run",
+        task_id="task-1",
+        codex_session_id="019d0000-0000-7000-9000-000000000099",
+        session_id="home-session-1",
+        runtime_root=tmp_path / "codex-runtime",
+        yolo=False,
+    )
+
+    assert result.return_code == 0
+    logged_args = codex_args_log.read_text(encoding="utf-8")
+    assert "exec" in logged_args
+    assert "resume" in logged_args
+    assert "019d0000-0000-7000-9000-000000000099" in logged_args
+    assert "--full-auto" in logged_args
+
+
+@pytest.mark.integration_p0
 def test_run_evals_defaults_are_smoke_test_contract():
     from evals.logic.runner import _build_parser
 
@@ -253,6 +315,10 @@ async def test_run_evals_codex_judge_does_not_launch_reviewers_without_flag(
     )
     workspace_dir = tmp_path / "workspace"
     workspace_dir.mkdir()
+    (workspace_dir / "simulation_result.json").write_text(
+        json.dumps({"success": True, "summary": "simulation completed"}),
+        encoding="utf-8",
+    )
     materialized = SimpleNamespace(
         workspace_dir=workspace_dir,
         prompt_path=workspace_dir / "prompt.md",
@@ -301,6 +367,11 @@ async def test_run_evals_codex_judge_does_not_launch_reviewers_without_flag(
         lambda **_: None,
     )
 
+    async def fail_codex_skill_loop(**_: object) -> tuple[object, object]:
+        raise AssertionError("codex skill loop should stay disabled by default")
+
+    monkeypatch.setattr(runner, "_run_codex_skill_loop", fail_codex_skill_loop)
+
     reviewer_called = False
 
     async def fail_reviewer_chain_for_judge(**_: object) -> list[dict[str, object]]:
@@ -331,6 +402,214 @@ async def test_run_evals_codex_judge_does_not_launch_reviewers_without_flag(
     assert reviewer_called is False
     assert stats[AgentName.BENCHMARK_CODER]["total"] == 1
     assert stats[AgentName.BENCHMARK_CODER]["success"] == 1
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_run_evals_codex_skill_loop_flag_enables_loop_backend(
+    tmp_path, monkeypatch
+):
+    item = EvalDatasetItem(
+        id="codex-skill-loop-enabled-001",
+        task="codex skill loop flag regression",
+        complexity_level=0,
+        expected_decision=ReviewDecision.APPROVED,
+    )
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+    (workspace_dir / "simulation_result.json").write_text(
+        json.dumps({"success": True, "summary": "simulation completed"}),
+        encoding="utf-8",
+    )
+    materialized = SimpleNamespace(
+        workspace_dir=workspace_dir,
+        prompt_path=workspace_dir / "prompt.md",
+        prompt_text="prompt",
+        copied_paths=(),
+    )
+
+    monkeypatch.setattr(runner, "SESSION_LOG_ROOT", tmp_path / "session-root")
+    monkeypatch.setattr(
+        runner, "_materialize_codex_workspace", lambda **_: materialized
+    )
+    monkeypatch.setattr(runner, "_launch_codex_exec", lambda *_, **__: 0)
+
+    async def fake_verify_codex_workspace_for_agent(**_: object) -> SimpleNamespace:
+        return SimpleNamespace(
+            success=True,
+            errors=[],
+            details={},
+            verification_name="codex-verify",
+        )
+
+    async def fake_run_codex_skill_loop(**_: object):
+        return runner.CodexSkillLoopSummary(enabled=True, triggered=True), None
+
+    monkeypatch.setattr(
+        runner,
+        "_verify_codex_workspace_for_agent",
+        fake_verify_codex_workspace_for_agent,
+    )
+    monkeypatch.setattr(runner, "_run_codex_skill_loop", fake_run_codex_skill_loop)
+    monkeypatch.setattr(runner, "_write_eval_session_metadata", lambda **_: None)
+    monkeypatch.setattr(
+        runner,
+        "_resolve_codex_home_root",
+        lambda **_: tmp_path / "codex-home",
+    )
+    monkeypatch.setattr(
+        runner,
+        "_capture_latest_codex_session_artifacts",
+        lambda **_: None,
+    )
+
+    stats = {AgentName.BENCHMARK_CODER: {"total": 0, "success": 0}}
+    success = await runner._run_codex_eval(
+        item=item,
+        stats=stats,
+        agent_name=AgentName.BENCHMARK_CODER,
+        reward_agent_configs={},
+        case_label="skill-loop-enabled",
+        run_judge=True,
+        run_reviewers_with_judge=False,
+        enable_codex_skill_loop=True,
+    )
+
+    assert success is True
+    assert stats[AgentName.BENCHMARK_CODER]["total"] == 1
+    assert stats[AgentName.BENCHMARK_CODER]["success"] == 1
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
+    tmp_path, monkeypatch
+):
+    item = EvalDatasetItem(
+        id="codex-skill-loop-001",
+        task="codex skill loop regression",
+        complexity_level=0,
+        expected_decision=ReviewDecision.APPROVED,
+    )
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+    (workspace_dir / "simulation_result.json").write_text(
+        json.dumps({"success": False, "summary": "simulation did not report success"}),
+        encoding="utf-8",
+    )
+
+    codex_trace_artifacts = CodexSessionTraceArtifact(
+        session_id="019d0000-0000-7000-9000-000000000123"
+    )
+    verification_result = SimpleNamespace(
+        success=False,
+        verification_name="coder_workspace_contract",
+        errors=["missing simulation_result.json"],
+        details={},
+    )
+    baseline_snapshot = runner._snapshot_workspace_state(workspace_dir=workspace_dir)
+    captured_prompts: list[tuple[str, str]] = []
+    resume_calls: list[tuple[str, str, float | None, str]] = []
+
+    def fake_resume_codex_exec(
+        workspace_dir: Path,
+        prompt_text: str,
+        *,
+        task_id: str,
+        codex_session_id: str,
+        agent_name: AgentName | None = None,
+        session_id: str | None = None,
+        runtime_root: Path | None = None,
+        yolo: bool = True,
+        timeout_seconds: float | None = None,
+        output_last_message_path: Path | None = None,
+        reasoning_effort: str = "high",
+    ) -> CodexExecRunResult:
+        resume_calls.append(
+            (codex_session_id, prompt_text, timeout_seconds, reasoning_effort)
+        )
+        if output_last_message_path is not None:
+            output_last_message_path.parent.mkdir(parents=True, exist_ok=True)
+            output_last_message_path.write_text("last message", encoding="utf-8")
+        return CodexExecRunResult(
+            command=[
+                "codex",
+                "exec",
+                "resume",
+                codex_session_id,
+                "-",
+            ],
+            return_code=0,
+            timed_out=False,
+            timeout_seconds=timeout_seconds,
+            session_id=session_id,
+            output_last_message_path=output_last_message_path,
+        )
+
+    def fake_capture_latest_codex_session_artifacts(**kwargs: object):
+        captured_prompts.append(
+            (
+                str(kwargs.get("artifact_root")),
+                str(kwargs.get("sessions_root")),
+            )
+        )
+        return codex_trace_artifacts
+
+    monkeypatch.setattr(runner, "_resume_codex_exec", fake_resume_codex_exec)
+    monkeypatch.setattr(
+        runner,
+        "_capture_latest_codex_session_artifacts",
+        fake_capture_latest_codex_session_artifacts,
+    )
+    monkeypatch.setattr(runner, "SESSION_LOG_ROOT", tmp_path / "session-root")
+
+    summary, updated_trace = await runner._run_codex_skill_loop(
+        item=item,
+        agent_name=AgentName.ENGINEER_CODER,
+        workspace_dir=workspace_dir,
+        codex_runtime_root=tmp_path / "codex-runtime",
+        eval_log_key="ec-001",
+        baseline_snapshot=baseline_snapshot,
+        codex_trace_artifacts=codex_trace_artifacts,
+        launch_return_code=1,
+        verification_result=verification_result,
+        log=runner.logger,
+    )
+
+    assert summary.triggered is True
+    assert summary.primary_turn is not None
+    assert summary.primary_turn.session_id == codex_trace_artifacts.session_id
+    assert summary.primary_turn.simulation_success is False
+    assert summary.self_analysis_turn is not None
+    assert summary.skill_update_turn is not None
+    assert summary.event_count == 2
+    assert summary.events_path is not None
+    assert len(resume_calls) == 2
+    assert resume_calls[0][0] == codex_trace_artifacts.session_id
+    assert resume_calls[1][0] == codex_trace_artifacts.session_id
+    assert resume_calls[0][3] == "xhigh"
+    assert resume_calls[1][3] == "xhigh"
+    assert "journal.md" in resume_calls[0][1]
+    assert "suggested_skills/" in resume_calls[1][1]
+    assert (workspace_dir / "logs" / "skill_loop" / "self_analysis.md").exists()
+    assert (workspace_dir / "logs" / "skill_loop" / "skill_update.md").exists()
+    events_path = workspace_dir / "logs" / "skill_loop" / "events.jsonl"
+    assert events_path.exists()
+    events = [
+        json.loads(line)
+        for line in events_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert [event["event_type"] for event in events] == [
+        "skill_self_reflection",
+        "skill_update",
+    ]
+    assert events[0]["reflection_text"] == "last message"
+    assert events[1]["skill_update_text"] == "last message"
+    assert events[0]["codex_session_id"] == codex_trace_artifacts.session_id
+    assert events[1]["codex_session_id"] == codex_trace_artifacts.session_id
+    assert updated_trace is not None
+    assert updated_trace.session_id == codex_trace_artifacts.session_id
 
 
 @pytest.mark.integration_p0

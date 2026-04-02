@@ -8,7 +8,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field
@@ -97,6 +97,17 @@ class WorkspaceVerificationResult(BaseModel):
     verification_name: str
     errors: list[str] = Field(default_factory=list)
     details: dict[str, Any] = Field(default_factory=dict)
+
+
+class CodexExecRunResult(BaseModel):
+    """Outcome of a Codex CLI invocation."""
+
+    command: list[str] = Field(default_factory=list)
+    return_code: int | None = None
+    timed_out: bool = False
+    timeout_seconds: float | None = None
+    session_id: str | None = None
+    output_last_message_path: Path | None = None
 
 
 @dataclass(slots=True)
@@ -331,6 +342,7 @@ def prepare_codex_home(
     codex_home_root: Path,
     workspace_dir: Path,
     source_auth_path: Path | None = None,
+    reasoning_effort: Literal["low", "medium", "high", "xhigh"] = "high",
 ) -> Path:
     """Seed an isolated Codex home with the active auth bundle."""
 
@@ -352,7 +364,7 @@ def prepare_codex_home(
         "\n".join(
             [
                 'model = "gpt-5.4-mini"',
-                'model_reasoning_effort = "high"',
+                f'model_reasoning_effort = "{reasoning_effort}"',
                 'approvals_reviewer = "user"',
                 "",
                 "[features]",
@@ -450,6 +462,79 @@ def build_codex_prompt(
         backend_family=PromptBackendFamily.CLI_BASED,
         runtime_context=runtime_context,
     )
+
+
+def _run_codex_exec_command(
+    *,
+    workspace_dir: Path,
+    prompt_text: str,
+    task_id: str,
+    agent_name: AgentName | None = None,
+    session_id: str | None = None,
+    runtime_root: Path | None = None,
+    yolo: bool = True,
+    timeout_seconds: float | None = None,
+    resume_session_id: str | None = None,
+    output_last_message_path: Path | None = None,
+    reasoning_effort: Literal["low", "medium", "high", "xhigh"] = "high",
+) -> CodexExecRunResult:
+    codex_home_root = resolve_codex_home_root(
+        task_id=task_id,
+        session_id=session_id,
+        runtime_root=runtime_root,
+    )
+    prepare_codex_home(
+        codex_home_root=codex_home_root,
+        workspace_dir=workspace_dir,
+        reasoning_effort=reasoning_effort,
+    )
+
+    cmd = ["codex", "exec"]
+    if resume_session_id is not None:
+        cmd.extend(["resume", resume_session_id])
+    cmd.extend(_codex_execution_flags(yolo=yolo))
+    if output_last_message_path is not None:
+        output_last_message_path.parent.mkdir(parents=True, exist_ok=True)
+        cmd.extend(["--output-last-message", str(output_last_message_path)])
+    cmd.extend(
+        [
+            "-c",
+            "shell_environment_policy.inherit=all",
+            "--cd",
+            str(workspace_dir),
+            "--skip-git-repo-check",
+            "-",
+        ]
+    )
+    print("launching: " + " ".join(cmd))
+
+    result = CodexExecRunResult(
+        command=cmd,
+        timeout_seconds=timeout_seconds,
+        session_id=session_id,
+        output_last_message_path=output_last_message_path,
+    )
+    try:
+        completed = subprocess.run(
+            cmd,
+            input=prompt_text,
+            text=True,
+            env=build_codex_env(
+                task_id=task_id,
+                workspace_dir=workspace_dir,
+                codex_home_root=codex_home_root,
+                session_id=session_id,
+                agent_name=agent_name,
+            ),
+            check=False,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired:
+        result.timed_out = True
+        return result
+
+    result.return_code = completed.returncode
+    return result
 
 
 def materialize_seed_workspace(
@@ -639,40 +724,55 @@ def launch_codex_exec(
     session_id: str | None = None,
     runtime_root: Path | None = None,
     yolo: bool = True,
+    timeout_seconds: float | None = None,
+    reasoning_effort: Literal["low", "medium", "high", "xhigh"] = "high",
 ) -> int:
     """Launch `codex exec` in a workspace and stream output to the terminal."""
-    codex_home_root = resolve_codex_home_root(
+    result = _run_codex_exec_command(
+        workspace_dir=workspace_dir,
+        prompt_text=prompt_text,
         task_id=task_id,
+        agent_name=agent_name,
         session_id=session_id,
         runtime_root=runtime_root,
+        yolo=yolo,
+        timeout_seconds=timeout_seconds,
+        reasoning_effort=reasoning_effort,
     )
-    prepare_codex_home(codex_home_root=codex_home_root, workspace_dir=workspace_dir)
-    cmd = [
-        "codex",
-        "exec",
-        *_codex_execution_flags(yolo=yolo),
-        "-c",
-        "shell_environment_policy.inherit=all",
-        "--cd",
-        str(workspace_dir),
-        "--skip-git-repo-check",
-        "-",
-    ]
-    print("launching: " + " ".join(cmd))
-    completed = subprocess.run(
-        cmd,
-        input=prompt_text,
-        text=True,
-        env=build_codex_env(
-            task_id=task_id,
-            workspace_dir=workspace_dir,
-            codex_home_root=codex_home_root,
-            session_id=session_id,
-            agent_name=agent_name,
-        ),
-        check=False,
+    if result.timed_out:
+        return 124
+    return result.return_code if result.return_code is not None else 1
+
+
+def resume_codex_exec(
+    workspace_dir: Path,
+    prompt_text: str,
+    *,
+    task_id: str,
+    codex_session_id: str,
+    agent_name: AgentName | None = None,
+    session_id: str | None = None,
+    runtime_root: Path | None = None,
+    yolo: bool = True,
+    timeout_seconds: float | None = None,
+    output_last_message_path: Path | None = None,
+    reasoning_effort: Literal["low", "medium", "high", "xhigh"] = "high",
+) -> CodexExecRunResult:
+    """Resume an existing `codex exec` session with a follow-up prompt."""
+
+    return _run_codex_exec_command(
+        workspace_dir=workspace_dir,
+        prompt_text=prompt_text,
+        task_id=task_id,
+        agent_name=agent_name,
+        session_id=session_id,
+        runtime_root=runtime_root,
+        yolo=yolo,
+        timeout_seconds=timeout_seconds,
+        resume_session_id=codex_session_id,
+        output_last_message_path=output_last_message_path,
+        reasoning_effort=reasoning_effort,
     )
-    return completed.returncode
 
 
 def open_codex_ui(

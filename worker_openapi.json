@@ -2316,6 +2316,8 @@
           "logic_failure",
           "skill_edit",
           "skill_read",
+          "skill_self_reflection",
+          "skill_update",
           "ls_files_tool",
           "grep_tool",
           "read_file_tool",

@@ -56,6 +56,10 @@ class ObservabilityEventType(StrEnum):
     SKILL_EDIT = "skill_edit"
     # 18. Skill read (used as context)
     SKILL_READ = "skill_read"
+    # 19. Codex skill loop self-reflection turn
+    SKILL_SELF_REFLECTION = "skill_self_reflection"
+    # 20. Codex skill loop skill-update turn
+    SKILL_UPDATE = "skill_update"
     # 19. Tool-specific events for easier navigation/aggregation
     TOOL_LS_FILES = "ls_files_tool"
     TOOL_GREP = "grep_tool"
@@ -255,6 +259,37 @@ class SkillReadEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.SKILL_READ
     skill_path: str
     skill_name: str
+
+
+class SkillSelfReflectionEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.SKILL_SELF_REFLECTION
+    codex_session_id: str
+    task_id: str
+    agent_name: str
+    stage: str = "self_analysis"
+    trigger_reason: str
+    prompt_path: str | None = None
+    output_path: str | None = None
+    reflection_text: str
+    simulation_success: bool | None = None
+    verification_success: bool | None = None
+    reasoning_effort: str = "xhigh"
+
+
+class SkillUpdateEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.SKILL_UPDATE
+    codex_session_id: str
+    task_id: str
+    agent_name: str
+    stage: str = "skill_update"
+    trigger_reason: str
+    prompt_path: str | None = None
+    output_path: str | None = None
+    skill_update_text: str
+    updated_skill_paths: list[str] = Field(default_factory=list)
+    simulation_success: bool | None = None
+    verification_success: bool | None = None
+    reasoning_effort: str = "xhigh"
 
 
 class LsFilesToolEvent(BaseEvent):
