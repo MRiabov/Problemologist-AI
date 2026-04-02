@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from worker_renderer.utils.rendering import (
+    append_render_bundle_index,
+    build_render_bundle_index_entry,
     build_render_manifest,
     normalize_render_manifest,
     select_single_preview_render_subdir,
@@ -18,12 +20,14 @@ from .preview_scene import export_preview_scene_bundle
 __all__ = [
     "build_render_manifest",
     "bundle_workspace_base64",
+    "append_render_bundle_index",
     "configure_headless_rendering",
     "configure_headless_runtime",
     "materialize_preview_response",
     "materialize_render_artifacts",
     "configure_headless_vtk_egl",
     "create_headless_vtk_render_window",
+    "build_render_bundle_index_entry",
     "normalize_render_manifest",
     "render_preview",
     "render_simulation_video_artifact",

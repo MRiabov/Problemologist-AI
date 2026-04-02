@@ -851,6 +851,18 @@ class SegmentationLegendEntry(BaseModel):
     color_hex: StrictStr
 
 
+class RenderBundleIdentity(BaseModel):
+    """Stable identity fields for one published render bundle."""
+
+    bundle_id: StrictStr | None = None
+    created_at: StrictStr | None = None
+    revision: StrictStr | None = None
+    scene_hash: StrictStr | None = None
+    bundle_path: StrictStr | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class RenderArtifactMetadata(BaseModel):
     """Structured metadata persisted for one render artifact."""
 
@@ -872,12 +884,139 @@ class RenderManifest(BaseModel):
     """Manifest persisted alongside rendered artifacts under renders/."""
 
     version: StrictStr = "1.0"
+    bundle_id: StrictStr | None = None
+    created_at: StrictStr | None = None
     episode_id: StrictStr | None = None
     worker_session_id: StrictStr | None = None
     revision: StrictStr | None = None
+    scene_hash: StrictStr | None = None
+    bundle_path: StrictStr | None = None
     environment_version: StrictStr | None = None
     preview_evidence_paths: list[StrictStr] = Field(default_factory=list)
     artifacts: dict[StrictStr, RenderArtifactMetadata] = Field(default_factory=dict)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class RenderBundleIndexEntry(RenderBundleIdentity):
+    """Append-only discovery row for one published render bundle."""
+
+    manifest_path: StrictStr
+    preview_evidence_paths: list[StrictStr] = Field(default_factory=list)
+    primary_media_paths: list[StrictStr] = Field(default_factory=list)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class RenderFrameMetadata(BaseModel):
+    """Sparse frame metadata for a published video bundle."""
+
+    frame_index: StrictInt = Field(ge=0)
+    source_path: StrictStr
+    timestamp_s: float | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class RenderBundleObjectPoseRecord(BaseModel):
+    """Compact object pose row for query helpers."""
+
+    frame_index: StrictInt | None = None
+    object_id: StrictInt | None = None
+    object_type: StrictStr | None = None
+    label: StrictStr | None = None
+    instance_id: StrictStr | None = None
+    instance_name: StrictStr | None = None
+    semantic_label: StrictStr | None = None
+    body_name: StrictStr | None = None
+    geom_name: StrictStr | None = None
+    position: tuple[float, float, float] | None = None
+    orientation: tuple[float, float, float] | None = None
+    source_path: StrictStr | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class RenderBundleObjectIdentity(BaseModel):
+    """Identity fields returned by point-pick queries."""
+
+    object_type: StrictStr | None = None
+    object_id: StrictInt | None = None
+    label: StrictStr | None = None
+    instance_id: StrictStr | None = None
+    instance_name: StrictStr | None = None
+    semantic_label: StrictStr | None = None
+    body_name: StrictStr | None = None
+    geom_name: StrictStr | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class RenderBundlePointPickRequest(BaseModel):
+    """Request for a single point-pick query against one render bundle."""
+
+    bundle_path: StrictStr
+    pixel_x: StrictInt = Field(ge=0)
+    pixel_y: StrictInt = Field(ge=0)
+    image_width: StrictInt = Field(gt=0)
+    image_height: StrictInt = Field(gt=0)
+    orbit_pitch: float = 45.0
+    orbit_yaw: float = 45.0
+    view_index: StrictInt = Field(default=0, ge=0)
+    bundle_id: StrictStr | None = None
+    manifest_path: StrictStr | None = None
+    rendering_type: PreviewRenderingType | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class RenderBundlePointPickResult(BaseModel):
+    """World-space hit record returned by point-pick queries."""
+
+    bundle_id: StrictStr | None = None
+    bundle_path: StrictStr
+    revision: StrictStr | None = None
+    scene_hash: StrictStr | None = None
+    manifest_path: StrictStr | None = None
+    view_index: StrictInt = Field(ge=0)
+    pixel_x: StrictInt = Field(ge=0)
+    pixel_y: StrictInt = Field(ge=0)
+    image_width: StrictInt = Field(gt=0)
+    image_height: StrictInt = Field(gt=0)
+    orbit_pitch: float
+    orbit_yaw: float
+    ray_origin: tuple[float, float, float]
+    ray_direction: tuple[float, float, float]
+    hit: StrictBool
+    distance: float | None = None
+    world_point: tuple[float, float, float] | None = None
+    object_identity: RenderBundleObjectIdentity | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class RenderBundleQueryRequest(BaseModel):
+    """Request for a compact render-bundle metadata query."""
+
+    bundle_path: StrictStr
+    manifest_path: StrictStr | None = None
+    bundle_id: StrictStr | None = None
+    limit: StrictInt | None = Field(default=None, gt=0)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class RenderBundleQueryResult(BaseModel):
+    """Compact bundle-level query response."""
+
+    bundle_id: StrictStr | None = None
+    bundle_path: StrictStr
+    revision: StrictStr | None = None
+    scene_hash: StrictStr | None = None
+    manifest_path: StrictStr | None = None
+    preview_evidence_paths: list[StrictStr] = Field(default_factory=list)
+    frames: list[RenderFrameMetadata] = Field(default_factory=list)
+    objects: list[RenderBundleObjectPoseRecord] = Field(default_factory=list)
 
     model_config = ConfigDict(extra="forbid")
 

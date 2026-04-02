@@ -2087,7 +2087,8 @@ def validate(
         )
 
         if render_paths:
-            manifest_path = working_root / "renders" / "render_manifest.json"
+            bundle_path = str(Path(render_paths[0]).parent).replace("\\", "/")
+            manifest_path = working_root / bundle_path / "render_manifest.json"
             existing_manifest = None
             if manifest_path.exists():
                 with contextlib.suppress(Exception):
@@ -2103,10 +2104,32 @@ def validate(
                 worker_session_id=session_id,
                 revision=runtime_revision,
                 environment_version=None,
+                bundle_path=bundle_path,
             )
             manifest_path.write_text(
                 manifest.model_dump_json(indent=2),
                 encoding="utf-8",
+            )
+            compat_manifest_path = working_root / "renders" / "render_manifest.json"
+            if compat_manifest_path != manifest_path:
+                compat_manifest_path.write_text(
+                    manifest.model_dump_json(indent=2),
+                    encoding="utf-8",
+                )
+            from worker_renderer.utils.rendering import (
+                append_render_bundle_index,
+                build_render_bundle_index_entry,
+            )
+
+            append_render_bundle_index(
+                working_root,
+                build_render_bundle_index_entry(
+                    manifest,
+                    manifest_path=str(manifest_path.relative_to(working_root)).replace(
+                        "\\", "/"
+                    ),
+                    primary_media_paths=list(render_paths),
+                ),
             )
     except Exception as e:
         logger.warning(

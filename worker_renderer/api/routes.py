@@ -3,7 +3,9 @@ from __future__ import annotations
 import asyncio
 import base64
 import contextlib
+import json
 import os
+import shutil
 import tempfile
 import time
 import uuid
@@ -30,6 +32,7 @@ from shared.workers.schema import (
     PreviewRenderingType,
     PreviewViewSpec,
     RenderArtifactMetadata,
+    RenderFrameMetadata,
     RenderManifest,
     RenderSiblingPaths,
     SegmentationLegendEntry,
@@ -51,11 +54,12 @@ from worker_renderer.utils.build123d_rendering import (
     _render_view,
     camera_position_from_orbit,
     collect_preview_scene,
-    render_preview_bundle,
     render_preview_scene_bundle,
 )
 from worker_renderer.utils.file_validation import validate_benchmark_definition_yaml
 from worker_renderer.utils.rendering import (
+    append_render_bundle_index,
+    build_render_bundle_index_entry,
     build_render_manifest,
     normalize_render_manifest,
     select_single_preview_render_subdir,
@@ -210,11 +214,12 @@ def _load_workspace_benchmark_definition(
     return objectives_or_errors
 
 
-def _load_preview_scene(root: Path) -> PreviewScene | None:
+def _load_preview_scene_bundle(root: Path) -> tuple[PreviewScene | None, str | None]:
     scene_path = root / "preview_scene.json"
     if not scene_path.exists():
-        return None
-    scene = PreviewScene.model_validate_json(scene_path.read_text(encoding="utf-8"))
+        return None, None
+    raw_scene = scene_path.read_text(encoding="utf-8")
+    scene = PreviewScene.model_validate_json(raw_scene)
     for entity in scene.entities:
         if not entity.mesh_paths:
             continue
@@ -224,7 +229,80 @@ def _load_preview_scene(root: Path) -> PreviewScene | None:
             else str(Path(mesh_path).resolve())
             for mesh_path in entity.mesh_paths
         ]
-    return scene
+    return scene, raw_scene
+
+
+def _persist_preview_scene_bundle(
+    *,
+    bundle_root: Path,
+    scene: PreviewScene,
+    source_mesh_root: Path | None,
+    raw_scene_json: str | None = None,
+) -> Path:
+    """Persist the exact preview scene snapshot used by the renderer."""
+
+    bundle_root.mkdir(parents=True, exist_ok=True)
+    bundle_mesh_root = bundle_root / "meshes"
+    if source_mesh_root is not None and source_mesh_root.exists():
+        shutil.copytree(source_mesh_root, bundle_mesh_root, dirs_exist_ok=True)
+    else:
+        bundle_mesh_root.mkdir(parents=True, exist_ok=True)
+
+    if raw_scene_json is not None:
+        scene_path = bundle_root / "preview_scene.json"
+        scene_path.write_text(raw_scene_json, encoding="utf-8")
+        return scene_path
+
+    normalized_scene = scene.model_copy(deep=True)
+    normalized_source_root = source_mesh_root.resolve() if source_mesh_root else None
+    for entity in normalized_scene.entities:
+        if not entity.mesh_paths:
+            continue
+        normalized_paths: list[str] = []
+        for mesh_path in entity.mesh_paths:
+            mesh_path_obj = Path(mesh_path)
+            if mesh_path_obj.is_absolute() and normalized_source_root is not None:
+                rel_path = mesh_path_obj.resolve().relative_to(normalized_source_root)
+            else:
+                rel_path = mesh_path_obj
+            normalized_paths.append(str(Path("meshes") / rel_path))
+        entity.mesh_paths = normalized_paths
+
+    scene_path = bundle_root / "preview_scene.json"
+    scene_path.write_text(normalized_scene.model_dump_json(indent=2), encoding="utf-8")
+    return scene_path
+
+
+def _bundle_sidecar_blobs(bundle_root: Path) -> dict[str, str]:
+    blobs: dict[str, str] = {}
+    for rel_path in (
+        "preview_scene.json",
+        "render_manifest.json",
+        "frames.jsonl",
+        "objects.parquet",
+    ):
+        sidecar_path = bundle_root / rel_path
+        if sidecar_path.exists() and sidecar_path.is_file():
+            blobs[str(sidecar_path.relative_to(bundle_root.parent.parent))] = (
+                base64.b64encode(sidecar_path.read_bytes()).decode("ascii")
+            )
+
+    index_path = bundle_root.parent.parent / "renders" / "render_index.jsonl"
+    if index_path.exists() and index_path.is_file():
+        blobs[str(index_path.relative_to(bundle_root.parent.parent))] = (
+            base64.b64encode(index_path.read_bytes()).decode("ascii")
+        )
+
+    compat_manifest_path = bundle_root.parent / "render_manifest.json"
+    if (
+        compat_manifest_path.exists()
+        and compat_manifest_path.is_file()
+        and compat_manifest_path != bundle_root / "render_manifest.json"
+    ):
+        blobs[str(compat_manifest_path.relative_to(bundle_root.parent.parent))] = (
+            base64.b64encode(compat_manifest_path.read_bytes()).decode("ascii")
+        )
+    return blobs
 
 
 def _collect_render_artifacts(
@@ -258,10 +336,19 @@ def _collect_render_artifacts(
             )
             if object_store_key is not None:
                 object_store_keys[rel_key] = object_store_key
-                continue
+            continue
         render_blobs_base64[rel_key] = base64.b64encode(
             render_path.read_bytes()
         ).decode("ascii")
+
+    bundle_roots = {
+        (root / Path(render_path).parent).resolve()
+        for render_path in normalized_render_paths
+        if render_path
+    }
+    for bundle_root in sorted(bundle_roots):
+        with contextlib.suppress(Exception):
+            render_blobs_base64.update(_bundle_sidecar_blobs(bundle_root))
 
     render_manifest_path = root / "renders" / "render_manifest.json"
     existing_manifest = None
@@ -541,6 +628,7 @@ def _render_single_preview(
         )
         return image_path, artifacts
 
+    if rendering_type == PreviewRenderingType.SEGMENTATION:
         seg_base_bundle = _build_renderer(
             scene,
             width=width,
@@ -553,66 +641,69 @@ def _render_single_preview(
             edge_color=_OVERLAY_EDGE_COLOR,
             background=(0.0, 0.0, 0.0),
         )
-    seg_overlay_bundle: Any | None = None
-    if include_segmentation_axes or include_segmentation_edges:
-        seg_overlay_bundle = _build_renderer(
-            scene,
-            width=width,
-            height=height,
-            segmentation=False,
-            include_axes=include_segmentation_axes,
-            include_edges=include_segmentation_edges,
-            include_fill=False,
-            axes_color=_OVERLAY_AXES_COLOR,
-            edge_color=_OVERLAY_EDGE_COLOR,
-            background=(0.0, 0.0, 0.0),
-        )
-    try:
-        seg_image, _ = _render_view(
-            seg_base_bundle,
-            camera_position=camera_position,
-            lookat=center,
-            up=(0.0, 0.0, 1.0),
-            capture_depth=False,
-        )
-        if seg_overlay_bundle is not None:
-            seg_overlay, _ = _render_view(
-                seg_overlay_bundle,
+        seg_overlay_bundle: Any | None = None
+        if include_segmentation_axes or include_segmentation_edges:
+            seg_overlay_bundle = _build_renderer(
+                scene,
+                width=width,
+                height=height,
+                segmentation=False,
+                include_axes=include_segmentation_axes,
+                include_edges=include_segmentation_edges,
+                include_fill=False,
+                axes_color=_OVERLAY_AXES_COLOR,
+                edge_color=_OVERLAY_EDGE_COLOR,
+                background=(0.0, 0.0, 0.0),
+            )
+        try:
+            seg_image, _ = _render_view(
+                seg_base_bundle,
                 camera_position=camera_position,
                 lookat=center,
                 up=(0.0, 0.0, 1.0),
                 capture_depth=False,
             )
-            seg_image = _composite_non_black(seg_image, seg_overlay)
-    finally:
-        del seg_base_bundle
-        if seg_overlay_bundle is not None:
-            del seg_overlay_bundle
+            if seg_overlay_bundle is not None:
+                seg_overlay, _ = _render_view(
+                    seg_overlay_bundle,
+                    camera_position=camera_position,
+                    lookat=center,
+                    up=(0.0, 0.0, 1.0),
+                    capture_depth=False,
+                )
+                seg_image = _composite_non_black(seg_image, seg_overlay)
+        finally:
+            del seg_base_bundle
+            if seg_overlay_bundle is not None:
+                del seg_overlay_bundle
 
-    image_path = output_dir / f"{group_key}_segmentation.png"
-    Image.fromarray(seg_image, mode="RGB").save(image_path, "PNG")
-    rel_path = str(image_path.relative_to(workspace_root))
-    artifacts[rel_path] = RenderArtifactMetadata(
-        modality="segmentation",
-        group_key=group_key,
-        view_index=view_index,
-        orbit_pitch=pitch,
-        orbit_yaw=yaw,
-        siblings=RenderSiblingPaths(
-            rgb=str((output_dir / f"{group_key}.png").relative_to(workspace_root)),
-            depth=str(
-                (output_dir / f"{group_key}_depth.png").relative_to(workspace_root)
+        image_path = output_dir / f"{group_key}_segmentation.png"
+        Image.fromarray(seg_image, mode="RGB").save(image_path, "PNG")
+        rel_path = str(image_path.relative_to(workspace_root))
+        artifacts[rel_path] = RenderArtifactMetadata(
+            modality="segmentation",
+            group_key=group_key,
+            view_index=view_index,
+            orbit_pitch=pitch,
+            orbit_yaw=yaw,
+            siblings=RenderSiblingPaths(
+                rgb=str((output_dir / f"{group_key}.png").relative_to(workspace_root)),
+                depth=str(
+                    (output_dir / f"{group_key}_depth.png").relative_to(workspace_root)
+                ),
+                segmentation=str(image_path.relative_to(workspace_root)),
             ),
-            segmentation=str(image_path.relative_to(workspace_root)),
-        ),
-        segmentation_legend=_preview_segmentation_legend(scene),
-    )
-    return image_path, artifacts
+            segmentation_legend=_preview_segmentation_legend(scene),
+        )
+        return image_path, artifacts
+
+    raise ValueError(f"unsupported preview rendering type: {rendering_type}")
 
 
 def _build_preview_manifest(
     *,
     root: Path,
+    bundle_root: Path,
     saved_paths: list[str],
     legend_by_path: dict[str, list[SegmentationLegendEntry]],
     depth_ranges_by_path: dict[str, tuple[float, float]] | None,
@@ -707,10 +798,20 @@ def _build_preview_manifest(
         workspace_root=root,
         episode_id=session_id,
         worker_session_id=session_id,
+        bundle_path=str(bundle_root.relative_to(root)).replace("\\", "/"),
         preview_evidence_paths=preview_evidence_paths,
     )
-    manifest_path = root / "renders" / "render_manifest.json"
+    manifest_path = bundle_root / "render_manifest.json"
     _write_text_atomic(manifest_path, manifest.model_dump_json(indent=2))
+    compat_manifest_path = root / "renders" / "render_manifest.json"
+    if compat_manifest_path != manifest_path:
+        _write_text_atomic(compat_manifest_path, manifest.model_dump_json(indent=2))
+    index_entry = build_render_bundle_index_entry(
+        manifest,
+        manifest_path=str(manifest_path.relative_to(root)).replace("\\", "/"),
+        primary_media_paths=list(preview_evidence_paths),
+    )
+    append_render_bundle_index(root, index_entry)
     return manifest_path
 
 
@@ -856,10 +957,12 @@ async def api_preview(
                             "preview request must include at least one view"
                         )
 
-                    scene = _load_preview_scene(root)
+                    scene, raw_scene_json = _load_preview_scene_bundle(root)
+                    source_mesh_root: Path | None = root / "meshes" if scene else None
                     if scene is not None:
                         preview_scene = scene
                         mesh_tmpdir_ctx = contextlib.nullcontext(None)
+                        component = None
                     else:
                         component = load_component_from_script(
                             script_path=root / request.script_path,
@@ -870,13 +973,14 @@ async def api_preview(
 
                     with mesh_tmpdir_ctx as mesh_tmpdir:
                         if scene is None:
+                            source_mesh_root = Path(mesh_tmpdir)
                             preview_scene = await asyncio.to_thread(
                                 collect_preview_scene,
                                 component,
                                 objectives=objectives,
                                 workspace_root=root,
                                 smoke_test_mode=bool(request.smoke_test_mode),
-                                mesh_root=Path(mesh_tmpdir),
+                                mesh_root=source_mesh_root,
                             )
 
                         modalities: list[PreviewRenderingType] = []
@@ -951,8 +1055,16 @@ async def api_preview(
                         if first_image_path is None:
                             raise RuntimeError("preview renderer returned no output")
 
+                        _persist_preview_scene_bundle(
+                            bundle_root=renders_dir,
+                            scene=preview_scene,
+                            source_mesh_root=source_mesh_root,
+                            raw_scene_json=raw_scene_json,
+                        )
+
                 preview_manifest = _build_preview_manifest(
                     root=root,
+                    bundle_root=renders_dir,
                     saved_paths=saved_paths,
                     legend_by_path=legend_by_path,
                     depth_ranges_by_path=depth_ranges_by_path or None,
@@ -1063,8 +1175,9 @@ async def api_static_preview(
                         )
                     )
                     renders_dir.mkdir(parents=True, exist_ok=True)
-                    scene = _load_preview_scene(root)
+                    scene, raw_scene_json = _load_preview_scene_bundle(root)
                     if scene is not None:
+                        source_mesh_root = root / "meshes"
                         render_result = await asyncio.to_thread(
                             render_preview_scene_bundle,
                             scene,
@@ -1083,8 +1196,15 @@ async def api_static_preview(
                             width=render_width,
                             height=render_height,
                         )
+                        _persist_preview_scene_bundle(
+                            bundle_root=renders_dir,
+                            scene=scene,
+                            source_mesh_root=source_mesh_root,
+                            raw_scene_json=raw_scene_json,
+                        )
                         _build_preview_manifest(
                             root=root,
+                            bundle_root=renders_dir,
                             saved_paths=render_result.saved_paths,
                             legend_by_path=render_result.legend_by_path,
                             depth_ranges_by_path=render_result.depth_ranges_by_path,
@@ -1097,27 +1217,43 @@ async def api_static_preview(
                             session_root=root,
                             script_content=request.script_content,
                         )
-                        render_result = await asyncio.to_thread(
-                            render_preview_bundle,
-                            component,
-                            output_dir=renders_dir,
-                            objectives=objectives,
-                            smoke_test_mode=bool(request.smoke_test_mode),
-                            workspace_root=root,
-                            rgb_axes=render_policy.rgb.axes,
-                            rgb_edges=render_policy.rgb.edges,
-                            depth_axes=render_policy.depth.axes,
-                            depth_edges=render_policy.depth.edges,
-                            segmentation_axes=render_policy.segmentation.axes,
-                            segmentation_edges=render_policy.segmentation.edges,
-                            include_rgb=render_policy.rgb.enabled,
-                            include_depth=render_policy.depth.enabled,
-                            include_segmentation=render_policy.segmentation.enabled,
-                            width=render_width,
-                            height=render_height,
-                        )
+                        mesh_tmpdir = tempfile.TemporaryDirectory()
+                        with mesh_tmpdir as mesh_tmpdir_path:
+                            source_mesh_root = Path(mesh_tmpdir_path)
+                            preview_scene = await asyncio.to_thread(
+                                collect_preview_scene,
+                                component,
+                                objectives=objectives,
+                                workspace_root=root,
+                                smoke_test_mode=bool(request.smoke_test_mode),
+                                mesh_root=source_mesh_root,
+                            )
+                            render_result = await asyncio.to_thread(
+                                render_preview_scene_bundle,
+                                preview_scene,
+                                output_dir=renders_dir,
+                                workspace_root=root,
+                                smoke_test_mode=bool(request.smoke_test_mode),
+                                width=render_width,
+                                height=render_height,
+                                include_rgb=render_policy.rgb.enabled,
+                                include_depth=render_policy.depth.enabled,
+                                include_segmentation=render_policy.segmentation.enabled,
+                                rgb_axes=render_policy.rgb.axes,
+                                rgb_edges=render_policy.rgb.edges,
+                                depth_axes=render_policy.depth.axes,
+                                depth_edges=render_policy.depth.edges,
+                                segmentation_axes=render_policy.segmentation.axes,
+                                segmentation_edges=render_policy.segmentation.edges,
+                            )
+                            _persist_preview_scene_bundle(
+                                bundle_root=renders_dir,
+                                scene=preview_scene,
+                                source_mesh_root=source_mesh_root,
+                            )
                         _build_preview_manifest(
                             root=root,
+                            bundle_root=renders_dir,
                             saved_paths=render_result.saved_paths,
                             legend_by_path=render_result.legend_by_path,
                             depth_ranges_by_path=render_result.depth_ranges_by_path,
@@ -1163,8 +1299,22 @@ async def api_simulation_video(
                         fps=request.fps,
                     )
 
-                manifest_path = root / "renders" / "render_manifest.json"
                 output_rel_path = str(output_path.relative_to(root))
+                bundle_root = output_path.parent
+                frames_sidecar = bundle_root / "frames.jsonl"
+                frame_rows = [
+                    RenderFrameMetadata(
+                        frame_index=index,
+                        source_path=str(Path(frame_path)),
+                        timestamp_s=(index / float(request.fps)),
+                    ).model_dump(mode="json")
+                    for index, frame_path in enumerate(request.frame_paths)
+                ]
+                frames_sidecar.write_text(
+                    "\n".join(json.dumps(row, sort_keys=False) for row in frame_rows)
+                    + ("\n" if frame_rows else ""),
+                    encoding="utf-8",
+                )
                 manifest = build_render_manifest(
                     {
                         output_rel_path: RenderArtifactMetadata(
@@ -1175,10 +1325,24 @@ async def api_simulation_video(
                     workspace_root=root,
                     episode_id=request.session_id or x_session_id,
                     worker_session_id=x_session_id,
+                    bundle_path=str(bundle_root.relative_to(root)).replace("\\", "/"),
                 )
-                manifest_path.write_text(
-                    manifest.model_dump_json(indent=2),
-                    encoding="utf-8",
+                manifest_path = bundle_root / "render_manifest.json"
+                _write_text_atomic(manifest_path, manifest.model_dump_json(indent=2))
+                compat_manifest_path = root / "renders" / "render_manifest.json"
+                if compat_manifest_path != manifest_path:
+                    _write_text_atomic(
+                        compat_manifest_path, manifest.model_dump_json(indent=2)
+                    )
+                append_render_bundle_index(
+                    root,
+                    build_render_bundle_index_entry(
+                        manifest,
+                        manifest_path=str(manifest_path.relative_to(root)).replace(
+                            "\\", "/"
+                        ),
+                        primary_media_paths=[output_rel_path],
+                    ),
                 )
 
                 events = collect_and_cleanup_events(root, session_id=x_session_id)
@@ -1219,8 +1383,8 @@ async def api_stress_heatmap(
                         height=request.height,
                     )
 
-                manifest_path = root / "renders" / "render_manifest.json"
                 output_rel_path = str(output_path.relative_to(root))
+                bundle_root = output_path.parent
                 manifest = build_render_manifest(
                     {
                         output_rel_path: RenderArtifactMetadata(
@@ -1231,10 +1395,24 @@ async def api_stress_heatmap(
                     workspace_root=root,
                     episode_id=request.session_id or x_session_id,
                     worker_session_id=x_session_id,
+                    bundle_path=str(bundle_root.relative_to(root)).replace("\\", "/"),
                 )
-                manifest_path.write_text(
-                    manifest.model_dump_json(indent=2),
-                    encoding="utf-8",
+                manifest_path = bundle_root / "render_manifest.json"
+                _write_text_atomic(manifest_path, manifest.model_dump_json(indent=2))
+                compat_manifest_path = root / "renders" / "render_manifest.json"
+                if compat_manifest_path != manifest_path:
+                    _write_text_atomic(
+                        compat_manifest_path, manifest.model_dump_json(indent=2)
+                    )
+                append_render_bundle_index(
+                    root,
+                    build_render_bundle_index_entry(
+                        manifest,
+                        manifest_path=str(manifest_path.relative_to(root)).replace(
+                            "\\", "/"
+                        ),
+                        primary_media_paths=[output_rel_path],
+                    ),
                 )
 
                 events = collect_and_cleanup_events(root, session_id=x_session_id)

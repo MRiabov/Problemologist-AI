@@ -252,6 +252,10 @@ async def api_preview(
                 target_preview_prefix,
             )
             _write_text_atomic(
+                preview_renders_dir / "render_manifest.json",
+                response.render_manifest_json,
+            )
+            _write_text_atomic(
                 preview_renders_dir.parent / "render_manifest.json",
                 response.render_manifest_json,
             )

@@ -54,7 +54,11 @@ from shared.models.schemas import CodeReference, ReviewResult, TraceMetadata
 from shared.observability.schemas import LlmMediaAttachedEvent
 from shared.script_contracts import authored_script_path_for_agent
 from shared.workers.filesystem.policy import VisualInspectionPolicy
-from shared.workers.schema import MediaInspectionResult, RenderManifest
+from shared.workers.schema import (
+    MediaInspectionResult,
+    RenderBundleIndexEntry,
+    RenderManifest,
+)
 
 if TYPE_CHECKING:
     from controller.agent.state import AgentState
@@ -211,55 +215,109 @@ class BaseNode:
         return len(inspected_paths.intersection(current_render_paths))
 
     async def _list_current_revision_render_paths(self) -> list[str]:
-        manifest_candidates = (
-            "renders/render_manifest.json",
-            "workspace/renders/render_manifest.json",
-        )
-        render_manifest_path = ""
-        manifest_raw = ""
-        for candidate in manifest_candidates:
-            if await self.ctx.worker_client.exists(
-                candidate, bypass_agent_permissions=True
-            ):
-                try:
-                    manifest_raw = await self.ctx.worker_client.read_file(
-                        candidate, bypass_agent_permissions=True
-                    )
-                    render_manifest_path = candidate
-                    break
-                except Exception:
-                    continue
-
-        if not render_manifest_path:
-            return []
-
-        try:
-            render_manifest = RenderManifest.model_validate_json(manifest_raw)
-        except Exception:
-            return []
-
         current_revision = repo_revision(Path(__file__).resolve().parents[2])
         if not current_revision:
             return []
-        if not render_manifest.revision:
-            return []
-        if render_manifest.revision.strip().lower() != current_revision.lower():
-            return []
 
-        preview_paths = [
-            path.lstrip("/")
-            for path in render_manifest.preview_evidence_paths
-            if path and path.lower().endswith((".png", ".jpg", ".jpeg"))
+        manifest_candidates = [
+            "renders/benchmark_renders/render_manifest.json",
+            "renders/engineer_renders/render_manifest.json",
+            "renders/final_preview_renders/render_manifest.json",
+            "renders/render_manifest.json",
+            "workspace/renders/benchmark_renders/render_manifest.json",
+            "workspace/renders/engineer_renders/render_manifest.json",
+            "workspace/renders/final_preview_renders/render_manifest.json",
+            "workspace/renders/render_manifest.json",
         ]
-        if preview_paths:
-            return sorted(dict.fromkeys(preview_paths))
+        for candidate in manifest_candidates:
+            if not await self.ctx.worker_client.exists(
+                candidate, bypass_agent_permissions=True
+            ):
+                continue
+            try:
+                manifest_raw = await self.ctx.worker_client.read_file(
+                    candidate, bypass_agent_permissions=True
+                )
+                render_manifest = RenderManifest.model_validate_json(manifest_raw)
+            except Exception:
+                continue
 
-        artifact_paths = [
-            path.lstrip("/")
-            for path in render_manifest.artifacts.keys()
-            if path and path.lower().endswith((".png", ".jpg", ".jpeg"))
-        ]
-        return sorted(dict.fromkeys(artifact_paths))
+            if not render_manifest.revision:
+                continue
+            if render_manifest.revision.strip().lower() != current_revision.lower():
+                continue
+
+            preview_paths = [
+                path.lstrip("/")
+                for path in render_manifest.preview_evidence_paths
+                if path and path.lower().endswith((".png", ".jpg", ".jpeg"))
+            ]
+            if preview_paths:
+                return sorted(dict.fromkeys(preview_paths))
+
+            artifact_paths = [
+                path.lstrip("/")
+                for path in render_manifest.artifacts.keys()
+                if path and path.lower().endswith((".png", ".jpg", ".jpeg"))
+            ]
+            if artifact_paths:
+                return sorted(dict.fromkeys(artifact_paths))
+
+        index_candidates = (
+            "renders/render_index.jsonl",
+            "workspace/renders/render_index.jsonl",
+        )
+        for candidate in index_candidates:
+            if not await self.ctx.worker_client.exists(
+                candidate, bypass_agent_permissions=True
+            ):
+                continue
+            try:
+                index_raw = await self.ctx.worker_client.read_file(
+                    candidate, bypass_agent_permissions=True
+                )
+            except Exception:
+                continue
+
+            for line in reversed(
+                [row for row in index_raw.splitlines() if row.strip()]
+            ):
+                try:
+                    entry = RenderBundleIndexEntry.model_validate_json(line)
+                except Exception:
+                    continue
+                if not entry.revision:
+                    continue
+                if entry.revision.strip().lower() != current_revision.lower():
+                    continue
+                manifest_path = entry.manifest_path.lstrip("/")
+                if not await self.ctx.worker_client.exists(
+                    manifest_path, bypass_agent_permissions=True
+                ):
+                    continue
+                try:
+                    manifest_raw = await self.ctx.worker_client.read_file(
+                        manifest_path, bypass_agent_permissions=True
+                    )
+                    render_manifest = RenderManifest.model_validate_json(manifest_raw)
+                except Exception:
+                    continue
+                preview_paths = [
+                    path.lstrip("/")
+                    for path in render_manifest.preview_evidence_paths
+                    if path and path.lower().endswith((".png", ".jpg", ".jpeg"))
+                ]
+                if preview_paths:
+                    return sorted(dict.fromkeys(preview_paths))
+                artifact_paths = [
+                    path.lstrip("/")
+                    for path in render_manifest.artifacts.keys()
+                    if path and path.lower().endswith((".png", ".jpg", ".jpeg"))
+                ]
+                if artifact_paths:
+                    return sorted(dict.fromkeys(artifact_paths))
+
+        return []
 
     async def _ensure_current_revision_render_inspection(self) -> list[str]:
         """

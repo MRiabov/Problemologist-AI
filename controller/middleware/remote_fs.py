@@ -624,12 +624,19 @@ class RemoteFilesystemMiddleware:
         if render_path.startswith("workspace/"):
             render_path = render_path.removeprefix("workspace/")
 
-        manifest_candidates = (
-            "renders/render_manifest.json",
-            "workspace/renders/render_manifest.json",
-        )
-        for manifest_candidate in manifest_candidates:
-            manifest_raw = await self.client.read_file_optional(manifest_candidate)
+        candidate_dirs = []
+        path_obj = Path(render_path)
+        for parent in path_obj.parents:
+            candidate_dirs.append(parent)
+        candidate_dirs.append(Path("renders"))
+        seen_candidates: set[str] = set()
+        for candidate_dir in candidate_dirs:
+            candidate_manifest = candidate_dir / "render_manifest.json"
+            candidate_key = candidate_manifest.as_posix()
+            if candidate_key in seen_candidates:
+                continue
+            seen_candidates.add(candidate_key)
+            manifest_raw = await self.client.read_file_optional(candidate_key)
             if manifest_raw is None:
                 continue
 

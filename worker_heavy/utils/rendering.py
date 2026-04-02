@@ -7,7 +7,6 @@ import structlog
 from build123d import Compound
 
 from shared.agents.config import load_agents_config
-from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition
 from shared.observability.events import emit_event
 from shared.rendering import (
@@ -72,35 +71,18 @@ def build_render_manifest(
     environment_version: str | None = None,
     preview_evidence_paths: list[str] | None = None,
 ) -> RenderManifest:
-    resolved_revision = revision
-    if not resolved_revision:
-        resolved_revision = os.getenv("REPO_REVISION")
-    if not resolved_revision:
-        resolved_revision = repo_revision(Path.cwd())
-    if not resolved_revision and workspace_root is not None:
-        resolved_revision = repo_revision(workspace_root)
-    if not resolved_revision:
-        # Synthetic manifests can be built outside a checked-out workspace, so
-        # fall back to the repository that owns the runtime code.
-        resolved_revision = repo_revision(Path(__file__).resolve().parents[2])
+    from worker_renderer.utils.rendering import (
+        build_render_manifest as _build_render_manifest,
+    )
 
-    if environment_version is None:
-        environment_version = _workspace_environment_version(workspace_root)
-
-    if preview_evidence_paths is None:
-        preview_evidence_paths = sorted(
-            path
-            for path in artifacts
-            if Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
-        )
-
-    return RenderManifest(
-        episode_id=_derived_episode_id(episode_id),
+    return _build_render_manifest(
+        artifacts,
+        workspace_root=workspace_root,
+        episode_id=episode_id,
         worker_session_id=worker_session_id,
-        revision=resolved_revision,
+        revision=revision,
         environment_version=environment_version,
         preview_evidence_paths=preview_evidence_paths,
-        artifacts=artifacts,
     )
 
 
@@ -170,32 +152,28 @@ def normalize_render_manifest(
     revision: str | None = None,
     environment_version: str | None = None,
     preview_evidence_paths: list[str] | None = None,
+    bundle_path: str | None = None,
+    created_at: str | None = None,
+    bundle_id: str | None = None,
+    scene_hash: str | None = None,
 ) -> RenderManifest:
-    existing_artifacts = dict(existing_manifest.artifacts) if existing_manifest else {}
-    normalized_artifacts: dict[str, RenderArtifactMetadata] = {}
-    for render_path in render_paths:
-        suffix = Path(render_path).suffix.lower()
-        if suffix not in {".png", ".jpg", ".jpeg", ".mp4"}:
-            continue
-        normalized_artifacts[render_path] = _infer_render_artifact_metadata(
-            render_path, existing=existing_artifacts.get(render_path)
-        )
+    from worker_renderer.utils.rendering import (
+        normalize_render_manifest as _normalize_render_manifest,
+    )
 
-    resolved_revision = revision
-    if not resolved_revision and existing_manifest is not None:
-        resolved_revision = existing_manifest.revision
-    resolved_environment_version = environment_version
-    if resolved_environment_version is None and existing_manifest is not None:
-        resolved_environment_version = existing_manifest.environment_version
-
-    return build_render_manifest(
-        normalized_artifacts,
+    return _normalize_render_manifest(
+        render_paths=render_paths,
         workspace_root=workspace_root,
+        existing_manifest=existing_manifest,
         episode_id=episode_id,
         worker_session_id=worker_session_id,
-        revision=resolved_revision,
-        environment_version=resolved_environment_version,
+        revision=revision,
+        environment_version=environment_version,
         preview_evidence_paths=preview_evidence_paths,
+        bundle_path=bundle_path,
+        created_at=created_at,
+        bundle_id=bundle_id,
+        scene_hash=scene_hash,
     )
 
 
@@ -405,6 +383,14 @@ def prerender_24_views(
     saved_files = []
 
     try:
+        from worker_renderer.utils.rendering import (
+            append_render_bundle_index,
+            build_render_bundle_index_entry,
+        )
+        from worker_renderer.utils.rendering import (
+            normalize_render_manifest as renderer_normalize_render_manifest,
+        )
+
         emit_event(
             {
                 "event_type": "validation_preview_backend_selected",
@@ -445,7 +431,8 @@ def prerender_24_views(
         ]
         if not render_paths:
             raise RuntimeError("renderer returned no preview image artifacts")
-        manifest_path = resolved_workspace_root / "renders" / "render_manifest.json"
+        bundle_path = str(Path(render_paths[0]).parent).replace("\\", "/")
+        manifest_path = resolved_workspace_root / bundle_path / "render_manifest.json"
         existing_manifest = None
         if manifest_path.exists():
             try:
@@ -455,7 +442,7 @@ def prerender_24_views(
             except Exception:
                 existing_manifest = None
 
-        manifest = normalize_render_manifest(
+        manifest = renderer_normalize_render_manifest(
             render_paths=render_paths,
             workspace_root=resolved_workspace_root,
             existing_manifest=existing_manifest,
@@ -463,10 +450,29 @@ def prerender_24_views(
             worker_session_id=session_id,
             revision=revision,
             environment_version=environment_version,
+            bundle_path=bundle_path,
         )
         manifest_path.write_text(
             manifest.model_dump_json(indent=2),
             encoding="utf-8",
+        )
+        compat_manifest_path = (
+            resolved_workspace_root / "renders" / "render_manifest.json"
+        )
+        if compat_manifest_path != manifest_path:
+            compat_manifest_path.write_text(
+                manifest.model_dump_json(indent=2),
+                encoding="utf-8",
+            )
+        append_render_bundle_index(
+            resolved_workspace_root,
+            build_render_bundle_index_entry(
+                manifest,
+                manifest_path=str(
+                    manifest_path.relative_to(resolved_workspace_root)
+                ).replace("\\", "/"),
+                primary_media_paths=list(render_paths),
+            ),
         )
         saved_files = list(render_paths)
 

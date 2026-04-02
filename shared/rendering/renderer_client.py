@@ -274,8 +274,11 @@ def materialize_preview_response(
             first_materialized = output_dir / Path(response.image_path).name
 
     if response.render_manifest_json:
-        manifest_path = output_dir.parent / "render_manifest.json"
+        manifest_path = output_dir / "render_manifest.json"
         _write_text_atomic(manifest_path, response.render_manifest_json)
+        compat_manifest_path = output_dir.parent / "render_manifest.json"
+        if compat_manifest_path != manifest_path:
+            _write_text_atomic(compat_manifest_path, response.render_manifest_json)
 
     return first_materialized
 

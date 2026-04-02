@@ -28,6 +28,14 @@ from worker_heavy.utils.verification import run_verification_job
 
 logger = structlog.get_logger(__name__)
 
+_RENDER_SIDE_CAR_FILENAMES = {
+    "render_manifest.json",
+    "render_index.jsonl",
+    "preview_scene.json",
+    "frames.jsonl",
+    "objects.parquet",
+}
+
 
 def _extract_bundle(bundle_bytes: bytes, target_dir: Path):
     """Extract gzipped tarball to target directory using system tar."""
@@ -53,6 +61,28 @@ def _extract_bundle(bundle_bytes: bytes, target_dir: Path):
 
 def _decode_bundle(bundle_base64: str) -> bytes:
     return base64.b64decode(bundle_base64)
+
+
+def _is_render_payload_file(path: Path) -> bool:
+    return path.suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"} or (
+        path.name in _RENDER_SIDE_CAR_FILENAMES
+    )
+
+
+def _collect_render_payload_blobs(root: Path) -> dict[str, str]:
+    render_blobs_base64: dict[str, str] = {}
+    renders_dir = root / "renders"
+    if not renders_dir.exists():
+        return render_blobs_base64
+
+    for render_path in sorted(renders_dir.rglob("*")):
+        if not render_path.is_file() or not _is_render_payload_file(render_path):
+            continue
+        rel_path = str(render_path.relative_to(root))
+        render_blobs_base64[rel_path] = base64.b64encode(
+            render_path.read_bytes()
+        ).decode("ascii")
+    return render_blobs_base64
 
 
 def _collect_submission_artifacts(
@@ -97,11 +127,7 @@ def _collect_submission_artifacts(
             render_blobs_base64[rel_path] = base64.b64encode(
                 render_path.read_bytes()
             ).decode("ascii")
-        render_manifest_path = renders_dir / "render_manifest.json"
-        if render_manifest_path.exists():
-            render_blobs_base64[str(Path("renders") / "render_manifest.json")] = (
-                base64.b64encode(render_manifest_path.read_bytes()).decode("ascii")
-            )
+    render_blobs_base64.update(_collect_render_payload_blobs(root))
     artifacts.render_blobs_base64 = render_blobs_base64
     return artifacts
 
@@ -129,12 +155,7 @@ def _collect_validation_artifacts(root: Path) -> SimulationArtifacts:
                 render_path.read_bytes()
             ).decode("ascii")
 
-        render_manifest_path = renders_dir / "render_manifest.json"
-        if render_manifest_path.exists():
-            render_blobs_base64[str(Path("renders") / "render_manifest.json")] = (
-                base64.b64encode(render_manifest_path.read_bytes()).decode("ascii")
-            )
-
+    render_blobs_base64.update(_collect_render_payload_blobs(root))
     artifacts.render_blobs_base64 = render_blobs_base64
     return artifacts
 
@@ -171,13 +192,7 @@ def _collect_simulation_artifacts(
         render_blobs_base64[rel_path] = base64.b64encode(
             render_path.read_bytes()
         ).decode("ascii")
-
-    render_manifest_path = root / "renders" / "render_manifest.json"
-    if render_manifest_path.exists():
-        render_blobs_base64[str(Path("renders") / "render_manifest.json")] = (
-            base64.b64encode(render_manifest_path.read_bytes()).decode("ascii")
-        )
-
+    render_blobs_base64.update(_collect_render_payload_blobs(root))
     artifacts.render_blobs_base64 = render_blobs_base64
     return artifacts
 

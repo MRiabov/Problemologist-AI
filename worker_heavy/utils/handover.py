@@ -104,8 +104,21 @@ def _validate_render_manifest_bundle(
     if not expected_render_paths:
         return
 
-    manifest_path = renders_dir / "render_manifest.json"
-    if not manifest_path.exists():
+    bundle_roots = {
+        renders_dir.parent / Path(path.lstrip("/")).parent
+        for path in expected_render_paths
+    }
+    manifest_path = None
+    for candidate_root in sorted(bundle_roots):
+        candidate_manifest = candidate_root / "render_manifest.json"
+        if candidate_manifest.exists():
+            manifest_path = candidate_manifest
+            break
+    if manifest_path is None:
+        compat_manifest_path = renders_dir / "render_manifest.json"
+        if compat_manifest_path.exists():
+            manifest_path = compat_manifest_path
+    if manifest_path is None:
         missing_render_files = sorted(
             path
             for path in expected_render_paths
@@ -116,7 +129,7 @@ def _validate_render_manifest_bundle(
                 f"latest preview bundle is missing render files: {missing_render_files}"
             )
         raise ValueError(
-            "renders/render_manifest.json missing for latest preview bundle"
+            "bundle-local render_manifest.json missing for latest preview bundle"
         )
 
     try:
@@ -136,7 +149,7 @@ def _validate_render_manifest_bundle(
         )
     if render_manifest.revision.strip().lower() != current_revision:
         raise ValueError(
-            "renders/render_manifest.json is out of sync with the latest preview "
+            "bundle-local render_manifest.json is out of sync with the latest preview "
             "bundle: revision mismatch: "
             f"manifest={render_manifest.revision.strip().lower()} "
             f"latest={current_revision}"
@@ -170,7 +183,7 @@ def _validate_render_manifest_bundle(
 
     if details:
         raise ValueError(
-            "renders/render_manifest.json is out of sync with the latest preview "
+            "bundle-local render_manifest.json is out of sync with the latest preview "
             "bundle: " + "; ".join(details)
         )
 

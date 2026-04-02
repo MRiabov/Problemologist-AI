@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import contextlib
+import hashlib
 import os
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from shared.git_utils import repo_revision
 from shared.workers.schema import (
     RenderArtifactMetadata,
+    RenderBundleIdentity,
+    RenderBundleIndexEntry,
     RenderManifest,
     RenderSiblingPaths,
 )
@@ -19,6 +24,109 @@ def _derived_episode_id(session_id: str | None) -> str | None:
         return str(uuid.UUID(session_id))
     except Exception:
         return str(uuid.uuid5(uuid.NAMESPACE_DNS, session_id))
+
+
+def _bundle_path_from_artifacts(
+    *,
+    workspace_root: Path | None,
+    artifacts: dict[str, RenderArtifactMetadata],
+) -> str | None:
+    candidate_paths = sorted(
+        path
+        for path in artifacts
+        if Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
+    )
+    if not candidate_paths:
+        return None
+
+    bundle_parent = Path(candidate_paths[0]).parent
+    if workspace_root is not None:
+        with contextlib.suppress(Exception):
+            bundle_parent = bundle_parent.relative_to(workspace_root)
+    return str(bundle_parent).replace("\\", "/")
+
+
+def _resolve_bundle_scene_hash(
+    *,
+    workspace_root: Path | None,
+    bundle_path: str | None,
+    artifacts: dict[str, RenderArtifactMetadata],
+) -> str | None:
+    if workspace_root is None or not bundle_path:
+        return None
+
+    bundle_root = workspace_root / bundle_path
+    for candidate in (
+        bundle_root / "preview_scene.json",
+        bundle_root / "frames.jsonl",
+    ):
+        if candidate.exists():
+            try:
+                return hashlib.sha256(candidate.read_bytes()).hexdigest()
+            except Exception:
+                continue
+
+    candidate_paths = sorted(
+        path
+        for path in artifacts
+        if Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
+    )
+    if not candidate_paths:
+        return None
+
+    digest = hashlib.sha256()
+    for rel_path in candidate_paths:
+        digest.update(str(rel_path).encode("utf-8"))
+        digest.update(b"\0")
+        candidate = workspace_root / rel_path
+        if candidate.exists():
+            try:
+                digest.update(candidate.read_bytes())
+            except Exception:
+                continue
+    return digest.hexdigest()
+
+
+def _build_render_identity(
+    *,
+    workspace_root: Path | None,
+    artifacts: dict[str, RenderArtifactMetadata],
+    revision: str,
+    bundle_path: str | None = None,
+    created_at: str | None = None,
+    bundle_id: str | None = None,
+    scene_hash: str | None = None,
+) -> RenderBundleIdentity:
+    resolved_bundle_path = bundle_path or _bundle_path_from_artifacts(
+        workspace_root=workspace_root,
+        artifacts=artifacts,
+    )
+    resolved_scene_hash = scene_hash or _resolve_bundle_scene_hash(
+        workspace_root=workspace_root,
+        bundle_path=resolved_bundle_path,
+        artifacts=artifacts,
+    )
+    resolved_created_at = created_at or datetime.now(timezone.utc).isoformat()
+    resolved_bundle_id = bundle_id
+    if not resolved_bundle_id:
+        seed = "|".join(
+            part
+            for part in (
+                revision,
+                resolved_bundle_path or "",
+                resolved_scene_hash or "",
+                resolved_created_at,
+            )
+            if part
+        )
+        resolved_bundle_id = str(uuid.uuid5(uuid.NAMESPACE_URL, seed))
+    return RenderBundleIdentity(
+        bundle_id=resolved_bundle_id,
+        created_at=resolved_created_at,
+        revision=revision,
+        scene_hash=resolved_scene_hash,
+        bundle_path=resolved_bundle_path,
+    )
 
 
 def _workspace_environment_version(workspace_root: Path | None) -> str | None:
@@ -53,6 +161,10 @@ def build_render_manifest(
     revision: str | None = None,
     environment_version: str | None = None,
     preview_evidence_paths: list[str] | None = None,
+    bundle_path: str | None = None,
+    created_at: str | None = None,
+    bundle_id: str | None = None,
+    scene_hash: str | None = None,
 ) -> RenderManifest:
     resolved_revision = revision
     if not resolved_revision:
@@ -74,10 +186,23 @@ def build_render_manifest(
             if Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
         )
 
+    identity = _build_render_identity(
+        workspace_root=workspace_root,
+        artifacts=artifacts,
+        revision=resolved_revision,
+        bundle_path=bundle_path,
+        created_at=created_at,
+        bundle_id=bundle_id,
+        scene_hash=scene_hash,
+    )
     return RenderManifest(
+        bundle_id=identity.bundle_id,
+        created_at=identity.created_at,
         episode_id=_derived_episode_id(episode_id),
         worker_session_id=worker_session_id,
         revision=resolved_revision,
+        scene_hash=identity.scene_hash,
+        bundle_path=identity.bundle_path,
         environment_version=environment_version,
         preview_evidence_paths=preview_evidence_paths,
         artifacts=artifacts,
@@ -150,6 +275,10 @@ def normalize_render_manifest(
     revision: str | None = None,
     environment_version: str | None = None,
     preview_evidence_paths: list[str] | None = None,
+    bundle_path: str | None = None,
+    created_at: str | None = None,
+    bundle_id: str | None = None,
+    scene_hash: str | None = None,
 ) -> RenderManifest:
     existing_artifacts = dict(existing_manifest.artifacts) if existing_manifest else {}
     normalized_artifacts: dict[str, RenderArtifactMetadata] = {}
@@ -176,7 +305,43 @@ def normalize_render_manifest(
         revision=resolved_revision,
         environment_version=resolved_environment_version,
         preview_evidence_paths=preview_evidence_paths,
+        bundle_path=bundle_path,
+        created_at=created_at,
+        bundle_id=bundle_id,
+        scene_hash=scene_hash,
     )
+
+
+def build_render_bundle_index_entry(
+    manifest: RenderManifest,
+    *,
+    manifest_path: str,
+    primary_media_paths: list[str] | None = None,
+) -> RenderBundleIndexEntry:
+    """Build the append-only discovery row for one published bundle."""
+
+    return RenderBundleIndexEntry(
+        bundle_id=manifest.bundle_id,
+        created_at=manifest.created_at,
+        revision=manifest.revision,
+        scene_hash=manifest.scene_hash,
+        bundle_path=manifest.bundle_path,
+        manifest_path=manifest_path,
+        preview_evidence_paths=list(manifest.preview_evidence_paths),
+        primary_media_paths=primary_media_paths
+        or list(manifest.preview_evidence_paths),
+    )
+
+
+def append_render_bundle_index(root: Path, entry: RenderBundleIndexEntry) -> Path:
+    """Append a render bundle history row to the append-only index."""
+
+    index_path = root / "renders" / "render_index.jsonl"
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    with index_path.open("a", encoding="utf-8") as handle:
+        handle.write(entry.model_dump_json())
+        handle.write("\n")
+    return index_path
 
 
 def _is_benchmark_role(agent_role: str | None) -> bool:
