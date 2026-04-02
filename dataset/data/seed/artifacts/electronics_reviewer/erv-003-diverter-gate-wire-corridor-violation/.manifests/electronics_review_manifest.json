@@ -3,7 +3,7 @@
   "reviewer_stage": "electronics_reviewer",
   "timestamp": "2026-03-10T10:00:00Z",
   "session_id": "seed-erv-003-diverter-gate-wire-corridor-violation",
-  "revision": "595c218a20c0de96d4b83fcf50bc3dad55b23be2",
+  "revision": "b776fe27c3862c64707bc735f942cf3e213250b6",
   "script_path": "solution_script.py",
   "script_sha256": "19435a786642a1d2a47090c396d8b28af7b2552f45b98126f720788b86c4f152",
   "validation_success": true,
