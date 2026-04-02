@@ -171,6 +171,7 @@ Rules:
 4. Reviewer outputs are stage-scoped YAML pairs and the decision YAML is the routing source of truth.
 5. Token compression is configured by `config/agents_config.yaml` and keeps canonical context telemetry available for compaction.
 6. Feedback from simulation, cost checks, and manufacturability checks is recorded in markdown for downstream debugging and skill learning.
+7. Codex self-improvement runs also persist a local `logs/skill_loop/events.jsonl` sidecar so self-reflection text and follow-up skill-update output remain available for later diagnostics.
 
 ## Runner behavior
 

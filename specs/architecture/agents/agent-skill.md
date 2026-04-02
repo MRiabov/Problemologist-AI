@@ -43,6 +43,18 @@ The skill-learning loop runs asynchronously from the main execution flow.
 
 Skill revisions should be versioned so observability can correlate a skill version with later task outcomes.
 
+## Recursive improvement loop
+
+Codex-backed skill learning may run as a bounded recursive loop.
+
+The loop keeps the same Codex session alive across follow-up turns instead of rebuilding conversation context from scratch.
+
+The first follow-up turn performs self-analysis. A later follow-up turn drafts or repairs the skill content.
+
+Follow-up output is written to `suggested_skills/` first. Promotion into the checked-in `skills/` tree remains a separate reviewable step.
+
+The loop stays asynchronous relative to the main eval or task run, and it uses durable workspace artifacts such as `journal.md` to preserve the minimum state needed for later turns.
+
 ## Authoring and change policy
 
 Skill bodies should be stable, reusable, and specific enough to survive repeated use.
@@ -78,6 +90,7 @@ The observability layer can use confusion signals and downstream outcomes to ide
 - [tools.md](./tools.md): reusable workflows belong in skills instead of expanding prompts.
 - [roles.md](./roles.md): role-specific skill dependencies such as CAD drafting and manufacturing knowledge.
 - [handover-contracts.md](./handover-contracts.md): handoff artifacts that reference required skills or validation steps.
+- [../../migrations/minor/codex-self-improving-skill-loop.md](../../migrations/minor/codex-self-improving-skill-loop.md): migration note for the bounded Codex session-resume loop.
 - [../evals-architecture.md](../evals-architecture.md): skill validity, utility, and non-duplication checks.
 - [../observability.md](../observability.md): skill edit/read events, effectiveness metrics, and skill-learning feedback.
 - [../distributed-execution.md](../distributed-execution.md): startup-configurable skill sync across worker topologies.

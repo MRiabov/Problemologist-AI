@@ -26,6 +26,7 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 - [Agent skills](./architecture/agents/agent-skill.md): canonical skill-tree source, authoring contract, workspace materialization, and skill-improvement loop.
 - [Agent artifacts and filesystem](./architecture/agents/artifacts-and-filesystem.md): artifact surfaces, file ownership, and path-permission policy.
 - [Agent tools](./architecture/agents/tools.md): ReAct-callable tool surface, Python utility functions, checked-in shell-script bridges for custom command-like operations, and reviewer/planner submission gates. Custom command-like behavior is defined by shell scripts, not newly invented ReAct endpoints.
+- [Auxiliary agent tools](./architecture/agents/auxiliary-agent-tools.md): secondary wrappers, diagnostics, and experimental helper surfaces that do not belong in the main tool contract.
 - [Definitions of success and failure](./architecture/agents/definitions-of-success-and-failure.md): objective AABB rules, runtime randomization, benchmark-side motion exception, and failure taxonomy.
 
 ### Runtime and infrastructure

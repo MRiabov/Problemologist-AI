@@ -1,0 +1,64 @@
+# Auxiliary Agent Tools
+
+## Scope summary
+
+- This file records helper surfaces that are real in the runtime but intentionally outside the core contract in [Agent tools](./tools.md).
+- The main tool contract stays in `tools.md`, `agent-harness.md`, `agent-skill.md`, and the runtime docs.
+- This file owns secondary wrappers, diagnostic helpers, skill-loop utilities, and experimental functions that should not be duplicated in the main docs.
+- When one of these helpers graduates into a stable cross-role contract, the durable rule moves to the owning main doc and this file keeps only a short reference.
+
+## Contract boundary
+
+- Auxiliary helpers do not invent new agent abilities. They expose narrower or more specialized ways to reach existing runtime behavior.
+- Helper names are not a stability guarantee. If a helper mutates benchmark state, it must say which artifact it mutates and whether the artifact is benchmark-owned, engineer-owned, or derived.
+- Post-simulation helpers must require post-simulation artifacts.
+- Skill-loop helpers must stay inside `suggested_skills/`.
+- Experimental helpers must fail closed when required artifacts are missing and must not create placeholder state.
+- Prompt templates may mention an auxiliary helper, but the runtime contract is still owned by the source file that implements it.
+
+## What belongs here
+
+- This file does not repeat the core tool set already documented in [Agent tools](./tools.md).
+- The core surfaces that remain documented elsewhere include `validate`, `simulate`, `submit_plan`, `submit_for_review`, `inspect_media`, `inspect_topology`, `search_cots_catalog`, `invoke_cots_search_subagent`, `validate_costing_and_price`, `fastener_hole`, `preview`, and `objectives_geometry`.
+- This file instead tracks helper namespaces and functions that are secondary, role-specific, or experimental.
+
+## Current inventory
+
+| Namespace | Current helper surface | Status | Ownership / notes |
+| -- | -- | -- | -- |
+| `shared.utils.agent` | `refuse_plan(reason)` | Auxiliary wrapper | Writes a refusal artifact or forwards to the heavy-worker refusal path. The other proxy wrappers in this module are core and stay documented in `tools.md`. |
+| `worker_heavy.utils.validation` | `define_fluid(...)`, `get_stress_report(...)`, `preview_stress(...)`, `set_soft_mesh(...)` | Experimental / diagnostic | `define_fluid()` mutates `benchmark_definition.yaml`. `get_stress_report()` and `preview_stress()` require `simulation_result.json`. `set_soft_mesh()` toggles FEM intent and can switch the benchmark backend to Genesis. |
+| `worker_heavy.utils.electronics` | `calculate_power_budget(...)`, `create_circuit(...)`, `route_wire(...)`, `simulate_circuit_transient(...)`, `validate_circuit(...)` | Support namespace | Used by the electromechanical workflow as helper functions, not as separate high-level agent capabilities. |
+| `controller.agent.tools` | `run_validate_and_price_script(fs)` | Internal bridge | Runs the checked-in planner pricing script. The exposed planner gate is `validate_costing_and_price()`, which uses this bridge. |
+| `controller.agent.nodes.skills` | `save_suggested_skill(title, content)` | Skill-loop only | Writes staged skill drafts into `suggested_skills/` and is only available to the `skill_agent`. |
+
+## Experimental surfaces
+
+- The current experimental cluster is the fluid/FEM/stress helper set in `worker_heavy.utils.validation`.
+- Those helpers already have dedicated integration coverage in `specs/integration-test-list.md`, including the fluid workflow and stress-heatmap workflow, which is why they remain tracked as real runtime surfaces instead of being treated as throwaway snippets.
+- They are still opt-in helpers. A benchmark or engineering task only uses them when the benchmark contract explicitly requires fluids, deformables, or stress diagnostics.
+- The prompt surface should not advertise them as universal capabilities for every task.
+
+## Backend plumbing
+
+- `controller.tools.fs.create_fs_tools(...)` and `worker_light.utils.filesystem.get_filesystem_middleware(...)` are backend plumbing for the filesystem tool surface, not additional model abilities.
+- `worker_light.utils.assets.validate_asset_source(...)` is an asset-serving guard, not a general agent tool.
+- `worker_light.utils.git.*` manages workspace repository state and skill sync. It supports the runtime, but it is not a separate tool contract for the model.
+- `scripts/experiments/**` are evidence and measurement harnesses. They can justify a future helper contract, but they are not runtime tools themselves.
+
+## Rules
+
+1. If a helper writes a benchmark-owned file, the ownership must be explicit and the helper must fail closed on missing inputs.
+2. If a helper depends on `simulation_result.json`, `benchmark_definition.yaml`, or `suggested_skills/`, the helper is not a general-purpose prompt primitive.
+3. If a helper is only useful for one role family, the role gate must be visible in the runtime config rather than inferred from prose.
+4. If a helper graduates into the main tool contract, this file keeps only a short cross-reference and removes the repeated detail.
+5. If an experimental helper becomes a prompt default, it needs matching architecture documentation and observability coverage before it is treated as stable.
+
+## Related docs
+
+- [Agent tools](./tools.md)
+- [Agent harness](./agent-harness.md)
+- [Agent skills](./agent-skill.md)
+- [Simulation and rendering](../simulation-and-rendering.md)
+- [Observability](../observability.md)
+- [Unexpected functionality list](../auxillary/unexpected_functinality_list.md)

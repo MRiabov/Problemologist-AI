@@ -5,6 +5,7 @@
 - Primary focus: the tool surfaces available to agent runtimes and Python-side execution helpers.
 - Defines DSPy-native tool calling, filesystem permission expectations, and planner/reviewer submission utilities.
 - Use this file when changing agent-accessible tools, validation hooks, or handoff gate functions.
+- Helper surfaces that are real but intentionally secondary or experimental live in [auxiliary-agent-tools.md](./auxiliary-agent-tools.md). Keep this file focused on the core agent tool contract.
 
 ## "Agent-native" tools (callable by DSPy.ReAct runtime)
 

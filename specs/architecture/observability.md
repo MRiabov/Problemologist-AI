@@ -144,6 +144,10 @@ We track the following structured domain events to compute the evaluation metric
 
 32. LLM media attachment event (`llm_media_attached`) whenever a model request includes media parts, with node name, provider/model, attachment count, media kinds, and source artifact paths.
 
+33. Codex skill-loop self-reflection event (`skill_self_reflection`) with the follow-up prompt path, output path, trigger reason, simulation/verification outcome, and the captured reflection text.
+
+34. Codex skill-loop skill-update event (`skill_update`) with the follow-up prompt path, output path, trigger reason, updated skill paths, simulation/verification outcome, and the captured skill-update text.
+
 Visual-inspection-policy enforcement must also be reconstructable from traces even if we do not persist dedicated reminder events:
 
 1. When a role is subject to config-driven visual inspection (`config/agents_config.yaml`), the trace should make it possible to determine whether images existed, whether `inspect_media(...)` was called, and whether the configured minimum image count was satisfied.
@@ -236,6 +240,8 @@ The system enforces fail-closed behavior for terminal states.
 <!-- This part was LLM-suggested, but is OK -->
 
 We decided on persisting a local `events.jsonl` file with all events for deeper observability instead of sending individual events or a sqlite DB. This would allow sending all the events in one go instead of dozens of small requests. For 100 events per a 3-5 minute session (if that), it is acceptable. In fact, it wins a bit of performance: opening DB a hundred connections is slower than opening one and batch uploading it.
+
+Codex skill-loop runs should emit self-reflection and skill-update records into a local `events.jsonl` sidecar under the run workspace, and the same records may later be promoted into the controller DB event stream when an episode-backed integration path exists. The full self-reflection text is intentionally retained for diagnostics and postmortem debugging.
 
 ## Best practice: Give LLMs a way to complain
 
