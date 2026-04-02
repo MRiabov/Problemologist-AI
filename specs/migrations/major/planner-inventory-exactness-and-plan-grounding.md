@@ -40,6 +40,15 @@ enforcement is still fragmented.
    - planner weight is only checked as a cap/ceiling,
    - manufactured parts do not carry a per-part `weight_g` field,
    - COTS parts are the only assembly rows that can optionally carry `weight_g`.
+6. The drafting-artifact validation path is also narrow:
+   - `solution_plan_evidence_script.py` and
+     `benchmark_plan_evidence_script.py` are validated for inventory grounding,
+     not physical non-overlap,
+   - `solution_plan_technical_drawing_script.py` and
+     `benchmark_plan_technical_drawing_script.py` are validated for structure,
+     inventory grounding, and `TechnicalDrawing` usage only,
+   - physical overlap or intersection checks are not part of that file-level
+     validator path.
 
 ## Current-State Inventory
 
@@ -51,6 +60,7 @@ enforcement is still fragmented.
 | `worker_heavy/utils/file_validation.py` | Validates schema and placeholder hygiene. | It must also participate in exact-mention and inventory-multiset checks where planner artifacts are validated. |
 | `worker_heavy/utils/handover.py` | Collects and packages handoff artifacts. | It must reject mismatched inventory before a coder or reviewer sees it. |
 | `shared/models/schemas.py`, `worker_heavy/utils/dfm.py`, `controller/agent/benchmark/tools.py` | Define and enforce the current cost/weight contract. | They expose the asymmetry that cost is deterministic while weight is only planner-authored estimate/cap data. |
+| `worker_heavy/utils/file_validation.py`, `controller/agent/node_entry_validation.py` | Validate planner-authored evidence and technical-drawing scripts. | They currently stop at inventory/structure checks and do not enforce physical non-overlap for drafting artifacts. |
 | `shared/utils/agent/__init__.py` | Loads scripts and render evidence. | It needs to participate in the exactness contract for planner-authored evidence scripts. |
 | `config/prompts.yaml`, `controller/agent/prompt_manager.py` | Planner prompt assembly does not yet teach exact-mention and inventory-exactness self-checks explicitly enough. | The planner needs the exactness contract in its guidance path so it can self-validate before handoff. |
 | `evals/logic/specs.py`, `evals/logic/codex_workspace.py`, `scripts/validate_eval_seed.py` | Seeded evals still assume older artifact shapes in many rows. | All affected evals need the new contract so stale rows fail during preflight. |
@@ -77,6 +87,9 @@ enforcement is still fragmented.
 6. The cost/weight contract boundary is documented here as a separate
    exactness fix so it can be tightened later without being confused with the
    inventory-exactness work.
+7. The drafting-artifact physical-validation boundary is documented here as a
+   separate issue so later work can add non-overlap checks without conflating
+   them with inventory grounding or `TechnicalDrawing` structure checks.
 
 ## Required Work
 
@@ -135,6 +148,15 @@ enforcement is still fragmented.
   contract, not as a per-part recomputation contract.
 - Make the exactness boundary visible in the migration so future schema work
   can tighten it without reopening the inventory contract.
+
+### 7. Document the drafting-artifact physical-validation boundary
+
+- Keep the current file-level validator scope explicit: inventory grounding and
+  `TechnicalDrawing` structure checks are in scope, physical overlap is not.
+- Track the non-overlap gap separately so future geometry validation work can
+  land in the right layer instead of being inferred from drafting-file checks.
+- Make it clear that a passing drafting script does not imply a physically
+  non-intersecting assembly.
 
 ## Non-Goals
 
@@ -235,6 +257,15 @@ The safe order is:
   fields until a manufactured-part weight source is introduced.
 - [ ] Add follow-up schema work only if the repository introduces a new
   per-part weight source for manufactured parts or a new exact-weight contract.
+
+### Drafting physical-validation boundary
+
+- [ ] Record that the evidence and technical-drawing script validators do not
+  enforce physical non-overlap or intersection checks.
+- [ ] Keep the current validator scope limited to inventory grounding,
+  structural validity, and `TechnicalDrawing` usage.
+- [ ] Add follow-up geometry validation in the appropriate runtime layer if the
+  repository later decides drafting-file validation should prove non-overlap.
 
 ### Drafting contract follow-up
 

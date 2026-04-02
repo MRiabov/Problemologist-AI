@@ -60,6 +60,7 @@ This section is the smallest must-pass set. Keep it narrowly scoped, determinist
 | INT-189 | Engineer solution evidence default contract | Finished engineer runs surface terminal metadata (`detailed_status`, `terminal_reason`, `failure_class`) and default the artifact pane to the latest solution evidence (`simulation_result.json` before `validation_results.json`, then render/video evidence) instead of the planner draft; evidence selection must remain traceable to the exact asset path. |
 | INT-206 | P1 | Failed episode replay bundle contract |
 | INT-207 | P1 | Engineer workspace preview renderer delegation contract |
+| INT-208 | P1 | Engineer planner drafting geometry overlap gate |
 | INT-209 | P1 | Validate is render-free; preview delegates through renderer-worker |
 | INT-025 | Events collection end-to-end | Worker emits `events.jsonl`, controller ingests/bulk-persists, event loss does not occur in normal path. |
 | INT-026 | Mandatory event families emitted | Tool calls, simulation request/result, manufacturability checks, lint failures, plan submissions, and review decisions are emitted in real runs. |
