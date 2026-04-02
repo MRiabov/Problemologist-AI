@@ -102,7 +102,7 @@ from evals.logic.review_checks import (
 from evals.logic.specs import (
     AGENT_SPECS,
     JUDGE_REVIEWER_CHAIN,
-    PLANNER_REQUIRED_FILES,
+    required_plan_artifacts_for_agent,
 )
 from evals.logic.stack_profiles import apply_stack_profile_env
 from evals.logic.startup_checks import fail_closed_if_integration_test_setup
@@ -2012,7 +2012,7 @@ async def _collect_metrics_for_checks(
         episodes.extend(extra_episodes)
 
     events = _extract_events_from_episodes(episodes)
-    metrics_model = map_events_to_prediction(events)
+    metrics_model = map_events_to_prediction(events, agent_name=agent_name)
     metrics = metrics_model.model_dump(mode="json")
     metrics["task_success"] = success
     if metrics_override:
@@ -2024,7 +2024,7 @@ async def _collect_metrics_for_checks(
     )
     if needs_worker_checks and agent_name:
         review_prefix = AGENT_SPECS.get(agent_name).review_filename_prefix
-        required_files = PLANNER_REQUIRED_FILES.get(agent_name, ())
+        required_files = required_plan_artifacts_for_agent(agent_name)
 
         if workspace_dir is not None and workspace_dir.exists():
             worker = _LocalWorkspaceClient(

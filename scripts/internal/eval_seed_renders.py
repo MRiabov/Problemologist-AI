@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import shutil
 import sys
+import tempfile
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,14 +19,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from shared.agents import get_image_render_resolution
+from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition, CompoundMetadata, PartMetadata
-from shared.rendering import export_preview_scene_bundle
-from shared.rendering.renderer_client import (
-    materialize_render_artifacts,
-    render_static_preview,
-)
-from shared.script_contracts import authored_script_path_for_reviewer_stage
+from shared.rendering import select_static_preview_render_subdir
+from shared.script_contracts import authored_script_path_for_agent
 from shared.workers.loader import load_component_from_script
 from shared.workers.schema import (
     RenderArtifactMetadata,
@@ -33,11 +31,17 @@ from shared.workers.schema import (
     RenderSiblingPaths,
     SegmentationLegendEntry,
 )
+from worker_renderer.api.routes import (
+    _build_preview_manifest,
+    _persist_preview_scene_bundle,
+)
 from worker_renderer.utils.build123d_rendering import (
     _preview_camera_distance,
     _unique_color,
     _zone_color,
     camera_position_from_orbit,
+    collect_preview_scene,
+    render_preview_scene_bundle,
 )
 
 _NO_RENDER_ROLE = {
@@ -168,7 +172,9 @@ def _load_preview_component(
     artifact_dir: Path, definition: BenchmarkDefinition, role_name: str
 ) -> Compound:
     if role_name in _RENDER_ROLE_WITH_SCRIPT:
-        script_path = artifact_dir / authored_script_path_for_reviewer_stage(role_name)
+        script_path = artifact_dir / authored_script_path_for_agent(
+            AgentName(role_name)
+        )
         if not script_path.exists():
             raise FileNotFoundError(
                 f"{script_path.name} missing in {artifact_dir} for {role_name}"
@@ -660,7 +666,6 @@ def update_seed_artifact_renders(artifact_dir: Path) -> list[str]:
     artifact_dir = Path(artifact_dir)
     role_name = _role_name_for_artifact(artifact_dir)
     renders_dir = artifact_dir / "renders"
-    images_dir = renders_dir / "images"
 
     if role_name in _NO_RENDER_ROLE:
         if renders_dir.exists():
@@ -673,25 +678,54 @@ def update_seed_artifact_renders(artifact_dir: Path) -> list[str]:
     definition = _load_benchmark_definition(artifact_dir)
     component = _load_preview_component(artifact_dir, definition, role_name)
 
-    if images_dir.exists():
-        shutil.rmtree(images_dir)
-    bundle_base64 = export_preview_scene_bundle(
-        component,
-        objectives=definition,
-        workspace_root=artifact_dir,
-        smoke_test_mode=False,
-    )
-    response = render_static_preview(
-        bundle_base64=bundle_base64,
-        script_path="preview_scene.json",
-        session_id=f"seed-renders-{artifact_dir.name}-{uuid.uuid4().hex[:8]}",
-        smoke_test_mode=False,
-    )
-    if not response.success or response.artifacts is None:
-        raise RuntimeError(response.message or "seed render failed")
+    if renders_dir.exists():
+        shutil.rmtree(renders_dir)
 
-    rendered_paths = materialize_render_artifacts(
-        response.artifacts, artifact_dir, default_subdir="renders"
+    bundle_subdir = select_static_preview_render_subdir(
+        artifact_dir, agent_role=role_name
     )
+    bundle_root = renders_dir / bundle_subdir
+    session_id = f"seed-renders-{artifact_dir.name}-{uuid.uuid4().hex[:8]}"
 
-    return rendered_paths
+    with tempfile.TemporaryDirectory() as mesh_tmpdir:
+        source_mesh_root = Path(mesh_tmpdir)
+        preview_scene = collect_preview_scene(
+            component,
+            objectives=definition,
+            workspace_root=artifact_dir,
+            smoke_test_mode=False,
+            mesh_root=source_mesh_root,
+        )
+        render_result = render_preview_scene_bundle(
+            preview_scene,
+            output_dir=bundle_root,
+            workspace_root=artifact_dir,
+            smoke_test_mode=False,
+            include_rgb=True,
+            include_depth=True,
+            include_segmentation=True,
+            width=_IMAGE_SIZE[0],
+            height=_IMAGE_SIZE[1],
+            rgb_axes=True,
+            rgb_edges=True,
+            depth_axes=True,
+            depth_edges=True,
+            segmentation_axes=True,
+            segmentation_edges=True,
+        )
+        _persist_preview_scene_bundle(
+            bundle_root=bundle_root,
+            scene=preview_scene,
+            source_mesh_root=source_mesh_root,
+        )
+        _build_preview_manifest(
+            root=artifact_dir,
+            bundle_root=bundle_root,
+            saved_paths=render_result.saved_paths,
+            legend_by_path=render_result.legend_by_path,
+            depth_ranges_by_path=render_result.depth_ranges_by_path,
+            view_metadata_by_path=None,
+            session_id=session_id,
+        )
+
+    return list(render_result.saved_paths)

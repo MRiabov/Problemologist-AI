@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from controller.clients.worker import WorkerClient
 from shared.enums import AgentName, ReviewDecision
+from shared.eval_artifacts import plan_artifacts_for_agent
 from shared.observability.schemas import ObservabilityEventType
 
 logger = structlog.get_logger(__name__)
@@ -410,7 +411,10 @@ def cad_simulation_metric(
 
 
 def map_events_to_prediction(
-    events: list[dict | Any], _objectives: Any = None
+    events: list[dict | Any],
+    _objectives: Any = None,
+    *,
+    agent_name: AgentName | None = None,
 ) -> PredictionMetrics:
     """
     Translates worker events into a structured PredictionMetrics model.
@@ -420,12 +424,16 @@ def map_events_to_prediction(
 
     # Tracking for artifact presence
     planned_files = set()
-    required_planner_files = {
-        "plan.md",
-        "todo.md",
-        "assembly_definition.yaml",
-        "benchmark_assembly_definition.yaml",
-    }
+    required_planner_files = (
+        set(plan_artifacts_for_agent(agent_name))
+        if agent_name is not None
+        else {
+            "plan.md",
+            "todo.md",
+            "assembly_definition.yaml",
+            "benchmark_assembly_definition.yaml",
+        }
+    )
 
     for event in events:
         # Support both 'event_type' (BaseEvent) and 'type' (legacy/other)

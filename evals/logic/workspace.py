@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from controller.agent.node_entry_validation import (
     BENCHMARK_CODER_HANDOVER_CHECK,
     BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
@@ -23,8 +25,22 @@ from controller.agent.node_entry_validation import (
 from controller.clients.worker import WorkerClient
 from evals.logic.models import AgentEvalSpec, EvalDatasetItem
 from evals.logic.seed_maintenance import refresh_seed_artifact_manifests
-from shared.agent_templates import load_common_template_files
+from shared.agent_templates import load_common_template_files, load_template_repo_files
+from shared.agents.config import DraftingMode, load_agents_config
 from shared.enums import AgentName, EvalMode
+from shared.models.schemas import (
+    AssemblyConstraints,
+    AssemblyDefinition,
+    AssemblyPartConfig,
+    BenchmarkDefinition,
+    CostTotals,
+    DraftingCallout,
+    DraftingDimension,
+    DraftingNote,
+    DraftingSheet,
+    DraftingView,
+    PartConfig,
+)
 
 
 def resolve_seed_artifact_dir(item: EvalDatasetItem, *, root: Path) -> Path | None:
@@ -81,6 +97,341 @@ async def validate_workspace_has_artifacts(
         if not await worker.exists(rel_path):
             missing.append(rel_path)
     return missing
+
+
+_ENGINEER_DRAFTING_TARGETS = {
+    AgentName.ENGINEER_PLANNER,
+    AgentName.ENGINEER_PLAN_REVIEWER,
+    AgentName.ENGINEER_CODER,
+    AgentName.ENGINEER_EXECUTION_REVIEWER,
+}
+
+_ENGINEER_BENCHMARK_CONTEXT_TARGETS = {
+    AgentName.ENGINEER_PLANNER,
+    AgentName.ENGINEER_CODER,
+}
+
+_BENCHMARK_DRAFTING_TARGETS = {
+    AgentName.BENCHMARK_PLANNER,
+    AgentName.BENCHMARK_PLAN_REVIEWER,
+    AgentName.BENCHMARK_CODER,
+    AgentName.BENCHMARK_REVIEWER,
+}
+
+
+def _drafting_mode_active(mode: DraftingMode) -> bool:
+    return mode in (DraftingMode.DRAFTING, DraftingMode.DRAWING)
+
+
+def _engineering_drafting_mode_active() -> bool:
+    try:
+        return _drafting_mode_active(
+            load_agents_config().get_drafting_mode(AgentName.ENGINEER_PLANNER)
+        )
+    except Exception:
+        return False
+
+
+def _benchmark_drafting_mode_active() -> bool:
+    try:
+        return _drafting_mode_active(
+            load_agents_config().get_drafting_mode(AgentName.BENCHMARK_PLANNER)
+        )
+    except Exception:
+        return False
+
+
+def _collect_assembly_targets(assembly_definition: AssemblyDefinition) -> list[str]:
+    targets: list[str] = []
+
+    def _add(value: object) -> None:
+        text = str(value).strip()
+        if text and text not in targets:
+            targets.append(text)
+
+    for part in assembly_definition.manufactured_parts:
+        _add(part.part_name)
+        _add(part.part_id)
+    for part in assembly_definition.cots_parts:
+        _add(part.part_id)
+    for item in assembly_definition.final_assembly:
+        if isinstance(item, PartConfig):
+            _add(item.name)
+            continue
+        _add(item.subassembly_id)
+        for part in item.parts:
+            _add(part.name)
+    if assembly_definition.electronics:
+        for component in assembly_definition.electronics.components:
+            if component.assembly_part_ref:
+                _add(component.assembly_part_ref)
+
+    return targets
+
+
+def _starter_drafting_sheet(target_name: str) -> DraftingSheet:
+    return DraftingSheet(
+        sheet_id="sheet-1",
+        title="Starter Drafting Package",
+        views=[
+            DraftingView(
+                view_id="front",
+                target=target_name,
+                projection="front",
+                scale=1.0,
+                datums=["A"],
+                dimensions=[
+                    DraftingDimension(
+                        dimension_id="starter_width",
+                        kind="linear",
+                        target=target_name,
+                        value=1.0,
+                        binding=True,
+                        note="Starter placeholder dimension.",
+                    )
+                ],
+                callouts=[
+                    DraftingCallout(
+                        callout_id="1",
+                        label="Starter assembly",
+                        target=target_name,
+                    )
+                ],
+                notes=[
+                    DraftingNote(
+                        note_id="n1",
+                        text="Starter drafting placeholder for the seeded workspace.",
+                        critical=False,
+                    )
+                ],
+            )
+        ],
+    )
+
+
+async def _load_benchmark_caps(worker: WorkerClient) -> tuple[float, float]:
+    default_unit_cost = 100.0
+    default_weight = 1000.0
+    benchmark_path = "benchmark_definition.yaml"
+    if not await worker.exists(benchmark_path):
+        return default_unit_cost, default_weight
+    try:
+        raw_content = await worker.read_file(benchmark_path)
+        data = yaml.safe_load(raw_content) or {}
+        benchmark = BenchmarkDefinition.model_validate(data)
+    except Exception:
+        return default_unit_cost, default_weight
+
+    max_unit_cost = (
+        benchmark.constraints.max_unit_cost
+        if benchmark.constraints.max_unit_cost is not None
+        else default_unit_cost
+    )
+    max_weight_g = (
+        benchmark.constraints.max_weight_g
+        if benchmark.constraints.max_weight_g is not None
+        else default_weight
+    )
+    return float(max_unit_cost), float(max_weight_g)
+
+
+def _starter_engineer_assembly(
+    benchmark_max_unit_cost_usd: float, benchmark_max_weight_g: float
+) -> AssemblyDefinition:
+    planner_target_max_unit_cost_usd = max(1.0, benchmark_max_unit_cost_usd * 0.5)
+    planner_target_max_weight_g = max(1.0, benchmark_max_weight_g * 0.5)
+    target_name = "starter_assembly"
+    return AssemblyDefinition(
+        version="1.0",
+        constraints=AssemblyConstraints(
+            benchmark_max_unit_cost_usd=benchmark_max_unit_cost_usd,
+            benchmark_max_weight_g=benchmark_max_weight_g,
+            planner_target_max_unit_cost_usd=planner_target_max_unit_cost_usd,
+            planner_target_max_weight_g=planner_target_max_weight_g,
+        ),
+        manufactured_parts=[],
+        cots_parts=[],
+        final_assembly=[PartConfig(name=target_name, config=AssemblyPartConfig())],
+        totals=CostTotals(
+            estimated_unit_cost_usd=0.0,
+            estimated_weight_g=0.0,
+            estimate_confidence="high",
+        ),
+        drafting=_starter_drafting_sheet(target_name),
+    )
+
+
+def _starter_benchmark_assembly(
+    benchmark_max_unit_cost_usd: float, benchmark_max_weight_g: float
+) -> AssemblyDefinition:
+    planner_target_max_unit_cost_usd = max(1.0, benchmark_max_unit_cost_usd * 0.5)
+    planner_target_max_weight_g = max(1.0, benchmark_max_weight_g * 0.5)
+    target_name = "starter_assembly"
+    return AssemblyDefinition(
+        version="1.0",
+        constraints=AssemblyConstraints(
+            benchmark_max_unit_cost_usd=benchmark_max_unit_cost_usd,
+            benchmark_max_weight_g=benchmark_max_weight_g,
+            planner_target_max_unit_cost_usd=planner_target_max_unit_cost_usd,
+            planner_target_max_weight_g=planner_target_max_weight_g,
+        ),
+        manufactured_parts=[],
+        cots_parts=[],
+        final_assembly=[PartConfig(name=target_name, config=AssemblyPartConfig())],
+        totals=CostTotals(
+            estimated_unit_cost_usd=0.0,
+            estimated_weight_g=0.0,
+            estimate_confidence="high",
+        ),
+        drafting=_starter_drafting_sheet(target_name),
+    )
+
+
+async def _write_missing_template_files(
+    worker: WorkerClient, template_files: dict[str, str]
+) -> list[str]:
+    copied: list[str] = []
+    for rel_path, content in sorted(template_files.items()):
+        if await worker.exists(rel_path):
+            continue
+        await worker.write_file(
+            rel_path,
+            content,
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        copied.append(rel_path)
+    return copied
+
+
+async def _ensure_engineer_drafting_contract(worker: WorkerClient) -> list[str]:
+    assembly_path = "assembly_definition.yaml"
+    if not await worker.exists(assembly_path):
+        return []
+
+    raw_content = await worker.read_file(assembly_path)
+    try:
+        parsed = yaml.safe_load(raw_content) or {}
+        assembly = AssemblyDefinition.model_validate(parsed)
+    except Exception:
+        (
+            benchmark_max_unit_cost_usd,
+            benchmark_max_weight_g,
+        ) = await _load_benchmark_caps(worker)
+        starter = _starter_engineer_assembly(
+            benchmark_max_unit_cost_usd, benchmark_max_weight_g
+        )
+        await worker.write_file(
+            assembly_path,
+            yaml.safe_dump(
+                starter.model_dump(mode="json", by_alias=True, exclude_none=True),
+                sort_keys=False,
+            ),
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        return [assembly_path]
+
+    if assembly.drafting is not None:
+        return []
+
+    targets = _collect_assembly_targets(assembly)
+    if not targets:
+        (
+            benchmark_max_unit_cost_usd,
+            benchmark_max_weight_g,
+        ) = await _load_benchmark_caps(worker)
+        starter = _starter_engineer_assembly(
+            benchmark_max_unit_cost_usd, benchmark_max_weight_g
+        )
+        await worker.write_file(
+            assembly_path,
+            yaml.safe_dump(
+                starter.model_dump(mode="json", by_alias=True, exclude_none=True),
+                sort_keys=False,
+            ),
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        return [assembly_path]
+
+    updated = assembly.model_copy(deep=True)
+    updated.drafting = _starter_drafting_sheet(targets[0])
+    await worker.write_file(
+        assembly_path,
+        yaml.safe_dump(
+            updated.model_dump(mode="json", by_alias=True, exclude_none=True),
+            sort_keys=False,
+        ),
+        overwrite=True,
+        bypass_agent_permissions=True,
+    )
+    return [assembly_path]
+
+
+async def _ensure_benchmark_drafting_contract(worker: WorkerClient) -> list[str]:
+    assembly_path = "benchmark_assembly_definition.yaml"
+    if not await worker.exists(assembly_path):
+        return []
+
+    raw_content = await worker.read_file(assembly_path)
+    try:
+        parsed = yaml.safe_load(raw_content) or {}
+        assembly = AssemblyDefinition.model_validate(parsed)
+    except Exception:
+        (
+            benchmark_max_unit_cost_usd,
+            benchmark_max_weight_g,
+        ) = await _load_benchmark_caps(worker)
+        starter = _starter_benchmark_assembly(
+            benchmark_max_unit_cost_usd, benchmark_max_weight_g
+        )
+        await worker.write_file(
+            assembly_path,
+            yaml.safe_dump(
+                starter.model_dump(mode="json", by_alias=True, exclude_none=True),
+                sort_keys=False,
+            ),
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        return [assembly_path]
+
+    if assembly.drafting is not None:
+        return []
+
+    targets = _collect_assembly_targets(assembly)
+    if not targets:
+        (
+            benchmark_max_unit_cost_usd,
+            benchmark_max_weight_g,
+        ) = await _load_benchmark_caps(worker)
+        starter = _starter_benchmark_assembly(
+            benchmark_max_unit_cost_usd, benchmark_max_weight_g
+        )
+        await worker.write_file(
+            assembly_path,
+            yaml.safe_dump(
+                starter.model_dump(mode="json", by_alias=True, exclude_none=True),
+                sort_keys=False,
+            ),
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        return [assembly_path]
+
+    updated = assembly.model_copy(deep=True)
+    updated.drafting = _starter_drafting_sheet(targets[0])
+    await worker.write_file(
+        assembly_path,
+        yaml.safe_dump(
+            updated.model_dump(mode="json", by_alias=True, exclude_none=True),
+            sort_keys=False,
+        ),
+        overwrite=True,
+        bypass_agent_permissions=True,
+    )
+    return [assembly_path]
 
 
 async def seed_eval_workspace(
@@ -154,6 +505,36 @@ async def seed_eval_workspace(
                 bypass_agent_permissions=True,
             )
             seeded_paths.append(rel_path)
+
+        if (
+            agent_name in _ENGINEER_DRAFTING_TARGETS
+            and _engineering_drafting_mode_active()
+        ):
+            seeded_paths.extend(
+                await _write_missing_template_files(
+                    worker, load_template_repo_files("engineer/drafting")
+                )
+            )
+            seeded_paths.extend(await _ensure_engineer_drafting_contract(worker))
+        if (
+            agent_name in _ENGINEER_BENCHMARK_CONTEXT_TARGETS
+            and _benchmark_drafting_mode_active()
+        ):
+            seeded_paths.extend(
+                await _write_missing_template_files(
+                    worker, load_template_repo_files("benchmark_generator/drafting")
+                )
+            )
+        if (
+            agent_name in _BENCHMARK_DRAFTING_TARGETS
+            and _benchmark_drafting_mode_active()
+        ):
+            seeded_paths.extend(
+                await _write_missing_template_files(
+                    worker, load_template_repo_files("benchmark_generator/drafting")
+                )
+            )
+            seeded_paths.extend(await _ensure_benchmark_drafting_contract(worker))
     finally:
         await worker.aclose()
 

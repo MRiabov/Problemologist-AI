@@ -1050,8 +1050,8 @@ async def validate_seeded_workspace_handoff_artifacts(
     present_paths = set(contents)
 
     if (
-        "benchmark_definition.yaml" in present_paths
-        and target_node == AgentName.BENCHMARK_REVIEWER
+        target_node != AgentName.BENCHMARK_PLANNER
+        and "benchmark_definition.yaml" in present_paths
         and "benchmark_script.py" not in present_paths
     ):
         errors.append(

@@ -1,0 +1,78 @@
+---
+name: benchmark-planner
+description: Benchmark planning and handoff authoring for Problemologist. Use when creating or revising benchmark planner artifacts (`plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`), checking benchmark solvability or randomization, defining benchmark-owned fixture motion, or preparing the plan for `submit_plan()`.
+---
+
+# Benchmark Planner
+
+Turn a benchmark brief into a complete handoff that the benchmark coder can implement without re-planning.
+
+## Mission
+
+1. Define one clear learning objective and the smallest benchmark that teaches it.
+2. Keep the benchmark solvable, internally consistent, and easy for downstream roles to consume.
+3. Prefer passive geometry first. Add benchmark-owned motion only when it is necessary for the objective.
+4. Fail closed when required benchmark facts are missing, contradictory, or hidden behind placeholders.
+
+## Read First
+
+Read these before drafting or revising the handoff:
+
+- `references/handoff_contract.md`
+- `specs/desired_architecture.md`
+- `config/prompts.yaml`
+- `specs/architecture/agents/roles.md`
+- `specs/architecture/agents/handover-contracts.md`
+- `specs/architecture/agents/artifacts-and-filesystem.md`
+- `../engineer_coder/SKILL.md`
+- `../build123d_cad_drafting_skill/SKILL.md`
+- `../render-evidence/SKILL.md` when render evidence already exists or preview judgment is needed
+- `../mechanical-engineering/SKILL.md` when geometry or motion needs mechanical reasoning
+- `../cots-parts/SKILL.md` when a benchmark-owned fixture uses a catalog-backed component
+- `../manufacturing-knowledge/SKILL.md` when explicit cost or quantity reasoning matters
+
+## Working Rules
+
+01. Design the benchmark for the engineer, not the solution.
+02. Keep the challenge singular: one objective, one failure mode, one obvious path to success.
+03. Keep `benchmark_definition.yaml` as the source of truth for objective geometry, randomization, and benchmark estimates.
+04. Keep `benchmark_assembly_definition.yaml` as benchmark-owned fixture structure and motion contract.
+05. Keep `plan.md`, `todo.md`, the YAML files, and both benchmark planning scripts mutually consistent.
+06. Do not expect `benchmark_script.py` in the planner workspace before plan approval.
+07. Treat benchmark-owned fixtures as downstream read-only context. Do not drift into engineer solution design.
+08. Preserve exact part identity when a benchmark fixture is catalog-backed. Do not replace it with anonymous solids.
+09. Use reserved names carefully: top-level authored labels must be unique and must not be `environment` or start with `zone_`.
+10. Do not invent fallback labels, placeholder fields, or silent defaults to make a draft pass.
+
+## Planner Loop
+
+1. Reconstruct the objective, build zone, forbid zones, runtime jitter, and any benchmark-owned fixtures.
+2. Choose the simplest benchmark family that still teaches the intended behavior.
+3. Draft the benchmark geometry and any benchmark-owned fixture motion with explicit limits and clear visibility in the handoff.
+4. Write `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py`.
+5. Cross-check labels, AABBs, motion, and script geometry against the YAML before submission.
+6. Call `submit_plan()` only after the handoff is coherent and placeholder-free.
+
+## Handoff Rules
+
+- Keep `plan.md` narrative-first and specific enough that the benchmark coder can implement without re-deciding the benchmark shape.
+- Keep `todo.md` actionable and ordered for the benchmark coder.
+- Keep `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` aligned with the same geometry and labels as the YAML.
+- Make the benchmark-owned motion contract explicit if any fixture moves. In this repo, keep each moving fixture to one explicit DOF axis and spell out the controller facts and limits.
+- Keep the moved object inside `build_zone` under static variation plus runtime jitter.
+- Keep goal and forbid zones non-overlapping with the moved object at spawn.
+- Treat `submit_plan()` as the final gate, not as a shortcut around an incomplete handoff.
+
+## Common Failure Modes
+
+- Goal or forbid zones overlap the moved object path.
+- Runtime AABB escapes the build zone.
+- Labels collide with reserved names or with each other.
+- A moving benchmark fixture is implied but not declared clearly.
+- The evidence script drifts from the YAML geometry.
+- The handoff assumes a downstream file that does not exist yet.
+- The draft still contains placeholders, invented defaults, or ambiguous ownership.
+
+## Boundary With Engineer Coder
+
+Write the benchmark so `../engineer_coder/SKILL.md` can consume it as clean read-only context. If the downstream engineer would need to guess the benchmark intent, tighten the plan instead of handing off ambiguity.

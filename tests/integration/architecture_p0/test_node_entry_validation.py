@@ -475,6 +475,88 @@ async def test_int_184_seeded_benchmark_workspace_requires_drafting_when_mode_en
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+async def test_int_190_seeded_benchmark_workspace_requires_benchmark_script():
+    """
+    INT-190: Benchmark-backed seeded workspaces must fail closed when the
+    benchmark script source is missing.
+    """
+    session_id = f"INT-190-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        benchmark_definition = BenchmarkDefinition(
+            objectives=ObjectivesSection(
+                goal_zone=BoundingBox(min=(12.0, 12.0, 0.0), max=(16.0, 16.0, 6.0)),
+                forbid_zones=[],
+                build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)),
+            ),
+            physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
+            simulation_bounds=BoundingBox(
+                min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
+            ),
+            moved_object=MovedObject(
+                label="target_box",
+                shape="sphere",
+                material_id="aluminum_6061",
+                start_position=(0.0, 0.0, 10.0),
+                runtime_jitter=(0.0, 0.0, 0.0),
+            ),
+            constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+            benchmark_parts=_default_benchmark_parts(),
+        )
+        async with httpx.AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
+            await worker.upload_file(
+                "plan.md",
+                (
+                    "## 1. Learning Objective\n"
+                    "- Move the ball around the obstacle.\n"
+                    "\n"
+                    "## 2. Geometry\n"
+                    "- Keep the obstacle between the start and goal.\n"
+                    "\n"
+                    "## 3. Objectives\n"
+                    "- The ball must reach the goal without entering the forbid zone.\n"
+                ).encode("utf-8"),
+                bypass_agent_permissions=True,
+            )
+            await worker.upload_file(
+                "todo.md",
+                b"- [ ] Review the plan\n",
+                bypass_agent_permissions=True,
+            )
+            await worker.upload_file(
+                "benchmark_definition.yaml",
+                yaml.safe_dump(
+                    benchmark_definition.model_dump(
+                        mode="json", by_alias=True, exclude_none=True
+                    ),
+                    sort_keys=False,
+                ).encode("utf-8"),
+                bypass_agent_permissions=True,
+            )
+            await seed_benchmark_assembly_definition(
+                client,
+                session_id,
+                planner_target_max_unit_cost_usd=90.0,
+                planner_target_max_weight_g=900.0,
+            )
+            await worker.execute_command("rm -f benchmark_script.py", timeout=10)
+
+            errors = await validate_seeded_workspace_handoff_artifacts(
+                worker_client=worker,
+                target_node=AgentName.BENCHMARK_PLAN_REVIEWER,
+            )
+    finally:
+        await worker.aclose()
+
+    assert errors, (
+        "Expected benchmark-backed seed validation to require benchmark_script.py."
+    )
+    assert any(error.artifact_path == "benchmark_script.py" for error in errors), errors
+    assert any("benchmark_script.py" in error.message for error in errors), errors
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
 async def test_int_184_seeded_benchmark_assembly_uses_benchmark_definition_caps_only():
     """
     INT-184: Seeded benchmark planner handoff should validate when benchmark caps

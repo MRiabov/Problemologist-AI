@@ -33,6 +33,7 @@ from evals.logic.models import EvalDatasetItem
 from evals.logic.seed_maintenance import refresh_plan_review_manifest_hashes
 from shared.agents.config import AgentsConfig
 from shared.enums import AgentName, ManufacturingMethod, ReviewDecision
+from shared.eval_artifacts import plan_artifacts_for_agent
 from shared.models.schemas import (
     BenchmarkDefinition,
     BoundingBox,
@@ -99,6 +100,67 @@ def _load_agents_config_with_reasoning_effort_enabled(
     llm = data.setdefault("llm", {})
     llm["reasoning_effort_enabled"] = enabled
     return AgentsConfig.model_validate(data)
+
+
+def _engineer_drafting_mode_is_active() -> bool:
+    data = yaml.safe_load(AGENTS_CONFIG_PATH.read_text(encoding="utf-8")) or {}
+    agents = data.get("agents") or {}
+    engineer_planner = agents.get("engineer_planner") or {}
+    return engineer_planner.get("drafting_mode") in {"drafting", "drawing"}
+
+
+@pytest.mark.integration_p0
+def test_plan_artifacts_for_agent_is_mode_aware(monkeypatch: pytest.MonkeyPatch):
+    off_config = _agents_config_with_drafting_mode("off")
+    engineer_drafting_config = _agents_config_with_drafting_mode("drafting")
+    benchmark_drafting_config = _agents_config_with_drafting_mode(
+        "drafting", agent_role="benchmark_planner"
+    )
+
+    monkeypatch.setattr(
+        "shared.eval_artifacts.load_agents_config",
+        lambda: off_config,
+    )
+    assert plan_artifacts_for_agent(AgentName.ENGINEER_PLANNER) == (
+        "plan.md",
+        "todo.md",
+        "benchmark_definition.yaml",
+        "assembly_definition.yaml",
+    )
+
+    monkeypatch.setattr(
+        "shared.eval_artifacts.load_agents_config",
+        lambda: engineer_drafting_config,
+    )
+    assert plan_artifacts_for_agent(AgentName.ENGINEER_PLANNER) == (
+        "plan.md",
+        "todo.md",
+        "benchmark_definition.yaml",
+        "assembly_definition.yaml",
+        "solution_plan_evidence_script.py",
+        "solution_plan_technical_drawing_script.py",
+    )
+    assert plan_artifacts_for_agent(AgentName.ENGINEER_PLAN_REVIEWER) == (
+        "plan.md",
+        "todo.md",
+        "benchmark_definition.yaml",
+        "assembly_definition.yaml",
+        "solution_plan_evidence_script.py",
+        "solution_plan_technical_drawing_script.py",
+    )
+
+    monkeypatch.setattr(
+        "shared.eval_artifacts.load_agents_config",
+        lambda: benchmark_drafting_config,
+    )
+    assert plan_artifacts_for_agent(AgentName.BENCHMARK_PLANNER) == (
+        "plan.md",
+        "todo.md",
+        "benchmark_definition.yaml",
+        "benchmark_assembly_definition.yaml",
+        "benchmark_plan_evidence_script.py",
+        "benchmark_plan_technical_drawing_script.py",
+    )
 
 
 @pytest.mark.integration_p0
@@ -1588,9 +1650,12 @@ async def test_codex_materialized_planner_workspace_submits(
     assert "python .admin/clear_env.py" in materialized.prompt_text
     assert "Available skills you can read:" not in materialized.prompt_text
     assert "/skills/runtime-script-contract/SKILL.md" not in materialized.prompt_text
-    assert (
-        "/skills/build123d_cad_drafting_skill/SKILL.md" not in materialized.prompt_text
-    )
+    engineer_drafting_active = _engineer_drafting_mode_is_active()
+    if agent_name == AgentName.ENGINEER_PLANNER and engineer_drafting_active:
+        assert "Drafting mode is active." in materialized.prompt_text
+        assert "assembly_definition.yaml.drafting" in materialized.prompt_text
+    else:
+        assert "Drafting mode is active." not in materialized.prompt_text
     _assert_skills_tree_materialized(workspace_dir)
     _assert_skills_tree_materialized(mirror_workspace_dir)
     assert any(path.startswith(".agents/skills/") for path in materialized.copied_paths)
@@ -1776,6 +1841,8 @@ async def test_codex_materialized_planner_workspace_submits(
                 "benchmark_definition.yaml",
                 "benchmark_assembly_definition.yaml",
                 "assembly_definition.yaml",
+                "solution_plan_evidence_script.py",
+                "solution_plan_technical_drawing_script.py",
                 "scripts/submit_review.sh",
                 "scripts/submit_review.py",
             ),
@@ -1783,7 +1850,7 @@ async def test_codex_materialized_planner_workspace_submits(
         ),
         (
             "dataset/data/seed/role_based/benchmark_reviewer.json",
-            "br-012-sideways-ball-infeasible-goal",
+            "br-014-timed-gate-cots-review",
             AgentName.BENCHMARK_REVIEWER,
             (
                 "You are the Benchmark Reviewer.",
@@ -1801,6 +1868,8 @@ async def test_codex_materialized_planner_workspace_submits(
                 "benchmark_definition.yaml",
                 "benchmark_assembly_definition.yaml",
                 "benchmark_script.py",
+                "benchmark_plan_evidence_script.py",
+                "benchmark_plan_technical_drawing_script.py",
                 "journal.md",
                 "validation_results.json",
                 "simulation_result.json",
@@ -1907,9 +1976,20 @@ async def test_codex_seed_workspace_materialization_is_role_specific_and_determi
     assert "/workspace" not in materialized.prompt_text
     assert "Available skills you can read:" not in materialized.prompt_text
     assert "/skills/runtime-script-contract/SKILL.md" not in materialized.prompt_text
-    assert (
-        "/skills/build123d_cad_drafting_skill/SKILL.md" not in materialized.prompt_text
-    )
+    engineer_drafting_active = _engineer_drafting_mode_is_active()
+    if (
+        agent_name
+        in {
+            AgentName.ENGINEER_PLAN_REVIEWER,
+            AgentName.ENGINEER_CODER,
+            AgentName.ENGINEER_EXECUTION_REVIEWER,
+        }
+        and engineer_drafting_active
+    ):
+        assert "Drafting mode is active." in materialized.prompt_text
+        assert "assembly_definition.yaml.drafting" in materialized.prompt_text
+    else:
+        assert "Drafting mode is active." not in materialized.prompt_text
     _assert_skills_tree_materialized(workspace_dir)
     _assert_skills_tree_materialized(mirror_workspace_dir)
     assert any(path.startswith(".agents/skills/") for path in materialized.copied_paths)
@@ -2001,6 +2081,9 @@ def test_validate_eval_seed_accepts_curated_rows_and_preserves_redundancy_metada
         ("benchmark_plan_reviewer", "bpr-012-gap-bridge-hidden-dof"),
         ("benchmark_coder", "bc-011-sideways-ball"),
         ("benchmark_reviewer", "br-012-sideways-ball-infeasible-goal"),
+        ("benchmark_reviewer", "br-014-timed-gate-cots-review"),
+        ("benchmark_reviewer", "br-015-fast-transfer-hidden-brake-axis-review"),
+        ("benchmark_reviewer", "br-016-lower-bin-unreachable-redirection-review"),
     )
     for agent_name, row_id in validation_cases:
         completed = subprocess.run(
