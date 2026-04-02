@@ -10,8 +10,11 @@ import pytest
 import yaml
 from PIL import Image
 
+from controller.clients.worker import WorkerClient
+from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from shared.agents import get_image_render_resolution
 from shared.agents.config import DraftingMode
+from shared.enums import AgentName
 from shared.models.schemas import (
     AssemblyConstraints,
     AssemblyDefinition,
@@ -925,6 +928,149 @@ def build():
             assert any(name.endswith(".svg") for name in render_names), render_names
             assert any(name.endswith(".dxf") for name in render_names), render_names
             assert "render_manifest.json" in render_names, render_names
+    finally:
+        AGENTS_CONFIG_PATH.write_text(original_config, encoding="utf-8")
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_188_drafting_preview_bundle_is_inspectable():
+    """INT-188: drafting preview output must be inspectable through media inspection."""
+    original_config = _set_engineer_planner_technical_drawing_mode(DraftingMode.MINIMAL)
+    try:
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            session_id = f"INT-188-{uuid.uuid4().hex[:8]}"
+            headers = {"X-Session-ID": session_id}
+
+            script = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    p = Box(10, 6, 4).move(Location((0, 0, 2)))
+    p.label = "target_box"
+    p.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    return p
+"""
+            assembly_definition = AssemblyDefinition(
+                version="1.0",
+                constraints=AssemblyConstraints(
+                    planner_target_max_unit_cost_usd=90.0,
+                    planner_target_max_weight_g=900.0,
+                ),
+                manufactured_parts=[
+                    ManufacturedPartEstimate(
+                        part_name="target_box",
+                        part_id="target_box",
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                        material_id="aluminum_6061",
+                        quantity=1,
+                        part_volume_mm3=240.0,
+                        stock_bbox_mm={"x": 10.0, "y": 6.0, "z": 4.0},
+                        stock_volume_mm3=240.0,
+                        removed_volume_mm3=0.0,
+                        estimated_unit_cost_usd=1.0,
+                    )
+                ],
+                cots_parts=[],
+                final_assembly=[
+                    PartConfig(name="target_box", config=AssemblyPartConfig())
+                ],
+                totals=CostTotals(
+                    estimated_unit_cost_usd=1.0,
+                    estimated_weight_g=1.0,
+                    estimate_confidence="high",
+                ),
+                drafting=DraftingSheet(
+                    sheet_id="sheet-1",
+                    title="Target Box Drawing",
+                    views=[
+                        DraftingView(
+                            view_id="front",
+                            target="target_box",
+                            projection="front",
+                            scale=1.0,
+                            datums=["A"],
+                            dimensions=[
+                                DraftingDimension(
+                                    dimension_id="width",
+                                    kind="linear",
+                                    target="target_box",
+                                    value=10.0,
+                                    binding=True,
+                                )
+                            ],
+                            callouts=[
+                                DraftingCallout(
+                                    callout_id="1",
+                                    label="Target box",
+                                    target="target_box",
+                                )
+                            ],
+                            notes=[
+                                DraftingNote(
+                                    note_id="n1",
+                                    text="Preserve the target box envelope.",
+                                    critical=True,
+                                )
+                            ],
+                        )
+                    ],
+                ),
+            )
+            write_resp = await client.post(
+                f"{WORKER_LIGHT_URL}/fs/write",
+                json=WriteFileRequest(
+                    path="script.py", content=script, overwrite=True
+                ).model_dump(mode="json"),
+                headers=headers,
+            )
+            assert write_resp.status_code == 200, write_resp.text
+            assembly_resp = await client.post(
+                f"{WORKER_LIGHT_URL}/fs/write",
+                json=WriteFileRequest(
+                    path="assembly_definition.yaml",
+                    content=yaml.safe_dump(
+                        assembly_definition.model_dump(
+                            mode="json", by_alias=True, exclude_none=True
+                        ),
+                        sort_keys=False,
+                    ),
+                    overwrite=True,
+                ).model_dump(mode="json"),
+                headers=headers,
+            )
+            assert assembly_resp.status_code == 200, assembly_resp.text
+
+            preview_resp = await client.post(
+                f"{WORKER_LIGHT_URL}/benchmark/preview",
+                json=PreviewDesignRequest(
+                    script_path="script.py",
+                    drafting=True,
+                ).model_dump(mode="json"),
+                headers=headers,
+            )
+            assert preview_resp.status_code == 200, preview_resp.text
+            preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
+            assert preview_data.success, preview_data.message
+            assert preview_data.image_path is not None
+
+            fs = RemoteFilesystemMiddleware(
+                WorkerClient(
+                    base_url=WORKER_LIGHT_URL,
+                    session_id=session_id,
+                    agent_role=AgentName.ENGINEER_PLANNER,
+                    light_transport="http",
+                ),
+                agent_role=AgentName.ENGINEER_PLANNER,
+                episode_id=str(uuid.uuid4()),
+            )
+            inspection = await fs.inspect_media(preview_data.image_path)
+            assert inspection.media_kind == "image"
+            assert inspection.attached_to_model is True
+            assert inspection.attached_media_count == 1
+            assert inspection.render_metadata is not None
+            assert inspection.render_metadata.siblings.svg.endswith(".svg")
+            assert inspection.render_metadata.siblings.dxf.endswith(".dxf")
     finally:
         AGENTS_CONFIG_PATH.write_text(original_config, encoding="utf-8")
 

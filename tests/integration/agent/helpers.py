@@ -139,13 +139,14 @@ def _benchmark_assembly_definition_content(
             "title": "Seeded benchmark drafting",
             "views": [
                 {
-                    "view_id": "view-1",
+                    "view_id": "front",
                     "target": "environment_fixture",
                     "projection": "front",
-                    "datums": ["A"],
+                    "scale": 1.0,
+                    "datums": ["A", "B"],
                     "dimensions": [
                         {
-                            "dimension_id": "dim-1",
+                            "dimension_id": "width",
                             "kind": "linear",
                             "target": "environment_fixture",
                             "value": 10.0,
@@ -154,12 +155,58 @@ def _benchmark_assembly_definition_content(
                     ],
                     "callouts": [
                         {
-                            "callout_id": "callout-1",
+                            "callout_id": 1,
                             "label": "environment_fixture",
                             "target": "environment_fixture",
                         }
                     ],
-                }
+                },
+                {
+                    "view_id": "top",
+                    "target": "environment_fixture",
+                    "projection": "top",
+                    "scale": 1.0,
+                    "datums": ["A", "C"],
+                    "dimensions": [
+                        {
+                            "dimension_id": "depth",
+                            "kind": "linear",
+                            "target": "environment_fixture",
+                            "value": 10.0,
+                            "binding": True,
+                        }
+                    ],
+                    "callouts": [
+                        {
+                            "callout_id": 2,
+                            "label": "environment_fixture",
+                            "target": "environment_fixture",
+                        }
+                    ],
+                },
+                {
+                    "view_id": "side",
+                    "target": "environment_fixture",
+                    "projection": "side",
+                    "scale": 1.0,
+                    "datums": ["B", "C"],
+                    "dimensions": [
+                        {
+                            "dimension_id": "height",
+                            "kind": "linear",
+                            "target": "environment_fixture",
+                            "value": 10.0,
+                            "binding": True,
+                        }
+                    ],
+                    "callouts": [
+                        {
+                            "callout_id": 3,
+                            "label": "environment_fixture",
+                            "target": "environment_fixture",
+                        }
+                    ],
+                },
             ],
         },
         final_assembly=[],

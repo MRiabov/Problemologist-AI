@@ -25,14 +25,20 @@ from shared.enums import AgentName, EntryFailureDisposition, EpisodeStatus, Trac
 from shared.models.schemas import (
     AssemblyConstraints,
     AssemblyDefinition,
+    AssemblyPartConfig,
     BenchmarkDefinition,
     BoundingBox,
     Constraints,
     CostTotals,
     EntryValidationContext,
+    DraftingCallout,
+    DraftingDimension,
+    DraftingSheet,
+    DraftingView,
     MovedObject,
     ObjectivesSection,
     PhysicsConfig,
+    PartConfig,
 )
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import ReviewManifest
@@ -126,6 +132,82 @@ def _agents_config_with_technical_drawing_modes(
     benchmark_agent = agents.setdefault("benchmark_planner", {})
     benchmark_agent["technical_drawing_mode"] = benchmark_mode
     return AgentsConfig.model_validate(data)
+
+
+def _drafting_validation_payloads(
+    *,
+    assembly_part_name: str,
+    drafting_target: str,
+) -> tuple[dict[str, object], dict[str, object]]:
+    benchmark_definition = BenchmarkDefinition(
+        objectives=ObjectivesSection(
+            goal_zone=BoundingBox(min=(12.0, 12.0, 0.0), max=(16.0, 16.0, 6.0)),
+            forbid_zones=[],
+            build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)),
+        ),
+        physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
+        simulation_bounds=BoundingBox(
+            min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
+        ),
+        moved_object=MovedObject(
+            label="target_box",
+            shape="sphere",
+            material_id="aluminum_6061",
+            start_position=(0.0, 0.0, 10.0),
+            runtime_jitter=(0.0, 0.0, 0.0),
+        ),
+        constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+        benchmark_parts=_default_benchmark_parts(),
+    )
+    assembly_definition = AssemblyDefinition(
+        version="1.0",
+        constraints=AssemblyConstraints(
+            planner_target_max_unit_cost_usd=90.0,
+            planner_target_max_weight_g=900.0,
+        ),
+        manufactured_parts=[],
+        cots_parts=[],
+        final_assembly=[
+            PartConfig(name=assembly_part_name, config=AssemblyPartConfig())
+        ],
+        totals=CostTotals(
+            estimated_unit_cost_usd=0.0,
+            estimated_weight_g=0.0,
+            estimate_confidence="high",
+        ),
+        drafting=DraftingSheet(
+            sheet_id="sheet-1",
+            title="Broken Drafting",
+            views=[
+                DraftingView(
+                    view_id="front",
+                    target=drafting_target,
+                    projection="front",
+                    datums=["A"],
+                    dimensions=[
+                        DraftingDimension(
+                            dimension_id="width",
+                            kind="linear",
+                            target=drafting_target,
+                            value=10.0,
+                            binding=True,
+                        )
+                    ],
+                    callouts=[
+                        DraftingCallout(
+                            callout_id="1",
+                            label="Drafting target",
+                            target=drafting_target,
+                        )
+                    ],
+                )
+            ],
+        ),
+    )
+    return (
+        benchmark_definition.model_dump(mode="json", by_alias=True, exclude_none=True),
+        assembly_definition.model_dump(mode="json", by_alias=True, exclude_none=True),
+    )
 
 
 @pytest.mark.integration_p0
@@ -371,6 +453,169 @@ async def test_int_184_seeded_workspace_requires_drafting_when_mode_enabled(
         pytest.param(DraftingMode.FULL, id="full"),
     ],
 )
+async def test_int_184_seeded_workspace_rejects_unknown_drafting_targets(
+    monkeypatch: pytest.MonkeyPatch,
+    technical_drawing_mode: DraftingMode,
+):
+    """
+    INT-184: Seeded engineer-plan-reviewer entry must reject drafting claims
+    that point at undeclared assembly targets.
+    """
+    drafting_config = _agents_config_with_technical_drawing_modes(
+        engineer_mode=technical_drawing_mode,
+    )
+    monkeypatch.setattr(
+        "worker_heavy.utils.file_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+    session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        benchmark_definition = BenchmarkDefinition(
+            objectives=ObjectivesSection(
+                goal_zone=BoundingBox(min=(12.0, 12.0, 0.0), max=(16.0, 16.0, 6.0)),
+                forbid_zones=[],
+                build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)),
+            ),
+            physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
+            simulation_bounds=BoundingBox(
+                min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
+            ),
+            moved_object=MovedObject(
+                label="target_box",
+                shape="sphere",
+                material_id="aluminum_6061",
+                start_position=(0.0, 0.0, 10.0),
+                runtime_jitter=(0.0, 0.0, 0.0),
+            ),
+            constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+            benchmark_parts=_default_benchmark_parts(),
+        )
+        assembly_definition = AssemblyDefinition(
+            version="1.0",
+            constraints=AssemblyConstraints(
+                planner_target_max_unit_cost_usd=90.0,
+                planner_target_max_weight_g=900.0,
+            ),
+            manufactured_parts=[],
+            cots_parts=[],
+            final_assembly=[
+                PartConfig(name="target_box", config=AssemblyPartConfig())
+            ],
+            totals=CostTotals(
+                estimated_unit_cost_usd=0.0,
+                estimated_weight_g=0.0,
+                estimate_confidence="high",
+            ),
+            drafting=DraftingSheet(
+                sheet_id="sheet-1",
+                title="Broken Drafting",
+                views=[
+                    DraftingView(
+                        view_id="front",
+                        target="ghost_part",
+                        projection="front",
+                        datums=["A"],
+                        dimensions=[
+                            DraftingDimension(
+                                dimension_id="width",
+                                kind="linear",
+                                target="ghost_part",
+                                value=10.0,
+                                binding=True,
+                            )
+                        ],
+                        callouts=[
+                            DraftingCallout(
+                                callout_id="1",
+                                label="Ghost part",
+                                target="ghost_part",
+                            )
+                        ],
+                    )
+                ],
+            ),
+        )
+        try:
+            await worker.upload_file(
+                "plan.md",
+                (
+                    "## 1. Solution Overview\n"
+                    "- Keep the mechanism simple.\n"
+                    "\n"
+                    "## 2. Parts List\n"
+                    "- One target part.\n"
+                    "\n"
+                    "## 3. Assembly Strategy\n"
+                    "1. Assemble directly into the build zone.\n"
+                    "\n"
+                    "## 4. Cost & Weight Budget\n"
+                    "- Stay within budget.\n"
+                    "\n"
+                    "## 5. Risk Assessment\n"
+                    "- Minimal risk.\n"
+                ).encode("utf-8"),
+                bypass_agent_permissions=True,
+            )
+            await worker.upload_file(
+                "todo.md",
+                b"- [ ] Review the plan\n",
+                bypass_agent_permissions=True,
+            )
+            await worker.upload_file(
+                "benchmark_definition.yaml",
+                yaml.safe_dump(
+                    benchmark_definition.model_dump(
+                        mode="json", by_alias=True, exclude_none=True
+                    ),
+                    sort_keys=False,
+                ).encode("utf-8"),
+                bypass_agent_permissions=True,
+            )
+            await worker.upload_file(
+                "assembly_definition.yaml",
+                yaml.safe_dump(
+                    assembly_definition.model_dump(
+                        mode="json", by_alias=True, exclude_none=True
+                    ),
+                    sort_keys=False,
+                ).encode("utf-8"),
+                bypass_agent_permissions=True,
+            )
+            await worker.upload_file(
+                "manufacturing_config.yaml",
+                REPO_MANUFACTURING_CONFIG.encode("utf-8"),
+                bypass_agent_permissions=True,
+            )
+
+            errors = await validate_seeded_workspace_handoff_artifacts(
+                worker_client=worker,
+                target_node=AgentName.ENGINEER_PLAN_REVIEWER,
+            )
+        finally:
+            await worker.aclose()
+
+    finally:
+        pass
+
+    assert errors, "Expected unknown drafting targets to fail validation."
+    assert any(error.artifact_path == "assembly_definition.yaml" for error in errors), (
+        errors
+    )
+    assert any("not tied to a declared assembly part" in error.message for error in errors), (
+        errors
+    )
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "technical_drawing_mode",
+    [
+        pytest.param(DraftingMode.MINIMAL, id="minimal"),
+        pytest.param(DraftingMode.FULL, id="full"),
+    ],
+)
 async def test_int_184_seeded_benchmark_workspace_requires_drafting_when_mode_enabled(
     monkeypatch: pytest.MonkeyPatch,
     technical_drawing_mode: DraftingMode,
@@ -493,6 +738,310 @@ async def test_int_184_seeded_benchmark_workspace_requires_drafting_when_mode_en
         error.artifact_path == "benchmark_assembly_definition.yaml" for error in errors
     ), errors
     assert any("drafting" in error.message.lower() for error in errors), errors
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "technical_drawing_mode",
+    [
+        pytest.param(DraftingMode.MINIMAL, id="minimal"),
+        pytest.param(DraftingMode.FULL, id="full"),
+    ],
+)
+async def test_int_184_seeded_benchmark_workspace_rejects_unknown_drafting_targets(
+    monkeypatch: pytest.MonkeyPatch,
+    technical_drawing_mode: DraftingMode,
+):
+    """
+    INT-184: Seeded benchmark-plan-reviewer entry must reject drafting claims
+    that point at undeclared benchmark assembly targets.
+    """
+    drafting_config = _agents_config_with_technical_drawing_modes(
+        benchmark_mode=technical_drawing_mode,
+    )
+    monkeypatch.setattr(
+        "worker_heavy.utils.file_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+    session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        benchmark_definition = BenchmarkDefinition(
+            objectives=ObjectivesSection(
+                goal_zone=BoundingBox(min=(12.0, 12.0, 0.0), max=(16.0, 16.0, 6.0)),
+                forbid_zones=[],
+                build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)),
+            ),
+            physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
+            simulation_bounds=BoundingBox(
+                min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
+            ),
+            moved_object=MovedObject(
+                label="target_box",
+                shape="sphere",
+                material_id="aluminum_6061",
+                start_position=(0.0, 0.0, 10.0),
+                runtime_jitter=(0.0, 0.0, 0.0),
+            ),
+            constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+            benchmark_parts=_default_benchmark_parts(),
+        )
+        benchmark_assembly_definition = AssemblyDefinition(
+            version="1.0",
+            constraints=AssemblyConstraints(
+                planner_target_max_unit_cost_usd=90.0,
+                planner_target_max_weight_g=900.0,
+            ),
+            manufactured_parts=[],
+            cots_parts=[],
+            final_assembly=[
+                PartConfig(name="environment_fixture", config=AssemblyPartConfig())
+            ],
+            totals=CostTotals(
+                estimated_unit_cost_usd=0.0,
+                estimated_weight_g=0.0,
+                estimate_confidence="high",
+            ),
+            drafting=DraftingSheet(
+                sheet_id="sheet-1",
+                title="Broken Benchmark Drafting",
+                views=[
+                    DraftingView(
+                        view_id="front",
+                        target="ghost_fixture",
+                        projection="front",
+                        datums=["A"],
+                        dimensions=[
+                            DraftingDimension(
+                                dimension_id="width",
+                                kind="linear",
+                                target="ghost_fixture",
+                                value=10.0,
+                                binding=True,
+                            )
+                        ],
+                        callouts=[
+                            DraftingCallout(
+                                callout_id="1",
+                                label="Ghost fixture",
+                                target="ghost_fixture",
+                            )
+                        ],
+                    )
+                ],
+            ),
+        )
+        try:
+            await worker.upload_file(
+                "plan.md",
+                (
+                    "## 1. Learning Objective\n"
+                    "- Move the ball around the obstacle.\n"
+                    "\n"
+                    "## 2. Geometry\n"
+                    "- Keep the obstacle between the start and goal.\n"
+                    "\n"
+                    "## 3. Objectives\n"
+                    "- The ball must reach the goal without entering the forbid zone.\n"
+                ).encode("utf-8"),
+                bypass_agent_permissions=True,
+            )
+            await worker.upload_file(
+                "todo.md",
+                b"- [ ] Review the plan\n",
+                bypass_agent_permissions=True,
+            )
+            await worker.upload_file(
+                "benchmark_definition.yaml",
+                yaml.safe_dump(
+                    benchmark_definition.model_dump(
+                        mode="json", by_alias=True, exclude_none=True
+                    ),
+                    sort_keys=False,
+                ).encode("utf-8"),
+                bypass_agent_permissions=True,
+            )
+            await worker.upload_file(
+                "benchmark_assembly_definition.yaml",
+                yaml.safe_dump(
+                    benchmark_assembly_definition.model_dump(
+                        mode="json", by_alias=True, exclude_none=True
+                    ),
+                    sort_keys=False,
+                ).encode("utf-8"),
+                bypass_agent_permissions=True,
+            )
+            await worker.upload_file(
+                "manufacturing_config.yaml",
+                REPO_MANUFACTURING_CONFIG.encode("utf-8"),
+                bypass_agent_permissions=True,
+            )
+
+            errors = await validate_seeded_workspace_handoff_artifacts(
+                worker_client=worker,
+                target_node=AgentName.BENCHMARK_PLAN_REVIEWER,
+            )
+        finally:
+            await worker.aclose()
+
+    finally:
+        pass
+
+    assert errors, "Expected unknown drafting targets to fail validation."
+    assert any(
+        error.artifact_path == "benchmark_assembly_definition.yaml" for error in errors
+    ), errors
+    assert any("not tied to a declared assembly part" in error.message for error in errors), (
+        errors
+    )
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "target_node, assembly_artifact, assembly_part_name, drafting_target, technical_drawing_mode",
+    [
+        pytest.param(
+            AgentName.ENGINEER_PLAN_REVIEWER,
+            "assembly_definition.yaml",
+            "target_box",
+            "target_box",
+            DraftingMode.FULL,
+            id="engineer",
+        ),
+        pytest.param(
+            AgentName.BENCHMARK_PLAN_REVIEWER,
+            "benchmark_assembly_definition.yaml",
+            "environment_fixture",
+            "environment_fixture",
+            DraftingMode.FULL,
+            id="benchmark",
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "drafting_case, expected_error",
+    [
+        pytest.param(
+            "unsupported_view_projection",
+            "projection 'isometric' is not supported",
+            id="unsupported-view",
+        ),
+        pytest.param(
+            "duplicate_datums",
+            "must not contain duplicate datum identifiers",
+            id="duplicate-datums",
+        ),
+        pytest.param(
+            "unknown_callout_target",
+            "not tied to a declared assembly part",
+            id="unknown-callout-target",
+        ),
+        pytest.param(
+            "unknown_dimension_target",
+            "not tied to a declared assembly part",
+            id="unknown-dimension-target",
+        ),
+    ],
+)
+async def test_int_184_seeded_workspace_rejects_invalid_drafting_contract(
+    monkeypatch: pytest.MonkeyPatch,
+    target_node: AgentName,
+    assembly_artifact: str,
+    assembly_part_name: str,
+    drafting_target: str,
+    technical_drawing_mode: DraftingMode,
+    drafting_case: str,
+    expected_error: str,
+):
+    """
+    INT-184: Seeded workspace entries must fail closed on malformed drafting
+    views, datums, callouts, and dimensions.
+    """
+    drafting_config = _agents_config_with_technical_drawing_modes(
+        engineer_mode=technical_drawing_mode
+        if target_node == AgentName.ENGINEER_PLAN_REVIEWER
+        else DraftingMode.OFF,
+        benchmark_mode=technical_drawing_mode
+        if target_node == AgentName.BENCHMARK_PLAN_REVIEWER
+        else DraftingMode.OFF,
+    )
+    monkeypatch.setattr(
+        "worker_heavy.utils.file_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+    session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        benchmark_payload, assembly_payload = _drafting_validation_payloads(
+            assembly_part_name=assembly_part_name,
+            drafting_target=drafting_target,
+        )
+        drafting_view = assembly_payload["drafting"]["views"][0]
+        ghost_target = f"ghost_{assembly_part_name}"
+        if drafting_case == "unsupported_view_projection":
+            drafting_view["projection"] = "isometric"
+        elif drafting_case == "duplicate_datums":
+            drafting_view["datums"] = ["A", "A"]
+        elif drafting_case == "unknown_callout_target":
+            drafting_view["callouts"][0]["target"] = ghost_target
+        elif drafting_case == "unknown_dimension_target":
+            drafting_view["dimensions"][0]["target"] = ghost_target
+        else:
+            raise AssertionError(f"Unknown drafting case: {drafting_case}")
+
+        await worker.upload_file(
+            "plan.md",
+            (
+                "## 1. Solution Overview\n"
+                "- Keep the mechanism simple.\n"
+                "\n"
+                "## 2. Parts List\n"
+                f"- One {assembly_part_name}.\n"
+                "\n"
+                "## 3. Assembly Strategy\n"
+                "1. Assemble directly into the build zone.\n"
+                "\n"
+                "## 4. Cost & Weight Budget\n"
+                "- Stay within budget.\n"
+                "\n"
+                "## 5. Risk Assessment\n"
+                "- Minimal risk.\n"
+            ).encode("utf-8"),
+            bypass_agent_permissions=True,
+        )
+        await worker.upload_file(
+            "todo.md",
+            b"- [ ] Review the plan\n",
+            bypass_agent_permissions=True,
+        )
+        await worker.upload_file(
+            "benchmark_definition.yaml",
+            yaml.safe_dump(benchmark_payload, sort_keys=False).encode("utf-8"),
+            bypass_agent_permissions=True,
+        )
+        await worker.upload_file(
+            assembly_artifact,
+            yaml.safe_dump(assembly_payload, sort_keys=False).encode("utf-8"),
+            bypass_agent_permissions=True,
+        )
+        await worker.upload_file(
+            "manufacturing_config.yaml",
+            REPO_MANUFACTURING_CONFIG.encode("utf-8"),
+            bypass_agent_permissions=True,
+        )
+
+        errors = await validate_seeded_workspace_handoff_artifacts(
+            worker_client=worker,
+            target_node=target_node,
+        )
+    finally:
+        await worker.aclose()
+
+    assert errors, "Expected malformed drafting content to fail validation."
+    assert any(error.artifact_path == assembly_artifact for error in errors), errors
+    assert any(expected_error in error.message for error in errors), errors
 
 
 @pytest.mark.integration_p0
