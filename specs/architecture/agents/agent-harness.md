@@ -49,6 +49,7 @@ The runner exposes the backend as an explicit mode:
 3. `codex` is the default backend.
 4. The backend can be selected through `--call-paid-api`, `--runner-backend`, or `EVAL_RUNNER_BACKEND`.
 5. `--call-paid-api` flips the runner to the paid-provider/controller path; `--runner-backend` remains the explicit override.
+6. Role-specific `reasoning_effort` comes from `config/agents_config.yaml`, and the same config file can disable emitting that request parameter for backends or models that do not support it.
 
 ## Workspace materialization
 

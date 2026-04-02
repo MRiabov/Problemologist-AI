@@ -245,6 +245,7 @@ def _build_cached_dspy_lm(
     timeout_seconds: int,
     max_tokens: int,
     num_retries: int,
+    reasoning_effort: str | None = None,
 ) -> RateLimitedDSPyLM:
     lm_kwargs: dict[str, Any] = {
         "api_key": api_key,
@@ -253,6 +254,8 @@ def _build_cached_dspy_lm(
         "max_tokens": max_tokens,
         "num_retries": num_retries,
     }
+    if reasoning_effort is not None:
+        lm_kwargs["reasoning_effort"] = reasoning_effort
     if api_base:
         lm_kwargs["api_base"] = api_base
 
@@ -278,6 +281,11 @@ def build_dspy_lm(
     resolved_model = model_name or settings.llm_model
     request_config = settings.resolve_dspy_lm_request_config(resolved_model)
     api_key = request_config.api_key or "dummy"
+    reasoning_effort = (
+        load_agents_config().get_reasoning_effort(agent_role)
+        if agent_role is not None
+        else None
+    )
     base_lm = _build_cached_dspy_lm(
         request_config.model,
         api_key,
@@ -285,6 +293,7 @@ def build_dspy_lm(
         settings.llm_timeout_seconds,
         settings.llm_max_tokens,
         settings.dspy_program_max_retries,
+        reasoning_effort,
     )
     lm = base_lm.copy()
     lm.node_type = agent_role or "unknown_node"

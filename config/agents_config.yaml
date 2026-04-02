@@ -4,6 +4,7 @@ llm:
   context_compaction_threshold_tokens: 225000
   requests_per_minute: 40
   multimodal_model: null
+  reasoning_effort_enabled: true
 render:
   image_resolution:
     width: 1024
@@ -88,6 +89,7 @@ execution:
       max_turns: 150
       max_total_tokens: 400000
 defaults:
+  reasoning_effort: high
   filesystem_permissions:
     read:
       allow:
@@ -106,6 +108,7 @@ defaults:
 agents:
   engineer_planner:
     drafting_mode: "off"
+    reasoning_effort: xhigh
     filesystem_permissions:
       read:
         allow:
@@ -161,6 +164,7 @@ agents:
       min_images: 1
       reminder_interval: 2
   engineer_coder:
+    reasoning_effort: high
     filesystem_permissions:
       read:
         allow:
@@ -212,6 +216,7 @@ agents:
     - engineer_coder
     - engineer_execution_reviewer
   benchmark_coder:
+    reasoning_effort: high
     filesystem_permissions:
       read:
         allow:
@@ -269,6 +274,7 @@ agents:
       min_images: 1
       reminder_interval: 2
   engineer_plan_reviewer:
+    reasoning_effort: xhigh
     filesystem_permissions:
       read:
         allow:
@@ -317,6 +323,7 @@ agents:
       min_images: 1
       reminder_interval: 2
   engineer_execution_reviewer:
+    reasoning_effort: xhigh
     filesystem_permissions:
       read:
         allow:
@@ -364,6 +371,7 @@ agents:
       min_images: 1
       reminder_interval: 2
   benchmark_planner:
+    reasoning_effort: xhigh
     filesystem_permissions:
       read:
         allow:
@@ -416,6 +424,7 @@ agents:
     - benchmark_planner
     - benchmark_plan_reviewer
   benchmark_plan_reviewer:
+    reasoning_effort: xhigh
     filesystem_permissions:
       read:
         allow:
@@ -455,6 +464,7 @@ agents:
       min_images: 1
       reminder_interval: 2
   benchmark_reviewer:
+    reasoning_effort: xhigh
     filesystem_permissions:
       read:
         allow:
@@ -498,6 +508,7 @@ agents:
       min_images: 1
       reminder_interval: 2
   electronics_planner:
+    reasoning_effort: xhigh
     filesystem_permissions:
       read:
         allow:
@@ -545,6 +556,7 @@ agents:
     - electronics_planner
     - engineer_plan_reviewer
   electronics_reviewer:
+    reasoning_effort: xhigh
     filesystem_permissions:
       read:
         allow:

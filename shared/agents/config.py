@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 from pathlib import Path
+from typing import Literal
 
 import structlog
 import yaml
@@ -10,6 +11,8 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from shared.enums import AgentName
 
 logger = structlog.get_logger(__name__)
+
+ReasoningEffortLevel = Literal["low", "medium", "high", "xhigh"]
 
 
 class DraftingMode(StrEnum):
@@ -39,6 +42,7 @@ class AgentPolicy(BaseModel):
         default_factory=FilesystemPermissions
     )
     tools: list[str] | None = None
+    reasoning_effort: ReasoningEffortLevel = "high"
     allowed_during_unit_eval: list[AgentName] = Field(default_factory=list)
     visual_inspection: VisualInspectionPolicy = Field(
         default_factory=VisualInspectionPolicy
@@ -113,6 +117,7 @@ class LLMPolicyConfig(BaseModel):
     context_compaction_threshold_tokens: int = 225000
     requests_per_minute: int = Field(default=40, ge=1)
     multimodal_model: str | None = None
+    reasoning_effort_enabled: bool = True
 
 
 class RenderResolutionConfig(BaseModel):
@@ -248,6 +253,26 @@ class AgentsConfig(BaseModel):
         if policy is None:
             return self.defaults.drafting_mode
         return policy.drafting_mode
+
+    def get_reasoning_effort(
+        self,
+        agent_role: AgentName | str | None,
+        *,
+        requested_effort: ReasoningEffortLevel | None = None,
+    ) -> ReasoningEffortLevel | None:
+        if not self.llm.reasoning_effort_enabled:
+            return None
+        if requested_effort is not None:
+            return requested_effort
+
+        if agent_role is None:
+            return self.defaults.reasoning_effort
+
+        key = agent_role.value if isinstance(agent_role, AgentName) else str(agent_role)
+        policy = self.agents.get(key)
+        if policy is None:
+            return self.defaults.reasoning_effort
+        return policy.reasoning_effort
 
 
 def get_render_resolution(config: AgentsConfig | None = None) -> tuple[int, int]:

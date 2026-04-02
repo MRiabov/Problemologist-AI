@@ -30,6 +30,7 @@ from evals.logic.codex_workspace import (
 )
 from evals.logic.models import EvalDatasetItem
 from evals.logic.seed_maintenance import refresh_plan_review_manifest_hashes
+from shared.agents.config import AgentsConfig
 from shared.enums import AgentName, ManufacturingMethod, ReviewDecision
 from shared.models.schemas import (
     BenchmarkDefinition,
@@ -80,16 +81,21 @@ def _assert_skills_tree_materialized(workspace_dir: Path) -> None:
     assert (workspace_dir / ".agents" / "skills").is_dir()
 
 
-def _set_engineer_planner_drafting_mode(mode: str) -> str:
-    original = AGENTS_CONFIG_PATH.read_text(encoding="utf-8")
-    data = yaml.safe_load(original) or {}
+def _agents_config_with_drafting_mode(mode: str) -> AgentsConfig:
+    data = yaml.safe_load(AGENTS_CONFIG_PATH.read_text(encoding="utf-8")) or {}
     agents = data.setdefault("agents", {})
     engineer_planner = agents.setdefault("engineer_planner", {})
     engineer_planner["drafting_mode"] = mode
-    AGENTS_CONFIG_PATH.write_text(
-        yaml.safe_dump(data, sort_keys=False), encoding="utf-8"
-    )
-    return original
+    return AgentsConfig.model_validate(data)
+
+
+def _load_agents_config_with_reasoning_effort_enabled(
+    enabled: bool,
+) -> AgentsConfig:
+    data = yaml.safe_load(AGENTS_CONFIG_PATH.read_text(encoding="utf-8")) or {}
+    llm = data.setdefault("llm", {})
+    llm["reasoning_effort_enabled"] = enabled
+    return AgentsConfig.model_validate(data)
 
 
 @pytest.mark.integration_p0
@@ -781,6 +787,133 @@ def test_run_evals_codex_env_supports_repo_root_imports(tmp_path):
 
 
 @pytest.mark.integration_p0
+def test_run_evals_codex_env_uses_role_reasoning_effort_and_can_disable(
+    tmp_path, monkeypatch
+):
+    source_auth_path = tmp_path / "source-home" / ".codex" / "auth.json"
+    source_auth_path.parent.mkdir(parents=True, exist_ok=True)
+    source_auth_path.write_text(
+        json.dumps(
+            {
+                "OPENAI_API_KEY": None,
+                "tokens": {"account_id": "acct-1", "access_token": "token-1"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+
+    planner_home_root = tmp_path / "codex-home-planner"
+    planner_home = prepare_codex_home(
+        codex_home_root=planner_home_root,
+        workspace_dir=workspace_dir,
+        source_auth_path=source_auth_path,
+        agent_name=AgentName.ENGINEER_PLANNER,
+    )
+    planner_config = (planner_home / "config.toml").read_text(encoding="utf-8")
+    assert 'model_reasoning_effort = "xhigh"' in planner_config
+
+    coder_home_root = tmp_path / "codex-home-coder"
+    coder_home = prepare_codex_home(
+        codex_home_root=coder_home_root,
+        workspace_dir=workspace_dir,
+        source_auth_path=source_auth_path,
+        agent_name=AgentName.ENGINEER_CODER,
+    )
+    coder_config = (coder_home / "config.toml").read_text(encoding="utf-8")
+    assert 'model_reasoning_effort = "high"' in coder_config
+
+    disabled_agents_config = _load_agents_config_with_reasoning_effort_enabled(False)
+    monkeypatch.setattr(
+        "evals.logic.codex_workspace.load_agents_config",
+        lambda: disabled_agents_config,
+    )
+    disabled_home_root = tmp_path / "codex-home-disabled"
+    disabled_home = prepare_codex_home(
+        codex_home_root=disabled_home_root,
+        workspace_dir=workspace_dir,
+        source_auth_path=source_auth_path,
+        agent_name=AgentName.ENGINEER_PLANNER,
+    )
+    disabled_config = (disabled_home / "config.toml").read_text(encoding="utf-8")
+    assert "model_reasoning_effort" not in disabled_config
+
+
+@pytest.mark.integration_p0
+def test_run_evals_build_dspy_lm_uses_configured_reasoning_effort_and_toggle(
+    monkeypatch,
+):
+    from controller.agent import config as agent_config
+
+    captured: list[str | None] = []
+
+    class DummyLM:
+        def __init__(self) -> None:
+            self.node_type = None
+            self.session_id = None
+
+        def copy(self) -> "DummyLM":
+            return self
+
+    def fake_build_cached_dspy_lm(
+        model: str,
+        api_key: str,
+        api_base: str | None,
+        timeout_seconds: int,
+        max_tokens: int,
+        num_retries: int,
+        reasoning_effort: str | None = None,
+    ) -> DummyLM:
+        captured.append(reasoning_effort)
+        return DummyLM()
+
+    monkeypatch.setattr(agent_config.settings, "is_integration_test", False)
+    monkeypatch.setattr(
+        agent_config,
+        "_build_cached_dspy_lm",
+        fake_build_cached_dspy_lm,
+    )
+
+    enabled_agents_config = _load_agents_config_with_reasoning_effort_enabled(True)
+    monkeypatch.setattr(
+        agent_config,
+        "load_agents_config",
+        lambda: enabled_agents_config,
+    )
+
+    planner_lm = agent_config.build_dspy_lm(
+        model_name="gpt-5.4-mini",
+        session_id="session-1",
+        agent_role=AgentName.ENGINEER_PLANNER.value,
+    )
+
+    assert captured[-1] == "xhigh"
+    assert planner_lm.node_type == AgentName.ENGINEER_PLANNER.value
+    assert planner_lm.session_id == "session-1"
+
+    disabled_agents_config = _load_agents_config_with_reasoning_effort_enabled(False)
+    monkeypatch.setattr(
+        agent_config,
+        "load_agents_config",
+        lambda: disabled_agents_config,
+    )
+
+    coder_lm = agent_config.build_dspy_lm(
+        model_name="gpt-5.4-mini",
+        session_id="session-2",
+        agent_role=AgentName.ENGINEER_CODER.value,
+    )
+
+    assert captured[-1] is None
+    assert coder_lm.node_type == AgentName.ENGINEER_CODER.value
+    assert coder_lm.session_id == "session-2"
+
+
+@pytest.mark.integration_p0
 def test_run_evals_codex_vtk_preview_renders_headlessly(tmp_path, monkeypatch):
     monkeypatch.delenv("DISPLAY", raising=False)
     monkeypatch.delenv("XAUTHORITY", raising=False)
@@ -1284,42 +1417,37 @@ def test_prompt_manager_unified_render_uses_shared_source_model(tmp_path: Path):
 
 
 @pytest.mark.integration_p0
-def test_prompt_manager_injects_drafting_appendix_only_when_enabled():
-    original_config = _set_engineer_planner_drafting_mode("off")
-    try:
-        prompt_manager = PromptManager()
-        off_prompt = prompt_manager.render(AgentName.ENGINEER_PLANNER)
-        off_benchmark_prompt = prompt_manager.render(AgentName.BENCHMARK_PLANNER)
-        assert "Drafting mode is active." not in off_prompt
-        assert "Drafting mode is active." not in off_benchmark_prompt
+def test_prompt_manager_injects_drafting_appendix_only_when_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    off_config = _agents_config_with_drafting_mode("off")
+    monkeypatch.setattr(
+        "controller.agent.prompt_manager.load_agents_config",
+        lambda: off_config,
+    )
 
-        AGENTS_CONFIG_PATH.write_text(
-            yaml.safe_dump(
-                yaml.safe_load(original_config) or {},
-                sort_keys=False,
-            ),
-            encoding="utf-8",
-        )
-        enabled_data = yaml.safe_load(AGENTS_CONFIG_PATH.read_text(encoding="utf-8"))
-        enabled_data.setdefault("agents", {}).setdefault("engineer_planner", {})[
-            "drafting_mode"
-        ] = "drafting"
-        AGENTS_CONFIG_PATH.write_text(
-            yaml.safe_dump(enabled_data, sort_keys=False), encoding="utf-8"
-        )
+    prompt_manager = PromptManager()
+    off_prompt = prompt_manager.render(AgentName.ENGINEER_PLANNER)
+    off_benchmark_prompt = prompt_manager.render(AgentName.BENCHMARK_PLANNER)
+    assert "Drafting mode is active." not in off_prompt
+    assert "Drafting mode is active." not in off_benchmark_prompt
 
-        prompt_manager = PromptManager()
-        planner_prompt = prompt_manager.render(AgentName.ENGINEER_PLANNER)
-        reviewer_prompt = prompt_manager.render(AgentName.ENGINEER_PLAN_REVIEWER)
-        coder_prompt = prompt_manager.render(AgentName.ENGINEER_CODER)
-        benchmark_prompt = prompt_manager.render(AgentName.BENCHMARK_PLANNER)
+    on_config = _agents_config_with_drafting_mode("drafting")
+    monkeypatch.setattr(
+        "controller.agent.prompt_manager.load_agents_config",
+        lambda: on_config,
+    )
 
-        assert "Drafting mode is active." in planner_prompt
-        assert "Drafting mode is active." in reviewer_prompt
-        assert "Drafting mode is active." in coder_prompt
-        assert "Drafting mode is active." not in benchmark_prompt
-    finally:
-        AGENTS_CONFIG_PATH.write_text(original_config, encoding="utf-8")
+    prompt_manager = PromptManager()
+    planner_prompt = prompt_manager.render(AgentName.ENGINEER_PLANNER)
+    reviewer_prompt = prompt_manager.render(AgentName.ENGINEER_PLAN_REVIEWER)
+    coder_prompt = prompt_manager.render(AgentName.ENGINEER_CODER)
+    benchmark_prompt = prompt_manager.render(AgentName.BENCHMARK_PLANNER)
+
+    assert "Drafting mode is active." in planner_prompt
+    assert "Drafting mode is active." in reviewer_prompt
+    assert "assembly_definition.yaml.drafting" in coder_prompt
+    assert "Drafting mode is active." not in benchmark_prompt
 
 
 @pytest.mark.integration_p0

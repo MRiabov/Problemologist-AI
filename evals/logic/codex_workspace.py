@@ -31,6 +31,7 @@ from shared.agent_templates import (
     load_role_template_files,
     load_template_repo_files,
 )
+from shared.agents.config import load_agents_config
 from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import ReviewComments, ReviewFrontmatter
@@ -76,6 +77,7 @@ _SKIP_COPY_DIR_NAMES = {
     ".git",
     "__pycache__",
 }
+_REASONING_EFFORT_UNSET = object()
 
 
 class MaterializedWorkspace(BaseModel):
@@ -342,7 +344,10 @@ def prepare_codex_home(
     codex_home_root: Path,
     workspace_dir: Path,
     source_auth_path: Path | None = None,
-    reasoning_effort: Literal["low", "medium", "high", "xhigh"] = "high",
+    agent_name: AgentName | None = None,
+    reasoning_effort: Literal["low", "medium", "high", "xhigh"]
+    | None
+    | object = _REASONING_EFFORT_UNSET,
 ) -> Path:
     """Seed an isolated Codex home with the active auth bundle."""
 
@@ -359,25 +364,39 @@ def prepare_codex_home(
     (codex_home_root / ".tmp").mkdir(parents=True, exist_ok=True)
     shutil.copy2(source_auth_path, codex_home_dir / "auth.json")
     workspace_path = workspace_dir.expanduser().resolve()
-    config_path = codex_home_dir / "config.toml"
-    config_path.write_text(
-        "\n".join(
-            [
-                'model = "gpt-5.4-mini"',
-                f'model_reasoning_effort = "{reasoning_effort}"',
-                'approvals_reviewer = "user"',
-                "",
-                "[features]",
-                "use_legacy_landlock = true",
-                "",
-                f'[projects."{workspace_path.as_posix()}"]',
-                'trust_level = "trusted"',
-                "respect_gitignore = false",
-                "",
-            ]
-        ),
-        encoding="utf-8",
+    config = (
+        load_agents_config()
+        if agent_name is not None or reasoning_effort is not _REASONING_EFFORT_UNSET
+        else None
     )
+    if config is not None and not config.llm.reasoning_effort_enabled:
+        resolved_reasoning_effort = None
+    elif reasoning_effort is _REASONING_EFFORT_UNSET:
+        resolved_reasoning_effort = (
+            config.get_reasoning_effort(agent_name)
+            if config is not None and agent_name is not None
+            else "high"
+        )
+    else:
+        resolved_reasoning_effort = reasoning_effort
+    config_path = codex_home_dir / "config.toml"
+    config_lines = [
+        'model = "gpt-5.4-mini"',
+        'approvals_reviewer = "user"',
+        "",
+        "[features]",
+        "use_legacy_landlock = true",
+        "",
+        f'[projects."{workspace_path.as_posix()}"]',
+        'trust_level = "trusted"',
+        "respect_gitignore = false",
+        "",
+    ]
+    if resolved_reasoning_effort is not None:
+        config_lines.insert(
+            1, f'model_reasoning_effort = "{resolved_reasoning_effort}"'
+        )
+    config_path.write_text("\n".join(config_lines), encoding="utf-8")
     return codex_home_dir
 
 
@@ -476,7 +495,9 @@ def _run_codex_exec_command(
     timeout_seconds: float | None = None,
     resume_session_id: str | None = None,
     output_last_message_path: Path | None = None,
-    reasoning_effort: Literal["low", "medium", "high", "xhigh"] = "high",
+    reasoning_effort: Literal["low", "medium", "high", "xhigh"]
+    | None
+    | object = _REASONING_EFFORT_UNSET,
 ) -> CodexExecRunResult:
     codex_home_root = resolve_codex_home_root(
         task_id=task_id,
@@ -486,6 +507,7 @@ def _run_codex_exec_command(
     prepare_codex_home(
         codex_home_root=codex_home_root,
         workspace_dir=workspace_dir,
+        agent_name=agent_name,
         reasoning_effort=reasoning_effort,
     )
 
@@ -725,7 +747,9 @@ def launch_codex_exec(
     runtime_root: Path | None = None,
     yolo: bool = True,
     timeout_seconds: float | None = None,
-    reasoning_effort: Literal["low", "medium", "high", "xhigh"] = "high",
+    reasoning_effort: Literal["low", "medium", "high", "xhigh"]
+    | None
+    | object = _REASONING_EFFORT_UNSET,
 ) -> int:
     """Launch `codex exec` in a workspace and stream output to the terminal."""
     result = _run_codex_exec_command(
@@ -756,7 +780,9 @@ def resume_codex_exec(
     yolo: bool = True,
     timeout_seconds: float | None = None,
     output_last_message_path: Path | None = None,
-    reasoning_effort: Literal["low", "medium", "high", "xhigh"] = "high",
+    reasoning_effort: Literal["low", "medium", "high", "xhigh"]
+    | None
+    | object = _REASONING_EFFORT_UNSET,
 ) -> CodexExecRunResult:
     """Resume an existing `codex exec` session with a follow-up prompt."""
 
@@ -793,7 +819,11 @@ def open_codex_ui(
         session_id=session_id,
         runtime_root=runtime_root,
     )
-    prepare_codex_home(codex_home_root=codex_home_root, workspace_dir=workspace_dir)
+    prepare_codex_home(
+        codex_home_root=codex_home_root,
+        workspace_dir=workspace_dir,
+        agent_name=agent_name,
+    )
     cmd = [
         "codex",
         *_codex_execution_flags(yolo=yolo),

@@ -20,6 +20,7 @@ from controller.api.schemas import (
     EpisodeResponse,
 )
 from controller.clients.worker import WorkerClient
+from shared.agents.config import AgentsConfig
 from shared.enums import AgentName, EntryFailureDisposition, EpisodeStatus, TraceType
 from shared.models.schemas import (
     AssemblyConstraints,
@@ -36,7 +37,6 @@ from shared.models.schemas import (
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import ReviewManifest
 from tests.integration.agent.helpers import (
-    _default_benchmark_parts,
     seed_benchmark_assembly_definition,
     wait_for_benchmark_state,
     wait_for_episode_terminal,
@@ -50,6 +50,16 @@ REPO_MANUFACTURING_CONFIG = Path(
     "worker_heavy/workbenches/manufacturing_config.yaml"
 ).read_text(encoding="utf-8")
 pytestmark = pytest.mark.xdist_group(name="physics_sims")
+
+
+def _default_benchmark_parts() -> list[dict[str, object]]:
+    return [
+        {
+            "part_id": "environment_fixture",
+            "label": "environment_fixture",
+            "metadata": {"fixed": True, "material_id": "aluminum_6061"},
+        }
+    ]
 
 
 async def _poll_engineer_episode(
@@ -104,16 +114,12 @@ def _node_start_traces(episode: EpisodeResponse, node_name: str) -> list[str]:
     ]
 
 
-def _set_engineer_planner_drafting_mode(mode: str) -> str:
-    original = AGENTS_CONFIG_PATH.read_text(encoding="utf-8")
-    data = yaml.safe_load(original) or {}
+def _agents_config_with_drafting_mode(mode: str) -> AgentsConfig:
+    data = yaml.safe_load(AGENTS_CONFIG_PATH.read_text(encoding="utf-8")) or {}
     agents = data.setdefault("agents", {})
     engineer_planner = agents.setdefault("engineer_planner", {})
     engineer_planner["drafting_mode"] = mode
-    AGENTS_CONFIG_PATH.write_text(
-        yaml.safe_dump(data, sort_keys=False), encoding="utf-8"
-    )
-    return original
+    return AgentsConfig.model_validate(data)
 
 
 @pytest.mark.integration_p0
@@ -221,12 +227,18 @@ async def test_int_184_seeded_workspace_rejects_mismatched_benchmark_caps():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_184_seeded_workspace_requires_drafting_when_mode_enabled():
+async def test_int_184_seeded_workspace_requires_drafting_when_mode_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+):
     """
     INT-184: Seeded engineer-plan-reviewer entry must require drafting when the
     planner drafting mode is enabled.
     """
-    original_config = _set_engineer_planner_drafting_mode("drafting")
+    drafting_config = _agents_config_with_drafting_mode("drafting")
+    monkeypatch.setattr(
+        "worker_heavy.utils.file_validation.load_agents_config",
+        lambda: drafting_config,
+    )
     session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
     worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
     try:
@@ -269,15 +281,19 @@ async def test_int_184_seeded_workspace_requires_drafting_when_mode_enabled():
             await worker.upload_file(
                 "plan.md",
                 (
-                    "## Solution Overview\n"
+                    "## 1. Solution Overview\n"
                     "- Keep the mechanism simple.\n"
-                    "## Parts List\n"
+                    "\n"
+                    "## 2. Parts List\n"
                     "- One target part.\n"
-                    "## Assembly Strategy\n"
-                    "- Assemble directly into the build zone.\n"
-                    "## Cost & Weight Budget\n"
+                    "\n"
+                    "## 3. Assembly Strategy\n"
+                    "1. Assemble directly into the build zone.\n"
+                    "\n"
+                    "## 4. Cost & Weight Budget\n"
                     "- Stay within budget.\n"
-                    "## Risk Assessment\n"
+                    "\n"
+                    "## 5. Risk Assessment\n"
                     "- Minimal risk.\n"
                 ).encode("utf-8"),
                 bypass_agent_permissions=True,
@@ -319,8 +335,9 @@ async def test_int_184_seeded_workspace_requires_drafting_when_mode_enabled():
             )
         finally:
             await worker.aclose()
+
     finally:
-        AGENTS_CONFIG_PATH.write_text(original_config, encoding="utf-8")
+        pass
 
     assert errors, "Expected drafting mode to require assembly_definition.drafting."
     assert any(error.artifact_path == "assembly_definition.yaml" for error in errors), (

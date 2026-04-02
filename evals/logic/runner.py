@@ -2997,6 +2997,7 @@ async def _run_codex_eval(
             materialized.workspace_dir,
             materialized.prompt_text,
             task_id=task_id,
+            agent_name=agent_name,
             session_id=session_id,
             runtime_root=codex_runtime_root,
             yolo=False,
