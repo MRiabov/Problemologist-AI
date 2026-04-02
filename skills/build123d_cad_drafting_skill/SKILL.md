@@ -9,10 +9,10 @@ Read this skill and the relevant reference files below before planning any `buil
 
 ## Core Directives
 
-1. **Solid Modeling**: Prefer `with BuildPart()` plus primitives, booleans, fillets, chamfers, and shells for solid modeling. Use constraint helpers when they reduce manual coordinate tweaking.
+1. **Solid Modeling**: Prefer `with BuildPart()` plus primitives, booleans, fillets, chamfers, and shells for solid modeling. Use joint or placement helpers when they reduce manual coordinate tweaking.
 2. **Semantic Selectors**: Avoid indices. Use `faces()`, `edges()`, `vertices()` with `sort_by(Axis.Z)` or `last()`/`first()`.
-3. **2D Constraint Sketching**: When a sketch is defined by tangency, fixed radius, or datum relationships, use the constrained line/arc helpers instead of hand-tuning vertices. These helpers are for CAD sketch layout, not MJCF joints or simulation constraints. See [2d_constraints.md](references/2d_constraints.md).
-4. **3D Placement Constraints**: When assembly layout depends on repeated, mirrored, or rotated placement, use `Location`, `Locations`, `.move(...)`, `.moved(...)`, `Align`, and `Compound(children=[...])` placement patterns instead of hand-deriving every coordinate. See [3d_constraints.md](references/3d_constraints.md).
+3. **2D Joint Sketching**: When a sketch is defined by tangency, fixed radius, or datum relationships, use the constrained line/arc helpers instead of hand-tuning vertices. These helpers are for CAD sketch layout, not MJCF joints or simulation joints. See [2d_joints.md](references/2d_joints.md).
+4. **3D Placement Joints**: When assembly layout depends on repeated, mirrored, or rotated placement, use `Location`, `Locations`, `.move(...)`, `.moved(...)`, `Align`, and `Compound(children=[...])` placement patterns instead of hand-deriving every coordinate. See [3d_joints.md](references/3d_joints.md).
 5. **MJCF Compliance**: Ensure parts are non-intersecting if they belong to different simulation links.
 6. **Assembly Labels**: Use `.label = "stator"` and `.label = "rotor"` for automatic motor/joint injection in MJCF.
 7. **Label Namespace Hygiene**: Top-level authored labels must be unique and must not be `environment` or start with `zone_`. The simulator reserves those names for the scene root and generated objective bodies, and duplicate labels collide with MJCF mesh/body names.
@@ -69,13 +69,13 @@ rail_lower = rail_builder.part.moved(Location((0, -0.06, 0.09), (0, 2, 0)))
 - Environment Zones (Goal/Forbid) (L75)
 - Collision Best Practices (L82)
 
-### [2d_constraints.md](references/2d_constraints.md) (2D Constraints)
+### [2d_joints.md](references/2d_joints.md) (2D Joints)
 
 - Tangent bridge between repeated features
 - Fixed-radius tangent arcs
 - Dimension and extension lines
 
-### [3d_constraints.md](references/3d_constraints.md) (3D Constraints)
+### [3d_joints.md](references/3d_joints.md) (3D Joints)
 
 - Repeated datum placement with `Locations(...)`
 - Rotated top-level parts with `Location(...)`

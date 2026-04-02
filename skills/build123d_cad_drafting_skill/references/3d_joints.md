@@ -1,8 +1,8 @@
-# 3D Constraints
+# 3D Joints
 
-This document explains how the 3D placement constraints work for part placement, repetition, and assembly pose.
+This document explains how the 3D placement joints work for part placement, repetition, and assembly pose.
 
-These are placement constraints, not physics constraints.
+These are placement joints, not physics joints.
 
 ## 1. Repeated placements from one builder result
 

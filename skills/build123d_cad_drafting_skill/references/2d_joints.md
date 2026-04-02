@@ -1,8 +1,8 @@
-# 2D Constraints
+# 2D Joints
 
-This document explains how the 2D sketch constraints work for layout, tangency, and annotation workflows.
+This document explains how the 2D sketch joints work for layout, tangency, and annotation workflows.
 
-These helpers are for sketch layout. They are not MJCF joints or simulation constraints.
+These helpers are for sketch layout. They are not MJCF joints or simulation joints.
 
 ## 1. Tangent bridge between repeated features
 
@@ -21,7 +21,7 @@ path = Wire([bridge])
 
 ## 2. Fixed-radius tangent arc
 
-`Edge.make_constrained_arcs(...)` is useful when the turn radius is known but the final endpoint should emerge from the constraint.
+`Edge.make_constrained_arcs(...)` is useful when the turn radius is known but the final endpoint should emerge from the joint relationship.
 
 ```python
 from build123d import Axis, Edge, Vector, Wire
@@ -49,6 +49,6 @@ with BuildSketch() as sk:
 
 ## 4. Rule of thumb
 
-- Use constraint helpers when the sketch is relationship-driven.
+- Use joint helpers when the sketch is relationship-driven.
 - Use `BuildSketch`, `BuildLine`, and `BuildPart` for the actual CAD shape.
 - Multiple solutions are normal; choose by length, orientation, or datum fit.

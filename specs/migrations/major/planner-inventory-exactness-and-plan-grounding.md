@@ -182,6 +182,13 @@ The safe order is:
   assume the old loose handoff shape.
 - [ ] Keep benchmark and engineering evals in parity where the artifact shape
   is the same.
+- [ ] Update eval coverage for the `preview_drawing()` gate so drafting-mode
+  planner, coder, and reviewer rows fail closed when the current revision does
+  not record a required preview call.
+- [ ] Update eval coverage for structural `TechnicalDrawing` validation so
+  `solution_plan_technical_drawing_script.py` and
+  `benchmark_plan_technical_drawing_script.py` fail when they do not truly
+  import and invoke build123d `TechnicalDrawing`.
 
 ### Integration refresh
 
@@ -191,11 +198,21 @@ The safe order is:
 - [ ] Add negative-path coverage for relabeling, quantity drift, and COTS
   identity drift in planner handoffs.
 - [ ] Refresh most integration tests that touch planner or coder handoffs.
+- [ ] Add integration-test coverage for the `preview_drawing()` gate in the
+  drafting-mode planner, coder, and reviewer flows.
+- [ ] Add integration-test coverage for structural `TechnicalDrawing`
+  validation on `solution_plan_technical_drawing_script.py` and
+  `benchmark_plan_technical_drawing_script.py`.
 
 ### Documentation and prompts
 
 - [ ] Align prompt-side guidance with the exactness contract.
 - [ ] Keep the handoff and role docs in sync with the implemented validator.
+
+### Drafting contract follow-up
+
+- [x] Add the fail-closed `preview_drawing()` usage gate for drafting-mode planner, coder, and reviewer nodes, and wire it through the drafting, tool, and prompt docs.
+- [x] Add structural validation for `solution_plan_technical_drawing_script.py` and `benchmark_plan_technical_drawing_script.py` so the scripts must truly import and invoke build123d `TechnicalDrawing`, using AST/symbol checks rather than substring matching.
 
 ## File-Level Change Set
 

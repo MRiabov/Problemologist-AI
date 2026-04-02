@@ -383,7 +383,7 @@ eval preflight path fail closed before node execution starts.
 - [x] Add a narrow integration slice that proves the planner can produce the
   drafting contract and the reviewer can inspect it.
 - [x] Add an inspection assertion for the persisted drawing bundle.
-- [ ] Add assertions that drafting scripts reject unsupported views, callouts,
+- [x] Add assertions that drafting scripts reject unsupported views, callouts,
   datums, or dimensions.
 - [ ] Add assertions for the mode-off path so the planner does not
   accidentally learn the drafting contract when it should not.
@@ -391,6 +391,7 @@ eval preflight path fail closed before node execution starts.
   benchmark reviewer see the same artifact split.
 - [x] Add an end-to-end assertion that the reviewer can judge the drawing
   contract from real render artifacts.
+
 <!--Note: it'll likely involve rerunning the whole integration test suite - so many contract mismatches to update in mock responses.-->
 
 ## File-Level Change Set
