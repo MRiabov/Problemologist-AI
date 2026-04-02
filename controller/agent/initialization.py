@@ -47,6 +47,12 @@ def _role_template_files(agent_name: AgentName) -> dict[str, str]:
             "engineer/drafting/benchmark_plan_technical_drawing_script.py": (
                 "benchmark_plan_technical_drawing_script.py"
             ),
+            "engineer/renders/engineer_renders/render_manifest.json": (
+                "renders/engineer_renders/render_manifest.json"
+            ),
+            "engineer/renders/benchmark_renders/render_manifest.json": (
+                "renders/benchmark_renders/render_manifest.json"
+            ),
         },
         AgentName.ENGINEER_CODER: {
             "engineer/benchmark_assembly_definition.yaml": (

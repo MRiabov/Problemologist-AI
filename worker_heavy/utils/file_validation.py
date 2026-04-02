@@ -263,8 +263,11 @@ def _validate_drafting_artifact_inventory_exactness(
     )
 
 
-def _collect_component_identity_counts(component: Any) -> Counter[str]:
+def _collect_component_identity_counts(
+    component: Any,
+) -> tuple[Counter[str], list[tuple[str | None, str | None]]]:
     counts: Counter[str] = Counter()
+    identity_entries: list[tuple[str | None, str | None]] = []
 
     def _visit(node: Any, *, is_root: bool) -> None:
         children = getattr(node, "children", ()) or ()
@@ -272,17 +275,48 @@ def _collect_component_identity_counts(component: Any) -> Counter[str]:
         metadata = getattr(node, "metadata", None)
 
         if not (is_root and children):
-            if isinstance(label, str) and label.strip():
-                counts[label.strip()] += 1
+            normalized_label = (
+                label.strip() if isinstance(label, str) and label.strip() else None
+            )
+            normalized_cots_id = None
+            if normalized_label is not None:
+                counts[normalized_label] += 1
             cots_id = getattr(metadata, "cots_id", None)
             if isinstance(cots_id, str) and cots_id.strip():
-                counts[cots_id.strip()] += 1
+                normalized_cots_id = cots_id.strip()
+                counts[normalized_cots_id] += 1
+            if normalized_label is not None or normalized_cots_id is not None:
+                identity_entries.append((normalized_label, normalized_cots_id))
 
         for child in children:
             _visit(child, is_root=False)
 
     _visit(component, is_root=True)
-    return counts
+    return counts, identity_entries
+
+
+def _format_component_identity_entries(
+    identity_entries: list[tuple[str | None, str | None]],
+    *,
+    max_entries: int = 4,
+) -> str:
+    if not identity_entries:
+        return "<none>"
+
+    formatted_entries: list[str] = []
+    for label, cots_id in identity_entries[:max_entries]:
+        pieces: list[str] = []
+        if label is not None:
+            pieces.append(f"label={label}")
+        if cots_id is not None:
+            pieces.append(f"cots_id={cots_id}")
+        if not pieces:
+            pieces.append("<unlabeled>")
+        formatted_entries.append(", ".join(pieces))
+
+    if len(identity_entries) > max_entries:
+        formatted_entries.append("...")
+    return "; ".join(formatted_entries)
 
 
 def validate_component_inventory_exactness(
@@ -291,15 +325,17 @@ def validate_component_inventory_exactness(
     expected_tokens: Counter[str],
     artifact_name: str,
 ) -> list[str]:
-    observed_tokens = _collect_component_identity_counts(component)
+    observed_tokens, identity_entries = _collect_component_identity_counts(component)
     errors: list[str] = []
+    identity_summary = _format_component_identity_entries(identity_entries)
     for token in sorted(set(observed_tokens) | set(expected_tokens)):
         expected_count = expected_tokens.get(token, 0)
         observed_count = observed_tokens.get(token, 0)
         if observed_count != expected_count:
             errors.append(
                 f"{artifact_name}: exact inventory mismatch for '{token}' "
-                f"(expected {expected_count}, found {observed_count})"
+                f"(expected {expected_count}, found {observed_count}; "
+                f"observed identities: {identity_summary})"
             )
     return errors
 

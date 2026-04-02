@@ -10,13 +10,17 @@ import yaml
 from controller.observability.middleware_helper import broadcast_file_update
 from shared.models.schemas import AssemblyDefinition
 from shared.rendering import build_render_manifest
-from shared.workers.schema import RenderArtifactMetadata
+from shared.workers.schema import RenderArtifactMetadata, RenderSiblingPaths
 
 logger = structlog.get_logger(__name__)
 
 _TINY_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W8FcAAAAASUVORK5CYII="
 )
+_TINY_SVG = (
+    "<svg xmlns='http://www.w3.org/2000/svg' width='1' height='1'></svg>"
+).encode("utf-8")
+_TINY_DXF = b"0\nSECTION\n2\nENTITIES\n0\nENDSEC\n0\nEOF\n"
 
 
 def _normalize_render_path(path: str) -> str:
@@ -84,36 +88,73 @@ async def seed_benchmark_review_preview_bundle(
         )
 
     for render_path in canonical_render_paths:
-        if render_path in existing_render_paths:
-            continue
-        try:
-            await asyncio.wait_for(
-                worker_client.upload_file(render_path, _TINY_PNG),
-                timeout=5.0,
-            )
-        except Exception as exc:
-            logger.warning(
-                "benchmark_review_render_seed_upload_failed",
-                session_id=session_id,
-                path=render_path,
-                error=str(exc),
-            )
-            continue
-        try:
-            await asyncio.wait_for(
-                broadcast_file_update(str(session_id), render_path, ""),
-                timeout=2.0,
-            )
-        except Exception as exc:
-            logger.warning(
-                "benchmark_review_render_seed_broadcast_failed",
-                session_id=session_id,
-                path=render_path,
-                error=str(exc),
-            )
+        svg_path = Path(render_path).with_suffix(".svg")
+        dxf_path = Path(render_path).with_suffix(".dxf")
+        if render_path not in existing_render_paths:
+            try:
+                await asyncio.wait_for(
+                    worker_client.upload_file(render_path, _TINY_PNG),
+                    timeout=5.0,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "benchmark_review_render_seed_upload_failed",
+                    session_id=session_id,
+                    path=render_path,
+                    error=str(exc),
+                )
+                continue
+            try:
+                await asyncio.wait_for(
+                    broadcast_file_update(str(session_id), render_path, ""),
+                    timeout=2.0,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "benchmark_review_render_seed_broadcast_failed",
+                    session_id=session_id,
+                    path=render_path,
+                    error=str(exc),
+                )
+        for sibling_path, sibling_bytes in (
+            (svg_path, _TINY_SVG),
+            (dxf_path, _TINY_DXF),
+        ):
+            try:
+                await asyncio.wait_for(
+                    worker_client.upload_file(str(sibling_path), sibling_bytes),
+                    timeout=5.0,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "benchmark_review_render_seed_sidecar_upload_failed",
+                    session_id=session_id,
+                    path=str(sibling_path),
+                    error=str(exc),
+                )
+                continue
+            try:
+                await asyncio.wait_for(
+                    broadcast_file_update(str(session_id), str(sibling_path), ""),
+                    timeout=2.0,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "benchmark_review_render_seed_sidecar_broadcast_failed",
+                    session_id=session_id,
+                    path=str(sibling_path),
+                    error=str(exc),
+                )
 
     manifest_artifacts = {
-        render_path: RenderArtifactMetadata(modality="rgb")
+        render_path: RenderArtifactMetadata(
+            modality="rgb",
+            siblings=RenderSiblingPaths(
+                rgb=render_path,
+                svg=str(Path(render_path).with_suffix(".svg")),
+                dxf=str(Path(render_path).with_suffix(".dxf")),
+            ),
+        )
         for render_path in canonical_render_paths
     }
     environment_version = await _workspace_environment_version(worker_client)

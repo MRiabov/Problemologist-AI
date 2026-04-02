@@ -247,7 +247,9 @@ def get_benchmark_planner_tools(
         missing_files: list[str] = []
 
         for rel_path in required_files:
-            content = await fs.read_file_optional(rel_path)
+            content = await fs.client.read_file_optional(
+                rel_path, bypass_agent_permissions=True
+            )
             if content is None:
                 missing_files.append(rel_path)
                 continue

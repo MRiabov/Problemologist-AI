@@ -273,6 +273,30 @@ async def _copy_approved_benchmark_bundle(
             path=path,
         )
 
+    root_manifest_path = "renders/render_manifest.json"
+    alias_paths = (
+        "renders/engineer_renders/render_manifest.json",
+        "renders/benchmark_renders/render_manifest.json",
+    )
+    if await source_client.exists(root_manifest_path, bypass_agent_permissions=True):
+        root_manifest = await source_client.read_file(
+            root_manifest_path, bypass_agent_permissions=True
+        )
+        for alias_path in alias_paths:
+            if await destination_client.write_file(
+                alias_path,
+                root_manifest,
+                overwrite=True,
+                bypass_agent_permissions=True,
+            ):
+                logger.info(
+                    "copied_approved_benchmark_artifact",
+                    source_session_id=source_client.session_id,
+                    destination_session_id=destination_client.session_id,
+                    path=alias_path,
+                    copied_from=root_manifest_path,
+                )
+
 
 async def _fail_episode_before_graph_start(
     *,

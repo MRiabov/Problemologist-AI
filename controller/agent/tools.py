@@ -8,6 +8,7 @@ import yaml
 
 from controller.middleware.remote_fs import EditOp, RemoteFilesystemMiddleware
 from controller.observability.tracing import record_worker_events
+from shared.agents.config import DraftingMode, load_agents_config
 from shared.cots.agent import (
     search_cots_catalog as base_search_cots_catalog,
 )
@@ -15,7 +16,11 @@ from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import PlannerSubmissionResult
 from shared.observability.schemas import RunCommandToolEvent
-from shared.script_contracts import technical_drawing_script_path_for_agent
+from shared.script_contracts import (
+    drafting_render_manifest_path_for_agent,
+    drafting_script_paths_for_agent,
+    technical_drawing_script_path_for_agent,
+)
 from shared.workers.schema import PlanReviewManifest
 
 
@@ -44,6 +49,16 @@ def _tool_name(tool: Callable) -> str:
 
 def _runtime_skill_script_path(*relative_parts: str) -> Path:
     return Path(__file__).resolve().parents[2].joinpath(*relative_parts)
+
+
+def _engineer_planner_drafting_required() -> bool:
+    try:
+        drafting_mode = load_agents_config().get_technical_drawing_mode(
+            AgentName.ENGINEER_PLANNER
+        )
+    except Exception:
+        return False
+    return drafting_mode in (DraftingMode.MINIMAL, DraftingMode.FULL)
 
 
 async def run_validate_and_price_script(
@@ -432,11 +447,21 @@ def get_engineer_planner_tools(
             "benchmark_definition.yaml",
             "assembly_definition.yaml",
         ]
+        if _engineer_planner_drafting_required():
+            required_files.extend(
+                str(path)
+                for path in drafting_script_paths_for_agent(AgentName.ENGINEER_PLANNER)
+            )
+            required_files.append(
+                str(drafting_render_manifest_path_for_agent(AgentName.ENGINEER_PLANNER))
+            )
         artifacts: dict[str, str] = {}
         missing_files: list[str] = []
 
         for rel_path in required_files:
-            content = await fs.read_file_optional(rel_path)
+            content = await fs.client.read_file_optional(
+                rel_path, bypass_agent_permissions=True
+            )
             if content is None:
                 missing_files.append(rel_path)
                 continue

@@ -138,6 +138,7 @@ agents:
         - journal.md
         - assembly_definition.yaml
         - benchmark_definition.yaml
+        - renders/**
         - benchmark_plan_evidence_script.py
         - benchmark_plan_technical_drawing_script.py
         - solution_plan_evidence_script.py

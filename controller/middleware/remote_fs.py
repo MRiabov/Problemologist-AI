@@ -426,9 +426,15 @@ class RemoteFilesystemMiddleware:
 
         return await self.client.read_file(str(path))
 
-    async def read_file_optional(self, path: str | Path) -> str | None:
+    async def read_file_optional(
+        self,
+        path: str | Path,
+        *,
+        bypass_agent_permissions: bool = False,
+    ) -> str | None:
         """Read file via the Worker client and return ``None`` if it is absent."""
-        self._check_perm("read", path)
+        if not bypass_agent_permissions:
+            self._check_perm("read", path)
         if self._is_visual_media_path(path):
             mime_type, media_kind = self._media_metadata_for_path(path)
             msg = (
@@ -466,7 +472,10 @@ class RemoteFilesystemMiddleware:
                 ],
             )
 
-        return await self.client.read_file_optional(str(path))
+        return await self.client.read_file_optional(
+            str(path),
+            bypass_agent_permissions=bypass_agent_permissions,
+        )
 
     async def inspect_media(self, path: str | Path) -> MediaInspectionResult:
         """Read supported visual media and prepare it for multimodal inspection."""
