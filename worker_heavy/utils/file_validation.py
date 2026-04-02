@@ -15,6 +15,7 @@ import io
 import re
 import shutil
 import subprocess
+import tempfile
 import tokenize
 import uuid
 from collections import Counter
@@ -52,7 +53,13 @@ from worker_heavy.utils.dfm import (
     validate_declared_assembly_cost,
     validate_exact_declared_assembly_cost,
 )
-from worker_heavy.utils.validation import _validate_benchmark_definition_consistency
+from worker_heavy.utils.validation import (
+    _shape_volume,
+    _validate_benchmark_definition_consistency,
+)
+from worker_heavy.utils.validation import (
+    validate as validate_component,
+)
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
 logger = structlog.get_logger(__name__)
@@ -531,6 +538,142 @@ def _validate_drafting_contract(
                 )
 
     return errors
+
+
+def _zone_body_from_bounds(
+    bounds: Any,
+    *,
+    inflation_mm: float = 0.0,
+) -> Any:
+    from build123d import Align, Box, Location
+
+    min_xyz = tuple(float(value) for value in bounds.min)
+    max_xyz = tuple(float(value) for value in bounds.max)
+    size = tuple(
+        max(max_xyz[i] - min_xyz[i] + 2.0 * inflation_mm, 0.0) for i in range(3)
+    )
+    center = tuple((min_xyz[i] + max_xyz[i]) / 2.0 for i in range(3))
+    zone = Box(
+        size[0],
+        size[1],
+        size[2],
+        align=(Align.CENTER, Align.CENTER, Align.CENTER),
+    )
+    if any(abs(value) > 1e-12 for value in center):
+        zone = zone.move(Location(center))
+    return zone
+
+
+def _plan_explicitly_allows_goal_zone_overlap(
+    plan_text: str | None,
+    zone_name: str,
+) -> bool:
+    if not plan_text:
+        return False
+
+    lower_text = plan_text.lower()
+    normalized_zone = zone_name.strip().lower().replace("_", " ")
+    if not normalized_zone:
+        normalized_zone = "goal zone"
+
+    intent_terms = ("capture", "occupy", "reference")
+    zone_terms = {
+        normalized_zone,
+        normalized_zone.replace(" ", "-"),
+        "goal zone",
+        "target zone",
+    }
+
+    if not any(term in lower_text for term in zone_terms):
+        return False
+
+    return any(term in lower_text for term in intent_terms)
+
+
+def validate_planner_drafting_geometry_contract(
+    *,
+    benchmark_definition: BenchmarkDefinition,
+    component: Any,
+    artifact_name: str,
+    plan_text: str | None = None,
+    session_id: str | None = None,
+) -> list[str]:
+    """Validate planner drafting geometry against backing objective zones."""
+    errors: list[str] = []
+
+    build_zone_error = None
+    try:
+        is_valid, message = validate_component(
+            component,
+            build_zone=benchmark_definition.objectives.build_zone.model_dump(),
+            session_id=session_id,
+        )
+        if not is_valid:
+            build_zone_error = message or "3D backing geometry validation failed"
+    except Exception as exc:
+        build_zone_error = str(exc)
+
+    if build_zone_error is not None:
+        return [f"{artifact_name}: {build_zone_error}"]
+
+    solids = list(component.solids())
+    if not solids:
+        return [f"{artifact_name}: drafted component contains no solid geometry"]
+
+    goal_zone = benchmark_definition.objectives.goal_zone
+    goal_zone_body = _zone_body_from_bounds(goal_zone, inflation_mm=1e-6)
+    goal_zone_allowed = _plan_explicitly_allows_goal_zone_overlap(
+        plan_text, "goal_zone"
+    )
+    for solid in solids:
+        try:
+            goal_intersection = solid.intersect(goal_zone_body)
+        except Exception as exc:
+            return [f"{artifact_name}: unable to evaluate goal-zone overlap: {exc}"]
+        if _shape_volume(goal_intersection) > 0.0 and not goal_zone_allowed:
+            solid_label = getattr(solid, "label", None) or "<unlabeled>"
+            return [
+                f"{artifact_name}: 3D backing geometry overlaps goal zone "
+                f"(offending solid: {solid_label}); explicit capture, occupy, "
+                "or reference intent is required in plan.md"
+            ]
+
+    for zone in benchmark_definition.objectives.forbid_zones:
+        zone_body = _zone_body_from_bounds(zone, inflation_mm=1e-6)
+        for solid in solids:
+            try:
+                intersection = solid.intersect(zone_body)
+            except Exception as exc:
+                return [
+                    f"{artifact_name}: unable to evaluate forbid-zone overlap "
+                    f"for '{zone.name}': {exc}"
+                ]
+            if _shape_volume(intersection) > 0.0:
+                solid_label = getattr(solid, "label", None) or "<unlabeled>"
+                return [
+                    f"{artifact_name}: 3D backing geometry intersects forbid "
+                    f"zone '{zone.name}' (offending solid: {solid_label})"
+                ]
+
+    return errors
+
+
+def _load_component_from_drafting_script_content(
+    *,
+    artifact_name: str,
+    content: str,
+    session_root: Path,
+) -> Any:
+    from shared.workers.loader import load_component_from_script
+
+    with tempfile.TemporaryDirectory(prefix="planner_drafting_") as tmpdir:
+        tmp_root = Path(tmpdir)
+        script_path = tmp_root / artifact_name
+        script_path.write_text(content, encoding="utf-8")
+        return load_component_from_script(
+            script_path=script_path,
+            session_root=session_root,
+        )
 
 
 def _drafting_script_paths_for_node(
@@ -1472,6 +1615,29 @@ def validate_planner_handoff_cross_contract(
                     artifact_name=artifact_name,
                     content=content,
                     expected_tokens=script_tokens,
+                )
+            )
+
+            try:
+                component = _load_component_from_drafting_script_content(
+                    artifact_name=artifact_name,
+                    content=content,
+                    session_root=Path(__file__).resolve().parents[2],
+                )
+            except Exception as exc:
+                errors.append(
+                    f"{artifact_name}: unable to load drafted component for "
+                    f"geometry validation: {exc}"
+                )
+                continue
+
+            errors.extend(
+                validate_planner_drafting_geometry_contract(
+                    benchmark_definition=benchmark_definition,
+                    component=component,
+                    artifact_name=artifact_name,
+                    plan_text=plan_text,
+                    session_id=None,
                 )
             )
 

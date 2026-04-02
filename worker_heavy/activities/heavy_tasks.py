@@ -4,8 +4,11 @@ import tempfile
 from pathlib import Path
 
 import structlog
+import yaml
 from temporalio import activity
 
+from shared.enums import AgentName
+from shared.models.schemas import AssemblyDefinition
 from shared.models.simulation import SimulationResult
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.loader import load_component_from_script
@@ -22,9 +25,14 @@ from shared.workers.schema import (
 )
 from worker_heavy.runtime.simulation_runner import run_simulation_in_isolated_process
 from worker_heavy.utils import renderer_client
+from worker_heavy.utils.file_validation import (
+    validate_benchmark_definition_yaml,
+    validate_planner_handoff_cross_contract,
+)
 from worker_heavy.utils.handover import submit_for_review
 from worker_heavy.utils.validation import validate
 from worker_heavy.utils.verification import run_verification_job
+from worker_heavy.workbenches.config import load_required_merged_config
 
 logger = structlog.get_logger(__name__)
 
@@ -160,6 +168,21 @@ def _collect_validation_artifacts(root: Path) -> SimulationArtifacts:
     return artifacts
 
 
+def _planner_role_for_drafting_script(script_path: str) -> AgentName | None:
+    script_name = Path(script_path).name
+    if script_name in {
+        "solution_plan_evidence_script.py",
+        "solution_plan_technical_drawing_script.py",
+    }:
+        return AgentName.ENGINEER_PLANNER
+    if script_name in {
+        "benchmark_plan_evidence_script.py",
+        "benchmark_plan_technical_drawing_script.py",
+    }:
+        return AgentName.BENCHMARK_PLANNER
+    return None
+
+
 def _collect_simulation_artifacts(
     root: Path, result: SimulationResult, *, session_id: str | None = None
 ) -> SimulationArtifacts:
@@ -248,10 +271,100 @@ async def validate_design_activity(
         root = Path(tmpdir)
         _extract_bundle(bundle_bytes, root)
 
+        planner_role = _planner_role_for_drafting_script(script_path)
         component = load_component_from_script(
             script_path=root / script_path,
             session_root=root,
         )
+
+        if planner_role is not None:
+            benchmark_definition_path = root / "benchmark_definition.yaml"
+            assembly_definition_path = (
+                root / "benchmark_assembly_definition.yaml"
+                if planner_role == AgentName.BENCHMARK_PLANNER
+                else root / "assembly_definition.yaml"
+            )
+            plan_path = root / "plan.md"
+
+            if not benchmark_definition_path.exists():
+                message = (
+                    "benchmark_definition.yaml missing for planner drafting validation"
+                )
+                return HeavyValidationResponse(
+                    success=False,
+                    message=message,
+                    artifacts=_collect_validation_artifacts(root),
+                )
+            if not assembly_definition_path.exists():
+                message = (
+                    f"{assembly_definition_path.name} missing for planner drafting "
+                    "validation"
+                )
+                return HeavyValidationResponse(
+                    success=False,
+                    message=message,
+                    artifacts=_collect_validation_artifacts(root),
+                )
+
+            benchmark_raw = benchmark_definition_path.read_text(encoding="utf-8")
+            benchmark_valid, benchmark_result = validate_benchmark_definition_yaml(
+                benchmark_raw, session_id=session_id
+            )
+            if not benchmark_valid:
+                return HeavyValidationResponse(
+                    success=False,
+                    message="benchmark_definition.yaml invalid: "
+                    + "; ".join(benchmark_result),
+                    artifacts=_collect_validation_artifacts(root),
+                )
+            benchmark_definition = benchmark_result
+
+            try:
+                assembly_definition = AssemblyDefinition.model_validate(
+                    yaml.safe_load(assembly_definition_path.read_text(encoding="utf-8"))
+                    or {}
+                )
+            except Exception as exc:
+                return HeavyValidationResponse(
+                    success=False,
+                    message=f"{assembly_definition_path.name} invalid: {exc}",
+                    artifacts=_collect_validation_artifacts(root),
+                )
+
+            manufacturing_config_path = root / "manufacturing_config.yaml"
+            if manufacturing_config_path.exists():
+                manufacturing_config = load_required_merged_config(
+                    manufacturing_config_path
+                )
+            else:
+                manufacturing_config = load_required_merged_config()
+
+            plan_text = (
+                plan_path.read_text(encoding="utf-8") if plan_path.exists() else None
+            )
+            drafting_artifacts = {
+                script_path: (root / script_path).read_text(encoding="utf-8")
+            }
+            cross_contract_errors = validate_planner_handoff_cross_contract(
+                benchmark_definition=benchmark_definition,
+                assembly_definition=assembly_definition,
+                manufacturing_config=manufacturing_config,
+                planner_node_type=planner_role,
+                plan_text=plan_text,
+                drafting_artifacts=drafting_artifacts,
+            )
+            if cross_contract_errors:
+                return HeavyValidationResponse(
+                    success=False,
+                    message="; ".join(cross_contract_errors),
+                    artifacts=_collect_validation_artifacts(root),
+                )
+
+            return HeavyValidationResponse(
+                success=True,
+                message="Validation completed",
+                artifacts=_collect_validation_artifacts(root),
+            )
 
         is_valid, message = await asyncio.to_thread(
             validate,
