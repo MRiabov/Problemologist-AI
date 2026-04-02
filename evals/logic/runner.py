@@ -153,6 +153,9 @@ DEFAULT_EVAL_AGENT = AgentName.BENCHMARK_PLANNER.value
 DEFAULT_EVAL_LIMIT = 1
 DEFAULT_EVAL_CONCURRENCY = 1
 
+_DRAWING_EVAL_KEY_RE = re.compile(
+    r"([a-z]{1,12}-\d{3}-drawing-(?:off|minimal|full))", re.IGNORECASE
+)
 _EVAL_KEY_RE = re.compile(r"([a-z]{1,12}-\d{3})", re.IGNORECASE)
 _ANSI_ESCAPE_RE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 _RUN_LOG_EVENT_RE = re.compile(r"\[[^\]]+\]\s+([A-Za-z0-9_]+)\s+\[[^\]]+\]")
@@ -906,6 +909,9 @@ def _resolve_eval_log_key(*, task_id: str, session_id: str = "") -> str:
     for source in (task_id, session_id):
         if not source:
             continue
+        drawing_match = _DRAWING_EVAL_KEY_RE.search(source)
+        if drawing_match:
+            return drawing_match.group(1).lower()
         match = _EVAL_KEY_RE.search(source)
         if match:
             return match.group(1).lower()

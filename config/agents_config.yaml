@@ -121,6 +121,8 @@ agents:
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
         - assembly_definition.yaml
+        - benchmark_plan_evidence_script.py
+        - benchmark_plan_technical_drawing_script.py
         - solution_plan_evidence_script.py
         - solution_plan_technical_drawing_script.py
         - plan.md
@@ -136,6 +138,8 @@ agents:
         - journal.md
         - assembly_definition.yaml
         - benchmark_definition.yaml
+        - benchmark_plan_evidence_script.py
+        - benchmark_plan_technical_drawing_script.py
         - solution_plan_evidence_script.py
         - solution_plan_technical_drawing_script.py
       deny:

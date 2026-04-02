@@ -35,6 +35,18 @@ def _role_template_files(agent_name: AgentName) -> dict[str, str]:
             "engineer/plan.md": "plan.md",
             "engineer/todo.md": "todo.md",
             "engineer/assembly_definition.yaml": "assembly_definition.yaml",
+            "engineer/drafting/solution_plan_evidence_script.py": (
+                "solution_plan_evidence_script.py"
+            ),
+            "engineer/drafting/solution_plan_technical_drawing_script.py": (
+                "solution_plan_technical_drawing_script.py"
+            ),
+            "engineer/drafting/benchmark_plan_evidence_script.py": (
+                "benchmark_plan_evidence_script.py"
+            ),
+            "engineer/drafting/benchmark_plan_technical_drawing_script.py": (
+                "benchmark_plan_technical_drawing_script.py"
+            ),
         },
         AgentName.ENGINEER_CODER: {
             "engineer/benchmark_assembly_definition.yaml": (

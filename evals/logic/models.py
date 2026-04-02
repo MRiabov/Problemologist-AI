@@ -1,9 +1,15 @@
+import re
 from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from shared.agents.config import DraftingMode
 from shared.enums import AgentName, EvalMode, ReviewDecision
+
+_DRAWING_SPLIT_TASK_ID_RE = re.compile(
+    r"^[a-z]{1,12}-\d{3}-drawing-(?:off|minimal|full)$", re.IGNORECASE
+)
 
 
 class AgentEvalSpec(BaseModel):
@@ -26,10 +32,21 @@ class EvalDatasetItem(BaseModel):
     seed_dataset: Path | None = None
     seed_artifact_dir: Path | None = None
     seed_files: dict[str, str] | None = None
+    technical_drawing_mode: DraftingMode | None = None
+    split_source_task_id: str | None = None
     git_eval: "GitEvalConfig | None" = None
     expected_decision: ReviewDecision | None = None
 
     model_config = ConfigDict(extra="allow")
+
+    @model_validator(mode="after")
+    def validate_drawing_split_mode(self) -> "EvalDatasetItem":
+        if (
+            self.technical_drawing_mode is None
+            and _DRAWING_SPLIT_TASK_ID_RE.match(self.id) is not None
+        ):
+            raise ValueError(f"Eval row '{self.id}' must set technical_drawing_mode.")
+        return self
 
 
 class HardCheckAggregate(BaseModel):
