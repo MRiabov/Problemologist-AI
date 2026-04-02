@@ -23,7 +23,7 @@
         "docs/data-models.md",
         "docs/development-guide.md"
       ],
-      "summary": "Classified the repository as a multi-part backend-first controller-worker platform and generated the canonical core documentation set."
+      "summary": "Classified the repository as a multi-part backend-first split-worker platform and generated the canonical core documentation set."
     },
     {
       "step": "step_2",

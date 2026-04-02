@@ -52,6 +52,10 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 
 - [Observability](./architecture/observability.md): event schema, IDs/lineage, metrics, and logging/backups/user-review data.
 
+### Developer instrumentation
+
+- [Developer instrumentation](./devtools.md): local bootstrap, integration orchestration, eval runners, workspace materialization, and contract validators that support developer workflows but are not part of the core architecture tree.
+
 ## Document ownership rule
 
 - Add or update architecture requirements in the corresponding `specs/architecture/**` file.
