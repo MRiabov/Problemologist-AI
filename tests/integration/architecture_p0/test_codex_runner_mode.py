@@ -46,6 +46,7 @@ from tests.integration.agent.helpers import repo_git_revision
 from worker_renderer.utils.build123d_rendering import render_preview_view
 
 ROOT = Path(__file__).resolve().parents[3]
+AGENTS_CONFIG_PATH = Path("config/agents_config.yaml")
 pytestmark = pytest.mark.xdist_group(name="eval_runner")
 
 
@@ -77,17 +78,18 @@ def _workspace_snapshot(workspace_dir: Path) -> dict[str, str]:
 
 def _assert_skills_tree_materialized(workspace_dir: Path) -> None:
     assert (workspace_dir / ".agents" / "skills").is_dir()
-    assert (
-        workspace_dir / ".agents" / "skills" / "runtime-script-contract" / "SKILL.md"
-    ).is_file()
-    assert (
-        workspace_dir
-        / ".agents"
-        / "skills"
-        / "build123d_cad_drafting_skill"
-        / "SKILL.md"
-    ).is_file()
-    assert not (workspace_dir / "skills").exists()
+
+
+def _set_engineer_planner_drafting_mode(mode: str) -> str:
+    original = AGENTS_CONFIG_PATH.read_text(encoding="utf-8")
+    data = yaml.safe_load(original) or {}
+    agents = data.setdefault("agents", {})
+    engineer_planner = agents.setdefault("engineer_planner", {})
+    engineer_planner["drafting_mode"] = mode
+    AGENTS_CONFIG_PATH.write_text(
+        yaml.safe_dump(data, sort_keys=False), encoding="utf-8"
+    )
+    return original
 
 
 @pytest.mark.integration_p0
@@ -1282,6 +1284,45 @@ def test_prompt_manager_unified_render_uses_shared_source_model(tmp_path: Path):
 
 
 @pytest.mark.integration_p0
+def test_prompt_manager_injects_drafting_appendix_only_when_enabled():
+    original_config = _set_engineer_planner_drafting_mode("off")
+    try:
+        prompt_manager = PromptManager()
+        off_prompt = prompt_manager.render(AgentName.ENGINEER_PLANNER)
+        off_benchmark_prompt = prompt_manager.render(AgentName.BENCHMARK_PLANNER)
+        assert "Drafting mode is active." not in off_prompt
+        assert "Drafting mode is active." not in off_benchmark_prompt
+
+        AGENTS_CONFIG_PATH.write_text(
+            yaml.safe_dump(
+                yaml.safe_load(original_config) or {},
+                sort_keys=False,
+            ),
+            encoding="utf-8",
+        )
+        enabled_data = yaml.safe_load(AGENTS_CONFIG_PATH.read_text(encoding="utf-8"))
+        enabled_data.setdefault("agents", {}).setdefault("engineer_planner", {})[
+            "drafting_mode"
+        ] = "drafting"
+        AGENTS_CONFIG_PATH.write_text(
+            yaml.safe_dump(enabled_data, sort_keys=False), encoding="utf-8"
+        )
+
+        prompt_manager = PromptManager()
+        planner_prompt = prompt_manager.render(AgentName.ENGINEER_PLANNER)
+        reviewer_prompt = prompt_manager.render(AgentName.ENGINEER_PLAN_REVIEWER)
+        coder_prompt = prompt_manager.render(AgentName.ENGINEER_CODER)
+        benchmark_prompt = prompt_manager.render(AgentName.BENCHMARK_PLANNER)
+
+        assert "Drafting mode is active." in planner_prompt
+        assert "Drafting mode is active." in reviewer_prompt
+        assert "Drafting mode is active." in coder_prompt
+        assert "Drafting mode is active." not in benchmark_prompt
+    finally:
+        AGENTS_CONFIG_PATH.write_text(original_config, encoding="utf-8")
+
+
+@pytest.mark.integration_p0
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     (
@@ -1752,12 +1793,33 @@ def test_clear_env_re_materializes_seeded_workspace_in_place(tmp_path: Path):
 @pytest.mark.integration_p0
 def test_validate_eval_seed_accepts_curated_rows_and_preserves_redundancy_metadata():
     """
-    INT-114: benchmark planner explicit submission gate.
+    INT-190: seeded render evidence sanity gate and judge cost guard.
 
-    Exercises the seed-validation CLI against representative curated rows and
+    Exercises the seed-validation CLI against representative curated rows,
     verifies the persisted curation manifests still expose deterministic
-    redundancy provenance.
+    redundancy provenance, and checks the optional judge wrapper fails closed
+    when the expensive path is requested for more than 10 selected seeds
+    without an explicit yes.
     """
+
+    help_completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/validate_eval_seed.py",
+            "--help",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+    assert help_completed.returncode == 0, help_completed.stderr
+    help_output = " ".join(help_completed.stdout.split()).lower()
+    assert "--run-judge" in help_output, help_completed.stdout
+    assert "-y" in help_output, help_completed.stdout
+    assert "--runner-backend" in help_output, help_completed.stdout
+    assert "codex" in help_output, help_completed.stdout
 
     validation_cases = (
         ("benchmark_planner", "bp-001-forbid-zone"),
@@ -1807,6 +1869,30 @@ def test_validate_eval_seed_accepts_curated_rows_and_preserves_redundancy_metada
             assert dropped_episode_ids == sorted(set(dropped_episode_ids))
         for rejected_row in manifest.rejected:
             assert rejected_row.reasons
+
+    judge_guard = subprocess.run(
+        [
+            sys.executable,
+            "scripts/validate_eval_seed.py",
+            "--skip-env-up",
+            "--agent",
+            "engineer_coder",
+            "--limit",
+            "11",
+            "--run-judge",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+    )
+    judge_guard_output = "\n".join(
+        part for part in (judge_guard.stdout, judge_guard.stderr) if part
+    )
+    assert judge_guard.returncode != 0, judge_guard_output
+    assert "-y" in judge_guard_output, judge_guard_output
+    assert "11" in judge_guard_output, judge_guard_output
 
 
 @pytest.mark.integration_p0

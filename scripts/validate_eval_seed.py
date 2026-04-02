@@ -44,7 +44,7 @@ from evals.logic.workspace import (  # noqa: E402
 from scripts.internal.eval_seed_renders import (  # noqa: E402
     update_seed_artifact_renders,
 )
-from shared.enums import AgentName  # noqa: E402
+from shared.enums import AgentName, EvalRunnerBackend  # noqa: E402
 from shared.logging import get_logger  # noqa: E402
 
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
@@ -175,6 +175,33 @@ def _parse_args() -> argparse.Namespace:
         help=(
             "Suppress PASS/status output and validator success chatter. "
             "Useful for bulk inventory sweeps such as --agent all."
+        ),
+    )
+    parser.add_argument(
+        "--run-judge",
+        action="store_true",
+        help=(
+            "After validating the selected seeds, run the eval runner in judge "
+            "mode using the codex backend to validate the seed quality itself."
+        ),
+    )
+    parser.add_argument(
+        "-y",
+        "--yes",
+        action="store_true",
+        help=(
+            "Assume yes for expensive judge runs. Required when --run-judge is "
+            "used with more than 10 selected seeds."
+        ),
+    )
+    parser.add_argument(
+        "--runner-backend",
+        type=str,
+        default=EvalRunnerBackend.CODEX.value,
+        choices=[backend.value for backend in EvalRunnerBackend],
+        help=(
+            "Backend to use for --run-judge follow-up evals "
+            f"(default: {EvalRunnerBackend.CODEX.value})."
         ),
     )
     parser.add_argument(
@@ -386,6 +413,24 @@ async def _async_main(args: argparse.Namespace) -> int:
     if args.level and not levels:
         raise SystemExit("No valid --level values were parsed.")
 
+    failures: list[tuple[str, str, str]] = []
+    checked = 0
+    work_items: list[tuple[AgentName, EvalDatasetItem]] = []
+
+    for agent in agents:
+        dataset = _load_dataset(
+            agent,
+            task_id=args.task_id,
+            limit=args.limit,
+            levels=levels if levels else None,
+        )
+        if args.task_id and not dataset:
+            failures.append((agent.value, args.task_id, "task id not found in dataset"))
+            if args.fail_fast:
+                break
+            continue
+        work_items.extend((agent, item) for item in dataset)
+
     lock_lease = acquire_eval_run_lock(
         queue=args.queue,
         requested_command=[sys.argv[0], *sys.argv[1:]],
@@ -398,6 +443,12 @@ async def _async_main(args: argparse.Namespace) -> int:
     if lock_lease is None:
         return 1
     atexit.register(release_eval_run_lock, lock_lease)
+
+    if args.run_judge and not failures and len(work_items) > 10 and not args.yes:
+        raise SystemExit(
+            f"--run-judge selected {len(work_items)} seed rows; rerun with -y to "
+            "confirm the extra judge cost."
+        )
 
     try:
         lock_lease.update_state(current_phase="manifest_validation")
@@ -424,25 +475,6 @@ async def _async_main(args: argparse.Namespace) -> int:
         return 1
 
     lock_lease.update_state(current_phase="validation")
-
-    failures: list[tuple[str, str, str]] = []
-    checked = 0
-
-    work_items: list[tuple[AgentName, EvalDatasetItem]] = []
-
-    for agent in agents:
-        dataset = _load_dataset(
-            agent,
-            task_id=args.task_id,
-            limit=args.limit,
-            levels=levels if levels else None,
-        )
-        if args.task_id and not dataset:
-            failures.append((agent.value, args.task_id, "task id not found in dataset"))
-            if args.fail_fast:
-                break
-            continue
-        work_items.extend((agent, item) for item in dataset)
 
     if not failures or not args.fail_fast:
         if args.fail_fast or args.concurrency == 1:
@@ -505,6 +537,54 @@ async def _async_main(args: argparse.Namespace) -> int:
 
     if not args.errors_only:
         print(f"Validated {checked} row(s): all passed.")
+
+    if args.run_judge:
+        release_eval_run_lock(lock_lease)
+        lock_lease = None
+
+        judge_backend = EvalRunnerBackend(args.runner_backend)
+        selected_agent_values = [agent.value for agent in agents]
+        if len(selected_agent_values) == len(AGENT_SPECS):
+            judge_agent_values = ["all"]
+        else:
+            judge_agent_values = selected_agent_values
+
+        for agent_value in judge_agent_values:
+            judge_command = [
+                sys.executable,
+                str(ROOT / "dataset" / "evals" / "run_evals.py"),
+                "--skip-env-up",
+                "--runner-backend",
+                judge_backend.value,
+                "--run-judge",
+                "--agent",
+                agent_value,
+                "--limit",
+                str(args.limit),
+            ]
+            if args.task_id:
+                judge_command.extend(["--task-id", args.task_id])
+            for level in sorted(levels):
+                judge_command.extend(["--level", str(level)])
+            if args.queue:
+                judge_command.append("--queue")
+            if args.update_manifests:
+                judge_command.append("--update-manifests")
+            else:
+                judge_command.append("--no-update-manifests")
+
+            print(
+                f"Running judge evals for {agent_value} via {judge_backend.value} backend..."
+            )
+            try:
+                subprocess.run(judge_command, check=True, cwd=ROOT)
+            except subprocess.CalledProcessError as exc:
+                print(
+                    f"Judge evals for {agent_value} failed with exit code {exc.returncode}.",
+                    file=sys.stderr,
+                )
+                return exc.returncode
+
     return 0
 
 
