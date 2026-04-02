@@ -36,6 +36,13 @@ from shared.workers.schema import (
 CONTROLLER_URL = "http://127.0.0.1:18000"
 WORKER_LIGHT_URL = "http://127.0.0.1:18001"
 WORKER_HEAVY_URL = "http://127.0.0.1:18002"
+ENGINEER_PLANNER_FIXTURE_DIR = (
+    Path(__file__).resolve().parents[1]
+    / "mock_responses"
+    / "INT-033"
+    / "engineer_planner"
+    / "entry_01"
+)
 
 pytestmark = pytest.mark.xdist_group(name="physics_sims")
 
@@ -169,6 +176,51 @@ print(f"PREVIEW_YAW={response.yaw}")
 
 def _manifest_path_for_artifact(artifact_path: str) -> str:
     return str(Path(artifact_path).parent / "render_manifest.json")
+
+
+def _engineer_planner_goal_overlap_benchmark_definition_yaml() -> str:
+    data = yaml.safe_load(
+        (ENGINEER_PLANNER_FIXTURE_DIR / "04__benchmark_definition.yaml").read_text()
+    )
+    data["objectives"]["goal_zone"] = {
+        "min": [-2.0, -2.0, 0.0],
+        "max": [2.0, 2.0, 4.0],
+    }
+    return yaml.safe_dump(data, sort_keys=False)
+
+
+async def _write_engineer_planner_drafting_workspace(
+    client: httpx.AsyncClient, session_id: str
+) -> None:
+    headers = {"X-Session-ID": session_id}
+
+    workspace_files = {
+        "plan.md": (ENGINEER_PLANNER_FIXTURE_DIR / "01__plan.md").read_text(),
+        "todo.md": (ENGINEER_PLANNER_FIXTURE_DIR / "02__todo.md").read_text(),
+        "assembly_definition.yaml": (
+            ENGINEER_PLANNER_FIXTURE_DIR / "03__assembly_definition.yaml"
+        ).read_text(),
+        "benchmark_definition.yaml": _engineer_planner_goal_overlap_benchmark_definition_yaml(),
+        "solution_plan_evidence_script.py": (
+            ENGINEER_PLANNER_FIXTURE_DIR / "05__solution_plan_evidence_script.py"
+        ).read_text(),
+        "solution_plan_technical_drawing_script.py": (
+            ENGINEER_PLANNER_FIXTURE_DIR
+            / "06__solution_plan_technical_drawing_script.py"
+        ).read_text(),
+    }
+
+    for path, content in workspace_files.items():
+        resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path=path,
+                content=content,
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text
 
 
 def _multi_view_preview_probe_script() -> str:
@@ -475,6 +527,50 @@ async def test_int_192_controller_script_tools_validate_waits_through_temporal_q
         assert busy_resp.status_code == 200, busy_resp.text
         busy_data = BenchmarkToolResponse.model_validate(busy_resp.json())
         assert busy_data.success, busy_data.message
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_int_208_controller_script_tools_validate_rejects_planner_goal_zone_overlap():
+    """
+    INT-208: controller script-tools validate must reject planner drafting geometry
+    when the evidence script overlaps the benchmark goal zone without explicit
+    capture/occupy/reference intent.
+    """
+    session_id = f"INT-208-{uuid.uuid4().hex[:8]}"
+
+    async with httpx.AsyncClient(timeout=1000.0) as client:
+        await _write_engineer_planner_drafting_workspace(client, session_id)
+
+        create_episode_resp = await client.post(
+            f"{CONTROLLER_URL}/api/test/episodes",
+            json=AgentRunRequest(
+                task="INT-208 controller planner drafting overlap regression",
+                session_id=session_id,
+                agent_name=AgentName.ENGINEER_PLANNER,
+            ).model_dump(mode="json"),
+            timeout=120.0,
+        )
+        assert create_episode_resp.status_code == 201, create_episode_resp.text
+        EpisodeCreateResponse.model_validate(create_episode_resp.json())
+
+        validate_resp = await client.post(
+            f"{CONTROLLER_URL}/api/script-tools/validate",
+            json={
+                "script_path": "solution_plan_evidence_script.py",
+                "agent_role": AgentName.ENGINEER_PLANNER.value,
+            },
+            headers={"X-Session-ID": session_id},
+            timeout=1000.0,
+        )
+
+        assert validate_resp.status_code == 200, validate_resp.text
+        validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
+        assert not validate_data.success, validate_data.message
+        assert validate_data.message is not None
+        assert "goal zone" in validate_data.message.lower(), validate_data.message
+        assert "solution_plan_evidence_script.py" in validate_data.message
+        assert validate_data.artifacts is not None
 
 
 @pytest.mark.integration_p1
