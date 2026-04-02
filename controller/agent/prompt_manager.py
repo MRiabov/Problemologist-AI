@@ -81,17 +81,17 @@ class PromptManager:
             self._agents_config = None
         self._skill_catalog = "\n".join(build_skill_catalog_lines()).strip()
 
-    def _drafting_mode_active(self, role_key: str) -> bool:
+    def _technical_drawing_mode_active(self, role_key: str) -> bool:
         if self._agents_config is None:
             return False
         planner_role = self._DRAFTING_MODE_PLANNER_BY_ROLE.get(role_key)
         if planner_role is None:
             return False
         try:
-            mode = self._agents_config.get_drafting_mode(planner_role)
+            mode = self._agents_config.get_technical_drawing_mode(planner_role)
         except Exception:
             return False
-        return mode in (DraftingMode.DRAFTING, DraftingMode.DRAWING)
+        return mode in (DraftingMode.MINIMAL, DraftingMode.FULL)
 
     @staticmethod
     def _supports_drafting_appendix(role_key: str) -> bool:
@@ -133,9 +133,9 @@ class PromptManager:
             role_prompt,
             self._prompt_source.appendices.shared.strip(),
         ]
-        if self._drafting_mode_active(role_key) and self._supports_drafting_appendix(
+        if self._technical_drawing_mode_active(
             role_key
-        ):
+        ) and self._supports_drafting_appendix(role_key):
             drafting_appendix = self._prompt_source.appendices.drafting.get(role_key)
             if drafting_appendix:
                 prompt_sections.append(drafting_appendix.strip())

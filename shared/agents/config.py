@@ -6,7 +6,7 @@ from typing import Literal
 
 import structlog
 import yaml
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
 
 from shared.enums import AgentName
 
@@ -17,8 +17,22 @@ ReasoningEffortLevel = Literal["low", "medium", "high", "xhigh"]
 
 class DraftingMode(StrEnum):
     OFF = "off"
-    DRAFTING = "drafting"
-    DRAWING = "drawing"
+    MINIMAL = "minimal"
+    FULL = "full"
+    # Backward-compatible aliases for older config/code paths.
+    DRAFTING = MINIMAL
+    DRAWING = FULL
+
+    @classmethod
+    def _missing_(cls, value: object) -> DraftingMode | None:
+        if not isinstance(value, str):
+            return None
+        normalized = value.strip().lower()
+        legacy_aliases = {
+            "drafting": cls.MINIMAL,
+            "drawing": cls.FULL,
+        }
+        return legacy_aliases.get(normalized)
 
 
 class PathPolicy(BaseModel):
@@ -47,7 +61,10 @@ class AgentPolicy(BaseModel):
     visual_inspection: VisualInspectionPolicy = Field(
         default_factory=VisualInspectionPolicy
     )
-    drafting_mode: DraftingMode = DraftingMode.OFF
+    technical_drawing_mode: DraftingMode = Field(
+        default=DraftingMode.OFF,
+        validation_alias=AliasChoices("technical_drawing_mode", "drafting_mode"),
+    )
 
     @field_validator("allowed_during_unit_eval", mode="before")
     @classmethod
@@ -247,12 +264,15 @@ class AgentsConfig(BaseModel):
             return ()
         return tuple(policy.allowed_during_unit_eval)
 
-    def get_drafting_mode(self, agent_role: AgentName | str) -> DraftingMode:
+    def get_technical_drawing_mode(self, agent_role: AgentName | str) -> DraftingMode:
         key = agent_role.value if isinstance(agent_role, AgentName) else str(agent_role)
         policy = self.agents.get(key)
         if policy is None:
-            return self.defaults.drafting_mode
-        return policy.drafting_mode
+            return self.defaults.technical_drawing_mode
+        return policy.technical_drawing_mode
+
+    def get_drafting_mode(self, agent_role: AgentName | str) -> DraftingMode:
+        return self.get_technical_drawing_mode(agent_role)
 
     def get_reasoning_effort(
         self,

@@ -329,23 +329,23 @@ def _write_missing_template_files(
     return copied
 
 
-def _drafting_mode_active(mode: DraftingMode) -> bool:
-    return mode in (DraftingMode.DRAFTING, DraftingMode.DRAWING)
+def _technical_drawing_mode_active(mode: DraftingMode) -> bool:
+    return mode in (DraftingMode.MINIMAL, DraftingMode.FULL)
 
 
-def _engineering_drafting_mode_active() -> bool:
+def _engineering_technical_drawing_mode_active() -> bool:
     try:
-        return _drafting_mode_active(
-            load_agents_config().get_drafting_mode(AgentName.ENGINEER_PLANNER)
+        return _technical_drawing_mode_active(
+            load_agents_config().get_technical_drawing_mode(AgentName.ENGINEER_PLANNER)
         )
     except Exception:
         return False
 
 
-def _benchmark_drafting_mode_active() -> bool:
+def _benchmark_technical_drawing_mode_active() -> bool:
     try:
-        return _drafting_mode_active(
-            load_agents_config().get_drafting_mode(AgentName.BENCHMARK_PLANNER)
+        return _technical_drawing_mode_active(
+            load_agents_config().get_technical_drawing_mode(AgentName.BENCHMARK_PLANNER)
         )
     except Exception:
         return False
@@ -933,7 +933,10 @@ def materialize_seed_workspace(
         )
     )
 
-    if agent_name in _ENGINEER_DRAFTING_TARGETS and _engineering_drafting_mode_active():
+    if (
+        agent_name in _ENGINEER_DRAFTING_TARGETS
+        and _engineering_technical_drawing_mode_active()
+    ):
         copied_paths.extend(
             _write_missing_template_files(
                 workspace_dir, load_template_repo_files("engineer/drafting")
@@ -942,14 +945,17 @@ def materialize_seed_workspace(
         copied_paths.extend(_ensure_engineer_drafting_contract(workspace_dir))
     if (
         agent_name in _ENGINEER_BENCHMARK_CONTEXT_TARGETS
-        and _benchmark_drafting_mode_active()
+        and _benchmark_technical_drawing_mode_active()
     ):
         copied_paths.extend(
             _write_missing_template_files(
                 workspace_dir, load_template_repo_files("benchmark_generator/drafting")
             )
         )
-    if agent_name in _BENCHMARK_DRAFTING_TARGETS and _benchmark_drafting_mode_active():
+    if (
+        agent_name in _BENCHMARK_DRAFTING_TARGETS
+        and _benchmark_technical_drawing_mode_active()
+    ):
         copied_paths.extend(
             _write_missing_template_files(
                 workspace_dir, load_template_repo_files("benchmark_generator/drafting")

@@ -98,38 +98,38 @@ appendices:
     When a task involves `preview(...)`, visual inspection, render bundle selection, or point-pick queries, use `skills/render-evidence/SKILL.md` as the operational playbook instead of re-deriving the workflow in prompt text.
   drafting:
     engineer_planner: |
-      Drafting mode is active.
+      Technical drawing mode is active.
       Keep `plan.md` narrative-first and write the machine-readable drafting contract in `assembly_definition.yaml.drafting`.
       Bind views, datums, dimensions, callouts, and notes to the reviewed mechanism only.
       Do not invent new parts, joints, motions, or geometry beyond the existing handoff.
       Keep `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` aligned with the same preserved geometry.
       Use `preview_drawing()` to inspect the drafted package before calling `submit_plan()`.
     engineer_plan_reviewer: |
-      Drafting mode is active.
+      Technical drawing mode is active.
       Verify that `assembly_definition.yaml.drafting` is present, structurally valid, and consistent with the reviewed plan.
       Reject unsupported geometry claims, missing datums, or binding dimensions that do not resolve to known assembly parts.
       Inspect `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` as read-only context when they are present.
       Use `inspect_media(...)` on the persisted drawing renders when reviewing visual evidence.
     engineer_coder: |
-      Drafting mode is active and the drafting section is read-only context for implementation work.
+      Technical drawing mode is active and the drafting section is read-only context for implementation work.
       Read `assembly_definition.yaml.drafting` when it is present, but do not rewrite the drafting contract unless the task explicitly requires it.
       Preserve `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` as read-only context.
       Treat the drawing package as a binding reference for the preserved geometry.
     benchmark_planner: |
-      Drafting mode is active.
+      Technical drawing mode is active.
       Keep `plan.md` narrative-first and write the machine-readable drafting contract in `benchmark_assembly_definition.yaml.drafting`.
       Bind views, datums, dimensions, callouts, and notes to the reviewed benchmark fixture only.
       Do not invent new benchmark objects, joints, motions, or geometry beyond the existing handoff.
       Keep `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` aligned with the same preserved geometry.
       Use `preview_drawing()` to inspect the drafted package before calling `submit_plan()`.
     benchmark_plan_reviewer: |
-      Drafting mode is active.
+      Technical drawing mode is active.
       Verify that `benchmark_assembly_definition.yaml.drafting` is present, structurally valid, and consistent with the reviewed benchmark plan.
       Reject unsupported benchmark geometry claims, missing datums, or binding dimensions that do not resolve to known benchmark assembly parts.
       Inspect `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only context when they are present.
       Use `inspect_media(...)` on the persisted drawing renders when reviewing visual evidence.
     benchmark_coder: |
-      Drafting mode is active and the drafting section is read-only context for implementation work.
+      Technical drawing mode is active and the drafting section is read-only context for implementation work.
       Read `benchmark_assembly_definition.yaml.drafting` when it is present, but do not rewrite the drafting contract unless the task explicitly requires it.
       Preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only context.
       Treat the drawing package as a binding reference for the preserved benchmark geometry.

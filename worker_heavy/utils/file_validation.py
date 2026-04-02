@@ -148,7 +148,9 @@ _BENCHMARK_DRAFTING_NODE_TYPES = {
 }
 
 
-def _drafting_mode_for_node(planner_node_type: AgentName | str | None) -> DraftingMode:
+def _technical_drawing_mode_for_node(
+    planner_node_type: AgentName | str | None,
+) -> DraftingMode:
     node_key = (
         planner_node_type.value
         if isinstance(planner_node_type, AgentName)
@@ -161,7 +163,7 @@ def _drafting_mode_for_node(planner_node_type: AgentName | str | None) -> Drafti
     else:
         return DraftingMode.OFF
     try:
-        return load_agents_config().get_drafting_mode(planner_role)
+        return load_agents_config().get_technical_drawing_mode(planner_role)
     except Exception:
         return DraftingMode.OFF
 
@@ -220,10 +222,10 @@ def _validate_drafting_contract(
 ) -> list[str]:
     errors: list[str] = []
     drafting = assembly_definition.drafting
-    drafting_mode = _drafting_mode_for_node(planner_node_type)
+    drafting_mode = _technical_drawing_mode_for_node(planner_node_type)
     drafting_required = drafting_mode in (
-        DraftingMode.DRAFTING,
-        DraftingMode.DRAWING,
+        DraftingMode.MINIMAL,
+        DraftingMode.FULL,
     )
 
     if drafting is None:

@@ -107,7 +107,7 @@ defaults:
       - '**'
 agents:
   engineer_planner:
-    drafting_mode: "drafting"
+    technical_drawing_mode: "minimal"
     reasoning_effort: xhigh
     filesystem_permissions:
       read:
@@ -370,7 +370,7 @@ agents:
       min_images: 1
       reminder_interval: 2
   benchmark_planner:
-    drafting_mode: "drafting"
+    technical_drawing_mode: "minimal"
     reasoning_effort: xhigh
     filesystem_permissions:
       read:

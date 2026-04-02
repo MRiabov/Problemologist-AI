@@ -64,19 +64,19 @@ _ENGINEER_BENCHMARK_CONTEXT_ROLES = {
 }
 
 
-def _drafting_mode_active(mode: DraftingMode) -> bool:
-    return mode in (DraftingMode.DRAFTING, DraftingMode.DRAWING)
+def _technical_drawing_mode_active(mode: DraftingMode) -> bool:
+    return mode in (DraftingMode.MINIMAL, DraftingMode.FULL)
 
 
-def _agent_drafting_modes() -> tuple[DraftingMode, DraftingMode]:
+def _agent_technical_drawing_modes() -> tuple[DraftingMode, DraftingMode]:
     try:
         config = load_agents_config()
     except Exception:
         return DraftingMode.OFF, DraftingMode.OFF
 
     return (
-        config.get_drafting_mode(AgentName.ENGINEER_PLANNER),
-        config.get_drafting_mode(AgentName.BENCHMARK_PLANNER),
+        config.get_technical_drawing_mode(AgentName.ENGINEER_PLANNER),
+        config.get_technical_drawing_mode(AgentName.BENCHMARK_PLANNER),
     )
 
 
@@ -85,22 +85,23 @@ def _dedupe_paths(paths: Iterable[str]) -> tuple[str, ...]:
 
 
 def plan_artifacts_for_agent(agent_name: AgentName) -> tuple[str, ...]:
-    engineer_mode, benchmark_mode = _agent_drafting_modes()
+    engineer_mode, benchmark_mode = _agent_technical_drawing_modes()
 
     if agent_name in _BENCHMARK_PLAN_ROLES:
         files = list(_BENCHMARK_PLAN_BASE_FILES)
-        if _drafting_mode_active(benchmark_mode):
+        if _technical_drawing_mode_active(benchmark_mode):
             files.extend(_BENCHMARK_DRAFTING_FILES)
         return _dedupe_paths(files)
 
     if agent_name in _ENGINEER_PLAN_ROLES:
         files = list(_ENGINEER_PLAN_BASE_FILES)
-        if agent_name in _ENGINEER_DRAFTING_TARGETS and _drafting_mode_active(
+        if agent_name in _ENGINEER_DRAFTING_TARGETS and _technical_drawing_mode_active(
             engineer_mode
         ):
             files.extend(_ENGINEER_DRAFTING_FILES)
-        if agent_name in _ENGINEER_BENCHMARK_CONTEXT_ROLES and _drafting_mode_active(
-            benchmark_mode
+        if (
+            agent_name in _ENGINEER_BENCHMARK_CONTEXT_ROLES
+            and _technical_drawing_mode_active(benchmark_mode)
         ):
             files.extend(_BENCHMARK_DRAFTING_FILES)
         return _dedupe_paths(files)

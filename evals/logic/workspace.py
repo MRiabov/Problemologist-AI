@@ -119,23 +119,23 @@ _BENCHMARK_DRAFTING_TARGETS = {
 }
 
 
-def _drafting_mode_active(mode: DraftingMode) -> bool:
-    return mode in (DraftingMode.DRAFTING, DraftingMode.DRAWING)
+def _technical_drawing_mode_active(mode: DraftingMode) -> bool:
+    return mode in (DraftingMode.MINIMAL, DraftingMode.FULL)
 
 
-def _engineering_drafting_mode_active() -> bool:
+def _engineering_technical_drawing_mode_active() -> bool:
     try:
-        return _drafting_mode_active(
-            load_agents_config().get_drafting_mode(AgentName.ENGINEER_PLANNER)
+        return _technical_drawing_mode_active(
+            load_agents_config().get_technical_drawing_mode(AgentName.ENGINEER_PLANNER)
         )
     except Exception:
         return False
 
 
-def _benchmark_drafting_mode_active() -> bool:
+def _benchmark_technical_drawing_mode_active() -> bool:
     try:
-        return _drafting_mode_active(
-            load_agents_config().get_drafting_mode(AgentName.BENCHMARK_PLANNER)
+        return _technical_drawing_mode_active(
+            load_agents_config().get_technical_drawing_mode(AgentName.BENCHMARK_PLANNER)
         )
     except Exception:
         return False
@@ -508,7 +508,7 @@ async def seed_eval_workspace(
 
         if (
             agent_name in _ENGINEER_DRAFTING_TARGETS
-            and _engineering_drafting_mode_active()
+            and _engineering_technical_drawing_mode_active()
         ):
             seeded_paths.extend(
                 await _write_missing_template_files(
@@ -518,7 +518,7 @@ async def seed_eval_workspace(
             seeded_paths.extend(await _ensure_engineer_drafting_contract(worker))
         if (
             agent_name in _ENGINEER_BENCHMARK_CONTEXT_TARGETS
-            and _benchmark_drafting_mode_active()
+            and _benchmark_technical_drawing_mode_active()
         ):
             seeded_paths.extend(
                 await _write_missing_template_files(
@@ -527,7 +527,7 @@ async def seed_eval_workspace(
             )
         if (
             agent_name in _BENCHMARK_DRAFTING_TARGETS
-            and _benchmark_drafting_mode_active()
+            and _benchmark_technical_drawing_mode_active()
         ):
             seeded_paths.extend(
                 await _write_missing_template_files(

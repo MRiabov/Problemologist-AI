@@ -198,21 +198,21 @@ _ENGINEER_BENCHMARK_DRAFTING_CONTEXT_TARGETS = {
 }
 
 
-def _drafting_mode_active(mode: DraftingMode) -> bool:
-    return mode in (DraftingMode.DRAFTING, DraftingMode.DRAWING)
+def _technical_drawing_mode_active(mode: DraftingMode) -> bool:
+    return mode in (DraftingMode.MINIMAL, DraftingMode.FULL)
 
 
-def _node_drafting_artifacts(target_node: AgentName) -> list[str]:
+def _node_technical_drawing_artifacts(target_node: AgentName) -> list[str]:
     try:
         config = load_agents_config()
     except Exception:
         return []
 
     artifacts: list[str] = []
-    engineer_mode = config.get_drafting_mode(AgentName.ENGINEER_PLANNER)
-    benchmark_mode = config.get_drafting_mode(AgentName.BENCHMARK_PLANNER)
+    engineer_mode = config.get_technical_drawing_mode(AgentName.ENGINEER_PLANNER)
+    benchmark_mode = config.get_technical_drawing_mode(AgentName.BENCHMARK_PLANNER)
 
-    if target_node in _ENGINEER_DRAFTING_TARGETS and _drafting_mode_active(
+    if target_node in _ENGINEER_DRAFTING_TARGETS and _technical_drawing_mode_active(
         engineer_mode
     ):
         artifacts.extend(
@@ -224,7 +224,7 @@ def _node_drafting_artifacts(target_node: AgentName) -> list[str]:
 
     if (
         target_node in _ENGINEER_BENCHMARK_DRAFTING_CONTEXT_TARGETS
-        and _drafting_mode_active(benchmark_mode)
+        and _technical_drawing_mode_active(benchmark_mode)
     ):
         artifacts.extend(
             (
@@ -233,7 +233,7 @@ def _node_drafting_artifacts(target_node: AgentName) -> list[str]:
             )
         )
 
-    if target_node in _BENCHMARK_DRAFTING_TARGETS and _drafting_mode_active(
+    if target_node in _BENCHMARK_DRAFTING_TARGETS and _technical_drawing_mode_active(
         benchmark_mode
     ):
         artifacts.extend(
@@ -249,7 +249,7 @@ def _node_drafting_artifacts(target_node: AgentName) -> list[str]:
 def build_benchmark_node_contracts() -> dict[AgentName, NodeEntryContract]:
     # Scope boundary: contracts apply only to first-class graph transitions.
     # Tool-invoked helper subagents are explicitly out of scope for this registry.
-    drafting_artifacts = _node_drafting_artifacts(AgentName.BENCHMARK_PLANNER)
+    drafting_artifacts = _node_technical_drawing_artifacts(AgentName.BENCHMARK_PLANNER)
     return {
         AgentName.BENCHMARK_PLANNER: NodeEntryContract(
             node=AgentName.BENCHMARK_PLANNER,
@@ -311,7 +311,7 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
             required_state_fields=["task", "episode_id"],
             required_artifacts=[
                 *ENGINEER_PLANNER_HANDOFF_ARTIFACTS,
-                *_node_drafting_artifacts(AgentName.ENGINEER_PLANNER),
+                *_node_technical_drawing_artifacts(AgentName.ENGINEER_PLANNER),
             ],
             custom_check=ENGINEER_BENCHMARK_HANDOVER_CHECK,
         ),
@@ -326,7 +326,7 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
             required_state_fields=["episode_id"],
             required_artifacts=[
                 *ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS,
-                *_node_drafting_artifacts(AgentName.ENGINEER_PLAN_REVIEWER),
+                *_node_technical_drawing_artifacts(AgentName.ENGINEER_PLAN_REVIEWER),
             ],
             custom_check=ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
         ),
@@ -336,7 +336,7 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
             required_artifacts=[
                 *ENGINEER_PLANNER_HANDOFF_ARTIFACTS,
                 *ENGINEER_BENCHMARK_SOURCE_ARTIFACTS,
-                *_node_drafting_artifacts(AgentName.ENGINEER_CODER),
+                *_node_technical_drawing_artifacts(AgentName.ENGINEER_CODER),
             ],
         ),
         AgentName.ELECTRONICS_REVIEWER: NodeEntryContract(
@@ -350,7 +350,9 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
             required_state_fields=["episode_id"],
             required_artifacts=[
                 *ENGINEERING_EXECUTION_REVIEWER_HANDOFF_ARTIFACTS,
-                *_node_drafting_artifacts(AgentName.ENGINEER_EXECUTION_REVIEWER),
+                *_node_technical_drawing_artifacts(
+                    AgentName.ENGINEER_EXECUTION_REVIEWER
+                ),
             ],
             custom_check=ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
         ),
