@@ -2,10 +2,10 @@
 
 ## Scope summary
 
-- Primary focus: the runtime harness for agent workflows, including the prompt/workspace contract, submission helpers, debug Codex mode, and skill-loading policy.
+- Primary focus: the runtime harness for agent workflows, including the prompt/workspace contract, submission helpers, and debug Codex mode.
 - Defines the DSPy/LangGraph/LangFuse runtime shape, backend selection, and local eval-debug behavior.
-- Covers agent memory, journal/review artifacts, and the skill lifecycle used by runtime agents.
-- Use this file for anything that changes how an agent starts, runs, submits, or learns in the workspace.
+- Covers agent memory, journal/review artifacts, and the runtime contract that feeds the prompt and workspace.
+- Use this file for anything that changes how an agent starts, runs, or submits in the workspace.
 
 ## Runtime model
 
@@ -89,7 +89,7 @@ The canonical prompt rules are:
 07. The prompt also advertises `python .admin/clear_env.py` as the in-workspace reset helper for clean retries.
 08. The prompt includes the task text, agent name, task ID, and seed dataset name when available.
 09. The prompt does not need to describe repository-level import paths or module layout.
-10. All starter, non-DSPy-optimized prompt fragments live in `config/prompts.yaml` and `shared/agent_templates/`; see [prompt-management.md](./prompt-management.md) for the unified prompt-source model and backend appendices.
+10. All starter, non-DSPy-optimized prompt fragments live in `config/prompts.yaml` and `shared/agent_templates/`; see [prompt-management.md](./prompt-management.md) for the unified prompt-source model and [agent-skill.md](./agent-skill.md) for the skill-tree contract.
 
 PromptManager is the canonical merge point for that prompt text; runtime code such as `evals/logic/codex_workspace.py` only supplies runtime context or template variables.
 
@@ -147,24 +147,17 @@ The helper script is intentionally simple: it is a local shell/Python command, n
 
 ## Skill source contract
 
-Skill loading is runtime-managed, not prompt-authored.
+The skill-tree contract is owned by [agent-skill.md](./agent-skill.md).
 
-For Codex CLI-backed sessions, the repo-local canonical skill tree is `.agents/skills/`. Do not confuse that checkout directory with the runtime workspace path the agent sees after materialization; the backend exposes the workspace-visible skill mount separately. The prompt does not need to explain where skills live or restate the discovery workflow.
+The harness only needs the runtime-facing summary:
 
-The skill repository boundary is explicit:
+1. The checked-in `skills/` tree is the canonical skill source.
+2. Codex workspaces materialize that tree into `.agents/skills/` inside the run-local workspace.
+3. Controller-backed runtime surfaces expose the same content through the `/skills` mount.
+4. `suggested_skills/` is writable staging, not canonical source.
+5. Workspace skill copies are read-only runtime inputs from the agent's perspective.
 
-1. `.agents/skills/` is the repo-local source tree for Codex CLI-backed runs, not the runtime workspace mount.
-2. `skills/` remains the workspace-visible compatibility mount used by controller-backed or legacy integrations until that path is retired.
-3. `.codex/skills/` is a repo-local Codex-only overlay for local debugging/editorial workflows and is not part of the runtime agent skill contract.
-4. `suggested_skills/` is a writable sidecar output area for proposed/new skills, not the canonical skill mount that normal agents should read from.
-5. Runtime agents should not be taught to treat `.codex/skills/`, `suggested_skills/`, or any other agent-specific skill store as interchangeable with the canonical tree.
-
-The skill lifecycle is:
-
-1. The agent can read skills that exist in the canonical tree.
-2. The skill creator / learner may update the canonical tree subject to safety limits.
-3. Learned skills are versioned and persisted to observability.
-4. The skill agent runs asynchronously from the main execution flow.
+The harness does not own the skill improvement loop, the skill catalog shape, or the promotion policy.
 
 ## Agent memory and review artifacts
 

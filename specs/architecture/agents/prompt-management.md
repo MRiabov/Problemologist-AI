@@ -2,7 +2,7 @@
 
 ## Scope summary
 
-This document defines the unified prompt source model for controller/API agents and Codex CLI agents. It covers role prompts, appendices, prompt-context templates, skill references, and merge order. Migration mechanics live in [prompt-management-unification.md](../../migrations/minor/prompt-management-unification.md).
+This document defines the unified prompt source model for controller/API agents and Codex CLI agents. It covers role prompts, appendices, prompt-context templates, merge order, and the prompt-side boundary to skills. The skill-tree contract, authoring shape, and improvement loop live in [agent-skill.md](./agent-skill.md). Migration mechanics live in [prompt-management-unification.md](../../migrations/minor/prompt-management-unification.md).
 
 ## Purpose
 
@@ -28,7 +28,7 @@ The unified prompt manager treats these inputs as authoritative:
 - `config/prompts.yaml`: structured role prompts and appendix fragments.
 - `shared/agent_templates/`: prompt-context files, helper scripts, and boilerplate that belong in the workspace context.
 - `shared/assets/template_repos/`: role-scoped starter workspace material copied into the run-local workspace.
-- backend-managed skill trees in the repo checkout (for example `.agents/skills/` for Codex CLI-backed runs) and any compact generated index derived from them when the backend needs one. Those repo-local trees are inputs to the runtime, not the same thing as the workspace-visible skill paths the agent later sees.
+- the checked-in skill tree and its workspace materializations, as described in [agent-skill.md](./agent-skill.md), plus any compact generated index derived from that tree when the backend needs one. Those runtime copies are inputs to the agent, not a separate prompt source.
 - `worker_light/agent_files/`: legacy compatibility mirror only.
 - runtime-generated context: task text, agent identity, task ID, workspace state, backend selection, and tool registration.
 
@@ -98,15 +98,11 @@ This context is injected by the runtime. It is not a manually maintained prompt 
 
 ## Skills
 
-Skills own the detailed business logic, procedures, and domain guidance.
+Skills own the durable, reusable guidance that prompts should not have to carry: procedures, repair patterns, domain heuristics, and concrete examples.
 
-Each first-class agent role has a dedicated maintained skill. Roles such as `engineer_coder` and `benchmark_planner` each map to their own skill, and the same 1:1 rule applies to the other active planner, coder, and reviewer roles.
+The canonical skill-tree contract, authoring shape, loading model, and improvement loop live in [agent-skill.md](./agent-skill.md).
 
-Skills are expected to evolve per agent over time as the role's workflows, failure modes, and operating heuristics mature.
-
-Skills are one of the most important levers for optimizing an agent because they can pack a large amount of useful guidance for a particular class of problems into a compact reusable artifact.
-
-The prompt manager should not hand-author skill-loading explanations or long skill catalogs. If a backend needs discoverability hints, derive them mechanically from the installed skill tree and keep them compact.
+PromptManager may append a compact generated catalog for discoverability when a backend needs it, but it must not re-author skill bodies or turn skills into a second prompt system.
 
 The rule of thumb is simple: prompts frame the work; skills explain the work.
 

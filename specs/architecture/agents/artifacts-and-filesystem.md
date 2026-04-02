@@ -6,7 +6,7 @@
 - Defines which files exist in an agent workspace and which roles may read or write them.
 - Covers immutable control files, review manifest naming, and the static file-validation contract.
 - Use this file for filesystem layout, artifact ownership, and permission-policy decisions.
-- Runtime harness, debug Codex mode, prompt generation, and skill loading live in [agent-harness.md](./agent-harness.md).
+- Runtime harness, debug Codex mode, prompt generation, and skill loading live in [agent-harness.md](./agent-harness.md) and [agent-skill.md](./agent-skill.md).
 
 ## Filesystem
 
@@ -24,7 +24,7 @@ Reusable starter files and prompt-context artifacts are defined once in `shared/
 The shared starter set includes `.admin/clear_env.py`, which resets the current
 seeded workspace in place without changing the conversation context.
 PromptManager consumes these prompt-context inputs when it materializes the runtime prompt.
-For Codex CLI-backed sessions, the runtime loads skills from the repo-local `.agents/skills/` tree, so prompt text does not need to duplicate the skill inventory. Do not confuse `.agents/skills/` or `.codex/skills/` with the runtime workspace paths the agent sees after materialization; the representative permission examples below are compatibility-oriented and describe the workspace contract, not the repo checkout layout.
+For Codex CLI-backed sessions, the runtime materializes the checked-in skill tree into `.agents/skills/` in the workspace. That copy is read-only runtime context, not canonical source. See [agent-skill.md](./agent-skill.md) for the source-tree and promotion contract.
 
 Role-specific planner scaffolds remain in `shared/assets/template_repos/` and are copied into each workspace before node entry.
 `worker_light/agent_files/` is a legacy compatibility mirror for bootstrap and local inspection, not the canonical source of truth.
