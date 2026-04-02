@@ -44,6 +44,10 @@ from evals.logic.workspace import (  # noqa: E402
 from scripts.internal.eval_seed_renders import (  # noqa: E402
     update_seed_artifact_renders,
 )
+from shared.agents.config import (  # noqa: E402
+    TECHNICAL_DRAWING_MODE_ENV,
+    DraftingMode,
+)
 from shared.enums import AgentName, EvalRunnerBackend  # noqa: E402
 from shared.logging import get_logger  # noqa: E402
 
@@ -170,6 +174,20 @@ def _parse_args() -> argparse.Namespace:
         help="Stop at the first invalid seed.",
     )
     parser.add_argument(
+        "--technical-drawing-mode",
+        type=str,
+        default=DraftingMode.FULL.value,
+        choices=[
+            DraftingMode.OFF.value,
+            DraftingMode.MINIMAL.value,
+            DraftingMode.FULL.value,
+        ],
+        help=(
+            "Select the drawing-mode corpus to validate (default: full). "
+            "Rows without technical_drawing_mode are skipped."
+        ),
+    )
+    parser.add_argument(
         "--errors-only",
         action="store_true",
         help=(
@@ -253,6 +271,22 @@ def _parse_level_filters(raw_levels: list[str]) -> set[int]:
     return parsed
 
 
+def _filter_dataset_rows_by_technical_drawing_mode(
+    rows: list[dict[str, object]],
+    *,
+    technical_drawing_mode: DraftingMode,
+) -> list[dict[str, object]]:
+    filtered: list[dict[str, object]] = []
+    for row in rows:
+        raw_mode = row.get("technical_drawing_mode")
+        if raw_mode is None or str(raw_mode).strip() == "":
+            continue
+        if DraftingMode(raw_mode) != technical_drawing_mode:
+            continue
+        filtered.append(row)
+    return filtered
+
+
 def _resolve_agents(agent_args: list[str]) -> list[AgentName]:
     parsed = _parse_agent_filters(agent_args)
     if not parsed:
@@ -288,6 +322,7 @@ def _load_dataset(
     task_id: str | None,
     limit: int,
     levels: set[int] | None,
+    technical_drawing_mode: DraftingMode,
 ) -> list[EvalDatasetItem]:
     dataset_roots = [
         ROOT / "dataset" / "evals" / "datasets",
@@ -314,6 +349,9 @@ def _load_dataset(
         data = [item for item in data if item["id"] == task_id]
     if levels:
         data = [item for item in data if item.get("complexity_level") in levels]
+    data = _filter_dataset_rows_by_technical_drawing_mode(
+        data, technical_drawing_mode=technical_drawing_mode
+    )
     if limit > 0:
         data = data[:limit]
 
@@ -408,6 +446,7 @@ async def _async_main(args: argparse.Namespace) -> int:
     if args.concurrency < 1:
         raise SystemExit("--concurrency must be >= 1")
 
+    technical_drawing_mode = DraftingMode(args.technical_drawing_mode)
     agents = _resolve_agents(args.agent)
     levels = _parse_level_filters(args.level or [])
     if args.level and not levels:
@@ -423,6 +462,7 @@ async def _async_main(args: argparse.Namespace) -> int:
             task_id=args.task_id,
             limit=args.limit,
             levels=levels if levels else None,
+            technical_drawing_mode=technical_drawing_mode,
         )
         if args.task_id and not dataset:
             failures.append((agent.value, args.task_id, "task id not found in dataset"))
@@ -438,6 +478,7 @@ async def _async_main(args: argparse.Namespace) -> int:
             agent=agents[0].value if len(agents) == 1 else None,
             task_ids=[args.task_id] if args.task_id else [],
             levels=sorted(levels) if levels else [],
+            technical_drawing_mode=technical_drawing_mode.value,
         ),
     )
     if lock_lease is None:
@@ -556,6 +597,8 @@ async def _async_main(args: argparse.Namespace) -> int:
                 "--skip-env-up",
                 "--runner-backend",
                 judge_backend.value,
+                "--technical-drawing-mode",
+                technical_drawing_mode.value,
                 "--run-judge",
                 "--agent",
                 agent_value,
@@ -590,6 +633,8 @@ async def _async_main(args: argparse.Namespace) -> int:
 
 def main() -> int:
     args = _parse_args()
+    technical_drawing_mode = DraftingMode(args.technical_drawing_mode)
+    os.environ[TECHNICAL_DRAWING_MODE_ENV] = technical_drawing_mode.value
     return asyncio.run(_async_main(args))
 
 

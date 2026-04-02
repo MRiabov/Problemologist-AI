@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from enum import StrEnum
 from pathlib import Path
 from typing import Literal
@@ -13,6 +14,7 @@ from shared.enums import AgentName
 logger = structlog.get_logger(__name__)
 
 ReasoningEffortLevel = Literal["low", "medium", "high", "xhigh"]
+TECHNICAL_DRAWING_MODE_ENV = "PROBLEMOLOGIST_TECHNICAL_DRAWING_MODE"
 
 
 class DraftingMode(StrEnum):
@@ -265,6 +267,10 @@ class AgentsConfig(BaseModel):
         return tuple(policy.allowed_during_unit_eval)
 
     def get_technical_drawing_mode(self, agent_role: AgentName | str) -> DraftingMode:
+        override = os.getenv(TECHNICAL_DRAWING_MODE_ENV, "").strip()
+        if override:
+            return DraftingMode(override)
+
         key = agent_role.value if isinstance(agent_role, AgentName) else str(agent_role)
         policy = self.agents.get(key)
         if policy is None:

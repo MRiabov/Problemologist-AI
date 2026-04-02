@@ -83,6 +83,7 @@ dev = [
     "mdformat>=1.0.0",
     "mdformat-gfm>=1.0.0",
     "mdformat-frontmatter>=2.0.10",
+    "pytest-randomly>=4.0.1",
 ]
 
 [tool.ruff]

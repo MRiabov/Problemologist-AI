@@ -117,7 +117,11 @@ from scripts.internal.eval_run_lock import (
     acquire_eval_run_lock,
     release_eval_run_lock,
 )
-from shared.agents.config import load_agents_config
+from shared.agents.config import (
+    TECHNICAL_DRAWING_MODE_ENV,
+    DraftingMode,
+    load_agents_config,
+)
 from shared.enums import (
     AgentName,
     EpisodeStatus,
@@ -727,6 +731,22 @@ def _parse_level_filters(raw_level_filters: list[str] | None) -> set[int]:
             selected_levels.add(level)
 
     return selected_levels
+
+
+def _filter_dataset_rows_by_technical_drawing_mode(
+    rows: list[dict[str, Any]],
+    *,
+    technical_drawing_mode: DraftingMode,
+) -> list[dict[str, Any]]:
+    filtered_rows: list[dict[str, Any]] = []
+    for row in rows:
+        raw_mode = row.get("technical_drawing_mode")
+        if raw_mode is None or str(raw_mode).strip() == "":
+            continue
+        if DraftingMode(raw_mode) != technical_drawing_mode:
+            continue
+        filtered_rows.append(row)
+    return filtered_rows
 
 
 def _resolve_runner_backend(
@@ -3953,6 +3973,20 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--technical-drawing-mode",
+        type=str,
+        default=DraftingMode.FULL.value,
+        choices=[
+            DraftingMode.OFF.value,
+            DraftingMode.MINIMAL.value,
+            DraftingMode.FULL.value,
+        ],
+        help=(
+            "Select the drawing-mode corpus to evaluate (default: full). "
+            "Rows without technical_drawing_mode are skipped."
+        ),
+    )
+    parser.add_argument(
         "--verbose", action="store_true", help="Print backend traces during polling"
     )
     parser.add_argument(
@@ -4052,6 +4086,8 @@ def _build_parser() -> argparse.ArgumentParser:
 async def main():
     parser = _build_parser()
     args = parser.parse_args()
+    technical_drawing_mode = DraftingMode(args.technical_drawing_mode)
+    os.environ[TECHNICAL_DRAWING_MODE_ENV] = technical_drawing_mode.value
     selected_task_ids = _parse_task_id_filters(args.task_id)
     try:
         selected_levels = _parse_level_filters(args.level)
@@ -4079,6 +4115,7 @@ async def main():
         agent=None if args.agent == "all" else args.agent,
         task_ids=selected_task_ids,
         levels=sorted(selected_levels),
+        technical_drawing_mode=technical_drawing_mode.value,
     )
     lock_lease = acquire_eval_run_lock(
         queue=args.queue,
@@ -4336,6 +4373,10 @@ async def main():
                             for item in data
                             if item.get("complexity_level") in selected_levels
                         ]
+                    data = _filter_dataset_rows_by_technical_drawing_mode(
+                        data,
+                        technical_drawing_mode=technical_drawing_mode,
+                    )
                     if args.limit > 0:
                         if args.random:
                             data = random.sample(data, k=min(args.limit, len(data)))

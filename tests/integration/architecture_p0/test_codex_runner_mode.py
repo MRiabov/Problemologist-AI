@@ -31,7 +31,11 @@ from evals.logic.codex_workspace import (
 )
 from evals.logic.models import EvalDatasetItem
 from evals.logic.seed_maintenance import refresh_plan_review_manifest_hashes
-from shared.agents.config import AgentsConfig, DraftingMode
+from shared.agents.config import (
+    TECHNICAL_DRAWING_MODE_ENV,
+    AgentsConfig,
+    DraftingMode,
+)
 from shared.enums import AgentName, ManufacturingMethod, ReviewDecision
 from shared.eval_artifacts import plan_artifacts_for_agent
 from shared.models.schemas import (
@@ -818,6 +822,41 @@ def test_eval_dataset_item_requires_mode_for_split_rows():
                 "complexity_level": 1,
             }
         )
+
+
+@pytest.mark.integration_p0
+def test_agents_config_honors_technical_drawing_mode_env_override(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv(TECHNICAL_DRAWING_MODE_ENV, DraftingMode.MINIMAL.value)
+    config = _agents_config_with_technical_drawing_modes(
+        engineer_mode=DraftingMode.OFF,
+        benchmark_mode=DraftingMode.OFF,
+    )
+
+    assert config.get_technical_drawing_mode(AgentName.ENGINEER_PLANNER) == (
+        DraftingMode.MINIMAL
+    )
+    assert config.get_technical_drawing_mode(AgentName.BENCHMARK_PLANNER) == (
+        DraftingMode.MINIMAL
+    )
+
+
+@pytest.mark.integration_p0
+def test_run_evals_filters_rows_by_technical_drawing_mode():
+    from evals.logic.runner import _filter_dataset_rows_by_technical_drawing_mode
+
+    rows = [
+        {"id": "ec-001-drawing-off", "technical_drawing_mode": "off"},
+        {"id": "ec-001-drawing-full", "technical_drawing_mode": "full"},
+        {"id": "ec-legacy", "task": "legacy row without a mode"},
+    ]
+
+    filtered = _filter_dataset_rows_by_technical_drawing_mode(
+        rows, technical_drawing_mode=DraftingMode.FULL
+    )
+
+    assert [row["id"] for row in filtered] == ["ec-001-drawing-full"]
 
 
 @pytest.mark.integration_p0

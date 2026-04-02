@@ -39,6 +39,10 @@ from evals.logic.codex_workspace import (
 )
 from evals.logic.models import EvalDatasetItem  # noqa: E402
 from evals.logic.startup_checks import fail_closed_if_integration_test_setup
+from shared.agents.config import (  # noqa: E402
+    TECHNICAL_DRAWING_MODE_ENV,
+    DraftingMode,
+)
 from shared.enums import AgentName  # noqa: E402
 
 DATASET_ROOTS = (
@@ -103,6 +107,20 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Wait for the shared eval lock instead of failing fast when another eval run is active.",
     )
+    parser.add_argument(
+        "--technical-drawing-mode",
+        type=str,
+        default=DraftingMode.FULL.value,
+        choices=[
+            DraftingMode.OFF.value,
+            DraftingMode.MINIMAL.value,
+            DraftingMode.FULL.value,
+        ],
+        help=(
+            "Select the drawing-mode corpus to materialize (default: full). "
+            "Rows without technical_drawing_mode are skipped."
+        ),
+    )
     yolo_group = parser.add_mutually_exclusive_group(required=True)
     yolo_group.add_argument(
         "--yolo",
@@ -119,7 +137,7 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _load_dataset(agent: AgentName) -> tuple[Path, list[EvalDatasetItem]]:
+def _load_dataset(agent: AgentName) -> tuple[Path, list[dict[str, object]]]:
     json_path = next(
         (
             root / f"{agent.value}.json"
@@ -137,22 +155,29 @@ def _load_dataset(agent: AgentName) -> tuple[Path, list[EvalDatasetItem]]:
     with json_path.open(encoding="utf-8") as handle:
         raw_rows = json.load(handle)
 
-    seed_dataset = json_path.relative_to(ROOT)
-    rows = [
-        EvalDatasetItem.model_validate({**row, "seed_dataset": seed_dataset})
-        for row in raw_rows
-    ]
+    rows = raw_rows
     return json_path, rows
 
 
+def _filter_rows_by_technical_drawing_mode(
+    rows: list[dict[str, object]], *, technical_drawing_mode: DraftingMode
+) -> list[dict[str, object]]:
+    return [
+        row
+        for row in rows
+        if row.get("technical_drawing_mode") is not None
+        and DraftingMode(row["technical_drawing_mode"]) == technical_drawing_mode
+    ]
+
+
 def _select_row(
-    rows: list[EvalDatasetItem], *, task_id: str | None, agent: AgentName
-) -> EvalDatasetItem:
+    rows: list[dict[str, object]], *, task_id: str | None, agent: AgentName
+) -> dict[str, object]:
     if task_id:
         for row in rows:
-            if row.id == task_id:
+            if row.get("id") == task_id:
                 return row
-        available = ", ".join(row.id for row in rows)
+        available = ", ".join(str(row.get("id")) for row in rows)
         raise SystemExit(
             f"Task id '{task_id}' was not found for agent '{agent.value}'. "
             f"Available rows: {available}"
@@ -161,7 +186,7 @@ def _select_row(
     if len(rows) == 1:
         return rows[0]
 
-    available = ", ".join(row.id for row in rows)
+    available = ", ".join(str(row.get("id")) for row in rows)
     raise SystemExit(
         f"Agent '{agent.value}' has multiple rows. Pass --task-id. Available rows: {available}"
     )
@@ -196,6 +221,8 @@ def _env_up() -> None:
 
 def main() -> None:
     args = _parse_args()
+    technical_drawing_mode = DraftingMode(args.technical_drawing_mode)
+    os.environ[TECHNICAL_DRAWING_MODE_ENV] = technical_drawing_mode.value
     try:
         agent = AgentName(args.agent)
     except ValueError as exc:
@@ -209,8 +236,13 @@ def main() -> None:
         context="seed workspace materializer startup",
     )
 
-    _, rows = _load_dataset(agent)
-    row = _select_row(rows, task_id=args.task_id, agent=agent)
+    json_path, rows = _load_dataset(agent)
+    rows = _filter_rows_by_technical_drawing_mode(
+        rows, technical_drawing_mode=technical_drawing_mode
+    )
+    row_raw = _select_row(rows, task_id=args.task_id, agent=agent)
+    seed_dataset = json_path.relative_to(ROOT)
+    row = EvalDatasetItem.model_validate({**row_raw, "seed_dataset": seed_dataset})
 
     workspace_dir = _ensure_destination(args.output_dir, agent=agent, task_id=row.id)
     materialized = materialize_codex_workspace(
@@ -239,6 +271,7 @@ def main() -> None:
                 agent=agent.value,
                 task_ids=[row.id],
                 levels=[],
+                technical_drawing_mode=technical_drawing_mode.value,
             ),
         )
         if lock_lease is None:
