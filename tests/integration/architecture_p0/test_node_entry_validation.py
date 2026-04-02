@@ -114,11 +114,13 @@ def _node_start_traces(episode: EpisodeResponse, node_name: str) -> list[str]:
     ]
 
 
-def _agents_config_with_drafting_mode(mode: str) -> AgentsConfig:
+def _agents_config_with_drafting_mode(
+    mode: str, *, agent_role: str = "engineer_planner"
+) -> AgentsConfig:
     data = yaml.safe_load(AGENTS_CONFIG_PATH.read_text(encoding="utf-8")) or {}
     agents = data.setdefault("agents", {})
-    engineer_planner = agents.setdefault("engineer_planner", {})
-    engineer_planner["drafting_mode"] = mode
+    target_agent = agents.setdefault(agent_role, {})
+    target_agent["drafting_mode"] = mode
     return AgentsConfig.model_validate(data)
 
 
@@ -343,6 +345,131 @@ async def test_int_184_seeded_workspace_requires_drafting_when_mode_enabled(
     assert any(error.artifact_path == "assembly_definition.yaml" for error in errors), (
         errors
     )
+    assert any("drafting" in error.message.lower() for error in errors), errors
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_184_seeded_benchmark_workspace_requires_drafting_when_mode_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """
+    INT-184: Seeded benchmark-plan-reviewer entry must require drafting when the
+    benchmark planner drafting mode is enabled.
+    """
+    drafting_config = _agents_config_with_drafting_mode(
+        "drafting", agent_role="benchmark_planner"
+    )
+    monkeypatch.setattr(
+        "worker_heavy.utils.file_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+    session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        benchmark_definition = BenchmarkDefinition(
+            objectives=ObjectivesSection(
+                goal_zone=BoundingBox(min=(12.0, 12.0, 0.0), max=(16.0, 16.0, 6.0)),
+                forbid_zones=[],
+                build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)),
+            ),
+            physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
+            simulation_bounds=BoundingBox(
+                min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
+            ),
+            moved_object=MovedObject(
+                label="target_box",
+                shape="sphere",
+                material_id="aluminum_6061",
+                start_position=(0.0, 0.0, 10.0),
+                runtime_jitter=(0.0, 0.0, 0.0),
+            ),
+            constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+            benchmark_parts=_default_benchmark_parts(),
+        )
+        assembly_definition = AssemblyDefinition(
+            version="1.0",
+            constraints=AssemblyConstraints(
+                planner_target_max_unit_cost_usd=90.0,
+                planner_target_max_weight_g=900.0,
+            ),
+            manufactured_parts=[],
+            cots_parts=[],
+            final_assembly=[],
+            totals=CostTotals(
+                estimated_unit_cost_usd=0.0,
+                estimated_weight_g=0.0,
+                estimate_confidence="high",
+            ),
+        )
+        try:
+            await worker.upload_file(
+                "plan.md",
+                (
+                    "## 1. Solution Overview\n"
+                    "- Keep the mechanism simple.\n"
+                    "\n"
+                    "## 2. Parts List\n"
+                    "- One target part.\n"
+                    "\n"
+                    "## 3. Assembly Strategy\n"
+                    "1. Assemble directly into the build zone.\n"
+                    "\n"
+                    "## 4. Cost & Weight Budget\n"
+                    "- Stay within budget.\n"
+                    "\n"
+                    "## 5. Risk Assessment\n"
+                    "- Minimal risk.\n"
+                ).encode("utf-8"),
+                bypass_agent_permissions=True,
+            )
+            await worker.upload_file(
+                "todo.md",
+                b"- [ ] Review the plan\n",
+                bypass_agent_permissions=True,
+            )
+            await worker.upload_file(
+                "benchmark_definition.yaml",
+                yaml.safe_dump(
+                    benchmark_definition.model_dump(
+                        mode="json", by_alias=True, exclude_none=True
+                    ),
+                    sort_keys=False,
+                ).encode("utf-8"),
+                bypass_agent_permissions=True,
+            )
+            await worker.upload_file(
+                "benchmark_assembly_definition.yaml",
+                yaml.safe_dump(
+                    assembly_definition.model_dump(
+                        mode="json", by_alias=True, exclude_none=True
+                    ),
+                    sort_keys=False,
+                ).encode("utf-8"),
+                bypass_agent_permissions=True,
+            )
+            await worker.upload_file(
+                "manufacturing_config.yaml",
+                REPO_MANUFACTURING_CONFIG.encode("utf-8"),
+                bypass_agent_permissions=True,
+            )
+
+            errors = await validate_seeded_workspace_handoff_artifacts(
+                worker_client=worker,
+                target_node=AgentName.BENCHMARK_PLAN_REVIEWER,
+            )
+        finally:
+            await worker.aclose()
+
+    finally:
+        pass
+
+    assert errors, (
+        "Expected drafting mode to require benchmark_assembly_definition.drafting."
+    )
+    assert any(
+        error.artifact_path == "benchmark_assembly_definition.yaml" for error in errors
+    ), errors
     assert any("drafting" in error.message.lower() for error in errors), errors
 
 

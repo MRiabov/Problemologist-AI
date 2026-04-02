@@ -17,6 +17,7 @@ import yaml
 from build123d import Box, BuildPart
 
 from controller.agent.prompt_manager import PromptManager
+from controller.api.routes.script_tools import ScriptToolRequest
 from controller.prompts import load_prompts
 from evals.logic import runner
 from evals.logic.codex_session_trace import CodexSessionTraceArtifact
@@ -81,11 +82,13 @@ def _assert_skills_tree_materialized(workspace_dir: Path) -> None:
     assert (workspace_dir / ".agents" / "skills").is_dir()
 
 
-def _agents_config_with_drafting_mode(mode: str) -> AgentsConfig:
+def _agents_config_with_drafting_mode(
+    mode: str, *, agent_role: str = "engineer_planner"
+) -> AgentsConfig:
     data = yaml.safe_load(AGENTS_CONFIG_PATH.read_text(encoding="utf-8")) or {}
     agents = data.setdefault("agents", {})
-    engineer_planner = agents.setdefault("engineer_planner", {})
-    engineer_planner["drafting_mode"] = mode
+    target_agent = agents.setdefault(agent_role, {})
+    target_agent["drafting_mode"] = mode
     return AgentsConfig.model_validate(data)
 
 
@@ -1431,6 +1434,8 @@ def test_prompt_manager_injects_drafting_appendix_only_when_enabled(
     off_benchmark_prompt = prompt_manager.render(AgentName.BENCHMARK_PLANNER)
     assert "Drafting mode is active." not in off_prompt
     assert "Drafting mode is active." not in off_benchmark_prompt
+    assert "assembly_definition.yaml.drafting" not in off_prompt
+    assert "benchmark_assembly_definition.yaml.drafting" not in off_benchmark_prompt
 
     on_config = _agents_config_with_drafting_mode("drafting")
     monkeypatch.setattr(
@@ -1443,11 +1448,53 @@ def test_prompt_manager_injects_drafting_appendix_only_when_enabled(
     reviewer_prompt = prompt_manager.render(AgentName.ENGINEER_PLAN_REVIEWER)
     coder_prompt = prompt_manager.render(AgentName.ENGINEER_CODER)
     benchmark_prompt = prompt_manager.render(AgentName.BENCHMARK_PLANNER)
+    benchmark_reviewer_prompt = prompt_manager.render(AgentName.BENCHMARK_PLAN_REVIEWER)
 
     assert "Drafting mode is active." in planner_prompt
     assert "Drafting mode is active." in reviewer_prompt
     assert "assembly_definition.yaml.drafting" in coder_prompt
     assert "Drafting mode is active." not in benchmark_prompt
+    assert "Drafting mode is active." not in benchmark_reviewer_prompt
+
+    benchmark_config = _agents_config_with_drafting_mode(
+        "drafting", agent_role="benchmark_planner"
+    )
+    monkeypatch.setattr(
+        "controller.agent.prompt_manager.load_agents_config",
+        lambda: benchmark_config,
+    )
+
+    prompt_manager = PromptManager()
+    benchmark_prompt = prompt_manager.render(AgentName.BENCHMARK_PLANNER)
+    benchmark_reviewer_prompt = prompt_manager.render(AgentName.BENCHMARK_PLAN_REVIEWER)
+    benchmark_coder_prompt = prompt_manager.render(AgentName.BENCHMARK_CODER)
+
+    assert "Drafting mode is active." in benchmark_prompt
+    assert "benchmark_assembly_definition.yaml.drafting" in (benchmark_reviewer_prompt)
+    assert "benchmark_assembly_definition.yaml.drafting" in benchmark_coder_prompt
+
+
+@pytest.mark.integration_p0
+def test_script_tool_request_normalizes_drafting_script_path_by_graph():
+    engineer_request = ScriptToolRequest(agent_role=AgentName.ENGINEER_PLANNER)
+    drafting_engineer_request = ScriptToolRequest(
+        agent_role=AgentName.ENGINEER_PLANNER,
+        drafting=True,
+    )
+    benchmark_request = ScriptToolRequest(agent_role=AgentName.BENCHMARK_PLANNER)
+    drafting_benchmark_request = ScriptToolRequest(
+        agent_role=AgentName.BENCHMARK_PLANNER,
+        drafting=True,
+    )
+
+    assert engineer_request.script_path == "solution_script.py"
+    assert drafting_engineer_request.script_path == (
+        "solution_plan_technical_drawing_script.py"
+    )
+    assert benchmark_request.script_path == "benchmark_script.py"
+    assert drafting_benchmark_request.script_path == (
+        "benchmark_plan_technical_drawing_script.py"
+    )
 
 
 @pytest.mark.integration_p0

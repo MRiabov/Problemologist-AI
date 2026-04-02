@@ -742,9 +742,49 @@ async def test_int_204_benchmark_plan_reviewer_inspects_latest_revision_renders_
             for path in artifact_paths
             if path.endswith("benchmark-plan-review-comments-round-1.yaml")
         ]
+        benchmark_plan_evidence_paths = [
+            path
+            for path in artifact_paths
+            if path.endswith("benchmark_plan_evidence_script.py")
+        ]
+        benchmark_plan_drawing_paths = [
+            path
+            for path in artifact_paths
+            if path.endswith("benchmark_plan_technical_drawing_script.py")
+        ]
+        benchmark_render_paths = [
+            path
+            for path in artifact_paths
+            if path.startswith("renders/")
+            and Path(path).suffix in {".png", ".jpg", ".jpeg"}
+        ]
 
         assert status == EpisodeStatus.PLANNED, (
             f"Expected benchmark plan reviewer approval to reach PLANNED, got {status}."
+        )
+        assert benchmark_plan_evidence_paths, (
+            "benchmark_plan_evidence_script.py missing from benchmark plan artifacts. "
+            f"Artifacts: {artifact_paths}"
+        )
+        assert benchmark_plan_drawing_paths, (
+            "benchmark_plan_technical_drawing_script.py missing from benchmark plan artifacts. "
+            f"Artifacts: {artifact_paths}"
+        )
+        assert benchmark_render_paths, (
+            "Expected real render artifacts in benchmark plan reviewer bundle. "
+            f"Artifacts: {artifact_paths}"
+        )
+        assert any(
+            path.endswith("cad_preview.png") for path in benchmark_render_paths
+        ), (
+            "cad_preview.png missing from benchmark render artifacts. "
+            f"Artifacts: {benchmark_render_paths}"
+        )
+        assert any(
+            path.endswith("simulation_preview.png") for path in benchmark_render_paths
+        ), (
+            "simulation_preview.png missing from benchmark render artifacts. "
+            f"Artifacts: {benchmark_render_paths}"
         )
 
         episode_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")

@@ -40,8 +40,12 @@ CONTROLLER_URL = "http://127.0.0.1:18000"
 pytestmark = pytest.mark.xdist_group(name="physics_sims")
 
 
+def _asset_path(asset_path: str | Path) -> Path:
+    return Path(str(asset_path).lstrip("/"))
+
+
 async def _read_episode_asset_text(
-    client: AsyncClient, episode_id: str, asset_path: str
+    client: AsyncClient, episode_id: str, asset_path: str | Path
 ) -> str:
     resp = await client.get(f"/episodes/{episode_id}/assets/{asset_path}")
     assert resp.status_code == 200, resp.text
@@ -161,7 +165,7 @@ async def test_engineering_full_loop():
         assert planner_episode.metadata_vars.benchmark_id == benchmark_episode_id
 
         planner_artifact_paths = [
-            asset.s3_path for asset in (planner_episode.assets or [])
+            _asset_path(asset.s3_path) for asset in (planner_episode.assets or [])
         ]
         planner_required_artifacts = (
             "plan.md",
@@ -174,12 +178,19 @@ async def test_engineering_full_loop():
             "renders/render_manifest.json",
         )
         for required_path in planner_required_artifacts:
-            assert any(
-                path.endswith(required_path) for path in planner_artifact_paths
-            ), (
+            assert Path(required_path) in planner_artifact_paths, (
                 f"{required_path} missing from planner stage artifacts. "
                 f"Artifacts: {planner_artifact_paths}"
             )
+        planner_render_paths = [
+            path
+            for path in planner_artifact_paths
+            if path.parent.name == "renders"
+            and path.suffix in {".png", ".jpg", ".jpeg"}
+        ]
+        assert planner_render_paths, (
+            f"Expected real render artifacts in planner stage. Artifacts: {planner_artifact_paths}"
+        )
 
         planner_tool_traces = [
             trace
@@ -208,7 +219,7 @@ async def test_engineering_full_loop():
         plan_manifest_path = next(
             path
             for path in planner_artifact_paths
-            if path.endswith("engineering_plan_review_manifest.json")
+            if path == Path(".manifests/engineering_plan_review_manifest.json")
         )
         plan_manifest = PlanReviewManifest.model_validate_json(
             await _read_episode_asset_text(
@@ -233,6 +244,22 @@ async def test_engineering_full_loop():
         assert expected_plan_hashes <= set(plan_manifest.artifact_hashes), (
             plan_manifest.artifact_hashes
         )
+        planner_render_manifest_path = next(
+            path
+            for path in planner_artifact_paths
+            if path == Path("renders/render_manifest.json")
+        )
+        planner_render_manifest = RenderManifest.model_validate_json(
+            await _read_episode_asset_text(
+                client, planner_episode_id, planner_render_manifest_path
+            )
+        )
+        assert planner_render_manifest.preview_evidence_paths, (
+            "Planner render manifest must preserve preview evidence paths."
+        )
+        assert {
+            _asset_path(path) for path in planner_render_manifest.preview_evidence_paths
+        } <= set(planner_artifact_paths), planner_render_manifest.preview_evidence_paths
         for asset_path in expected_plan_hashes:
             asset_text = await _read_episode_asset_text(
                 client, planner_episode_id, asset_path
@@ -366,7 +393,9 @@ async def test_engineering_full_loop():
         episode_resp = await client.get(f"/episodes/{engineer_episode_id}")
         assert episode_resp.status_code == 200, episode_resp.text
         episode_data = EpisodeResponse.model_validate(episode_resp.json())
-        artifact_paths = [asset.s3_path for asset in (episode_data.assets or [])]
+        artifact_paths = [
+            _asset_path(asset.s3_path) for asset in (episode_data.assets or [])
+        ]
         traces = episode_data.traces or []
 
         required_artifacts = (
@@ -391,19 +420,18 @@ async def test_engineering_full_loop():
             "reviews/engineering-execution-review-comments-round-1.yaml",
         )
         for required_path in required_artifacts:
-            assert any(path.endswith(required_path) for path in artifact_paths), (
+            assert Path(required_path) in artifact_paths, (
                 f"{required_path} missing from engineer episode artifacts. "
                 f"Artifacts: {artifact_paths}"
             )
         assert any(
-            path.lstrip("/").startswith("renders/")
-            and Path(path).suffix in {".png", ".jpg", ".jpeg"}
+            path.parent.name == "renders" and path.suffix in {".png", ".jpg", ".jpeg"}
             for path in artifact_paths
         ), f"Expected render images in engineer artifacts. Artifacts: {artifact_paths}"
-        assert any(path.endswith("benchmark_script.py") for path in artifact_paths), (
+        assert Path("benchmark_script.py") in artifact_paths, (
             f"Expected benchmark_script.py in engineer artifacts. Artifacts: {artifact_paths}"
         )
-        assert any(path.endswith("solution_script.py") for path in artifact_paths), (
+        assert Path("solution_script.py") in artifact_paths, (
             f"Expected solution_script.py in engineer artifacts. Artifacts: {artifact_paths}"
         )
 
@@ -467,7 +495,7 @@ async def test_engineering_full_loop():
         render_manifest_path = next(
             path
             for path in artifact_paths
-            if path.endswith("renders/render_manifest.json")
+            if path == Path("renders/render_manifest.json")
         )
         render_manifest = RenderManifest.model_validate_json(
             await _read_episode_asset_text(
@@ -478,14 +506,14 @@ async def test_engineering_full_loop():
         assert render_manifest.episode_id == engineer_episode_id
         assert render_manifest.worker_session_id == engineer_session_id
         assert render_manifest.preview_evidence_paths
-        assert set(render_manifest.preview_evidence_paths) == set(
-            simulation_result.render_paths
-        )
+        assert {
+            _asset_path(path) for path in render_manifest.preview_evidence_paths
+        } == {_asset_path(path) for path in simulation_result.render_paths}
 
         execution_manifest_path = next(
             path
             for path in artifact_paths
-            if path.endswith("engineering_execution_review_manifest.json")
+            if path == Path(".manifests/engineering_execution_review_manifest.json")
         )
         execution_manifest = ReviewManifest.model_validate_json(
             await _read_episode_asset_text(
@@ -507,15 +535,15 @@ async def test_engineering_full_loop():
         assert execution_manifest.simulation_success is True
         assert execution_manifest.goal_reached is True
         assert execution_manifest.script_sha256 == validation_result.script_sha256
-        assert set(execution_manifest.preview_evidence_paths) == set(
-            execution_manifest.renders
-        )
-        assert set(execution_manifest.renders) == set(
-            render_manifest.preview_evidence_paths
-        )
-        assert execution_manifest.preview_evidence_paths == (
-            render_manifest.preview_evidence_paths
-        )
+        assert {
+            _asset_path(path) for path in execution_manifest.preview_evidence_paths
+        } == {_asset_path(path) for path in execution_manifest.renders}
+        assert {_asset_path(path) for path in execution_manifest.renders} == {
+            _asset_path(path) for path in render_manifest.preview_evidence_paths
+        }
+        assert {
+            _asset_path(path) for path in execution_manifest.preview_evidence_paths
+        } == {_asset_path(path) for path in render_manifest.preview_evidence_paths}
 
         execution_comments = yaml.safe_load(
             await _read_episode_asset_text(
