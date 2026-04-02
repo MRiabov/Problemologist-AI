@@ -262,7 +262,47 @@ async def test_int_074_engineering_dof_minimization_review_gate():
             planner_target_max_unit_cost_usd=250.0,
             planner_target_max_weight_g=2500.0,
         )
+        benchmark_script_content = Path(
+            "tests/integration/mock_responses/INT-010/benchmark_coder/entry_01/01__benchmark_script.py"
+        ).read_text(encoding="utf-8")
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "benchmark_script.py",
+                "content": benchmark_script_content,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": plan_session},
+        )
         await _seed_plan_reviewer_handoff(client, plan_session)
+        benchmark_definition_content = await _read_session_file(
+            client, plan_session, "benchmark_definition.yaml"
+        )
+        benchmark_assembly_content = await _read_session_file(
+            client, plan_session, "benchmark_assembly_definition.yaml"
+        )
+        plan_content = await _read_session_file(client, plan_session, "plan.md")
+        todo_content = await _read_session_file(client, plan_session, "todo.md")
+        assembly_definition_content = await _read_session_file(
+            client, plan_session, "assembly_definition.yaml"
+        )
+        await _seed_engineer_plan_review_manifest(
+            client,
+            plan_session,
+            artifact_hashes={
+                "plan.md": hashlib.sha256(plan_content.encode("utf-8")).hexdigest(),
+                "todo.md": hashlib.sha256(todo_content.encode("utf-8")).hexdigest(),
+                "benchmark_definition.yaml": hashlib.sha256(
+                    benchmark_definition_content.encode("utf-8")
+                ).hexdigest(),
+                "assembly_definition.yaml": hashlib.sha256(
+                    assembly_definition_content.encode("utf-8")
+                ).hexdigest(),
+                "benchmark_assembly_definition.yaml": hashlib.sha256(
+                    benchmark_assembly_content.encode("utf-8")
+                ).hexdigest(),
+            },
+        )
         await seed_current_revision_render_preview(client, session_id=plan_session)
         planner_episode = await _run_and_wait(
             client,
