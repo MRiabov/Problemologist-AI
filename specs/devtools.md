@@ -7,6 +7,12 @@
 - Use `specs/integration-test-rules.md` for integration-test boundary rules, `specs/dataset-generation.md` and `specs/architecture/evals-architecture.md` for eval semantics, and `specs/architecture/agents/agent-harness.md` for the workspace contract.
 - The contract here is operational: how developers reproduce the stack, inspect seeded workspaces, run integration slices, and regenerate derived artifacts.
 
+## Tooling principles
+
+- Devtools are agent-facing by default. Keep default verbosity low, but when tools emit logs or summaries they should be dense and informative. Avoid chatty traces and large dumps; aim for roughly a few hundred tokens per invocation when practical, and treat a tool that routinely produces hundreds of lines as a smell because it wastes context and token budget.
+- Devtools integrate with application logic where possible instead of reimplementing it in wrapper code. The preferred shape is a thin maintainer-facing utility that reuses shared runtime, validation, or seed logic, as in `scripts/validate_eval_seed.py`, `dataset/evals/run_evals.py`, and `scripts/validate_integration_mock_response_preflight.py`.
+- Before adding a new devtool, check for shared utilities and existing dependencies in the application code. Prefer extending those primitives over creating parallel scaffolding; the repo should maintain the application code, not a second code path around it, and fewer duplicated concepts reduce confusion for both developers and agents.
+
 ## Ownership model
 
 The developer instrumentation layer is split into a small set of canonical entrypoints and a larger set of internal helpers.
