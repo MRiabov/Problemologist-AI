@@ -35,6 +35,11 @@ enforcement is still fragmented.
    assumptions.
 4. Because this contract spans planner, reviewer, and coder boundaries, the
    eval refresh is broad and the integration refresh is the long pole.
+5. The current cost/weight contract is also asymmetric:
+   - declared assembly cost is validated as a deterministic sum,
+   - planner weight is only checked as a cap/ceiling,
+   - manufactured parts do not carry a per-part `weight_g` field,
+   - COTS parts are the only assembly rows that can optionally carry `weight_g`.
 
 ## Current-State Inventory
 
@@ -45,6 +50,7 @@ enforcement is still fragmented.
 | `controller/agent/node_entry_validation.py` | Validates node entry and some handoff constraints. | It needs fail-closed exactness gates for planner handoff packages. |
 | `worker_heavy/utils/file_validation.py` | Validates schema and placeholder hygiene. | It must also participate in exact-mention and inventory-multiset checks where planner artifacts are validated. |
 | `worker_heavy/utils/handover.py` | Collects and packages handoff artifacts. | It must reject mismatched inventory before a coder or reviewer sees it. |
+| `shared/models/schemas.py`, `worker_heavy/utils/dfm.py`, `controller/agent/benchmark/tools.py` | Define and enforce the current cost/weight contract. | They expose the asymmetry that cost is deterministic while weight is only planner-authored estimate/cap data. |
 | `shared/utils/agent/__init__.py` | Loads scripts and render evidence. | It needs to participate in the exactness contract for planner-authored evidence scripts. |
 | `config/prompts.yaml`, `controller/agent/prompt_manager.py` | Planner prompt assembly does not yet teach exact-mention and inventory-exactness self-checks explicitly enough. | The planner needs the exactness contract in its guidance path so it can self-validate before handoff. |
 | `evals/logic/specs.py`, `evals/logic/codex_workspace.py`, `scripts/validate_eval_seed.py` | Seeded evals still assume older artifact shapes in many rows. | All affected evals need the new contract so stale rows fail during preflight. |
@@ -68,6 +74,9 @@ enforcement is still fragmented.
 5. Technical-drawing rendering and starter-template work remain separate from
    this migration; this migration owns the inventory/grounding contract, not
    the view-generation contract.
+6. The cost/weight contract boundary is documented here as a separate
+   exactness fix so it can be tightened later without being confused with the
+   inventory-exactness work.
 
 ## Required Work
 
@@ -117,6 +126,15 @@ enforcement is still fragmented.
   contract.
 - Ensure `config/prompts.yaml` and `PromptManager` tell planners to
   self-check exact mentions and inventory multiplicity before handoff.
+
+### 6. Document the cost/weight exactness boundary
+
+- Keep the current asymmetry explicit until a schema-level weight source exists
+  for manufactured parts.
+- Treat declared assembly cost as exact and planner weight as a cap/estimate
+  contract, not as a per-part recomputation contract.
+- Make the exactness boundary visible in the migration so future schema work
+  can tighten it without reopening the inventory contract.
 
 ## Non-Goals
 
@@ -208,6 +226,15 @@ The safe order is:
 
 - [ ] Align prompt-side guidance with the exactness contract.
 - [ ] Keep the handoff and role docs in sync with the implemented validator.
+
+### Cost/weight exactness boundary
+
+- [ ] Record the current cost-versus-weight asymmetry as an explicit contract
+  boundary in the migration notes.
+- [ ] Keep weight validation scoped to the existing planner estimate/cap
+  fields until a manufactured-part weight source is introduced.
+- [ ] Add follow-up schema work only if the repository introduces a new
+  per-part weight source for manufactured parts or a new exact-weight contract.
 
 ### Drafting contract follow-up
 
