@@ -1,3 +1,3 @@
 # Benchmark Journal
 
-- Seeded planner handoff for benchmark coder evaluation.
+- Seeded planner handoff and drafting companions for benchmark coder evaluation.
