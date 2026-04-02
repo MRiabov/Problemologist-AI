@@ -36,7 +36,7 @@ This script:
 - Ensures `ngspice` is available for electronics validation.
 - Starts the test infrastructure containers from `docker-compose.test.yaml`.
 - Runs database migrations.
-- Starts the controller, worker-light, worker-heavy, controller Temporal worker, and worker-heavy Temporal worker as local processes.
+- Starts the controller, worker-light, worker-heavy, controller-temporal-worker, and worker-heavy Temporal worker as local processes.
 - Starts the frontend dev server on port `15173` if the port is free and the UI is needed.
 
 ### Stop
@@ -57,7 +57,7 @@ This script:
 The root `docker-compose.yml` describes the full multi-service stack:
 
 - `controller`
-- `controller-worker`
+- `controller-temporal-worker`
 - `worker-light`
 - `worker-heavy`
 - `worker-heavy-temporal`

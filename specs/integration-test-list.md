@@ -31,7 +31,7 @@ This section is the smallest must-pass set. Keep it narrowly scoped, determinist
 
 | ID | Test | Required assertions |
 | -- | -- | -- |
-| INT-001 | Compose boot + health contract | `controller`, `worker`, Temporal worker service `controller-worker`, `postgres`, `minio`, `temporal` become healthy/started; health endpoints return expected status payload. |
+| INT-001 | Compose boot + health contract | `controller`, `worker`, Temporal worker service `controller-temporal-worker`, `postgres`, `minio`, `temporal` become healthy/started; health endpoints return expected status payload. |
 | INT-002 | Controller execution boundary | Agent-generated execution happens on worker only; controller never runs LLM-generated code. |
 | INT-003 | Session filesystem isolation | Two concurrent sessions cannot read each other's files. |
 | INT-004 | Heavy-worker single-flight admission | Multiple agents may run, but each heavy-worker instance accepts only one active heavy job; while that job is active, `/ready` reports not-ready, and concurrent requests to the same instance receive deterministic busy responses on the direct worker HTTP path (no in-worker buffering/scheduling). Multi-worker throughput/fan-out behavior is out of scope for this test. |

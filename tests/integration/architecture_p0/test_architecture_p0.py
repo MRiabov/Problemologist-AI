@@ -397,8 +397,8 @@ async def test_int_211_genesis_simulation_video_delegates_to_renderer_worker():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_002_controller_worker_execution_boundary():
-    """INT-002: Verify controller-worker handoff and execution status."""
+async def test_int_002_controller_temporal_worker_execution_boundary():
+    """INT-002: Verify controller-temporal-worker handoff and execution status."""
     session_id = f"INT-002-{uuid.uuid4().hex[:8]}"
     task = "Build a simple box of 10x10x10mm."
 

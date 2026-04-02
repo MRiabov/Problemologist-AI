@@ -1,0 +1,209 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_railway_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  temporal:
+    image: temporalio/auto-setup:1.22.0
+    environment:
+      DB: postgresql
+      DB_PORT: "5432"
+      POSTGRES_USER: postgres
+      POSTGRES_PWD: postgres
+      POSTGRES_SEEDS: postgres.railway.internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  migrations:
+    build:
+      context: .
+      dockerfile: controller/Dockerfile
+    command: ["sh", "-c", "exec alembic -c alembic.ini upgrade head"]
+    environment: &controller_db_env
+      POSTGRES_URL: postgresql+psycopg://postgres:postgres@postgres.railway.internal:5432/postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  controller:
+    build:
+      context: .
+      dockerfile: controller/Dockerfile
+    command: ["sh", "-c", "exec uvicorn controller.api.main:app --host :: --port 8000"]
+    environment:
+      <<: *controller_db_env
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres.railway.internal:5432/postgres
+      # Railway private networking uses http:// for HTTP services.
+      # Temporal stays host:port because the Temporal client speaks gRPC.
+      TEMPORAL_URL: temporal.railway.internal:7233
+      WORKER_URL: http://worker-light.railway.internal:8001
+      WORKER_LIGHT_TRANSPORT: ws
+      WORKER_HEAVY_URL: http://worker-heavy.railway.internal:8002
+      WORKER_RENDERER_URL: http://worker-renderer.railway.internal:8003
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE: ${OPENAI_API_BASE:-}
+      IS_INTEGRATION_TEST: "false"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      S3_ENDPOINT: ${ENDPOINT:-https://storage.railway.app}
+      S3_ENDPOINT_URL: ${ENDPOINT:-https://storage.railway.app}
+      S3_ACCESS_KEY: ${ACCESS_KEY_ID:-change-me}
+      S3_SECRET_KEY: ${SECRET_ACCESS_KEY:-change-me}
+      AWS_ACCESS_KEY_ID: ${ACCESS_KEY_ID:-change-me}
+      AWS_SECRET_ACCESS_KEY: ${SECRET_ACCESS_KEY:-change-me}
+      AWS_REGION: ${REGION:-auto}
+      ASSET_S3_BUCKET: ${BUCKET:-problemologist}
+      BACKUP_S3_BUCKET: ${BUCKET:-problemologist}
+      BENCHMARK_SOURCE_BUCKET: ${BUCKET:-problemologist}
+      BENCHMARK_ASSETS_BUCKET: ${BUCKET:-problemologist}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      migrations:
+        condition: service_completed_successfully
+
+  controller-temporal-worker:
+    build:
+      context: .
+      dockerfile: controller/Dockerfile
+    command: ["sh", "-c", "exec python controller/temporal_worker.py"]
+    environment:
+      TEMPORAL_URL: temporal.railway.internal:7233
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE: ${OPENAI_API_BASE:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      S3_ENDPOINT: ${ENDPOINT:-https://storage.railway.app}
+      S3_ENDPOINT_URL: ${ENDPOINT:-https://storage.railway.app}
+      S3_ACCESS_KEY: ${ACCESS_KEY_ID:-change-me}
+      S3_SECRET_KEY: ${SECRET_ACCESS_KEY:-change-me}
+      AWS_ACCESS_KEY_ID: ${ACCESS_KEY_ID:-change-me}
+      AWS_SECRET_ACCESS_KEY: ${SECRET_ACCESS_KEY:-change-me}
+      AWS_REGION: ${REGION:-auto}
+      ASSET_S3_BUCKET: ${BUCKET:-problemologist}
+      BACKUP_S3_BUCKET: ${BUCKET:-problemologist}
+      BENCHMARK_SOURCE_BUCKET: ${BUCKET:-problemologist}
+      BENCHMARK_ASSETS_BUCKET: ${BUCKET:-problemologist}
+    depends_on:
+      temporal:
+        condition: service_started
+
+  worker-light:
+    build:
+      context: .
+      dockerfile: worker_light/Dockerfile
+    command: ["sh", "-c", "exec uvicorn worker_light.app:app --host :: --port 8001"]
+    environment:
+      WORKER_TYPE: light
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      S3_ENDPOINT: ${ENDPOINT:-https://storage.railway.app}
+      S3_ENDPOINT_URL: ${ENDPOINT:-https://storage.railway.app}
+      S3_ACCESS_KEY: ${ACCESS_KEY_ID:-change-me}
+      S3_SECRET_KEY: ${SECRET_ACCESS_KEY:-change-me}
+      AWS_ACCESS_KEY_ID: ${ACCESS_KEY_ID:-change-me}
+      AWS_SECRET_ACCESS_KEY: ${SECRET_ACCESS_KEY:-change-me}
+      AWS_REGION: ${REGION:-auto}
+      ASSET_S3_BUCKET: ${BUCKET:-problemologist}
+      BACKUP_S3_BUCKET: ${BUCKET:-problemologist}
+      BENCHMARK_SOURCE_BUCKET: ${BUCKET:-problemologist}
+      BENCHMARK_ASSETS_BUCKET: ${BUCKET:-problemologist}
+
+  worker-heavy:
+    build:
+      context: .
+      dockerfile: worker_heavy/Dockerfile
+    command: ["sh", "-c", "exec uvicorn worker_heavy.app:app --host :: --port 8002"]
+    environment:
+      WORKER_TYPE: heavy
+      TEMPORAL_URL: temporal.railway.internal:7233
+      WORKER_RENDERER_URL: http://worker-renderer.railway.internal:8003
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      PROBLEMOLOGIST_PHYSICS_GL_BACKEND: egl
+      PROBLEMOLOGIST_RENDER_GL_BACKEND: osmesa
+      MUJOCO_GL: egl
+      PYOPENGL_PLATFORM: osmesa
+      PYVISTA_OFF_SCREEN: "true"
+      VTK_DEFAULT_OPENGL_WINDOW: vtkOSOpenGLRenderWindow
+      PYGLET_HEADLESS: "1"
+      S3_ENDPOINT: ${ENDPOINT:-https://storage.railway.app}
+      S3_ENDPOINT_URL: ${ENDPOINT:-https://storage.railway.app}
+      S3_ACCESS_KEY: ${ACCESS_KEY_ID:-change-me}
+      S3_SECRET_KEY: ${SECRET_ACCESS_KEY:-change-me}
+      AWS_ACCESS_KEY_ID: ${ACCESS_KEY_ID:-change-me}
+      AWS_SECRET_ACCESS_KEY: ${SECRET_ACCESS_KEY:-change-me}
+      AWS_REGION: ${REGION:-auto}
+      ASSET_S3_BUCKET: ${BUCKET:-problemologist}
+      BACKUP_S3_BUCKET: ${BUCKET:-problemologist}
+      BENCHMARK_SOURCE_BUCKET: ${BUCKET:-problemologist}
+      BENCHMARK_ASSETS_BUCKET: ${BUCKET:-problemologist}
+    depends_on:
+      temporal:
+        condition: service_started
+      worker-renderer:
+        condition: service_started
+
+  worker-heavy-temporal:
+    build:
+      context: .
+      dockerfile: worker_heavy/Dockerfile
+    command: ["sh", "-c", "exec python -m worker_heavy.temporal_worker"]
+    environment:
+      TEMPORAL_URL: temporal.railway.internal:7233
+      WORKER_RENDERER_URL: http://worker-renderer.railway.internal:8003
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      S3_ENDPOINT: ${ENDPOINT:-https://storage.railway.app}
+      S3_ENDPOINT_URL: ${ENDPOINT:-https://storage.railway.app}
+      S3_ACCESS_KEY: ${ACCESS_KEY_ID:-change-me}
+      S3_SECRET_KEY: ${SECRET_ACCESS_KEY:-change-me}
+      AWS_ACCESS_KEY_ID: ${ACCESS_KEY_ID:-change-me}
+      AWS_SECRET_ACCESS_KEY: ${SECRET_ACCESS_KEY:-change-me}
+      AWS_REGION: ${REGION:-auto}
+      ASSET_S3_BUCKET: ${BUCKET:-problemologist}
+      BACKUP_S3_BUCKET: ${BUCKET:-problemologist}
+      BENCHMARK_SOURCE_BUCKET: ${BUCKET:-problemologist}
+      BENCHMARK_ASSETS_BUCKET: ${BUCKET:-problemologist}
+    depends_on:
+      temporal:
+        condition: service_started
+      worker-renderer:
+        condition: service_started
+
+  worker-renderer:
+    build:
+      context: .
+      dockerfile: worker_renderer/Dockerfile
+    command: ["sh", "-c", "exec uvicorn worker_renderer.app:app --host :: --port 8003"]
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      PROBLEMOLOGIST_PHYSICS_GL_BACKEND: egl
+      PROBLEMOLOGIST_RENDER_GL_BACKEND: osmesa
+      PYOPENGL_PLATFORM: osmesa
+      PYVISTA_OFF_SCREEN: "true"
+      VTK_DEFAULT_OPENGL_WINDOW: vtkOSOpenGLRenderWindow
+      PYGLET_HEADLESS: "1"
+      S3_ENDPOINT: ${ENDPOINT:-https://storage.railway.app}
+      S3_ENDPOINT_URL: ${ENDPOINT:-https://storage.railway.app}
+      S3_ACCESS_KEY: ${ACCESS_KEY_ID:-change-me}
+      S3_SECRET_KEY: ${SECRET_ACCESS_KEY:-change-me}
+      AWS_ACCESS_KEY_ID: ${ACCESS_KEY_ID:-change-me}
+      AWS_SECRET_ACCESS_KEY: ${SECRET_ACCESS_KEY:-change-me}
+      AWS_REGION: ${REGION:-auto}
+      ASSET_S3_BUCKET: ${BUCKET:-problemologist}
+      BACKUP_S3_BUCKET: ${BUCKET:-problemologist}
+      BENCHMARK_SOURCE_BUCKET: ${BUCKET:-problemologist}
+      BENCHMARK_ASSETS_BUCKET: ${BUCKET:-problemologist}
+
+volumes:
+  postgres_railway_data:

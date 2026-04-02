@@ -86,7 +86,7 @@ services:
       postgres:
         condition: service_healthy
 
-  controller-worker: #fixme: why is it called controller-worker? it should be temporal worker!
+  controller-temporal-worker:
     image: problemologist-ai-controller:latest
     command: ["python", "controller/temporal_worker.py"]
     environment:

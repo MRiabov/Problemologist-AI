@@ -39,7 +39,7 @@ This repo is brownfield. Treat `specs/desired_architecture.md` and the files und
 
 - Use the architecture docs as the implementation contract. Do not fill gaps from memory when the docs already define the behavior.
 - This repo uses integration tests as the real verification path. Prefer black-box integration tests through the compose stack; do not replace them with unit tests or mocked project/runtime boundaries.
-- Heavy controller work must route through Temporal/controller-worker orchestration. `worker-heavy` is single-flight and must fail closed with deterministic busy responses when occupied.
+- Heavy controller work must route through Temporal/controller-temporal-worker orchestration. `worker-heavy` is single-flight and must fail closed with deterministic busy responses when occupied.
 - Do not run LLM-generated CAD/simulation code directly on the controller.
 - Planner/reviewer handoffs are strict files, not implicit state. Respect the stage-specific review YAMLs and keep `.manifests/**` system-only.
 - Benchmark-owned fixtures in `benchmark_definition.yaml` are read-only task context. Engineer-owned manufacturable parts live in `assembly_definition.yaml` and the authored CAD result.

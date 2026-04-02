@@ -25,8 +25,8 @@ Additionally:
 
 ## Non-negotiable Integration Execution Contract (applies to every `INT-xxx` and `INT-NEG-###`)
 
-01. Test target is a running compose stack (`controller`, `worker`, Temporal worker service `controller-worker`, infra services), not imported Python functions.
-    In this spec, `controller-worker` is the Temporal worker service label only; it is not the controller.
+01. Test target is a running compose stack (`controller`, `worker`, Temporal worker service `controller-temporal-worker`, infra services), not imported Python functions.
+    In this spec, `controller-temporal-worker` is the Temporal worker service label only; it is not the controller.
 02. Test traffic goes through HTTP APIs only.
 03. Files/artifacts are created by API/tool-call pathways, not by direct local writes to app internals.
 04. No `patch`, `monkeypatch`, or fake clients for controller/worker/temporal/s3 paths in integration tests.
@@ -154,7 +154,7 @@ Validation-preview tests should therefore assert:
 3. the selected simulation backend is not silently mutated for `/benchmark/simulate`.
 4. build123d/VTK-backed preview images persist as RGB/depth/segmentation sibling files in `renders/`.
 5. `config/agents_config.yaml render.<modality>.enabled` disables only the requested preview artifact types, while `render.<modality>.axes` and `render.<modality>.edges` independently control overlays for each modality.
-6. `renders/render_manifest.json` persists per-image metadata, including segmentation legend entries with semantic labels and unique instance identifiers.
+6. `renders/<bundle>/render_manifest.json` persists per-image metadata, including segmentation legend entries with semantic labels and unique instance identifiers. `renders/render_manifest.json` may remain as a current-bundle compatibility alias, but historical assertions should prefer the bundle-local manifest or the bundle history contract when available.
 7. RGB preview output reflects configured material colors for differing `material_id` values.
 8. When `benchmark_definition.yaml` contains `goal_zone`, `forbid_zones`, and `build_zone`, the RGB preview output includes visible green, red, and gray objective boxes rather than dropping those visuals.
 9. When axes/edge overlays are enabled on depth and segmentation previews, the generated images include the same world-coordinate axes treatment and use non-black edge accents so the overlays remain visible against their backgrounds.
