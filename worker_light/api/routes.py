@@ -989,14 +989,18 @@ async def pick_render_bundle_pixel_route(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@light_router.post("/render/pick/batch", response_model=list[RenderBundlePointPickResult])
+@light_router.post(
+    "/render/pick/batch", response_model=list[RenderBundlePointPickResult]
+)
 async def pick_render_bundle_pixels_route(
     requests: list[RenderBundlePointPickRequest],
     fs_router=Depends(get_router),
 ):
     """Resolve multiple screen-space clicks as one request object per pick."""
     try:
-        return pick_preview_pixels(requests, workspace_root=fs_router.local_backend.root)
+        return pick_preview_pixels(
+            requests, workspace_root=fs_router.local_backend.root
+        )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

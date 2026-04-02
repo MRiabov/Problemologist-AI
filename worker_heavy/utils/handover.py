@@ -134,7 +134,9 @@ def _validate_render_manifest_bundle(
             manifest_path.read_text(encoding="utf-8")
         )
     except Exception as exc:
-        raise ValueError(f"bundle-local render_manifest.json is invalid: {exc}") from exc
+        raise ValueError(
+            f"bundle-local render_manifest.json is invalid: {exc}"
+        ) from exc
 
     if not render_manifest.revision:
         raise ValueError("bundle-local render_manifest.json revision missing")
