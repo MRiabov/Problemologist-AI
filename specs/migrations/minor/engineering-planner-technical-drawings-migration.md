@@ -237,6 +237,38 @@ completed or explicitly waived with a written rationale.
 - [x] Keep the Engineering Coder, Benchmark Coder, and execution reviewers
   read-only for the drafting scripts.
 
+### Per-role artifact checklist
+
+The items below are the drafting-mode additions on top of each role's existing
+base handoff contract. The exact file enforcement lives in node-entry
+validation; this checklist keeps the migration tracker explicit about who owns
+which drafting artifacts.
+
+- [x] Engineer Planner: `assembly_definition.yaml.drafting` plus
+  `solution_plan_evidence_script.py` and
+  `solution_plan_technical_drawing_script.py`.
+- [x] Engineer Plan Reviewer: `assembly_definition.yaml.drafting` plus
+  `solution_plan_evidence_script.py` and
+  `solution_plan_technical_drawing_script.py`.
+- [x] Engineer Coder: `assembly_definition.yaml.drafting` plus
+  `solution_plan_evidence_script.py` and
+  `solution_plan_technical_drawing_script.py`.
+- [x] Engineer Execution Reviewer: `assembly_definition.yaml.drafting` plus
+  `solution_plan_evidence_script.py` and
+  `solution_plan_technical_drawing_script.py`.
+- [x] Benchmark Planner: `benchmark_assembly_definition.yaml.drafting` plus
+  `benchmark_plan_evidence_script.py` and
+  `benchmark_plan_technical_drawing_script.py`.
+- [x] Benchmark Plan Reviewer: `benchmark_assembly_definition.yaml.drafting`
+  plus `benchmark_plan_evidence_script.py` and
+  `benchmark_plan_technical_drawing_script.py`.
+- [x] Benchmark Coder: `benchmark_assembly_definition.yaml.drafting` plus
+  `benchmark_plan_evidence_script.py` and
+  `benchmark_plan_technical_drawing_script.py`.
+- [x] Benchmark Reviewer: `benchmark_assembly_definition.yaml.drafting` plus
+  `benchmark_plan_evidence_script.py` and
+  `benchmark_plan_technical_drawing_script.py`.
+
 ### Integration coverage
 
 - [x] Add a narrow integration slice for the mode-off path.
