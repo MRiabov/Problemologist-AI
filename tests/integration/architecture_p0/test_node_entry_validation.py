@@ -30,15 +30,15 @@ from shared.models.schemas import (
     BoundingBox,
     Constraints,
     CostTotals,
-    EntryValidationContext,
     DraftingCallout,
     DraftingDimension,
     DraftingSheet,
     DraftingView,
+    EntryValidationContext,
     MovedObject,
     ObjectivesSection,
-    PhysicsConfig,
     PartConfig,
+    PhysicsConfig,
 )
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import ReviewManifest
@@ -499,9 +499,7 @@ async def test_int_184_seeded_workspace_rejects_unknown_drafting_targets(
             ),
             manufactured_parts=[],
             cots_parts=[],
-            final_assembly=[
-                PartConfig(name="target_box", config=AssemblyPartConfig())
-            ],
+            final_assembly=[PartConfig(name="target_box", config=AssemblyPartConfig())],
             totals=CostTotals(
                 estimated_unit_cost_usd=0.0,
                 estimated_weight_g=0.0,
@@ -602,9 +600,9 @@ async def test_int_184_seeded_workspace_rejects_unknown_drafting_targets(
     assert any(error.artifact_path == "assembly_definition.yaml" for error in errors), (
         errors
     )
-    assert any("not tied to a declared assembly part" in error.message for error in errors), (
-        errors
-    )
+    assert any(
+        "not tied to a declared assembly part" in error.message for error in errors
+    ), errors
 
 
 @pytest.mark.integration_p0
@@ -892,9 +890,9 @@ async def test_int_184_seeded_benchmark_workspace_rejects_unknown_drafting_targe
     assert any(
         error.artifact_path == "benchmark_assembly_definition.yaml" for error in errors
     ), errors
-    assert any("not tied to a declared assembly part" in error.message for error in errors), (
-        errors
-    )
+    assert any(
+        "not tied to a declared assembly part" in error.message for error in errors
+    ), errors
 
 
 @pytest.mark.integration_p0
