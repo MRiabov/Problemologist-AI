@@ -3,8 +3,8 @@
     "assembly_definition.yaml": "feb78b37f74dacf5b5b363c6eef426034ccfc3f950bff80bc5b401835d0b8b7a",
     "plan.md": "b0bebe2e0b0a7bb9a0bb920f77e2c00ee2b83de7047990091d2c80fecc58b027",
     "todo.md": "d4024a5cdf332159830e203d60cd63ff00908657b2984bb2115af732a6d9f68a",
-    "solution_plan_evidence_script.py": "ac7fc6b33e031db47afa66df20c3c573957357df92b691b0bc5dcca8fa7d03fc",
-    "solution_plan_technical_drawing_script.py": "e687e414006fcaa46b17cc6e47d3faf93b2b20b8cc27a4517dc22854f38a61e4"
+    "solution_plan_evidence_script.py": "320c6ebf2388663f2bd5052c0d598518343c2f39fffc1391ddfc970eecc6a10e",
+    "solution_plan_technical_drawing_script.py": "c8a2c52225ea30a1bc741df3b6476fef7b88c0f630a805262e72847228e5dda9"
   },
   "planner_node_type": "engineer_planner",
   "reviewer_stage": "engineer_plan_reviewer",
