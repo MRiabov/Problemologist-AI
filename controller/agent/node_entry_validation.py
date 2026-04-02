@@ -1068,6 +1068,7 @@ async def validate_seeded_workspace_handoff_artifacts(
                 content,
                 session_id=worker_client.session_id,
                 manufacturing_config=manufacturing_config_model,
+                exact_weight=rel_path == "assembly_definition.yaml",
             )
             if not is_valid and isinstance(assembly_result, list):
                 errors.extend(

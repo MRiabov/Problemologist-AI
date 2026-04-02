@@ -346,6 +346,7 @@ def submit_for_review(
             cost_content,
             session_id=session_id,
             manufacturing_config=load_required_merged_config(custom_config_path),
+            exact_weight=cost_path.name == "assembly_definition.yaml",
         )
         if not is_valid:
             logger.warning(

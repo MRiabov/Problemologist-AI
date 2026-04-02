@@ -51,7 +51,9 @@ from shared.workers.schema import RenderManifest
 from shared.workers.workbench_models import ManufacturingConfig
 from worker_heavy.utils.dfm import (
     validate_declared_assembly_cost,
+    validate_declared_assembly_weight,
     validate_exact_declared_assembly_cost,
+    validate_exact_declared_assembly_weight,
 )
 from worker_heavy.utils.validation import (
     _shape_volume,
@@ -620,6 +622,21 @@ def validate_planner_drafting_geometry_contract(
     if not solids:
         return [f"{artifact_name}: drafted component contains no solid geometry"]
 
+    invalid_labels: list[str] = []
+    shapes_to_check = [component, *solids]
+    for shape in shapes_to_check:
+        try:
+            if hasattr(shape, "is_valid") and not shape.is_valid:
+                invalid_labels.append(getattr(shape, "label", None) or artifact_name)
+        except Exception as exc:
+            return [f"{artifact_name}: unable to evaluate geometry validity: {exc}"]
+
+    if invalid_labels:
+        return [
+            f"{artifact_name}: drafted geometry is invalid or self-intersecting "
+            f"(offending shape: {invalid_labels[0]})"
+        ]
+
     goal_zone = benchmark_definition.objectives.goal_zone
     goal_zone_body = _zone_body_from_bounds(goal_zone, inflation_mm=1e-6)
     goal_zone_allowed = _plan_explicitly_allows_goal_zone_overlap(
@@ -974,6 +991,7 @@ def validate_assembly_definition_yaml(
     content: str,
     session_id: str | None = None,
     manufacturing_config: ManufacturingConfig | None = None,
+    exact_weight: bool = False,
 ) -> tuple[bool, AssemblyDefinition | list[str]]:
     """
     Parse and validate assembly_definition.yaml content.
@@ -1013,6 +1031,19 @@ def validate_assembly_definition_yaml(
                 session_id=session_id,
             )
             return False, cost_errors
+
+        if exact_weight:
+            weight_errors = validate_exact_planner_weight_contract(
+                assembly_definition=estimation,
+                manufacturing_config=effective_config,
+            )
+            if weight_errors:
+                logger.error(
+                    "weight_estimation_yaml_invalid",
+                    errors=weight_errors,
+                    session_id=session_id,
+                )
+                return False, weight_errors
 
         from shared.cots.runtime import get_catalog_item_with_metadata
 
@@ -1511,6 +1542,15 @@ def validate_declared_planner_cost_contract(
     return validate_declared_assembly_cost(assembly_definition, manufacturing_config)
 
 
+def validate_declared_planner_weight_contract(
+    *,
+    assembly_definition: AssemblyDefinition,
+    manufacturing_config: ManufacturingConfig,
+) -> list[str]:
+    """Validate that planner totals include deterministic declared weights."""
+    return validate_declared_assembly_weight(assembly_definition, manufacturing_config)
+
+
 def validate_exact_planner_cost_contract(
     *,
     assembly_definition: AssemblyDefinition,
@@ -1518,6 +1558,17 @@ def validate_exact_planner_cost_contract(
 ) -> list[str]:
     """Validate that planner totals exactly match deterministic declared costs."""
     return validate_exact_declared_assembly_cost(
+        assembly_definition, manufacturing_config
+    )
+
+
+def validate_exact_planner_weight_contract(
+    *,
+    assembly_definition: AssemblyDefinition,
+    manufacturing_config: ManufacturingConfig,
+) -> list[str]:
+    """Validate that planner totals exactly match deterministic declared weights."""
+    return validate_exact_declared_assembly_weight(
         assembly_definition, manufacturing_config
     )
 
@@ -2037,6 +2088,7 @@ def validate_node_output(
                 content,
                 session_id=session_id,
                 manufacturing_config=effective_config,
+                exact_weight=filename == "assembly_definition.yaml",
             )
             if not is_valid:
                 # asm_res is list[str] on failure
