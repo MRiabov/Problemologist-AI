@@ -133,13 +133,37 @@ _SUPPORTED_BENCHMARK_MOTION_TOKENS = {
     "slide_z",
 }
 
+_ENGINEER_DRAFTING_NODE_TYPES = {
+    AgentName.ENGINEER_PLANNER.value,
+    AgentName.ENGINEER_PLAN_REVIEWER.value,
+    AgentName.ENGINEER_CODER.value,
+    AgentName.ENGINEER_EXECUTION_REVIEWER.value,
+}
 
-def _is_drafting_mode_active() -> bool:
+_BENCHMARK_DRAFTING_NODE_TYPES = {
+    AgentName.BENCHMARK_PLANNER.value,
+    AgentName.BENCHMARK_PLAN_REVIEWER.value,
+    AgentName.BENCHMARK_CODER.value,
+    AgentName.BENCHMARK_REVIEWER.value,
+}
+
+
+def _drafting_mode_for_node(planner_node_type: AgentName | str | None) -> DraftingMode:
+    node_key = (
+        planner_node_type.value
+        if isinstance(planner_node_type, AgentName)
+        else str(planner_node_type or "")
+    )
+    if node_key in _BENCHMARK_DRAFTING_NODE_TYPES:
+        planner_role = AgentName.BENCHMARK_PLANNER
+    elif node_key in _ENGINEER_DRAFTING_NODE_TYPES:
+        planner_role = AgentName.ENGINEER_PLANNER
+    else:
+        return DraftingMode.OFF
     try:
-        mode = load_agents_config().get_drafting_mode(AgentName.ENGINEER_PLANNER)
+        return load_agents_config().get_drafting_mode(planner_role)
     except Exception:
-        return False
-    return mode in (DraftingMode.DRAFTING, DraftingMode.DRAWING)
+        return DraftingMode.OFF
 
 
 def _collect_assembly_target_names(assembly_definition: AssemblyDefinition) -> set[str]:
@@ -196,21 +220,23 @@ def _validate_drafting_contract(
 ) -> list[str]:
     errors: list[str] = []
     drafting = assembly_definition.drafting
-    node_key = (
-        planner_node_type.value
-        if isinstance(planner_node_type, AgentName)
-        else str(planner_node_type or "")
+    drafting_mode = _drafting_mode_for_node(planner_node_type)
+    drafting_required = drafting_mode in (
+        DraftingMode.DRAFTING,
+        DraftingMode.DRAWING,
     )
-    drafting_required = _is_drafting_mode_active() and node_key in {
-        AgentName.ENGINEER_PLANNER.value,
-        AgentName.ENGINEER_PLAN_REVIEWER.value,
-    }
 
     if drafting is None:
         if drafting_required:
             errors.append(
                 "assembly_definition.drafting is required when drafting mode is active"
             )
+        return errors
+
+    if not drafting_required:
+        errors.append(
+            "assembly_definition.drafting must be absent when drafting mode is off"
+        )
         return errors
 
     known_targets = _collect_assembly_target_names(assembly_definition)

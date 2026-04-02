@@ -138,13 +138,12 @@ agents:
         - benchmark_definition.yaml
         - solution_plan_evidence_script.py
         - solution_plan_technical_drawing_script.py
-        deny:
+      deny:
         - skills/**
         - utils/**
         - reviews/**
         - benchmark_script.py
         - solution_script.py
-        - '**/*.py'
         - .manifests/**
     tools:
     - list_files
@@ -371,6 +370,7 @@ agents:
       min_images: 1
       reminder_interval: 2
   benchmark_planner:
+    drafting_mode: "off"
     reasoning_effort: xhigh
     filesystem_permissions:
       read:
@@ -403,12 +403,11 @@ agents:
         - benchmark_plan_evidence_script.py
         - benchmark_plan_technical_drawing_script.py
         - renders/**
-        deny:
+      deny:
         - skills/**
         - utils/**
         - reviews/**
         - solution_script.py
-        - '**/*.py'
         - .manifests/**
     tools:
     - list_files
@@ -419,6 +418,7 @@ agents:
     - grep
     - execute_command
     - invoke_cots_search_subagent
+    - preview_drawing
     - submit_plan
     allowed_during_unit_eval:
     - benchmark_planner

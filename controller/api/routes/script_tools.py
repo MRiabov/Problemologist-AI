@@ -15,7 +15,10 @@ from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.utils import EpisodeIdentity
 from shared.enums import AgentName
 from shared.logging import bind_log_context
-from shared.script_contracts import authored_script_path_for_agent
+from shared.script_contracts import (
+    authored_script_path_for_agent,
+    technical_drawing_script_path_for_agent,
+)
 from shared.simulation.schemas import (
     SimulatorBackendType,
     get_default_simulator_backend,
@@ -71,7 +74,12 @@ class ScriptToolRequest(BaseModel):
     @model_validator(mode="after")
     def normalize_script_path(self) -> "ScriptToolRequest":
         if self.script_path == "script.py":
-            self.script_path = authored_script_path_for_agent(self.agent_role)
+            if self.drafting:
+                self.script_path = technical_drawing_script_path_for_agent(
+                    self.agent_role
+                )
+            else:
+                self.script_path = authored_script_path_for_agent(self.agent_role)
         return self
 
 

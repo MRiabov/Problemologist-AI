@@ -3,7 +3,15 @@ from __future__ import annotations
 from shared.enums import AgentName
 
 BENCHMARK_SCRIPT_PATH = "benchmark_script.py"
+BENCHMARK_PLAN_EVIDENCE_SCRIPT_PATH = "benchmark_plan_evidence_script.py"
+BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH = (
+    "benchmark_plan_technical_drawing_script.py"
+)
 SOLUTION_SCRIPT_PATH = "solution_script.py"
+SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH = "solution_plan_evidence_script.py"
+SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH = (
+    "solution_plan_technical_drawing_script.py"
+)
 LEGACY_SCRIPT_PATH = "script.py"
 
 
@@ -21,6 +29,8 @@ def _normalize_agent_name(agent_name: AgentName | str | None) -> AgentName | Non
 def authored_script_path_for_agent(agent_name: AgentName | str | None) -> str:
     normalized = _normalize_agent_name(agent_name)
     if normalized in {
+        AgentName.BENCHMARK_PLANNER,
+        AgentName.BENCHMARK_PLAN_REVIEWER,
         AgentName.BENCHMARK_CODER,
         AgentName.BENCHMARK_REVIEWER,
     }:
@@ -35,6 +45,29 @@ def authored_script_path_for_agent(agent_name: AgentName | str | None) -> str:
     }:
         return SOLUTION_SCRIPT_PATH
     return LEGACY_SCRIPT_PATH
+
+
+def technical_drawing_script_path_for_agent(
+    agent_name: AgentName | str | None,
+) -> str:
+    normalized = _normalize_agent_name(agent_name)
+    if normalized in {
+        AgentName.BENCHMARK_PLANNER,
+        AgentName.BENCHMARK_PLAN_REVIEWER,
+        AgentName.BENCHMARK_CODER,
+        AgentName.BENCHMARK_REVIEWER,
+    }:
+        return BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH
+    if normalized in {
+        AgentName.ENGINEER_PLANNER,
+        AgentName.ENGINEER_PLAN_REVIEWER,
+        AgentName.ENGINEER_CODER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.ELECTRONICS_PLANNER,
+        AgentName.ELECTRONICS_REVIEWER,
+    }:
+        return SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH
+    return authored_script_path_for_agent(agent_name)
 
 
 def authored_script_path_for_reviewer_stage(reviewer_stage: str | None) -> str:

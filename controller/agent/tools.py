@@ -15,7 +15,7 @@ from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import PlannerSubmissionResult
 from shared.observability.schemas import RunCommandToolEvent
-from shared.script_contracts import authored_script_path_for_agent
+from shared.script_contracts import technical_drawing_script_path_for_agent
 from shared.workers.schema import PlanReviewManifest
 
 
@@ -140,7 +140,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
     Includes filesystem operations and COTS catalog search.
     """
 
-    default_script_path = authored_script_path_for_agent(fs.agent_role)
+    default_script_path = technical_drawing_script_path_for_agent(fs.agent_role)
 
     async def list_files(path: str = "/"):
         """List files in the workspace (filesystem)."""

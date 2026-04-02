@@ -791,6 +791,42 @@ def preview_drawing(
     )
 
 
+def list_render_bundles(*args: Any, **kwargs: Any) -> Any:
+    """Proxy to the worker-light render bundle history helper."""
+    from worker_light.utils.render_query import (
+        list_render_bundles as _list_render_bundles,
+    )
+
+    return _list_render_bundles(*args, **kwargs)
+
+
+def query_render_bundle(*args: Any, **kwargs: Any) -> Any:
+    """Proxy to the worker-light compact bundle query helper."""
+    from worker_light.utils.render_query import (
+        query_render_bundle as _query_render_bundle,
+    )
+
+    return _query_render_bundle(*args, **kwargs)
+
+
+def pick_preview_pixel(*args: Any, **kwargs: Any) -> Any:
+    """Proxy to the worker-light point-pick helper."""
+    from worker_light.utils.render_query import (
+        pick_preview_pixel as _pick_preview_pixel,
+    )
+
+    return _pick_preview_pixel(*args, **kwargs)
+
+
+def pick_preview_pixels(*args: Any, **kwargs: Any) -> Any:
+    """Proxy to the worker-light batch point-pick helper."""
+    from worker_light.utils.render_query import (
+        pick_preview_pixels as _pick_preview_pixels,
+    )
+
+    return _pick_preview_pixels(*args, **kwargs)
+
+
 def refuse_plan(reason: str) -> bool:
     """Refuse the current plan."""
     if os.getenv("IS_HEAVY_WORKER"):

@@ -46,6 +46,7 @@ from controller.clients.worker import WorkerClient
 from controller.config.settings import settings as controller_settings
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode
+from shared.agents.config import DraftingMode, load_agents_config
 from shared.enums import AgentName, EntryFailureDisposition, EntryValidationSource
 from shared.models.schemas import (
     AssemblyDefinition,
@@ -54,7 +55,11 @@ from shared.models.schemas import (
 )
 from shared.models.simulation import SimulationResult
 from shared.script_contracts import (
+    BENCHMARK_PLAN_EVIDENCE_SCRIPT_PATH,
+    BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH,
     BENCHMARK_SCRIPT_PATH,
+    SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH,
+    SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH,
     authored_script_path_for_reviewer_stage,
 )
 from shared.simulation.schemas import CustomObjectives
@@ -173,30 +178,110 @@ class NodeEntryContract(BaseModel):
     )
 
 
+_ENGINEER_DRAFTING_TARGETS = {
+    AgentName.ENGINEER_PLANNER,
+    AgentName.ENGINEER_PLAN_REVIEWER,
+    AgentName.ENGINEER_CODER,
+    AgentName.ENGINEER_EXECUTION_REVIEWER,
+}
+
+_BENCHMARK_DRAFTING_TARGETS = {
+    AgentName.BENCHMARK_PLANNER,
+    AgentName.BENCHMARK_PLAN_REVIEWER,
+    AgentName.BENCHMARK_CODER,
+    AgentName.BENCHMARK_REVIEWER,
+}
+
+_ENGINEER_BENCHMARK_DRAFTING_CONTEXT_TARGETS = {
+    AgentName.ENGINEER_PLANNER,
+    AgentName.ENGINEER_CODER,
+}
+
+
+def _drafting_mode_active(mode: DraftingMode) -> bool:
+    return mode in (DraftingMode.DRAFTING, DraftingMode.DRAWING)
+
+
+def _node_drafting_artifacts(target_node: AgentName) -> list[str]:
+    try:
+        config = load_agents_config()
+    except Exception:
+        return []
+
+    artifacts: list[str] = []
+    engineer_mode = config.get_drafting_mode(AgentName.ENGINEER_PLANNER)
+    benchmark_mode = config.get_drafting_mode(AgentName.BENCHMARK_PLANNER)
+
+    if target_node in _ENGINEER_DRAFTING_TARGETS and _drafting_mode_active(
+        engineer_mode
+    ):
+        artifacts.extend(
+            (
+                SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH,
+                SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH,
+            )
+        )
+
+    if (
+        target_node in _ENGINEER_BENCHMARK_DRAFTING_CONTEXT_TARGETS
+        and _drafting_mode_active(benchmark_mode)
+    ):
+        artifacts.extend(
+            (
+                BENCHMARK_PLAN_EVIDENCE_SCRIPT_PATH,
+                BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH,
+            )
+        )
+
+    if target_node in _BENCHMARK_DRAFTING_TARGETS and _drafting_mode_active(
+        benchmark_mode
+    ):
+        artifacts.extend(
+            (
+                BENCHMARK_PLAN_EVIDENCE_SCRIPT_PATH,
+                BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH,
+            )
+        )
+
+    return list(dict.fromkeys(artifacts))
+
+
 def build_benchmark_node_contracts() -> dict[AgentName, NodeEntryContract]:
     # Scope boundary: contracts apply only to first-class graph transitions.
     # Tool-invoked helper subagents are explicitly out of scope for this registry.
+    drafting_artifacts = _node_drafting_artifacts(AgentName.BENCHMARK_PLANNER)
     return {
         AgentName.BENCHMARK_PLANNER: NodeEntryContract(
             node=AgentName.BENCHMARK_PLANNER,
             required_state_fields=["session", "episode_id"],
+            required_artifacts=[
+                *BENCHMARK_PLANNER_HANDOFF_ARTIFACTS,
+                *drafting_artifacts,
+            ],
         ),
         AgentName.BENCHMARK_PLAN_REVIEWER: NodeEntryContract(
             node=AgentName.BENCHMARK_PLAN_REVIEWER,
             required_state_fields=["session", "episode_id"],
-            required_artifacts=list(BENCHMARK_PLANNER_HANDOFF_ARTIFACTS),
+            required_artifacts=[
+                *BENCHMARK_PLANNER_HANDOFF_ARTIFACTS,
+                *drafting_artifacts,
+            ],
             custom_check=BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.BENCHMARK_CODER: NodeEntryContract(
             node=AgentName.BENCHMARK_CODER,
             required_state_fields=["session", "episode_id"],
-            required_artifacts=list(BENCHMARK_PLANNER_HANDOFF_ARTIFACTS),
+            required_artifacts=[
+                *BENCHMARK_PLANNER_HANDOFF_ARTIFACTS,
+                BENCHMARK_SCRIPT_PATH,
+                *drafting_artifacts,
+            ],
             custom_check=BENCHMARK_CODER_HANDOVER_CHECK,
         ),
         AgentName.BENCHMARK_REVIEWER: NodeEntryContract(
             node=AgentName.BENCHMARK_REVIEWER,
             required_state_fields=["session", "episode_id"],
-            required_artifacts=[BENCHMARK_SCRIPT_PATH],
+            required_artifacts=[BENCHMARK_SCRIPT_PATH, *drafting_artifacts],
             custom_check=BENCHMARK_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.COTS_SEARCH: NodeEntryContract(
@@ -224,7 +309,10 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
         AgentName.ENGINEER_PLANNER: NodeEntryContract(
             node=AgentName.ENGINEER_PLANNER,
             required_state_fields=["task", "episode_id"],
-            required_artifacts=list(ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS),
+            required_artifacts=[
+                *ENGINEER_PLANNER_HANDOFF_ARTIFACTS,
+                *_node_drafting_artifacts(AgentName.ENGINEER_PLANNER),
+            ],
             custom_check=ENGINEER_BENCHMARK_HANDOVER_CHECK,
         ),
         AgentName.ELECTRONICS_PLANNER: NodeEntryContract(
@@ -236,6 +324,10 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
         AgentName.ENGINEER_PLAN_REVIEWER: NodeEntryContract(
             node=AgentName.ENGINEER_PLAN_REVIEWER,
             required_state_fields=["episode_id"],
+            required_artifacts=[
+                *ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS,
+                *_node_drafting_artifacts(AgentName.ENGINEER_PLAN_REVIEWER),
+            ],
             custom_check=ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.ENGINEER_CODER: NodeEntryContract(
@@ -244,6 +336,7 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
             required_artifacts=[
                 *ENGINEER_PLANNER_HANDOFF_ARTIFACTS,
                 *ENGINEER_BENCHMARK_SOURCE_ARTIFACTS,
+                *_node_drafting_artifacts(AgentName.ENGINEER_CODER),
             ],
         ),
         AgentName.ELECTRONICS_REVIEWER: NodeEntryContract(
@@ -255,7 +348,10 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
         AgentName.ENGINEER_EXECUTION_REVIEWER: NodeEntryContract(
             node=AgentName.ENGINEER_EXECUTION_REVIEWER,
             required_state_fields=["episode_id"],
-            required_artifacts=list(ENGINEERING_EXECUTION_REVIEWER_HANDOFF_ARTIFACTS),
+            required_artifacts=[
+                *ENGINEERING_EXECUTION_REVIEWER_HANDOFF_ARTIFACTS,
+                *_node_drafting_artifacts(AgentName.ENGINEER_EXECUTION_REVIEWER),
+            ],
             custom_check=ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.COTS_SEARCH: NodeEntryContract(
