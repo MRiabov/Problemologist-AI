@@ -5633,6 +5633,13 @@
             "type": "object",
             "title": "Render Blobs Base64"
           },
+          "object_store_keys": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Object Store Keys"
+          },
           "render_manifest_json": {
             "anyOf": [
               {

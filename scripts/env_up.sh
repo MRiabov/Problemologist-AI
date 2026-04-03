@@ -172,6 +172,10 @@ echo "Worker Light started (PID: $WORKER_LIGHT_PID)"
 # Start Worker Renderer in Docker (port 18003)
 export WORKER_RENDERER_LOG_DIR="$LOG_DIR"
 WORKER_RENDERER_COMPOSE_CMD=(docker compose -p "$COMPOSE_PROJECT_NAME" -f docker-compose.yml)
+if ! docker image inspect problemologist-ai-worker-renderer:latest >/dev/null 2>&1; then
+  echo "Building Worker Renderer image..."
+  docker build -f worker_renderer/Dockerfile -t problemologist-ai-worker-renderer:latest .
+fi
 echo "Starting Worker Renderer container..."
 "${WORKER_RENDERER_COMPOSE_CMD[@]}" up -d --no-deps worker-renderer > "$LOG_DIR/worker_renderer.log" 2>&1
 WORKER_RENDERER_CONTAINER_ID=$("${WORKER_RENDERER_COMPOSE_CMD[@]}" ps -q worker-renderer | tr -d '\r')

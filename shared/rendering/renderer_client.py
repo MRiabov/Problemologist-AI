@@ -5,13 +5,12 @@ import os
 import tempfile
 import time
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 import structlog
 
 from shared.models.simulation import StressFieldData
-from shared.observability.storage import S3Client, S3Config
 from shared.workers.bundling import bundle_directory_base64
 from shared.workers.schema import (
     BenchmarkToolRequest,
@@ -24,6 +23,9 @@ from shared.workers.schema import (
 )
 
 logger = structlog.get_logger(__name__)
+
+if TYPE_CHECKING:
+    from shared.observability.storage import S3Client
 
 
 def renderer_base_url() -> str:
@@ -52,6 +54,11 @@ def _write_text_atomic(path: Path, content: str) -> None:
 
 
 def _storage_client_from_env() -> S3Client | None:
+    try:
+        from shared.observability.storage import S3Client, S3Config
+    except ModuleNotFoundError:
+        return None
+
     access_key = os.getenv("S3_ACCESS_KEY", os.getenv("AWS_ACCESS_KEY_ID"))
     secret_key = os.getenv("S3_SECRET_KEY", os.getenv("AWS_SECRET_ACCESS_KEY"))
     if not access_key or not secret_key:
@@ -272,12 +279,37 @@ def materialize_preview_response(
     output_dir.mkdir(parents=True, exist_ok=True)
     workspace_root = output_dir.parent.parent
     first_materialized: Path | None = None
+    object_store_keys = response.object_store_keys or {}
+    storage_client = None
+
+    if object_store_keys:
+        storage_client = _storage_client_from_env()
 
     if response.render_blobs_base64:
         for rel_path, blob in response.render_blobs_base64.items():
             target = workspace_root / rel_path
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(base64.b64decode(blob))
+            if first_materialized is None and target.suffix.lower() in {
+                ".png",
+                ".jpg",
+                ".jpeg",
+            }:
+                first_materialized = target
+
+    if object_store_keys and storage_client is not None:
+        for rel_path, object_key in object_store_keys.items():
+            target = workspace_root / rel_path
+            if target.exists():
+                if first_materialized is None and target.suffix.lower() in {
+                    ".png",
+                    ".jpg",
+                    ".jpeg",
+                }:
+                    first_materialized = target
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            storage_client.download_file(object_key, target)
             if first_materialized is None and target.suffix.lower() in {
                 ".png",
                 ".jpg",

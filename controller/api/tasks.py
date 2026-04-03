@@ -256,22 +256,36 @@ async def _copy_approved_benchmark_bundle(
     destination_client: WorkerClient,
     review_manifest: ReviewManifest,
 ) -> None:
-    for path in _benchmark_artifact_paths(review_manifest):
-        if not await source_client.exists(path, bypass_agent_permissions=True):
+    artifact_paths = _benchmark_artifact_paths(review_manifest)
+    if artifact_paths:
+        artifact_blobs = await source_client.read_files_binary(
+            artifact_paths, bypass_agent_permissions=True
+        )
+        missing_paths = [path for path in artifact_paths if path not in artifact_blobs]
+        if missing_paths:
             raise RuntimeError(
-                f"benchmark artifact missing from source workspace: {path}"
+                "benchmark artifact missing from source workspace: "
+                + ", ".join(sorted(missing_paths))
             )
-        await _copy_approved_benchmark_artifact(
-            source_client=source_client,
-            destination_client=destination_client,
-            path=path,
-        )
-        logger.info(
-            "copied_approved_benchmark_artifact",
-            source_session_id=source_client.session_id,
-            destination_session_id=destination_client.session_id,
-            path=path,
-        )
+
+        batch_uploads = [
+            (path, artifact_blobs[path])
+            for path in artifact_paths
+            if path in artifact_blobs
+        ]
+        if not await destination_client.upload_files(
+            batch_uploads,
+            bypass_agent_permissions=True,
+        ):
+            raise RuntimeError("failed to upload approved benchmark bundle")
+
+        for path in artifact_paths:
+            logger.info(
+                "copied_approved_benchmark_artifact",
+                source_session_id=source_client.session_id,
+                destination_session_id=destination_client.session_id,
+                path=path,
+            )
 
     root_manifest_path = "renders/render_manifest.json"
     alias_paths = (
@@ -282,20 +296,19 @@ async def _copy_approved_benchmark_bundle(
         root_manifest = await source_client.read_file(
             root_manifest_path, bypass_agent_permissions=True
         )
+        if not await destination_client.upload_files(
+            [(alias_path, root_manifest.encode("utf-8")) for alias_path in alias_paths],
+            bypass_agent_permissions=True,
+        ):
+            raise RuntimeError("failed to copy approved benchmark render manifest")
         for alias_path in alias_paths:
-            if await destination_client.write_file(
-                alias_path,
-                root_manifest,
-                overwrite=True,
-                bypass_agent_permissions=True,
-            ):
-                logger.info(
-                    "copied_approved_benchmark_artifact",
-                    source_session_id=source_client.session_id,
-                    destination_session_id=destination_client.session_id,
-                    path=alias_path,
-                    copied_from=root_manifest_path,
-                )
+            logger.info(
+                "copied_approved_benchmark_artifact",
+                source_session_id=source_client.session_id,
+                destination_session_id=destination_client.session_id,
+                path=alias_path,
+                copied_from=root_manifest_path,
+            )
 
 
 async def _fail_episode_before_graph_start(

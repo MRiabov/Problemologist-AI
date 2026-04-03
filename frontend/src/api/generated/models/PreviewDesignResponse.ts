@@ -28,6 +28,7 @@ export type PreviewDesignResponse = {
      */
     image_bytes_base64?: (string | null);
     render_blobs_base64?: Record<string, string>;
+    object_store_keys?: Record<string, string>;
     render_manifest_json?: (string | null);
     events?: Array<BaseEvent>;
 };

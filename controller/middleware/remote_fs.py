@@ -1058,20 +1058,25 @@ class RemoteFilesystemMiddleware:
 
         bundle = await self.client.bundle_session()
         workflow_id = _bundle_workflow_id("ver", self.client.session_id, bundle)
+        params: dict[str, Any] = {
+            "bundle_base64": base64.b64encode(bundle).decode("utf-8"),
+            "script_path": str(script_path),
+            "backend": backend or get_default_simulator_backend(),
+            "smoke_test_mode": smoke_test_mode,
+            "session_id": self.client.session_id,
+        }
+        if jitter_range is not None:
+            params["jitter_range"] = jitter_range
+        if num_scenes is not None:
+            params["num_scenes"] = num_scenes
+        if duration is not None:
+            params["duration"] = duration
+        if seed is not None:
+            params["seed"] = seed
         return await self._execute_or_use_existing_workflow(
             HeavyVerifyWorkflow.run,
             workflow_id,
-            HeavyVerifyParams(
-                bundle_base64=base64.b64encode(bundle).decode("utf-8"),
-                script_path=str(script_path),
-                backend=backend or get_default_simulator_backend(),
-                smoke_test_mode=smoke_test_mode,
-                jitter_range=jitter_range or (0.002, 0.002, 0.001),
-                num_scenes=num_scenes or 5,
-                duration=duration or 10.0,
-                seed=seed if seed is not None else 42,
-                session_id=self.client.session_id,
-            ),
+            HeavyVerifyParams(**params),
             result_type=BenchmarkToolResponse,
         )
 

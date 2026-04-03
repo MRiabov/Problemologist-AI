@@ -69,10 +69,6 @@ def preview(
     if not response.success:
         raise RuntimeError(response.message or "build123d preview render failed")
 
-    image_bytes_base64 = response.image_bytes_base64
-    if not image_bytes_base64:
-        raise RuntimeError("renderer returned no preview image bytes")
-
     if output_dir is None:
         output_dir = (
             workspace_root
@@ -84,6 +80,9 @@ def preview(
     output_dir.mkdir(parents=True, exist_ok=True)
     materialized_path = materialize_preview_response(response, output_dir)
     if materialized_path is None:
+        image_bytes_base64 = response.image_bytes_base64
+        if not image_bytes_base64:
+            raise RuntimeError("renderer returned no preview image bytes")
         pitch_value = orbit_pitch[0] if isinstance(orbit_pitch, list) else orbit_pitch
         yaw_value = orbit_yaw[0] if isinstance(orbit_yaw, list) else orbit_yaw
         component_label = normalize_preview_label(getattr(component, "label", None))
@@ -97,7 +96,6 @@ def preview(
         ).name
         materialized_path = output_dir / image_name
         materialized_path.write_bytes(base64.b64decode(image_bytes_base64))
-
     try:
         response.image_path = str(materialized_path.relative_to(workspace_root))
     except ValueError:

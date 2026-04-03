@@ -34,6 +34,7 @@ from shared.workers.schema import (
     PreviewRenderingType,
     ReadFilesResponse,
     ReviewerStage,
+    UploadFilesFromObjectStoreRequest,
     WorkerLightRpcAction,
     WorkerLightRpcRequest,
 )
@@ -515,10 +516,6 @@ class WorkerClient:
 
     async def bundle_session(self) -> bytes:
         """Bundle the session workspace into a gzipped tarball from the light worker."""
-        if self._should_use_light_websocket():
-            result = await self._light_ws_request("fs_bundle", {})
-            encoded = str((result or {}).get("content_b64", ""))
-            return base64.b64decode(encoded)
         client = await self._get_client()
         try:
             response = await client.post(
@@ -540,6 +537,59 @@ class WorkerClient:
         elif self.light_url != self.heavy_url:
             bundle = await self.bundle_session()
             payload["bundle_base64"] = base64.b64encode(bundle).decode("utf-8")
+
+    @staticmethod
+    def _multipart_escape(value: str) -> str:
+        return value.replace("\\", "\\\\").replace('"', '\\"')
+
+    @classmethod
+    def _build_multipart_request(
+        cls,
+        *,
+        fields: list[tuple[str, str]] | None = None,
+        file_fields: list[tuple[str, str, bytes]] | None = None,
+    ) -> tuple[bytes, str]:
+        boundary = f"----problemologist-{uuid.uuid4().hex}"
+        body = bytearray()
+        fields = fields or []
+        file_fields = file_fields or []
+
+        for name, value in fields:
+            body.extend(f"--{boundary}\r\n".encode("ascii"))
+            body.extend(
+                (
+                    f'Content-Disposition: form-data; name="{cls._multipart_escape(name)}"'
+                    "\r\n\r\n"
+                ).encode("utf-8")
+            )
+            body.extend(value.encode("utf-8"))
+            body.extend(b"\r\n")
+
+        for name, filename, content in file_fields:
+            body.extend(f"--{boundary}\r\n".encode("ascii"))
+            body.extend(
+                (
+                    f'Content-Disposition: form-data; name="{cls._multipart_escape(name)}"; '
+                    f'filename="{cls._multipart_escape(filename)}"\r\n'
+                    "Content-Type: application/octet-stream\r\n\r\n"
+                ).encode("utf-8")
+            )
+            body.extend(content)
+            body.extend(b"\r\n")
+
+        body.extend(f"--{boundary}--\r\n".encode("ascii"))
+        return bytes(body), f"multipart/form-data; boundary={boundary}"
+
+    class _AsyncBytesStream(httpx.AsyncByteStream):
+        def __init__(self, data: bytes):
+            self._data = data
+            self._closed = False
+
+        async def __aiter__(self):
+            yield self._data
+
+        async def aclose(self) -> None:
+            self._closed = True
 
     async def _sync_handover_artifacts_to_light(
         self,
@@ -580,24 +630,47 @@ class WorkerClient:
             (path, content.encode("utf-8")) for path, content in writes
         ]
 
-        for path, encoded in artifacts.render_blobs_base64.items():
-            batch_uploads.append((path, base64.b64decode(encoded)))
-
         object_store_keys = getattr(artifacts, "object_store_keys", None) or {}
-        if object_store_keys:
-            storage_client = _storage_client_from_env()
-            if storage_client is None:
+        object_store_uploads = [
+            (path, object_key)
+            for path, object_key in object_store_keys.items()
+            if path not in artifacts.render_blobs_base64
+        ]
+
+        if object_store_uploads:
+            try:
+                if not await self.upload_files_from_object_store(
+                    object_store_uploads,
+                    bypass_agent_permissions=True,
+                ):
+                    logger.warning(
+                        "handover_object_store_batch_upload_failed",
+                        paths=[path for path, _ in object_store_uploads],
+                    )
+            except Exception as exc:
                 logger.warning(
-                    "handover_render_sync_object_store_unavailable",
-                    paths=sorted(object_store_keys),
+                    "handover_object_store_batch_upload_error",
+                    error=str(exc),
+                    paths=[path for path, _ in object_store_uploads],
                 )
-            else:
-                for path, object_key in object_store_keys.items():
-                    if path in artifacts.render_blobs_base64:
-                        continue
-                    with tempfile.NamedTemporaryFile(suffix=Path(path).suffix) as tmp:
-                        storage_client.download_file(object_key, tmp.name)
-                        batch_uploads.append((path, Path(tmp.name).read_bytes()))
+                storage_client = _storage_client_from_env()
+                if storage_client is None:
+                    logger.warning(
+                        "handover_render_sync_object_store_unavailable",
+                        paths=sorted(object_store_keys),
+                    )
+                else:
+                    for path, object_key in object_store_uploads:
+                        with tempfile.NamedTemporaryFile(
+                            suffix=Path(path).suffix
+                        ) as tmp:
+                            storage_client.download_file(object_key, tmp.name)
+                            batch_uploads.append((path, Path(tmp.name).read_bytes()))
+
+        for path, encoded in artifacts.render_blobs_base64.items():
+            if path in object_store_keys:
+                continue
+            batch_uploads.append((path, base64.b64decode(encoded)))
 
         if batch_uploads:
             if not await self.upload_files(
@@ -612,6 +685,42 @@ class WorkerClient:
                 for path, _ in batch_uploads:
                     logger.info("handover_artifact_synced", path=path)
 
+    async def upload_files_from_object_store(
+        self,
+        files: list[tuple[str, str]],
+        *,
+        bypass_agent_permissions: bool = False,
+    ) -> bool:
+        """Stage multiple files by letting the worker-light service pull from S3."""
+        payload = UploadFilesFromObjectStoreRequest(
+            files=[
+                {"path": path, "object_store_key": object_key}
+                for path, object_key in files
+            ],
+            bypass_agent_permissions=bypass_agent_permissions,
+        ).model_dump(mode="json")
+
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request(
+                "fs_upload_files_object_store", payload
+            )
+            return bool((result or {}).get("status") == ResponseStatus.SUCCESS)
+
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.base_url}/fs/upload_files_object_store",
+                json=payload,
+                headers=self._request_headers(
+                    bypass_agent_permissions=bypass_agent_permissions
+                ),
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            return response.json()["status"] == ResponseStatus.SUCCESS
+        finally:
+            await self._close_client(client)
+
     async def upload_file(
         self,
         path: str,
@@ -620,31 +729,25 @@ class WorkerClient:
         bypass_agent_permissions: bool = False,
     ) -> bool:
         """Upload a file with binary content."""
-        if self._should_use_light_websocket():
-            result = await self._light_ws_request(
-                "fs_upload_file",
-                {
-                    "path": path,
-                    "content_b64": base64.b64encode(content).decode("ascii"),
-                    "bypass_agent_permissions": bypass_agent_permissions,
-                },
-            )
-            return bool((result or {}).get("status") == ResponseStatus.SUCCESS)
         client = await self._get_client()
         try:
-            # Prepare multipart form data
-            files = {"file": ("blob", content)}
-            data = {
-                "path": path,
-                "bypass_agent_permissions": str(bypass_agent_permissions).lower(),
-            }
+            body, content_type = self._build_multipart_request(
+                fields=[
+                    ("path", path),
+                    ("bypass_agent_permissions", str(bypass_agent_permissions).lower()),
+                ],
+                file_fields=[
+                    ("file", Path(path).name or "blob", content),
+                ],
+            )
+            headers = self._request_headers(
+                bypass_agent_permissions=bypass_agent_permissions
+            )
+            headers["Content-Type"] = content_type
             response = await client.post(
                 f"{self.base_url}/fs/upload_file",
-                data=data,
-                files=files,
-                headers=self._request_headers(
-                    bypass_agent_permissions=bypass_agent_permissions
-                ),
+                content=self._AsyncBytesStream(body),
+                headers=headers,
                 timeout=30.0,
             )
             response.raise_for_status()
@@ -659,38 +762,29 @@ class WorkerClient:
         bypass_agent_permissions: bool = False,
     ) -> bool:
         """Upload multiple files in one request."""
-        if self._should_use_light_websocket():
-            result = await self._light_ws_request(
-                "fs_upload_files",
-                {
-                    "files": [
-                        {
-                            "path": path,
-                            "content_b64": base64.b64encode(content).decode("ascii"),
-                        }
-                        for path, content in files
-                    ],
-                    "bypass_agent_permissions": bypass_agent_permissions,
-                },
-            )
-            return bool((result or {}).get("status") == ResponseStatus.SUCCESS)
         client = await self._get_client()
         try:
+            body, content_type = self._build_multipart_request(
+                fields=[
+                    *[("paths", path) for path, _content in files],
+                    (
+                        "bypass_agent_permissions",
+                        str(bypass_agent_permissions).lower(),
+                    ),
+                ],
+                file_fields=[
+                    ("files", Path(path).name or "blob", content)
+                    for path, content in files
+                ],
+            )
+            headers = self._request_headers(
+                bypass_agent_permissions=bypass_agent_permissions
+            )
+            headers["Content-Type"] = content_type
             response = await client.post(
-                f"{self.base_url}/fs/upload_files",
-                json={
-                    "files": [
-                        {
-                            "path": path,
-                            "content_b64": base64.b64encode(content).decode("ascii"),
-                        }
-                        for path, content in files
-                    ],
-                    "bypass_agent_permissions": bypass_agent_permissions,
-                },
-                headers=self._request_headers(
-                    bypass_agent_permissions=bypass_agent_permissions
-                ),
+                f"{self.base_url}/fs/upload_files_binary",
+                content=self._AsyncBytesStream(body),
+                headers=headers,
                 timeout=60.0,
             )
             response.raise_for_status()
@@ -702,16 +796,6 @@ class WorkerClient:
         self, path: str, *, bypass_agent_permissions: bool = False
     ) -> bytes:
         """Read file contents as binary."""
-        if self._should_use_light_websocket():
-            result = await self._light_ws_request(
-                "fs_read_blob",
-                {
-                    "path": path,
-                    "bypass_agent_permissions": bypass_agent_permissions,
-                },
-            )
-            encoded = str((result or {}).get("content_b64", ""))
-            return base64.b64decode(encoded)
         client = await self._get_client()
         try:
             response = await client.post(
@@ -745,24 +829,20 @@ class WorkerClient:
             "paths": normalized_paths,
             "bypass_agent_permissions": bypass_agent_permissions,
         }
-        if self._should_use_light_websocket():
-            result = await self._light_ws_request("fs_read_files", payload)
-            response = ReadFilesResponse.model_validate(result)
-        else:
-            client = await self._get_client()
-            try:
-                http_response = await client.post(
-                    f"{self.base_url}/fs/read_files",
-                    json=payload,
-                    headers=self._request_headers(
-                        bypass_agent_permissions=bypass_agent_permissions
-                    ),
-                    timeout=60.0,
-                )
-                http_response.raise_for_status()
-                response = ReadFilesResponse.model_validate(http_response.json())
-            finally:
-                await self._close_client(client)
+        client = await self._get_client()
+        try:
+            http_response = await client.post(
+                f"{self.base_url}/fs/read_files",
+                json=payload,
+                headers=self._request_headers(
+                    bypass_agent_permissions=bypass_agent_permissions
+                ),
+                timeout=60.0,
+            )
+            http_response.raise_for_status()
+            response = ReadFilesResponse.model_validate(http_response.json())
+        finally:
+            await self._close_client(client)
 
         return {
             entry.path: base64.b64decode(entry.content_b64) for entry in response.files

@@ -228,6 +228,20 @@ class UploadFilesRequest(BaseModel):
     bypass_agent_permissions: bool = False
 
 
+class ObjectStoreUploadFilePayload(BaseModel):
+    """One file staged by object-store key for a direct worker-side pull."""
+
+    path: StrictStr = Field(..., min_length=1)
+    object_store_key: StrictStr = Field(..., min_length=1)
+
+
+class UploadFilesFromObjectStoreRequest(BaseModel):
+    """Request to stage multiple files from object-store keys."""
+
+    files: list[ObjectStoreUploadFilePayload] = Field(..., min_length=1)
+    bypass_agent_permissions: bool = False
+
+
 class EditOp(BaseModel):
     """A single edit operation (find and replace)."""
 
@@ -562,6 +576,7 @@ WorkerLightRpcAction: TypeAlias = Literal[
     "fs_read_files",
     "fs_write",
     "fs_upload_files",
+    "fs_upload_files_object_store",
     "fs_edit",
     "fs_upload_file",
     "fs_delete",
@@ -729,6 +744,7 @@ class PreviewDesignResponse(BaseModel):
         ),
     )
     render_blobs_base64: dict[StrictStr, StrictStr] = Field(default_factory=dict)
+    object_store_keys: dict[StrictStr, StrictStr] = Field(default_factory=dict)
     render_manifest_json: StrictStr | None = None
     events: list[BaseEvent] = Field(default_factory=list)
 

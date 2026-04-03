@@ -69,7 +69,6 @@ from worker_heavy.simulation.factory import (
     get_simulation_builder,
 )
 from worker_heavy.simulation.naming import MOVED_OBJECT_SCENE_PREFIX
-from worker_heavy.utils import renderer_client
 from worker_heavy.utils.rendering import prerender_24_views
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
@@ -2099,7 +2098,6 @@ def validate(
     if label_contract_error:
         return False, label_contract_error
 
-    objectives_model: BenchmarkDefinition | None = None
     solids = component.solids()
     if len(solids) > 1:
         for i in range(len(solids)):
@@ -2150,7 +2148,6 @@ def validate(
                     )
                     if location_contract_error:
                         return (False, location_contract_error)
-                    objectives_model = obj_model
                     effective_build_zone = obj_model.objectives.build_zone.model_dump()
             except Exception:
                 pass
@@ -2272,112 +2269,8 @@ def validate(
     if drafting_gate_error:
         return False, drafting_gate_error
 
-    try:
-        renders_dir = (
-            working_root
-            / "renders"
-            / select_static_preview_render_subdir(
-                working_root, agent_role=_preview_agent_role()
-            )
-        )
-        renders_dir.mkdir(parents=True, exist_ok=True)
-
-        from shared.rendering import export_preview_scene_bundle
-        from worker_renderer.utils.build123d_rendering import PREVIEW_BACKEND_NAME
-
-        emit_event(
-            {
-                "event_type": "render_request_benchmark",
-                "num_views": 24,
-                "backend": PREVIEW_BACKEND_NAME,
-                "requested_physics_backend": SimulatorBackendType.MUJOCO.value,
-                "purpose": "validation_static_preview",
-            }
-        )
-
-        response = renderer_client.render_static_preview(
-            bundle_base64=export_preview_scene_bundle(
-                component,
-                objectives=objectives_model,
-                workspace_root=working_root,
-                smoke_test_mode=bool(smoke_test_mode),
-            ),
-            script_path="preview_scene.json",
-            session_id=session_id or "renderer",
-            agent_role=_preview_agent_role(),
-            smoke_test_mode=smoke_test_mode,
-            particle_budget=particle_budget,
-        )
-        if not response.success:
-            raise RuntimeError(response.message)
-        if response.artifacts is None:
-            raise RuntimeError("renderer returned no artifacts")
-        render_paths = renderer_client.materialize_render_artifacts(
-            response.artifacts, working_root
-        )
-        if render_paths:
-            logger.info(
-                "validation_renderer_materialized",
-                session_id=session_id,
-                render_paths=render_paths,
-            )
-        runtime_revision = (
-            os.environ.get("REPO_REVISION")
-            or repo_revision(Path.cwd())
-            or repo_revision(Path(__file__).resolve().parents[2])
-        )
-
-        if render_paths:
-            bundle_path = str(Path(render_paths[0]).parent).replace("\\", "/")
-            manifest_path = working_root / bundle_path / "render_manifest.json"
-            existing_manifest = None
-            if manifest_path.exists():
-                with contextlib.suppress(Exception):
-                    existing_manifest = RenderManifest.model_validate_json(
-                        manifest_path.read_text(encoding="utf-8")
-                    )
-
-            manifest = normalize_render_manifest(
-                render_paths=render_paths,
-                workspace_root=working_root,
-                existing_manifest=existing_manifest,
-                episode_id=session_id,
-                worker_session_id=session_id,
-                revision=runtime_revision,
-                environment_version=None,
-                bundle_path=bundle_path,
-            )
-            manifest_path.write_text(
-                manifest.model_dump_json(indent=2),
-                encoding="utf-8",
-            )
-            compat_manifest_path = working_root / "renders" / "render_manifest.json"
-            if compat_manifest_path != manifest_path:
-                compat_manifest_path.write_text(
-                    manifest.model_dump_json(indent=2),
-                    encoding="utf-8",
-                )
-            from worker_renderer.utils.rendering import (
-                append_render_bundle_index,
-                build_render_bundle_index_entry,
-            )
-
-            append_render_bundle_index(
-                working_root,
-                build_render_bundle_index_entry(
-                    manifest,
-                    manifest_path=str(manifest_path.relative_to(working_root)).replace(
-                        "\\", "/"
-                    ),
-                    primary_media_paths=list(render_paths),
-                ),
-            )
-    except Exception as e:
-        logger.warning(
-            "validate_render_capture_failed", error=str(e), session_id=session_id
-        )
-        return False, f"Validation preview render failed: {e}"
-
+    # Validation is intentionally geometry-only. Preview evidence belongs to the
+    # explicit preview path, not the default validate() contract.
     return True, None
 
 

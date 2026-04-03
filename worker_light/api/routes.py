@@ -25,6 +25,7 @@ from fastapi.encoders import jsonable_encoder
 
 from shared.enums import FailureReason, ResponseStatus
 from shared.models.simulation import SimulationFailure
+from shared.observability.storage import S3Client, S3Config
 from shared.rendering import (
     materialize_preview_response,
     render_preview,
@@ -72,6 +73,7 @@ from shared.workers.schema import (
     RenderBundleQueryResult,
     SimulationArtifacts,
     StatusResponse,
+    UploadFilesFromObjectStoreRequest,
     UploadFilesRequest,
     WorkerLightRpcError,
     WorkerLightRpcRequest,
@@ -362,6 +364,7 @@ async def api_preview(
             image_path=artifact_path,
             image_bytes_base64=response.image_bytes_base64,
             render_blobs_base64=response.render_blobs_base64,
+            object_store_keys=response.object_store_keys,
             render_manifest_json=response.render_manifest_json,
             events=events,
         )
@@ -451,6 +454,69 @@ def _bundle_session_bytes(fs_router) -> bytes:
                 tar.add(path, arcname=str(rel_p))
 
     return buf.getvalue()
+
+
+def _storage_client_from_env() -> S3Client | None:
+    access_key = os.getenv("S3_ACCESS_KEY", os.getenv("AWS_ACCESS_KEY_ID"))
+    secret_key = os.getenv("S3_SECRET_KEY", os.getenv("AWS_SECRET_ACCESS_KEY"))
+    if not access_key or not secret_key:
+        return None
+
+    return S3Client(
+        S3Config(
+            endpoint_url=os.getenv("S3_ENDPOINT"),
+            access_key_id=access_key,
+            secret_access_key=secret_key,
+            bucket_name=os.getenv("ASSET_S3_BUCKET", "problemologist"),
+            region_name=os.getenv("AWS_REGION", "us-east-1"),
+        )
+    )
+
+
+def _upload_workspace_files(
+    fs_router,
+    files: list[tuple[str, bytes]],
+    *,
+    bypass_agent_permissions: bool,
+):
+    """Write a batch of workspace files through the owning backend."""
+    if bypass_agent_permissions:
+        return fs_router.local_backend.upload_files(files)
+    return fs_router.upload_files(files)
+
+
+def _raise_first_upload_error(responses) -> None:
+    first_error = next(
+        (response.error for response in responses if response.error), None
+    )
+    if first_error is not None:
+        raise HTTPException(status_code=403, detail=first_error)
+
+
+def _download_object_store_files(
+    fs_router,
+    files: list[tuple[str, str]],
+    *,
+    bypass_agent_permissions: bool,
+):
+    storage_client = _storage_client_from_env()
+    if storage_client is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Object-store upload requested but S3 credentials are unavailable",
+        )
+
+    staged_files: list[tuple[str, bytes]] = []
+    for path, object_key in files:
+        with tempfile.NamedTemporaryFile(suffix=Path(path).suffix) as tmp:
+            storage_client.download_file(object_key, tmp.name)
+            staged_files.append((path, Path(tmp.name).read_bytes()))
+
+    return _upload_workspace_files(
+        fs_router,
+        staged_files,
+        bypass_agent_permissions=bypass_agent_permissions,
+    )
 
 
 async def _handle_light_rpc_action(
@@ -562,15 +628,12 @@ async def _handle_light_rpc_action(
 
     if action == "fs_upload_file":
         content = base64.b64decode(payload["content_b64"])
-        if payload.get("bypass_agent_permissions", False):
-            responses = fs_router.local_backend.upload_files(
-                [(payload["path"], content)]
-            )
-        else:
-            responses = fs_router.upload_files([(payload["path"], content)])
-
-        if responses and responses[0].error:
-            raise HTTPException(status_code=403, detail=responses[0].error)
+        responses = _upload_workspace_files(
+            fs_router,
+            [(payload["path"], content)],
+            bypass_agent_permissions=payload.get("bypass_agent_permissions", False),
+        )
+        _raise_first_upload_error(responses)
         return {"status": ResponseStatus.SUCCESS}
 
     if action == "fs_upload_files":
@@ -578,16 +641,22 @@ async def _handle_light_rpc_action(
         files = [
             (entry.path, base64.b64decode(entry.content_b64)) for entry in request.files
         ]
-        if request.bypass_agent_permissions:
-            responses = fs_router.local_backend.upload_files(files)
-        else:
-            responses = fs_router.upload_files(files)
-
-        first_error = next(
-            (response.error for response in responses if response.error), None
+        responses = _upload_workspace_files(
+            fs_router,
+            files,
+            bypass_agent_permissions=request.bypass_agent_permissions,
         )
-        if first_error is not None:
-            raise HTTPException(status_code=403, detail=first_error)
+        _raise_first_upload_error(responses)
+        return {"status": ResponseStatus.SUCCESS}
+
+    if action == "fs_upload_files_object_store":
+        request = UploadFilesFromObjectStoreRequest.model_validate(payload)
+        responses = _download_object_store_files(
+            fs_router,
+            [(entry.path, entry.object_store_key) for entry in request.files],
+            bypass_agent_permissions=request.bypass_agent_permissions,
+        )
+        _raise_first_upload_error(responses)
         return {"status": ResponseStatus.SUCCESS}
 
     if action == "fs_delete":
@@ -990,19 +1059,56 @@ async def upload_file(
     """Upload a file with binary content."""
     try:
         content = await file.read()
-        if _bypass_enabled(bypass_agent_permissions, x_system_fs_bypass):
-            responses = fs_router.local_backend.upload_files([(path, content)])
-        else:
-            responses = fs_router.upload_files([(path, content)])
-
-        if responses and responses[0].error:
-            raise HTTPException(status_code=403, detail=responses[0].error)
+        responses = _upload_workspace_files(
+            fs_router,
+            [(path, content)],
+            bypass_agent_permissions=_bypass_enabled(
+                bypass_agent_permissions, x_system_fs_bypass
+            ),
+        )
+        _raise_first_upload_error(responses)
 
         return StatusResponse(status=ResponseStatus.SUCCESS)
     except HTTPException:
         raise
     except Exception as e:
         logger.warning("api_upload_file_failed", path=path, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@light_router.post("/fs/upload_files_binary", response_model=StatusResponse)
+async def upload_files_binary(
+    paths: list[str] = Form(...),
+    files: list[UploadFile] = File(...),
+    bypass_agent_permissions: bool = Form(False),
+    fs_router=Depends(get_router),
+    x_system_fs_bypass: str | None = Header(default=None, alias="X-System-FS-Bypass"),
+):
+    """Upload multiple files in one multipart request."""
+    try:
+        if len(paths) != len(files):
+            raise HTTPException(
+                status_code=400,
+                detail="paths and files must contain the same number of entries",
+            )
+
+        payload_files: list[tuple[str, bytes]] = []
+        for path, upload in zip(paths, files):
+            payload_files.append((path, await upload.read()))
+
+        responses = _upload_workspace_files(
+            fs_router,
+            payload_files,
+            bypass_agent_permissions=_bypass_enabled(
+                bypass_agent_permissions, x_system_fs_bypass
+            ),
+        )
+        _raise_first_upload_error(responses)
+        return StatusResponse(status=ResponseStatus.SUCCESS)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning("api_upload_files_binary_failed", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1017,22 +1123,44 @@ async def upload_files(
         files = [
             (entry.path, base64.b64decode(entry.content_b64)) for entry in request.files
         ]
-        if _bypass_enabled(request.bypass_agent_permissions, x_system_fs_bypass):
-            responses = fs_router.local_backend.upload_files(files)
-        else:
-            responses = fs_router.upload_files(files)
-
-        first_error = next(
-            (response.error for response in responses if response.error), None
+        responses = _upload_workspace_files(
+            fs_router,
+            files,
+            bypass_agent_permissions=_bypass_enabled(
+                request.bypass_agent_permissions, x_system_fs_bypass
+            ),
         )
-        if first_error is not None:
-            raise HTTPException(status_code=403, detail=first_error)
+        _raise_first_upload_error(responses)
 
         return StatusResponse(status=ResponseStatus.SUCCESS)
     except HTTPException:
         raise
     except Exception as e:
         logger.warning("api_upload_files_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@light_router.post("/fs/upload_files_object_store", response_model=StatusResponse)
+async def upload_files_object_store(
+    request: UploadFilesFromObjectStoreRequest,
+    fs_router=Depends(get_router),
+    x_system_fs_bypass: str | None = Header(default=None, alias="X-System-FS-Bypass"),
+):
+    """Stage multiple workspace files from object-store keys in one request."""
+    try:
+        responses = _download_object_store_files(
+            fs_router,
+            [(entry.path, entry.object_store_key) for entry in request.files],
+            bypass_agent_permissions=_bypass_enabled(
+                request.bypass_agent_permissions, x_system_fs_bypass
+            ),
+        )
+        _raise_first_upload_error(responses)
+        return StatusResponse(status=ResponseStatus.SUCCESS)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning("api_upload_files_object_store_failed", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 

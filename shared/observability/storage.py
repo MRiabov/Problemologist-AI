@@ -5,7 +5,6 @@ from pathlib import Path
 
 import boto3
 import structlog
-from botocore.exceptions import ClientError
 from pydantic import BaseModel, Field, StrictInt, StrictStr
 
 from shared.type_checking import type_check
@@ -69,7 +68,7 @@ class S3Client:
                 content_type=content_type,
             )
             return object_key
-        except ClientError as e:
+        except Exception as e:
             logger.error(
                 "upload_failed",
                 bucket=self.bucket,
@@ -92,7 +91,7 @@ class S3Client:
             logger.info(
                 "file_downloaded", bucket=self.bucket, key=object_key, path=local_path
             )
-        except ClientError as e:
+        except Exception as e:
             logger.error(
                 "download_failed",
                 bucket=self.bucket,
@@ -124,7 +123,7 @@ class S3Client:
                             )
                         )
             return files
-        except ClientError as e:
+        except Exception as e:
             logger.error(
                 "list_files_failed",
                 bucket=self.bucket,
@@ -144,7 +143,7 @@ class S3Client:
             )
             logger.debug("presigned_url_generated", bucket=self.bucket, key=object_key)
             return url
-        except ClientError as e:
+        except Exception as e:
             logger.error(
                 "presigned_url_failed",
                 bucket=self.bucket,

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 import structlog
@@ -25,6 +27,9 @@ from shared.workers.schema import (
 from worker_renderer.utils.scene_builder import normalize_preview_label
 
 logger = structlog.get_logger(__name__)
+
+if TYPE_CHECKING:
+    from shared.observability.storage import S3Client
 
 
 _VIEW_CAMERA_MAP: dict[
@@ -104,6 +109,27 @@ def _script_source_sha256(
     if script_content is not None:
         return hashlib.sha256(script_content.encode("utf-8")).hexdigest()
     return hashlib.sha256(script_path.read_bytes()).hexdigest()
+
+
+def _preview_storage_client() -> S3Client | None:
+    try:
+        from shared.observability.storage import S3Client, S3Config
+    except ModuleNotFoundError:
+        return None
+
+    access_key = os.getenv("S3_ACCESS_KEY", os.getenv("AWS_ACCESS_KEY_ID"))
+    secret_key = os.getenv("S3_SECRET_KEY", os.getenv("AWS_SECRET_ACCESS_KEY"))
+    if not access_key or not secret_key:
+        return None
+
+    config = S3Config(
+        endpoint_url=os.getenv("S3_ENDPOINT"),
+        access_key_id=access_key,
+        secret_access_key=secret_key,
+        bucket_name=os.getenv("ASSET_S3_BUCKET", "problemologist"),
+        region_name=os.getenv("AWS_REGION", "us-east-1"),
+    )
+    return S3Client(config)
 
 
 def _project_edges(
@@ -260,7 +286,10 @@ def render_technical_drawing_preview(
     png_paths: list[str] = []
     view_specs: list[PreviewViewSpec] = []
     render_blobs_base64: dict[str, str] = {}
+    object_store_keys: dict[str, str] = {}
+    png_upload_jobs: list[tuple[str, Path]] = []
     first_image_path: Path | None = None
+    preview_client = _preview_storage_client()
 
     for index, view in enumerate(drafting.views):
         visible_edges, hidden_edges, view_spec = _project_edges(
@@ -300,9 +329,7 @@ def render_technical_drawing_preview(
             view_index=index,
             siblings=RenderSiblingPaths(rgb=png_rel, svg=svg_rel, dxf=dxf_rel),
         )
-        render_blobs_base64[png_rel] = base64.b64encode(png_path.read_bytes()).decode(
-            "ascii"
-        )
+        png_upload_jobs.append((png_rel, png_path))
         render_blobs_base64[svg_rel] = base64.b64encode(svg_path.read_bytes()).decode(
             "ascii"
         )
@@ -314,6 +341,35 @@ def render_technical_drawing_preview(
 
     if first_image_path is None:
         raise ValueError("drafting preview produced no output")
+
+    if preview_client is not None and png_upload_jobs:
+        with ThreadPoolExecutor(max_workers=min(8, len(png_upload_jobs))) as executor:
+            futures = {
+                executor.submit(preview_client.upload_file, png_path, png_rel): (
+                    png_rel,
+                    png_path,
+                )
+                for png_rel, png_path in png_upload_jobs
+            }
+            for future in as_completed(futures):
+                png_rel, png_path = futures[future]
+                try:
+                    object_store_keys[png_rel] = future.result()
+                except Exception:
+                    logger.warning(
+                        "technical_drawing_preview_object_store_upload_failed",
+                        session_id=session_id,
+                        agent_role=agent_role,
+                        image_path=str(png_path),
+                    )
+                    render_blobs_base64[png_rel] = base64.b64encode(
+                        png_path.read_bytes()
+                    ).decode("ascii")
+    else:
+        for png_rel, png_path in png_upload_jobs:
+            render_blobs_base64[png_rel] = base64.b64encode(
+                png_path.read_bytes()
+            ).decode("ascii")
 
     manifest = build_render_manifest(
         artifacts,
@@ -345,10 +401,13 @@ def render_technical_drawing_preview(
         pitch=None,
         yaw=None,
         image_path=str(first_image_path.relative_to(root)),
-        image_bytes_base64=base64.b64encode(first_image_path.read_bytes()).decode(
-            "ascii"
+        image_bytes_base64=(
+            None
+            if object_store_keys
+            else base64.b64encode(first_image_path.read_bytes()).decode("ascii")
         ),
         render_blobs_base64=render_blobs_base64,
+        object_store_keys=object_store_keys,
         render_manifest_json=manifest.model_dump_json(indent=2),
         events=[],
     )

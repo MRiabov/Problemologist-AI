@@ -641,6 +641,7 @@ async def api_preview(
                     pitch=request.orbit_pitch,
                     yaw=request.orbit_yaw,
                     image_bytes_base64=response.image_bytes_base64,
+                    object_store_keys=response.object_store_keys,
                     render_manifest_json=response.render_manifest_json,
                     events=response.events,
                 )

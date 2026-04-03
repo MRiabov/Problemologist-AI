@@ -9,6 +9,7 @@ import shutil
 import tempfile
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
@@ -144,28 +145,38 @@ def _renderer_storage_client():
         return None
 
     try:
-        from shared.observability.storage import S3Client, S3Config
+        from shared.observability.storage import (
+            S3Client,
+            S3Config,
+        )
     except ModuleNotFoundError:
         return None
 
-    return S3Client(
-        S3Config(
-            endpoint_url=os.getenv("S3_ENDPOINT"),
-            access_key_id=access_key,
-            secret_access_key=secret_key,
-            bucket_name=os.getenv("ASSET_S3_BUCKET", "problemologist"),
-            region_name=os.getenv("AWS_REGION", "us-east-1"),
-        )
+    config = S3Config(
+        endpoint_url=os.getenv("S3_ENDPOINT"),
+        access_key_id=access_key,
+        secret_access_key=secret_key,
+        bucket_name=os.getenv("ASSET_S3_BUCKET", "problemologist"),
+        region_name=os.getenv("AWS_REGION", "us-east-1"),
     )
+    return S3Client(config)
 
 
 def _maybe_store_large_render_artifact(
-    render_path: Path, *, rel_path: str, session_id: str | None = None
+    render_path: Path,
+    *,
+    rel_path: str,
+    session_id: str | None = None,
+    allow_image_upload: bool = False,
+    client: Any | None = None,
 ) -> str | None:
-    if render_path.suffix.lower() != ".mp4":
+    suffix = render_path.suffix.lower()
+    if suffix != ".mp4" and not (
+        allow_image_upload and suffix in {".png", ".jpg", ".jpeg"}
+    ):
         return None
 
-    client = _renderer_storage_client()
+    client = client or _renderer_storage_client()
     if client is None:
         logger.info(
             "renderer_object_store_skipped",
@@ -298,11 +309,17 @@ def _bundle_sidecar_blobs(bundle_root: Path, *, workspace_root: Path) -> dict[st
 
 
 def _collect_render_artifacts(
-    root: Path, render_paths: list[str], *, session_id: str | None = None
+    root: Path,
+    render_paths: list[str],
+    *,
+    session_id: str | None = None,
+    store_image_artifacts: bool = False,
 ) -> SimulationArtifacts:
     normalized_render_paths: list[str] = []
     render_blobs_base64: dict[str, str] = {}
     object_store_keys: dict[str, str] = {}
+    upload_candidates: list[tuple[str, Path]] = []
+    upload_client = None
 
     for raw_path in render_paths:
         candidate = Path(raw_path)
@@ -322,16 +339,44 @@ def _collect_render_artifacts(
             continue
         rel_key = str(rel_path)
         normalized_render_paths.append(rel_key)
-        if suffix == ".mp4":
-            object_store_key = _maybe_store_large_render_artifact(
-                render_path, rel_path=rel_key, session_id=session_id
-            )
-            if object_store_key is not None:
-                object_store_keys[rel_key] = object_store_key
-                continue
-        render_blobs_base64[rel_key] = base64.b64encode(
-            render_path.read_bytes()
-        ).decode("ascii")
+        if suffix == ".mp4" or store_image_artifacts:
+            upload_candidates.append((rel_key, render_path))
+        else:
+            render_blobs_base64[rel_key] = base64.b64encode(
+                render_path.read_bytes()
+            ).decode("ascii")
+
+    if upload_candidates:
+        upload_client = _renderer_storage_client()
+        if upload_client is None:
+            for rel_key, render_path in upload_candidates:
+                render_blobs_base64[rel_key] = base64.b64encode(
+                    render_path.read_bytes()
+                ).decode("ascii")
+        else:
+            with ThreadPoolExecutor(
+                max_workers=min(8, len(upload_candidates))
+            ) as executor:
+                futures = {
+                    executor.submit(
+                        _maybe_store_large_render_artifact,
+                        render_path,
+                        rel_path=rel_key,
+                        session_id=session_id,
+                        allow_image_upload=store_image_artifacts,
+                        client=upload_client,
+                    ): (rel_key, render_path)
+                    for rel_key, render_path in upload_candidates
+                }
+                for future in as_completed(futures):
+                    rel_key, render_path = futures[future]
+                    object_key = future.result()
+                    if object_key is not None:
+                        object_store_keys[rel_key] = object_key
+                    else:
+                        render_blobs_base64[rel_key] = base64.b64encode(
+                            render_path.read_bytes()
+                        ).decode("ascii")
 
     bundle_roots = {
         (root / Path(render_path).parent).resolve()
@@ -1081,7 +1126,10 @@ async def api_preview(
                 manifest_json = preview_manifest.read_text(encoding="utf-8")
 
                 render_artifacts = _collect_render_artifacts(
-                    root, saved_paths, session_id=x_session_id
+                    root,
+                    saved_paths,
+                    session_id=x_session_id,
+                    store_image_artifacts=True,
                 )
                 events = collect_and_cleanup_events(root, session_id=x_session_id)
                 resolved_rendering_type = request.rendering_type
@@ -1113,10 +1161,16 @@ async def api_preview(
                     if isinstance(request.orbit_yaw, float)
                     else None,
                     image_path=str(first_image_path.relative_to(root)),
-                    image_bytes_base64=base64.b64encode(
-                        first_image_path.read_bytes()
-                    ).decode("ascii"),
+                    image_bytes_base64=(
+                        None
+                        if str(first_image_path.relative_to(root))
+                        in render_artifacts.object_store_keys
+                        else base64.b64encode(first_image_path.read_bytes()).decode(
+                            "ascii"
+                        )
+                    ),
                     render_blobs_base64=render_artifacts.render_blobs_base64,
+                    object_store_keys=render_artifacts.object_store_keys,
                     render_manifest_json=manifest_json,
                     events=events,
                 )

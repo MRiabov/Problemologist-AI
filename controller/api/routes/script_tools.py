@@ -261,14 +261,20 @@ async def verify_script(
         async with _controller_script_middleware(
             x_session_id, payload.agent_role, request, payload.episode_id
         ) as middleware:
+            num_scenes = payload.num_scenes
+            duration = payload.duration
+            if smoke_test_mode and num_scenes is None:
+                num_scenes = 1
+            if smoke_test_mode and duration is None:
+                duration = 1.0
             result = await _retry_busy(
                 lambda: middleware.verify(
                     payload.script_path,
                     backend=payload.backend,
                     smoke_test_mode=smoke_test_mode,
                     jitter_range=payload.jitter_range,
-                    num_scenes=payload.num_scenes,
-                    duration=payload.duration,
+                    num_scenes=num_scenes,
+                    duration=duration,
                     seed=payload.seed,
                 )
             )

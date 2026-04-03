@@ -879,6 +879,32 @@ def _worker_renderer_compose_cmd(*, compose_project_name: str) -> list[str]:
     return ["docker", "compose", "-p", compose_project_name, "-f", "docker-compose.yml"]
 
 
+def _ensure_worker_renderer_image(*, compose_project_name: str) -> None:
+    image_name = "problemologist-ai-worker-renderer:latest"
+
+    probe = _run(
+        ["docker", "image", "inspect", image_name],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    if probe.returncode == 0:
+        return
+
+    print("Building Worker Renderer image...")
+    _run(
+        [
+            "docker",
+            "build",
+            "-f",
+            "worker_renderer/Dockerfile",
+            "-t",
+            image_name,
+            ".",
+        ]
+    )
+
+
 def _start_worker_renderer_container(
     *,
     compose_project_name: str,
@@ -887,6 +913,7 @@ def _start_worker_renderer_container(
     compose_cmd = _worker_renderer_compose_cmd(
         compose_project_name=compose_project_name
     )
+    _ensure_worker_renderer_image(compose_project_name=compose_project_name)
     log_file.parent.mkdir(parents=True, exist_ok=True)
     with log_file.open("ab") as handle:
         handle.write(b"Starting Worker Renderer container via docker compose...\n")

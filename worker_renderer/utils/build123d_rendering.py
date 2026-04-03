@@ -4,6 +4,7 @@ import base64
 import colorsys
 import math
 import os
+import shutil
 import tempfile
 from dataclasses import dataclass
 from io import BytesIO
@@ -21,6 +22,7 @@ from shared.models.simulation import RendererCapabilities, RenderMode
 from shared.rendering import (
     configure_headless_rendering,
     create_headless_vtk_render_window,
+    materialize_preview_response,
 )
 from shared.simulation.backends import RendererBackend
 from shared.workers.bundling import bundle_directory_base64
@@ -1668,10 +1670,16 @@ def render_preview_view(
     if not response.success:
         raise RuntimeError(response.message or "build123d preview render failed")
 
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    materialized_path = materialize_preview_response(response, output_path.parent)
+    if materialized_path is not None:
+        if materialized_path != output_path:
+            shutil.copy2(materialized_path, output_path)
+        return output_path
+
     if not response.image_bytes_base64:
         raise RuntimeError("renderer returned no preview image bytes")
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
     image_bytes = base64.b64decode(response.image_bytes_base64)
     output_suffix = output_path.suffix.lower()
     output_format_map = {
