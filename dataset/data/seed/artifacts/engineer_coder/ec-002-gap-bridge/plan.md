@@ -26,7 +26,29 @@ Use a freestanding bridge deck with shallow side fences to move `transfer_cube` 
 5. Keep every part label grounded in `plan.md`, `todo.md`, and `assembly_definition.yaml`, and keep the benchmark fixtures unchanged.
 6. The drafting sheet callouts `1`-`5` track the base frame, bridge deck, left fence, right fence, and landing pocket, respectively.
 
-## 4. Cost & Weight Budget
+## 4. Assumption Register
+
+- The bridge remains fully passive; no actuators are needed or allowed.
+- The support frame can straddle the gap without touching the forbid zone footprint.
+- The landing pocket can overlap the goal zone while staying clear of the right deck rebound path.
+
+## 5. Detailed Calculations
+
+| Check | Calculation | Result |
+| -- | -- | -- |
+| Gap span | `bridge_deck` length of 300 mm bridges the corridor with enough contact area at both ends. | Pass |
+| Guide coverage | `left_fence` and `right_fence` extend the full deck length, leaving the cube a centered passive path. | Pass |
+| Landing capture | `landing_pocket` mouth overlaps the goal zone so the cube settles before rebounding off the deck edge. | Pass |
+
+## 6. Critical Constraints / Operating Envelope
+
+- Build zone: keep the frame feet and deck footprint inside the benchmark build bounds.
+- Gap keepout: no support feet or stiffeners may intrude into `floor_gap`.
+- Motion contract: passive only, no added DOFs or powered components.
+- Goal zone: the landing pocket must overlap the goal volume and contain the cube after crossing.
+- Budget envelope: maintain the current weight/cost headroom so the planner target remains feasible.
+
+## 7. Cost & Weight Budget
 
 | Item | Volume (cm^3) | Weight (g) | Cost ($) |
 | -- | -- | -- | -- |
@@ -39,7 +61,7 @@ Use a freestanding bridge deck with shallow side fences to move `transfer_cube` 
 
 **Budget Margin**: 31% remaining versus the planner target.
 
-## 5. Risk Assessment
+## 8. Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 | -- | -- | -- | -- |

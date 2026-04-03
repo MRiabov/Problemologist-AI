@@ -35,7 +35,29 @@ Use a compact single `ServoMotor_DS3218`-driven metering wheel ahead of the benc
 5. Preserve the benchmark-owned `entry_ramp`, `gate_housing`, `gate_pivot_arm`, and `exit_tray` geometry as read-only context while checking the release path against the gate opening.
 6. The drafting sheet callouts `1`-`7` track the base plate, settling chute, metering wheel guard, guide rail, post-gate channel, goal cup, and the left-side drive motor corridor, respectively.
 
-## 4. Cost & Weight Budget
+## 4. Assumption Register
+
+- The benchmark-owned gate motion stays visible and remains the only moving fixture.
+- Exactly one servo drive is used to meter the ball; no second actuator is introduced.
+- The left-side wiring corridor remains open and does not cross the gate swing path.
+
+## 5. Detailed Calculations
+
+| Check | Calculation | Result |
+| -- | -- | -- |
+| Capture pocket | `settling_chute` and `metering_wheel_guard` form a controlled pocket before the open window. | Pass |
+| Release path | `guide_rail` and `post_gate_channel` maintain a single downstream path into `goal_cup`. | Pass |
+| Swing clearance | The drive motor remains on the left side of the gate and outside `gate_swing_keepout`. | Pass |
+
+## 6. Critical Constraints / Operating Envelope
+
+- Build zone: keep `base_plate` and all downstream pieces within the permitted footprint.
+- Gate keep-out: do not enter `gate_swing_keepout` with the motor, guard, or wiring.
+- Motion contract: the benchmark-owned gate remains the only moving benchmark fixture.
+- Goal zone: `goal_cup` must overlap the goal zone and absorb the released ball.
+- Budget envelope: preserve the planned cost and weight margin with a single small servo-grade motor.
+
+## 7. Cost & Weight Budget
 
 | Item | Volume (cm^3) | Weight (g) | Cost ($) |
 | -- | -- | -- | -- |
@@ -50,7 +72,7 @@ Use a compact single `ServoMotor_DS3218`-driven metering wheel ahead of the benc
 
 **Budget Margin**: 13% remaining versus the planner target.
 
-## 5. Risk Assessment
+## 8. Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 | -- | -- | -- | -- |

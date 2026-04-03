@@ -92,6 +92,7 @@ cots_parts:
 - part_id: ServoMotor_DS3218
   manufacturer: pololu
   unit_cost_usd: 18.0
+  weight_g: 60.0
   quantity: 1
   source: catalog
 final_assembly:
@@ -101,7 +102,7 @@ final_assembly:
     - rotate_z
 totals:
   estimated_unit_cost_usd: 69.0
-  estimated_weight_g: 980.0
+  estimated_weight_g: 298.95
   estimate_confidence: high
 dfm_suggestions:
 - Keep the metering-wheel guard as a simple two-wall pocket that can be machined in one setup.

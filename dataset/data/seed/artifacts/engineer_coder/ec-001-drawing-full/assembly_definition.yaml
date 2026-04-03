@@ -80,8 +80,77 @@ cots_parts:
 - part_id: ServoMotor_DS3218
   manufacturer: pololu
   unit_cost_usd: 18.0
+  weight_g: 60.0
   quantity: 1
   source: catalog
+drafting:
+  sheet_id: "sheet_1"
+  title: "Sideways transfer technical drawing"
+  units: "mm"
+  projection_standard: "orthographic"
+  views:
+  - view_id: "front_overview"
+    target: "base_plate"
+    projection: "front"
+    scale: 1.0
+    datums: ["A", "B"]
+    dimensions:
+    - dimension_id: "d_front_base_plate_width"
+      kind: "linear"
+      target: "base_plate"
+      value: 170.0
+      tolerance: "nominal"
+      note: "Base plate width carries the lane support."
+      plan_ref: "plan.md#parts-list"
+    - dimension_id: "d_front_entry_funnel_width"
+      kind: "linear"
+      target: "entry_funnel"
+      value: 140.0
+      tolerance: "nominal"
+      note: "Capture mouth absorbs the jitter envelope."
+      plan_ref: "plan.md#assembly-strategy"
+    - dimension_id: "d_front_roller_bed_width"
+      kind: "linear"
+      target: "roller_bed"
+      value: 70.0
+      tolerance: "nominal"
+      note: "Main lane width keeps the ball centered over the driven roller."
+      plan_ref: "plan.md#parts-list"
+    - dimension_id: "d_front_idler_guide_width"
+      kind: "linear"
+      target: "idler_guide"
+      value: 18.0
+      tolerance: "nominal"
+      note: "Guide width keeps the return lane narrow and stable."
+      plan_ref: "plan.md#parts-list"
+    - dimension_id: "d_front_goal_tray_width"
+      kind: "linear"
+      target: "goal_tray"
+      value: 120.0
+      tolerance: "nominal"
+      note: "Landing pocket stays wider than the incoming lane."
+      plan_ref: "plan.md#parts-list"
+    callouts:
+    - callout_id: 1
+      label: "base plate"
+      target: "base_plate"
+      plan_ref: "plan.md#parts-list"
+      note: "Freestanding support plate."
+    - callout_id: 2
+      label: "entry funnel"
+      target: "entry_funnel"
+      plan_ref: "plan.md#assembly-strategy"
+      note: "Capture mouth that absorbs spawn jitter."
+    - callout_id: 3
+      label: "servo motor"
+      target: "ServoMotor_DS3218"
+      plan_ref: "plan.md#assembly-strategy"
+      note: "Drive motor fixed to the side corridor."
+    notes:
+    - note_id: "n_front_overview"
+      text: "Front view shows the capture mouth, lane width, and goal tray width that hold the ball centered."
+      critical: true
+      plan_ref: "plan.md#assembly-strategy"
 final_assembly:
 - name: transfer_lane
   config:
@@ -89,7 +158,7 @@ final_assembly:
     - rotate_x
 totals:
   estimated_unit_cost_usd: 62.0
-  estimated_weight_g: 694.3
+  estimated_weight_g: 608.34
   estimate_confidence: high
 dfm_suggestions:
 - Keep the roller lane profile constant along its length to reduce machining setups.
