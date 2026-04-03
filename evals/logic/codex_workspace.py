@@ -34,7 +34,7 @@ from shared.agent_templates import (
 )
 from shared.agents.config import DraftingMode, load_agents_config
 from shared.enums import AgentName
-from shared.git_utils import repo_revision
+from shared.git_utils import init_workspace_repo, repo_revision
 from shared.models.schemas import (
     AssemblyConstraints,
     AssemblyDefinition,
@@ -1053,6 +1053,8 @@ def materialize_seed_workspace(
     prompt_path.write_text(prompt_text, encoding="utf-8")
     copied_paths.append("prompt.md")
 
+    init_workspace_repo(workspace_dir)
+
     helper_script_paths = []
     if is_planner_agent(agent_name):
         helper_script_paths.append("scripts/submit_plan.sh")
@@ -1224,7 +1226,7 @@ def open_codex_ui(
 ) -> int:
     """Open the interactive Codex UI with a workspace prompt."""
     if not (workspace_dir / ".git").exists():
-        subprocess.run(["git", "init", "-q", str(workspace_dir)], check=False)
+        init_workspace_repo(workspace_dir)
     codex_home_root = resolve_codex_home_root(
         task_id=task_id,
         session_id=session_id,

@@ -8,8 +8,9 @@ logger = structlog.get_logger(__name__)
 
 def init_workspace_repo(path: Path) -> Repo:
     """
-    Initialize a git repository in the workspace if it doesn't verify exist.
-    Configures default user.
+    Initialize a git repository in the workspace if it doesn't already exist.
+    Configures a default user and creates an initial commit when there is
+    content to snapshot.
     """
     git_dir = path / ".git"
     if not git_dir.exists():
@@ -18,12 +19,7 @@ def init_workspace_repo(path: Path) -> Repo:
         with repo.config_writer() as git_config:
             git_config.set_value("user", "email", "agent@problemologist.ai")
             git_config.set_value("user", "name", "Agent Worker")
-
-        # Create an initial commit to allow future commits to have a parent?
-        # Or just let the first commit be the first one.
-        # Let's create an empty commit so we have a HEAD.
-        # But wait, hard to do empty commit with gitpython easily without index manipulation.
-        # Let's just return the repo.
+        commit_all(path, "Initial commit")
         return repo
     return Repo(path)
 
