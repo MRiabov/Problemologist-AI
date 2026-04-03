@@ -8,7 +8,7 @@ The acceptance-criteria files linked from this index should prefer `References` 
 ## File Map
 
 | Artifact | Typical roles | Main gate |
-| --- | --- | --- |
+| -- | -- | -- |
 | `plan.md` | benchmark and engineering planners, plan reviewers | Stage-specific heading schema, exact identifiers, cross-file consistency |
 | `todo.md` | planners, coders, reviewers | Checkbox integrity and stage-correct completion state |
 | `journal.md` | planners, coders, reviewers | Concrete attempt logging with blockers, observations, and next steps |
