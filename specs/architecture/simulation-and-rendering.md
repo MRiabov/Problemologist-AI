@@ -342,15 +342,15 @@ This exception is benchmark-only. It does not relax engineering realism requirem
 
 ### Planner motion forecast contract
 
-Engineer-owned moving solutions need a planner-authored motion forecast, not just a prose description of the mechanism.
+Engineer-owned moving solutions need a planner-authored payload trajectory contract, not just a prose description of the mechanism.
 
 The contract is:
 
-01. The forecast captures the nominal path; the tolerance bands define the envelope around that path.
+01. The forecast captures the nominal payload trajectory; the tolerance bands define the envelope around that path.
 02. The canonical location is a dedicated `motion_forecast` section inside `assembly_definition.yaml` for engineering handoffs that include moving engineer-owned parts. The first anchor must be build-zone valid, and the terminal anchor or terminal event must explicitly prove goal-zone entry/contact.
 03. The forecast is sparse and ordered. It is not a full per-timestep replay of the physics engine.
 04. The default planner cadence is coarse, typically `0.5s`. The exact cadence and tolerance budgets for planner and coder layers are policy-driven via `config/agents_config.yaml`, not hardcoded in the schema. The benchmark planner may use an even coarser course-setting layer for benchmark-owned moving fixtures when that contract allows it.
-05. The coder may generate a denser implementation/verification trace, typically around `0.3s`, but that trace is derived evidence, not a replacement for the planner-owned contract. When required, the engineer coder's precise path lives in a separate engineer-owned `precise_path_definition.yaml` artifact rather than replacing `motion_forecast`.
+05. The coder may generate a denser implementation/verification trace, typically around `0.3s`, but that trace is derived evidence, not a replacement for the planner-owned contract. When required, the engineer coder's precise path lives in a separate engineer-owned `precise_path_definition.yaml` artifact rather than replacing `motion_forecast`; it refines the payload trajectory and contact proof instead of reinterpreting the mechanism.
 06. Each anchor must state:
     - `t_s`
     - an explicit `reference_point` such as COM, another named physical point, or a justified geometric proxy
@@ -362,7 +362,7 @@ The contract is:
 08. The terminal anchor must carry `goal_zone_contact: true` or `goal_zone_entry: true`, or an equivalent structured `terminal_event`, and the recorded position must lie inside the benchmark goal zone.
 09. Contact order is part of the contract. If the payload touches multiple surfaces before success, the first-touch order and an expected time window for each first contact must be recorded.
 10. Tolerances must be grounded in runtime jitter and contact uncertainty. The default positional tolerance on any axis should not exceed `1.2x` the runtime jitter on that axis unless a calculation subsection or risk assessment explicitly justifies a wider band.
-11. A plan that cannot state this motion at reviewable resolution is incomplete. The reviewer should not have to infer the trajectory from a vague mechanism description.
+11. A plan that cannot state this payload trajectory at reviewable resolution is incomplete. The reviewer should not have to infer it from a vague mechanism description.
 12. The planner owns the forecast. The coder may refine implementation details inside the approved envelope, but may not silently rewrite the forecast when the plan is already approved.
 13. Simulation may fail fast when the realized motion leaves the tolerated corridor for a configurable number of consecutive checks or when the required contact sequence becomes impossible.
 14. This contract applies to engineer-owned moving parts only. Benchmark-owned moving fixtures continue to use the benchmark motion contract in `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml`.

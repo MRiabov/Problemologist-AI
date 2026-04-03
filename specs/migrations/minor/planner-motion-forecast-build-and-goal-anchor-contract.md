@@ -32,12 +32,13 @@ to refuse the plan rather than guess at the missing contact semantics. The
 reviewer is a fallback validation layer, not a substitute for a precise
 planner-facing contract.
 
-The precise contact path should live in the engineer-coder path, not in the
-planner-owned forecast. The planner sets the coarse, reviewable intent; the
-engineer-coder expands that into backend-specific contact evidence and initial
-pose/orientation details. The hard consistency gate stays at `validate()`: if
-the engineer has deviated too far from the approved plan, the episode should
-stop there rather than trying to paper over the mismatch later in review.
+The precise payload trajectory should live in the engineer-coder path, not in
+the planner-owned forecast. The planner sets the coarse, reviewable intent; the
+engineer-coder expands that into backend-specific payload trajectory/contact
+evidence and initial pose/orientation details. The hard consistency gate stays
+at `validate()`: if the engineer has deviated too far from the approved plan,
+the episode should stop there rather than trying to paper over the mismatch
+later in review.
 
 In concrete terms, the planner forecast should stay coarse: fewer anchors,
 slower waypoint cadence, and wider tolerance bands. The engineer-owned path
@@ -85,7 +86,7 @@ while still leaving the start or end conditions ambiguous.
 | `shared/simulation/backends.py` and `worker_heavy/simulation/{genesis_backend.py,mujoco_backend.py}` | The shared `PhysicsBackend` protocol already exists, and both backends expose contact data through backend-specific implementations. | The migration needs to validate that a shared collision/contact seam is enough before any planner-facing contract is tightened. |
 | `config/agents_config.yaml` | Currently owns execution, render, and visual-inspection policy, but not motion cadence/tolerance budgets. | The motion-layer frequency and tolerance knobs should be centralized there instead of hardcoded. |
 | `shared/assets/template_repos/engineer/assembly_definition.yaml` | The starter engineer assembly template does not expose a `motion_forecast` section. | Seeded workspaces need a visible template slot for the new contract. |
-| `Engineer-coder` precise-path artifact (`precise_path_definition.yaml`, provisional) | No separate engineer-owned precise path artifact exists yet. | The coarse planner forecast needs a distinct engineer-owned path file for higher-resolution contact proof. |
+| `Engineer-coder` precise-path artifact (`precise_path_definition.yaml`, provisional) | No separate engineer-owned precise path artifact exists yet. | The coarse planner forecast needs a distinct engineer-owned path file for higher-resolution payload trajectory proof. |
 | `worker_heavy/utils/file_validation.py` | Validates `assembly_definition.yaml` and the planner cross-contract, but does not yet enforce endpoint assertions on the engineer motion forecast. | This is the main fail-closed validation seam for the contract. |
 | `controller/agent/node_entry_validation.py` | Seeded preflight validates planner handoffs and review manifests. | Seeded entry must reject endpoint-ambiguous motion forecasts before node execution continues. |
 | `controller/agent/review_handover.py` and `controller/agent/tools.py` | Route planner submission and reviewer entry through the existing handoff gates. | Their gate messaging and error propagation must reflect the new endpoint requirement. |
@@ -162,7 +163,7 @@ while still leaving the start or end conditions ambiguous.
 ### 1b. Define the engineer-owned precise path artifact
 
 - Add a separate engineer-owned `precise_path_definition.yaml` artifact for the
-  backend-specific higher-resolution path and contact proof.
+  backend-specific higher-resolution payload trajectory and contact proof.
 - Treat this artifact as implementation-facing, not planner-facing: it should
   refine the coarse motion forecast rather than duplicate it.
 - Keep the name provisional; if the schema review decides on a better name, the

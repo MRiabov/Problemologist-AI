@@ -167,7 +167,7 @@ Control-file ownership split:
 07. `solution_plan_evidence_script.py` owns engineering planner drafting evidence geometry.
 08. `solution_plan_technical_drawing_script.py` owns engineering planner technical-drawing exports.
 09. `assembly_definition.yaml` owns engineer-planned solution structure, costing inputs, and motion metadata.
-10. `precise_path_definition.yaml` owns engineer-coder higher-resolution path and contact proof; it refines the coarse planner forecast, must not contradict it, and must preserve the approved build-zone start and goal-zone finish semantics.
+10. `precise_path_definition.yaml` owns engineer-coder higher-resolution payload trajectory and contact proof; it refines the coarse planner forecast, must not contradict it, and must preserve the approved build-zone start and goal-zone finish semantics.
 11. We do not duplicate engineer solution metadata into `benchmark_definition.yaml`.
 
 ## File updates

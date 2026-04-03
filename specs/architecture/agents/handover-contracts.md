@@ -289,8 +289,8 @@ Engineer sends the planner handoff files to the coder agent who has to implement
 1. A `plan.md` file. The plan.md is a structured document (much like the benchmark generator plan) outlining:
 2. A stripped down `benchmark_definition.yaml` file, except the max price and weight are set by the planner now and remain under the benchmark/customer caps.
 3. A `todo.md` TODO-list.
-4. A `assembly_definition.yaml` file with per-part pricing inputs, `final_assembly` structure, assembly totals produced by `validate_costing_and_price.py`, and a planner-authored `motion_forecast` section whenever the approved solution includes moving engineer-owned parts. That forecast must start build-zone valid and end with an explicit goal-zone proof.
-5. A `precise_path_definition.yaml` file when the implementation needs a higher-resolution engineer-owned path/contact proof; it refines the coarse `motion_forecast` rather than replacing it.
+4. A `assembly_definition.yaml` file with per-part pricing inputs, `final_assembly` structure, assembly totals produced by `validate_costing_and_price.py`, and a planner-authored `motion_forecast` section whenever the approved solution includes moving engineer-owned parts. That forecast describes the payload trajectory: it must start build-zone valid and end with an explicit goal-zone proof.
+5. A `precise_path_definition.yaml` file when the implementation needs a higher-resolution payload trajectory/contact proof; it refines the coarse `motion_forecast` rather than replacing it.
 6. A `solution_plan_evidence_script.py` file that captures the build123d planning evidence for the proposed solution geometry.
 7. A `solution_plan_technical_drawing_script.py` file that captures the planner-authored technical drawing companion for that same solution geometry.
 

@@ -2,17 +2,17 @@
 
 ## Definition of "success" and failure in the simulation
 
-We want to support one primary use-case: moving an object from one position to another, using motors and gravity; avoiding forbidden zones, and staying in simulation bounds.
+We want to support one primary use-case: moving a payload from one position to another, using motors and gravity; avoiding forbidden zones, and staying in simulation bounds.
 
 <!-- another use-case could be: given a severe constraint in positioning, design a system which would support a given load. However, the issue is that it's not  -->
 
-### Moving an object from one screen to another
+### Moving a payload from one screen to another
 
 We define the "simulation objective" from four components:
 
 1. A "build zone" - where the agent can actually create parts (note: the agent is forbidden to construct outside of this zone),
-2. A "goal zone" - the area to which the goal object needs to move to,
-3. The moved object - the object which is spawned to be moved into the goal
+2. A "goal zone" - the area to which the payload needs to move,
+3. The payload - the object which is spawned to be moved into the goal
 4. A "forbid" zone - an area none of the simulation objects the agent may not go into.
 
 The objectives are always axis-aligned bounding boxes (AABB) for simplicity. The forbid or goal zone is triggered if the agent touches it even slightly.
