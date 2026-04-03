@@ -27,7 +27,9 @@ def parse_cli_list_values(raw_values: Iterable[str]) -> list[str]:
 
         token = token.strip("[]")
         parts = _DELIMITER_PATTERN.split(token)
-        parsed.extend(part.strip().strip("[]").strip("'\"") for part in parts if part.strip())
+        parsed.extend(
+            part.strip().strip("[]").strip("'\"") for part in parts if part.strip()
+        )
     return parsed
 
 

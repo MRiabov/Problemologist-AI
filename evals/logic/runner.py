@@ -40,11 +40,6 @@ from controller.agent.reward import (
 )
 from controller.clients.worker import WorkerClient
 from controller.prompts import load_prompts
-from evals.logic.dataset_selection import (
-    filter_rows_by_technical_drawing_mode,
-    parse_level_filters,
-    parse_task_id_filters,
-)
 from evals.logic.codex_session_trace import (
     CodexSessionTraceArtifact,
 )
@@ -78,6 +73,11 @@ from evals.logic.codex_workspace import (
 )
 from evals.logic.codex_workspace import (
     verify_workspace_for_agent as _verify_codex_workspace_for_agent,
+)
+from evals.logic.dataset_selection import (
+    filter_rows_by_technical_drawing_mode,
+    parse_level_filters,
+    parse_task_id_filters,
 )
 from evals.logic.models import (
     AgentEvalSpec,
