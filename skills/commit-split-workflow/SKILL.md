@@ -1,34 +1,88 @@
 ---
 name: commit-split-workflow
-description: Manual workflow for splitting a dirty git tree into meaningful commits with the repo's commit-naming conventions.
+description: Manual trigger only. Use this skill only when the user explicitly asks for `$commit-split-workflow` (or clearly requests this exact workflow) to split changes into meaningful commits with the repository's commit-message conventions.
 ---
 
-# Commit Split Workflow
+# Commit Split Workflow (Manual Only)
 
-Use this skill only when the user explicitly asks to split changes into commits or triggers `$commit-split-workflow`.
+Use this skill only when explicitly requested by name.
+Do not auto-trigger for general git or commit tasks.
 
-## Workflow
+## Goal
 
-1. Run `pre-commit run --all-files` at the start of the workflow, before staging any commit.
-2. Inspect `git status` and group changes by meaning.
-3. Stage and commit one logical group at a time.
-4. Keep throwaway repro scripts out of commits unless the user explicitly wants them. Typical names include `repro_`, `debug_`, `verify_`, and `check_`.
-5. Use these commit prefixes when they match the change:
-   - `(spec)` for markdown spec updates, especially spec-kitty files
-   - `(refactor)` for internal refactors with no user-facing change
-   - `(debug)` for bug fixes and investigation-driven changes
-   - `(test)` for test coverage or test fixes
-   - `(devops)` for Kubernetes, Vercel, and similar infra files
-6. Leave user-facing UI or backend feature commits unprefixed unless another prefix clearly fits.
-7. Commit groups in this order when multiple kinds are present: markdown, then config, then backend, then frontend.
-8. If backend and frontend changes are mixed, commit backend-related changes first when hooks may rewrite derived artifacts.
+Split the current git changes into small, reviewable groups, then commit each group separately with a message that makes the intent obvious later.
 
-## Commit Message Style
+The goal is not to "commit everything quickly".
+The goal is to produce a commit history that lets the reviewer answer:
 
-Keep commit titles short and specific. Examples:
+- what changed in this commit
+- why it changed
+- which files belong together
+- what is already done versus still pending
 
+## Commit message naming rules
+
+Use these prefixes when applicable:
+
+- `(spec)`: for editing markdown spec files (especially spec-kitty files).
+- `(refactor)`: internal refactors with no user-facing behavior change.
+- `(debug)`: debugging and bug-fix work.
+- `(test)`: test coverage additions/fixes.
+- `(devops)`: infra/deployment config changes (Kubernetes, Vercel, etc.).
+
+For user-facing UI/backend feature commits, do not prefix.
+
+Examples:
+
+- `(spec) Specified spec 025`
 - `(spec) Planned for spec 025`
 - `(refactor) Make webhook logic more modular`
-- `(debug) Fix the test failure in worker transport`
-- `(test) Add coverage for commit splitting`
-- `(devops) Update deployment config`
+- `(debug) Fix test failure in submission routing`
+
+## Process
+
+1. Inspect `git status` and split changes by intent/meaning.
+2. Build a commit map before staging anything: group related hunks by behavior, feature, refactor, test, spec, or devops work.
+3. If a file contains multiple unrelated changes, split it by hunk instead of forcing the whole file into one commit.
+4. Stage and commit each logical group separately.
+5. Give each commit a descriptive message that says what changed, not a generic placeholder.
+6. If a change lives in a nested repo/submodule, commit that repo's change as part of the split instead of leaving it dirty.
+
+Commit grouping rules:
+
+- Group by intent, not by file count.
+- Do not merge unrelated fixes into one "cleanup" commit.
+- Keep tests with the behavior they verify when possible.
+- Keep spec or docs updates separate when they describe the work rather than implement it.
+- Do not skip markdown changes. If markdown files are present, include them in the relevant logical commit or a dedicated spec/doc commit.
+- If a change set still reads as "and also" when described, it probably needs another split.
+
+Commit message rules:
+
+- Use the existing prefixes when they fit.
+- Prefer short, concrete titles over broad summaries.
+- Name the result or behavior, not the implementation mechanics.
+- Make it easy to match a commit message back to the grouped files.
+
+## Guardrails
+
+- Do not stage throwaway scripts. Watch especially for names like:
+  - `repro_*`
+  - `debug_*`
+  - `verify_*`
+  - `check_*`
+- Do not leave submodule changes uncommitted if they are part of the current work. Treat them like any other logical change group and commit them in the nested repo before finalizing the parent repo.
+- If found (especially at repo root), call them out to the user and suggest moving them to `/scripts/throwaway/`.
+
+## Quality gate
+
+Before committing, prefer running:
+
+- `pre-commit run --all-files`
+
+This avoids hook failures and auto-fixes formatting/lint issues up front.
+
+## Final response requirement
+
+Always include the final commit names in the summary.
+Also include a short mapping from each commit name to the change group it covered so the reviewer can tell what was done in each commit.
