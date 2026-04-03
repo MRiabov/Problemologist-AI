@@ -2,7 +2,7 @@
   "version": "1.0",
   "bundle_id": "seed-bc-002-drawing-full-benchmark-drafting",
   "created_at": "2026-04-02T00:00:00Z",
-  "revision": "681feeeb473f748a36edf0d346906bf650f51d99",
+  "revision": "72535020e8d0d2cef0b39a64227a35777915bc98",
   "bundle_path": "renders/benchmark_renders",
   "drafting": true,
   "source_script_sha256": "7b169a7e0d27fa709f94a10930003d40295088287f5040dc60973e89597608c4",
