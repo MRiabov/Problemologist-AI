@@ -34,9 +34,12 @@ DEFAULT_REASONING_EFFORT = "xhigh"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from evals.logic.cli_args import parse_cli_int_set, parse_cli_list_values  # noqa: E402
+from evals.logic.dataset_selection import (  # noqa: E402
+    parse_level_filters,
+    parse_task_id_filters,
+    resolve_agents,
+)
 from evals.logic.models import EvalDatasetItem  # noqa: E402
-from evals.logic.specs import AGENT_SPECS  # noqa: E402
 from shared.enums import AgentName  # noqa: E402
 
 
@@ -58,35 +61,6 @@ def timestamp_for_path(moment: datetime | None = None) -> str:
 
 def safe_slug(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("_") or "item"
-
-
-def _resolve_agents(agent_args: list[str]) -> list[AgentName]:
-    parsed = parse_cli_list_values(agent_args)
-    if not parsed:
-        raise SystemExit("No valid --agent values were parsed.")
-
-    if any(agent_arg.lower() == "all" for agent_arg in parsed):
-        return list(AGENT_SPECS.keys())
-
-    agents: list[AgentName] = []
-    seen: set[AgentName] = set()
-    for agent_arg in parsed:
-        try:
-            agent = AgentName(agent_arg)
-        except ValueError as exc:
-            available = ", ".join(sorted(agent.value for agent in AGENT_SPECS))
-            raise SystemExit(
-                f"Unknown agent '{agent_arg}'. Available: {available}"
-            ) from exc
-
-        if agent not in AGENT_SPECS:
-            raise SystemExit(f"Agent '{agent.value}' is not configured in AGENT_SPECS.")
-        if agent in seen:
-            continue
-        seen.add(agent)
-        agents.append(agent)
-
-    return agents
 
 
 def _load_dataset(agent: AgentName) -> tuple[Path, list[EvalDatasetItem]]:
@@ -678,12 +652,12 @@ def _apply(args: argparse.Namespace) -> int:
     if not investigation_notes:
         raise SystemExit(f"Investigation notes are empty: {args.notes_path}")
 
-    agents = _resolve_agents(args.agent)
+    agents = resolve_agents(args.agent)
     raw_task_id_tokens = [token for group in (args.task_id or []) for token in group]
-    task_ids = set(parse_cli_list_values(raw_task_id_tokens))
+    task_ids = parse_task_id_filters(raw_task_id_tokens)
     if args.task_id and not task_ids:
         raise SystemExit("No valid --task-id values were parsed.")
-    levels = parse_cli_int_set(args.level or [])
+    levels = parse_level_filters(args.level)
     if args.level and not levels:
         raise SystemExit("No valid --level values were parsed.")
 

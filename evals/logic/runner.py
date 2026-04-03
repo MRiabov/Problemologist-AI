@@ -40,6 +40,11 @@ from controller.agent.reward import (
 )
 from controller.clients.worker import WorkerClient
 from controller.prompts import load_prompts
+from evals.logic.dataset_selection import (
+    filter_rows_by_technical_drawing_mode,
+    parse_level_filters,
+    parse_task_id_filters,
+)
 from evals.logic.codex_session_trace import (
     CodexSessionTraceArtifact,
 )
@@ -654,101 +659,6 @@ def _build_seed_failure_pointer(
                         )
 
     return pointer.model_dump(mode="json")
-
-
-def _parse_task_id_filters(raw_task_id_filters: list[str] | None) -> set[str]:
-    """Parse task ID filters from repeated --task-id arguments.
-
-    Supported forms per argument:
-    - single ID: "id-1"
-    - comma-separated: "id-1,id-2"
-    - bracket list: "[id-1,id-2]" or '["id-1","id-2"]'
-    """
-    if not raw_task_id_filters:
-        return set()
-
-    selected_ids: set[str] = set()
-    for raw_filter in raw_task_id_filters:
-        text = raw_filter.strip()
-        if not text:
-            continue
-
-        values_to_parse = text
-        if text.startswith("[") and text.endswith("]"):
-            with contextlib.suppress(json.JSONDecodeError):
-                parsed = json.loads(text)
-                if isinstance(parsed, list):
-                    for item in parsed:
-                        item_text = str(item).strip()
-                        if item_text:
-                            selected_ids.add(item_text.strip("'\""))
-                    continue
-            values_to_parse = text[1:-1]
-
-        for candidate in values_to_parse.split(","):
-            normalized = candidate.strip().strip("'\"")
-            if normalized:
-                selected_ids.add(normalized)
-
-    return selected_ids
-
-
-def _parse_level_filters(raw_level_filters: list[str] | None) -> set[int]:
-    """Parse complexity-level filters from repeated --level arguments."""
-
-    if not raw_level_filters:
-        return set()
-
-    selected_levels: set[int] = set()
-    for raw_filter in raw_level_filters:
-        text = raw_filter.strip()
-        if not text:
-            continue
-
-        values_to_parse = text
-        if text.startswith("[") and text.endswith("]"):
-            with contextlib.suppress(json.JSONDecodeError):
-                parsed = json.loads(text)
-                if isinstance(parsed, list):
-                    for item in parsed:
-                        item_text = str(item).strip()
-                        if not item_text:
-                            continue
-                        level = int(item_text.strip("'\""))
-                        if level < 0 or level > 5:
-                            raise ValueError(
-                                f"Invalid complexity level '{level}'. Expected 0-5."
-                            )
-                        selected_levels.add(level)
-                    continue
-            values_to_parse = text[1:-1]
-
-        for candidate in re.split(r"\s*(?:,|\bor\b|\|)\s*", values_to_parse):
-            normalized = candidate.strip().strip("'\"")
-            if not normalized:
-                continue
-            level = int(normalized)
-            if level < 0 or level > 5:
-                raise ValueError(f"Invalid complexity level '{level}'. Expected 0-5.")
-            selected_levels.add(level)
-
-    return selected_levels
-
-
-def _filter_dataset_rows_by_technical_drawing_mode(
-    rows: list[dict[str, Any]],
-    *,
-    technical_drawing_mode: DraftingMode,
-) -> list[dict[str, Any]]:
-    filtered_rows: list[dict[str, Any]] = []
-    for row in rows:
-        raw_mode = row.get("technical_drawing_mode")
-        if raw_mode is None or str(raw_mode).strip() == "":
-            continue
-        if DraftingMode(raw_mode) != technical_drawing_mode:
-            continue
-        filtered_rows.append(row)
-    return filtered_rows
 
 
 def _resolve_runner_backend(
@@ -4092,10 +4002,10 @@ async def main():
     args = parser.parse_args()
     technical_drawing_mode = DraftingMode(args.technical_drawing_mode)
     os.environ[TECHNICAL_DRAWING_MODE_ENV] = technical_drawing_mode.value
-    selected_task_ids = _parse_task_id_filters(args.task_id)
+    selected_task_ids = parse_task_id_filters(args.task_id)
     try:
-        selected_levels = _parse_level_filters(args.level)
-    except ValueError as exc:
+        selected_levels = parse_level_filters(args.level)
+    except SystemExit as exc:
         parser.error(str(exc))
 
     if args.task_id and not selected_task_ids:
@@ -4387,7 +4297,7 @@ async def main():
                             for item in data
                             if item.get("complexity_level") in selected_levels
                         ]
-                    data = _filter_dataset_rows_by_technical_drawing_mode(
+                    data = filter_rows_by_technical_drawing_mode(
                         data,
                         technical_drawing_mode=technical_drawing_mode,
                     )

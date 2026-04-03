@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import json
 import re
 from collections.abc import Iterable
 
@@ -9,11 +11,23 @@ _DELIMITER_PATTERN = re.compile(r"\s*(?:,|\bor\b|\|)\s*", flags=re.IGNORECASE)
 def parse_cli_list_values(raw_values: Iterable[str]) -> list[str]:
     parsed: list[str] = []
     for raw in raw_values:
-        token = raw.strip().strip("[]")
+        token = raw.strip()
         if not token:
             continue
+
+        if token.startswith("[") and token.endswith("]"):
+            with contextlib.suppress(json.JSONDecodeError):
+                loaded = json.loads(token)
+                if isinstance(loaded, list):
+                    for item in loaded:
+                        item_text = str(item).strip().strip("'\"")
+                        if item_text:
+                            parsed.append(item_text)
+                    continue
+
+        token = token.strip("[]")
         parts = _DELIMITER_PATTERN.split(token)
-        parsed.extend(part.strip().strip("[]") for part in parts if part.strip())
+        parsed.extend(part.strip().strip("[]").strip("'\"") for part in parts if part.strip())
     return parsed
 
 

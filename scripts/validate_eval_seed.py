@@ -13,7 +13,11 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from evals.logic.cli_args import parse_cli_int_set, parse_cli_list_values  # noqa: E402
+from evals.logic.dataset_selection import (  # noqa: E402
+    filter_rows_by_technical_drawing_mode,
+    parse_level_filters,
+    resolve_agents,
+)
 from evals.logic.stack_profiles import apply_stack_profile_env  # noqa: E402
 from scripts.internal.eval_run_lock import (  # noqa: E402
     EvalRunSelection,
@@ -248,52 +252,6 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _filter_dataset_rows_by_technical_drawing_mode(
-    rows: list[dict[str, object]],
-    *,
-    technical_drawing_mode: DraftingMode,
-) -> list[dict[str, object]]:
-    filtered: list[dict[str, object]] = []
-    for row in rows:
-        raw_mode = row.get("technical_drawing_mode")
-        if raw_mode is None or str(raw_mode).strip() == "":
-            filtered.append(row)
-            continue
-        if DraftingMode(raw_mode) != technical_drawing_mode:
-            continue
-        filtered.append(row)
-    return filtered
-
-
-def _resolve_agents(agent_args: list[str]) -> list[AgentName]:
-    parsed = parse_cli_list_values(agent_args)
-    if not parsed:
-        raise SystemExit("No valid --agent values were parsed.")
-
-    if any(agent_arg.lower() == "all" for agent_arg in parsed):
-        return list(AGENT_SPECS.keys())
-
-    agents: list[AgentName] = []
-    seen: set[AgentName] = set()
-    for agent_arg in parsed:
-        try:
-            agent = AgentName(agent_arg)
-        except ValueError as exc:
-            available = ", ".join(sorted(agent.value for agent in AGENT_SPECS))
-            raise SystemExit(
-                f"Unknown agent '{agent_arg}'. Available: {available}"
-            ) from exc
-
-        if agent not in AGENT_SPECS:
-            raise SystemExit(f"Agent '{agent.value}' is not configured in AGENT_SPECS.")
-        if agent in seen:
-            continue
-        seen.add(agent)
-        agents.append(agent)
-
-    return agents
-
-
 def _load_dataset(
     agent: AgentName,
     *,
@@ -327,7 +285,7 @@ def _load_dataset(
         data = [item for item in data if item["id"] == task_id]
     if levels:
         data = [item for item in data if item.get("complexity_level") in levels]
-    data = _filter_dataset_rows_by_technical_drawing_mode(
+    data = filter_rows_by_technical_drawing_mode(
         data, technical_drawing_mode=technical_drawing_mode
     )
     if limit > 0:
@@ -428,10 +386,8 @@ async def _async_main(args: argparse.Namespace) -> int:
         raise SystemExit("--concurrency must be >= 1")
 
     technical_drawing_mode = DraftingMode(args.technical_drawing_mode)
-    agents = _resolve_agents(args.agent)
-    levels = parse_cli_int_set(
-        args.level or [], minimum=0, maximum=5, label="complexity level"
-    )
+    agents = resolve_agents(args.agent)
+    levels = parse_level_filters(args.level)
     if args.level and not levels:
         raise SystemExit("No valid --level values were parsed.")
 
