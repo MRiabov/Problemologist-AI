@@ -1,4 +1,0 @@
-interface:
-  display_name: "Eval Creation Workflow"
-  short_description: "Create seeded role-based evals for Problemologist."
-  default_prompt: "Use this skill when adding or repairing role-based eval datasets in this repo. Prefer stage-correct seeded artifact directories over prompt-only rows for coder, reviewer, and downstream roles, keep deterministic fields exact at entry, and validate with minimal-scope run_evals.py runs."
