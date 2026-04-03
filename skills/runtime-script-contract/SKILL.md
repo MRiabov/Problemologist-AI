@@ -23,9 +23,12 @@ Use top-level `utils` imports in authored scripts:
 ```python
 from utils.submission import validate, simulate, submit_for_review
 from utils.metadata import PartMetadata, CompoundMetadata
+from utils.preview import preview, preview_drawing, objectives_geometry
 ```
 
 `shared.*` paths are implementation internals. Do not use them in authored agent scripts.
+
+For render evidence and point-pick workflows, prefer the namespaced helpers in `utils.preview`; use `utils.visualize` only as a compatibility alias when older code already references it.
 
 For ordinary mechanical engineer scripts, keep imports minimal:
 
@@ -48,7 +51,7 @@ Use this sequence for engineer-coder evals:
 
 01. Read `plan.md`, `todo.md`, `assembly_definition.yaml`, and `benchmark_definition.yaml`.
 02. If benchmark geometry exists, read `benchmark_script.py` as read-only context before drafting the solution.
-03. Read `skills/build123d_cad_drafting_skill/SKILL.md` before the first geometry draft.
+03. Read `skills/build123d-cad-drafting-skill/SKILL.md` before the first geometry draft.
 04. If the design includes catalog-backed components, read `skills/cots-parts/SKILL.md` before drafting the part geometry or motion contract.
 05. Only read `skills/electronics-engineering/SKILL.md` if the approved handoff explicitly contains an `electronics` section or the benchmark declares `electronics_requirements`. Motors alone do not imply an electronics task, and mechanical wire-routing placeholders do not qualify.
 06. Keep the first `solution_script.py` draft compact and complete for the handoff. Prefer a direct `result = ...` binding and avoid extra helper files.

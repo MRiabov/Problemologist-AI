@@ -1,5 +1,5 @@
 ---
-name: engineer_coder
+name: engineer-coder
 description: Problemologist engineering implementation role. Use when turning approved engineering handoffs into solution_script.py, solving engineering evals with bounded retries, selecting mechanism patterns, validating and simulating revisions, inspecting render evidence, preserving planner inventory exactness, grounding work in proof-backed plan.md contracts, or refusing an infeasible plan with plan_refusal.md.
 ---
 
@@ -26,6 +26,20 @@ The agent should be able to do the following without overthinking the workflow:
 4. Use specialist skills only when they materially change the design.
 5. Validate, simulate, inspect evidence, and submit for review.
 6. Refuse cleanly when the plan cannot be made to work.
+
+## Canonical Helpers
+
+Use the runtime helpers explicitly in authored engineer scripts:
+
+```python
+from utils.submission import validate, simulate
+from utils.preview import preview, preview_drawing, objectives_geometry
+```
+
+- `validate(result)` and `simulate(result)` are the required pre-handoff checks.
+- `submit_for_review(result)` is available for supporting scripts that own the final handoff step.
+- `preview(...)` and `preview_drawing()` are the evidence-generation paths; `objectives_geometry()` reconstructs benchmark objective overlays when needed.
+- `from utils.visualize import ...` is a compatibility alias, but `utils.preview` is the preferred namespace for new code.
 
 ## What This Skill Owns
 
@@ -67,7 +81,7 @@ Then load specialist knowledge only as needed:
 
 - [render-evidence](../render-evidence/SKILL.md) when the task needs preview generation, media inspection, bundle selection, or point-pick queries
 - [runtime-script-contract](../runtime-script-contract/SKILL.md)
-- [build123d_cad_drafting_skill](../build123d_cad_drafting_skill/SKILL.md)
+- [build123d-cad-drafting-skill](../build123d-cad-drafting-skill/SKILL.md)
 - [mechanical-engineering](../mechanical-engineering/SKILL.md)
 - [cots-parts](../cots-parts/SKILL.md)
 - [manufacturing-knowledge](../manufacturing-knowledge/SKILL.md)
@@ -125,6 +139,7 @@ This role should behave like a high-confidence solver, not a wandering explorer.
 - Keep one active hypothesis at a time. If a targeted fix does not change the measured failure mode, record that and pivot instead of layering unrelated edits.
 - Preserve working substructures instead of rebuilding the entire model after every failure.
 - Use the first simulation or review failure to identify the dominant failure class, then repair that class directly.
+- For passive transfer tasks, check first contact height at the spawn point before iterating on capture details; if the object never reaches the support path, lower or reshape the first contact surface instead of tuning the pocket.
 - Spend one quick pass on the handoff files, then start drafting.
 - Avoid unrelated repo spelunking after the objective is clear.
 - Verify against the real validation/simulation/integration gates, not unit-test substitutes or mocked stand-ins.

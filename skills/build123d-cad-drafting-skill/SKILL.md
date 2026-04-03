@@ -1,5 +1,5 @@
 ---
-name: build123d_cad_drafting_skill
+name: build123d-cad-drafting-skill
 description: Use this skill when you need do CAD modeling using build123d. Includes builder modes, semantic selectors, and MJCF-compatible boolean strategies, and everything you need to know about build123d syntax.
 ---
 
@@ -13,7 +13,7 @@ Read this skill and the relevant reference files below before planning any `buil
 02. **Parametric Dimensioning**: Never guess a size. Drive each dimension from named inputs, source geometry, or formulas. Compute secondary offsets, wall thicknesses, clearances, and manufacturing constants from those inputs. If a value is missing, stop and surface the missing source instead of inventing a number.
 03. **Semantic Selectors**: Avoid indices. Use `faces()`, `edges()`, `vertices()` with `sort_by(Axis.Z)` or `last()`/`first()`.
 04. **2D Joint Sketching**: When a sketch is defined by tangency, fixed radius, or datum relationships, use the constrained line/arc helpers instead of hand-tuning vertices. Compute radii and spans from named parameters rather than by eye. These helpers are for CAD sketch layout, not MJCF joints or simulation joints. See [2d_joints.md](references/2d_joints.md).
-05. **3D Placement Joints**: When assembly layout depends on repeated, mirrored, or rotated placement, use `Location`, `Locations`, `.move(...)`, `.moved(...)`, `Align`, and `Compound(children=[...])` placement patterns to derive poses from joint frames and datums instead of hand-deriving world coordinates. This is joint-driven placement, not random position-driven layout. See [3d_joints.md](references/3d_joints.md).
+05. **3D Placement Joints**: When assembly layout depends on repeated, mirrored, or rotated placement, use `Location`, `Locations`, `.move(...)`, `.moved(...)`, `Align`, and `Compound(children=[...])` placement patterns to derive poses from joint frames and datums instead of hand-deriving world coordinates. Prefer constraint-based placement against an existing part over standalone `Location(...)`; use absolute pose data only when there is no better mating or joint relationship. This is joint-driven placement, not random position-driven layout. When choosing a mating face, start from visual inspection and then confirm with axis-sorted selectors; in practice the obvious face is often the first or last face along a principal axis, which is faster and less error-prone than reasoning from coordinates alone. See [3d_joints.md](references/3d_joints.md) for a face-constrained example.
 06. **MJCF Compliance**: Ensure parts are non-intersecting if they belong to different simulation links.
 07. **Assembly Labels**: Use `.label = "stator"` and `.label = "rotor"` for automatic motor/joint injection in MJCF.
 08. **Label Namespace Hygiene**: Top-level authored labels must be unique and must not be `environment` or start with `zone_`. The simulator reserves those names for the scene root and generated objective bodies, and duplicate labels collide with MJCF mesh/body names.
@@ -25,6 +25,7 @@ For orthographic sheets, title blocks, and vector export, use the companion [bui
 ## Placement And Rotation Contract
 
 - Create top-level authored solids at the origin, then place them with `Location(...)`.
+- Treat `Location(...)` as the last-mile pose carrier, not the default modeling strategy. If another part, mate, fastener, or datum can define the relationship, derive the pose from that constraint chain first and keep the absolute coordinate anchor as small and traceable as possible.
 - For exported benchmark/engineering assemblies, the simulation stack reads pose from `child.location`.
 - The orientation tuple inside `Location((x, y, z), (rx, ry, rz))` is in degrees, not radians.
 - If a mechanism uses multiple top-level parts that must share the same slope or travel direction, encode compatible rotated locations for each of them. Do not rotate only one part and leave companion rails/walls flat.

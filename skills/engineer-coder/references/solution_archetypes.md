@@ -40,6 +40,8 @@ Drafting cues:
 - Include enough lateral containment to survive jitter and bounce.
 - Avoid tiny ledges or gaps that only work on the nominal seed.
 - If the path is mirrored or drains the wrong way, fix handedness, slope sign, or datum orientation before widening capture or adding complexity.
+- Verify that the cube actually contacts the support surface at the declared spawn height before tuning anything else.
+- If the cube never reaches the path, lower or reshape the first contact surface instead of spending time on pocket details.
 
 Typical failure modes:
 
@@ -55,6 +57,7 @@ First response:
 - Remove unsupported gaps.
 - Re-check the final placed envelope, not just the sketch.
 - Verify the first rendered motion before spending time on cosmetic cleanup.
+- Confirm first contact at the spawn point with a quick analytic height check before another simulation pass.
 
 ## Actuated solutions
 
@@ -150,5 +153,6 @@ First response:
 - Reduce sensitivity before increasing complexity.
 - If the approved handoff already pins down the exact geometry, labels, or inventory, copy that contract forward verbatim into `solution_script.py` and spend effort on the build123d translation, not on re-deciding the mechanism.
 - If the first simulation shows the object moving away from the goal, treat it as a directionality bug, not a robustness bug.
+- If the first simulation shows the object never reaching the support path, treat it as a contact-height bug, not a capture-margin bug.
 - If a review or simulation failure recurs, promote the winning pattern into this file so the next run starts from a better prior.
 - Keep new patterns here concise enough to reuse, but specific enough to be actionable.

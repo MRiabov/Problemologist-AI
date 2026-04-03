@@ -15,6 +15,20 @@ This skill operationalizes the `benchmark_coder` prompt in `config/prompts.yaml`
 4. Validate and simulate the latest revision before handoff.
 5. Refuse cleanly when the approved plan is genuinely infeasible.
 
+## Canonical Helpers
+
+Use the runtime helpers explicitly in authored benchmark scripts:
+
+```python
+from utils.submission import validate, simulate, submit_for_review
+from utils.preview import preview, preview_drawing, objectives_geometry
+```
+
+- `validate(result)` and `simulate(result)` are the required pre-handoff checks.
+- `submit_for_review(result)` is the final benchmark review handoff helper.
+- `preview(...)` and `preview_drawing()` are the evidence-generation paths; `objectives_geometry()` reconstructs benchmark objective overlays when needed.
+- `from utils.visualize import ...` is a compatibility alias, but `utils.preview` is the preferred namespace for new code.
+
 ## Geometry Contract
 
 - Base every size, offset, and clearance on approved geometry, COTS dimensions, or explicit formulas.
@@ -63,10 +77,10 @@ When the benchmark planner uses its structured template, read `plan.md` as a sec
 
 Load sibling skill guidance only when it changes the implementation outcome:
 
-- [engineer_coder](../engineer_coder/SKILL.md) for shared implementation discipline such as import safety, validation strategy, and evidence handling.
+- [engineer-coder](../engineer-coder/SKILL.md) for shared implementation discipline such as import safety, validation strategy, and evidence handling.
 - [render-evidence](../render-evidence/SKILL.md) when media inspection or preview bundle handling is needed.
 - [runtime-script-contract](../runtime-script-contract/SKILL.md)
-- [build123d_cad_drafting_skill](../build123d_cad_drafting_skill/SKILL.md)
+- [build123d-cad-drafting-skill](../build123d-cad-drafting-skill/SKILL.md)
 - [mechanical-engineering](../mechanical-engineering/SKILL.md)
 - [cots-parts](../cots-parts/SKILL.md) when exact catalog identity matters.
 - [manufacturing-knowledge](../manufacturing-knowledge/SKILL.md) when cost or weight constraints drive the design.
@@ -136,4 +150,4 @@ Do not invent fallback behavior to paper over contradictions. If the approved pl
 
 - Add recurring benchmark geometry families and implementation heuristics to `references/benchmark_patterns.md`.
 - Add recurring blockers, diagnostics, and repair patterns to `references/failure_modes.md`.
-- Mirror shared patterns from `engineer_coder` only when the benchmark semantics are actually the same.
+- Mirror shared patterns from `engineer-coder` only when the benchmark semantics are actually the same.

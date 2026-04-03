@@ -5,6 +5,15 @@ description: Review benchmark planner handoffs before coding starts. Use when va
 
 # Benchmark Plan Reviewer
 
+## Canonical Preview Helpers
+
+When planner drafts or evidence need visual checking, use the shared preview helpers explicitly:
+
+- `preview(...)` for live scene or preview-bundle inspection
+- `preview_drawing()` for drafted plan packages and orthographic evidence
+- `objectives_geometry()` when a preview scene needs benchmark objective overlays reconstructed
+- Prefer `utils.preview` for new code paths; `utils.visualize` is compatibility-only
+
 ## Review Checklist
 
 - [ ] Confirm the latest planner revision and matching `.manifests/benchmark_plan_review_manifest.json`.

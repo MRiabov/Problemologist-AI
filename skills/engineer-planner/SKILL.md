@@ -14,6 +14,15 @@ description: Engineering planning role for turning benchmark handoff context int
 5. Preserve benchmark-owned fixtures and geometry as read-only context.
 6. Fail closed on contradictory, under-specified, or infeasible handoffs.
 
+## Canonical Preview Helpers
+
+Use the shared preview helpers whenever the plan needs visual evidence:
+
+- `preview(...)` for live scene inspection and engineering preview renders
+- `preview_drawing()` for drafting packages and plan evidence
+- `objectives_geometry()` when the preview scene needs benchmark objective overlays reconstructed
+- Prefer `utils.preview` for new code paths; `utils.visualize` is compatibility-only
+
 ## Geometry Contract
 
 - Base every size, offset, and clearance on explicit source geometry, COTS dimensions, or formulas.
@@ -54,12 +63,12 @@ Start with the current handoff package:
 Load specialist skill support only when it materially changes the plan:
 
 - `render-evidence` when preview generation, media inspection, or point-pick evidence is needed
-- `build123d_cad_drafting_skill` for drafting geometry or technical drawings
+- `build123d-cad-drafting-skill` for drafting geometry or technical drawings
 - `manufacturing-knowledge` when budget, quantity, or manufacturability matters
 - `mechanical-engineering` when mechanism feasibility or load path needs deeper analysis
 - `electronics-engineering` only when the handoff explicitly includes electronics requirements
 - `cots-parts` or the COTS search subagent when exact part identity affects the plan
-- [solution archetypes](../engineer_coder/references/solution_archetypes.md) when a solution family needs a quick prior
+- [solution archetypes](../engineer-coder/references/solution_archetypes.md) when a solution family needs a quick prior
 
 ## Source Hierarchy
 

@@ -7,6 +7,15 @@ description: Benchmark execution-review skill for validating implemented benchma
 
 Use this skill to decide whether the implemented benchmark is ready to hand off to the engineer graph. Keep the review read-only, evidence-based, and tied to the latest revision.
 
+## Canonical Preview Helpers
+
+When preview evidence or objective overlays are present, use the shared preview helpers explicitly:
+
+- `preview(...)` for live scene previews or benchmark evidence inspection
+- `preview_drawing()` for drafting-package review evidence
+- `objectives_geometry()` when a benchmark preview needs reconstructed objective overlays
+- Prefer `utils.preview` for new code paths; `utils.visualize` is a compatibility alias
+
 ## Review Checklist
 
 - [ ] Confirm the latest revision and valid `.manifests/benchmark_review_manifest.json`.

@@ -27,6 +27,8 @@ Use when the moved object starts above the target path and only needs directed t
 - Provide one continuous support path from spawn support to goal support.
 - Ensure the travel direction has a real downhill component.
 - Add side retention if jitter or bounce could eject the object.
+- Verify the object can physically touch the runway at the declared spawn height before tuning capture details.
+- If spawn sits above the runway, lower the first support or raise the path before widening the pocket.
 
 ### Chute or channel
 
@@ -50,6 +52,7 @@ Use when the object must rest safely before the next motion step.
 
 - Support the object at its actual start position.
 - Do not leave the object effectively in free space and rely on simulation settling.
+- If the object never reaches the path, fix first-contact height before increasing pocket depth or width.
 
 ## 3. Failure Patterns To Reject
 
@@ -134,6 +137,7 @@ Use this loop when a passive-transfer draft validates but the motion still fails
 5. Treat seed hints for direction, x-position, and corridor placement as hard constraints when they are explicit.
 6. Change one variable at a time. Do not mix placement, clearance, slope, and capture geometry changes in the same iteration.
 7. Treat validation as a prerequisite, not evidence that the mechanism works.
+8. If the object never reaches the support surface, treat it as a contact-height bug before a capture-margin bug.
 
 ## 6. When To Escalate Beyond Passive Transfer
 

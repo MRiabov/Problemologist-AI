@@ -27,7 +27,7 @@
 ## Render-query helpers
 
 - `worker_light.utils.render_query` is the planned worker-light helper family for bundle lookup and ray-pick.
-- `pick_preview_pixel(...)` resolves a screen-space click through the persisted render snapshot and returns a structured world-space hit record.
+- `pick_preview_pixel(...)` resolves a screen-space click through the persisted render snapshot and returns a structured world-space hit record. Stable calls should include `bundle_path`, `pixel_x`, `pixel_y`, `image_width`, `image_height`, and `view_index`; `bundle_id` and `manifest_path` are optional disambiguators. Use `pick_preview_pixels(...)` for multiple picks against the same snapshot.
 - `list_render_bundles(...)` and `query_render_bundle(...)` are lookup helpers that sit on top of the render history contract owned by the rendering docs.
 - These helpers are auxiliary. They fail closed when the bundle snapshot, render history, or requested artifact cannot be resolved.
 
@@ -45,7 +45,7 @@
 
 | Namespace | Proposed helper surface | Status | Ownership / notes |
 | -- | -- | -- | -- |
-| `worker_light.utils.render_query` | `pick_preview_pixel(...)`, `list_render_bundles(...)`, `query_render_bundle(...)` | Planned / auxiliary | Worker-light render lookup and ray-pick helper family. Implementation may be re-exported through the public `utils` facade as thin wrappers. |
+| `worker_light.utils.render_query` | `pick_preview_pixel(...)`, `pick_preview_pixels(...)`, `list_render_bundles(...)`, `query_render_bundle(...)` | Planned / auxiliary | Worker-light render lookup and ray-pick helper family. Implementation may be re-exported through the public `utils` facade as thin wrappers. |
 
 ## Experimental surfaces
 
@@ -68,7 +68,7 @@
 2. If a helper depends on `simulation_result.json`, `benchmark_definition.yaml`, or `suggested_skills/`, the helper is not a general-purpose prompt primitive.
 3. If a helper reads render history, it must resolve a published bundle through the owning render contract, not through an unnamed latest alias alone.
 4. If a helper is only useful for one role family, the role gate must be visible in the runtime config rather than inferred from prose.
-5. If a helper needs a point coordinate from a render, it must validate the bundle snapshot before returning a world-space hit.
+5. If a helper needs a point coordinate from a render, it must validate the bundle snapshot before returning a world-space hit, and it must expose enough inputs to replay the exact bundle, view, and pixel choice later.
 6. If a helper graduates into the main tool contract, this file keeps only a short cross-reference and removes the repeated detail.
 7. If an experimental helper becomes a prompt default, it needs matching architecture documentation and observability coverage before it is treated as stable.
 

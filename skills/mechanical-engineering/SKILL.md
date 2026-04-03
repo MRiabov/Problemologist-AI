@@ -24,23 +24,25 @@ Use this skill as a router. Keep the main prompt lean and load only the referenc
 
 ## Core Rules
 
-1. Make the transport mechanism explicit.
-   If the object must move laterally, roll, slide, funnel, deflect, or stay captured, model the actual surfaces or components that do that work. Spawn pedestals and containment walls are not enough.
-2. Prefer the simplest physically credible mechanism family.
-   Start with passive gravity transfer before adding motors, joints, or extra DOFs. Add motion only when the task truly requires it.
-3. Every non-static DOF must map to a real mechanism.
-   Bearings, sliders, motors, fasteners, or another allowed physical constraint must justify the motion. Convenience DOFs are review failures.
-4. Use the current runtime helpers for stress/fluid work.
-   `get_stress_report(...)`, `preview_stress(...)`, and `define_fluid(...)` are the current repo-level hooks; do not invent alternate analysis paths in prompts.
-5. Keep manufacturing and physics aligned.
-   Benchmark-owned fixtures are not priced as manufactured parts, but engineer-authored parts still need realistic geometry, materials, and attachment logic.
-6. Never guess a size.
-   Derive every length, thickness, gap, capture width, wall height, clearance, and support offset from declared source dimensions, measured geometry, or manufacturing constants. If the required value is missing, stop and surface the missing input instead of inventing a plausible number.
-7. When the mechanism is joint-driven, place parts from joint axes, contact surfaces, and datum offsets instead of arbitrary world coordinates.
-8. Before relying on a passive slide or chute, compare the slope to the actual friction coefficient in `manufacturing_config.yaml`.
-   If `tan(theta)` does not beat the relevant `friction_coef`, treat the mechanism as stalled until geometry or family changes.
-9. If the mechanism uses COTS components, keep the concrete part contract separate from the motion contract.
-   Do not treat motors, fixtures, or other catalog-backed parts as generic geometry.
+01. Make the transport mechanism explicit.
+    If the object must move laterally, roll, slide, funnel, deflect, or stay captured, model the actual surfaces or components that do that work. Spawn pedestals and containment walls are not enough.
+02. Prefer the simplest physically credible mechanism family.
+    Start with passive gravity transfer before adding motors, joints, or extra DOFs. Add motion only when the task truly requires it.
+03. Every non-static DOF must map to a real mechanism.
+    Bearings, sliders, motors, fasteners, or another allowed physical constraint must justify the motion. Convenience DOFs are review failures.
+04. Use the current runtime helpers for stress/fluid work.
+    `get_stress_report(...)`, `preview_stress(...)`, and `define_fluid(...)` are the current repo-level hooks; do not invent alternate analysis paths in prompts.
+05. Keep manufacturing and physics aligned.
+    Benchmark-owned fixtures are not priced as manufactured parts, but engineer-authored parts still need realistic geometry, materials, and attachment logic.
+06. Never guess a size.
+    Derive every length, thickness, gap, capture width, wall height, clearance, and support offset from declared source dimensions, measured geometry, or manufacturing constants. If the required value is missing, stop and surface the missing input instead of inventing a plausible number.
+07. When the mechanism is joint-driven, place parts from joint axes, contact surfaces, and datum offsets instead of arbitrary world coordinates.
+08. Before relying on a passive slide or chute, compare the slope to the actual friction coefficient in `manufacturing_config.yaml`.
+    If `tan(theta)` does not beat the relevant `friction_coef`, treat the mechanism as stalled until geometry or family changes.
+09. If the mechanism uses COTS components, keep the concrete part contract separate from the motion contract.
+    Do not treat motors, fixtures, or other catalog-backed parts as generic geometry.
+10. Before tuning capture pockets or side rails, verify that the object actually reaches the support surface at the declared spawn height.
+    If the object never makes first contact, lower or reshape the first support surface before changing capture geometry.
 
 ## Passive-Transfer Debugging
 
@@ -48,6 +50,7 @@ Use this skill as a router. Keep the main prompt lean and load only the referenc
 - Separate validation from effectiveness. Passing geometry validation is necessary, but it is not evidence of a working mechanism. Stop treating validation success as progress once simulation is still failing.
 - Inspect the first simulation frames or video as soon as direction is uncertain.
 - When the motion is reversed, verify slope sign, handedness, and datum orientation before changing capture width or seam cleanup.
+- When the object never gets onto the intended path, check first contact height at the spawn point before tuning pocket geometry.
 - For friction-sensitive passive transfer, use the workspace manufacturing config rather than a guessed coefficient. If the object stalls, first check `tan(theta)` against `friction_coef`, then widen capture or change the mechanism family.
 - Treat seed hints for direction, x-position, and capture span as hard constraints.
 - Change one variable at a time; validation success is necessary, but it is not proof that the mechanism works.

@@ -4,7 +4,7 @@ This document explains how the 3D placement joints work for part placement, repe
 
 These are placement joints, not physics joints.
 
-Treat the joint frame or mating datum as the source of truth for pose. Derive every repeated or rotated placement from that relationship instead of placing parts by arbitrary world coordinates.
+Treat the joint frame or mating datum as the source of truth for pose. Derive every repeated or rotated placement from that relationship instead of placing parts by arbitrary world coordinates. Prefer constrained placement against an existing part whenever one exists; use standalone `Location(...)` only when the assembly relation cannot be expressed more directly from a mate, joint, or repeated datum chain.
 
 ## 1. Repeated placements from one builder result
 
@@ -44,3 +44,28 @@ assembly = Compound(children=[base_part, bracket_part])
 - Use the joint or datum chain to calculate pose before calling `Location(...)`.
 - Derive separate `.moved(...)` copies when you need multiple instances.
 - Run `do_children_intersect()` on the final compound if placement risk matters.
+
+## 4. Face-constrained placement example
+
+This pattern places a second part from the first part's face instead of hand-placing the second part with raw XYZ coordinates.
+
+```python
+from build123d import Align, Axis, Box, BuildPart, BuildSketch, Rectangle, extrude
+
+with BuildPart() as base:
+    Box(40, 30, 8, align=(Align.CENTER, Align.CENTER, Align.MIN))
+
+base_top = base.part.faces().sort_by(Axis.Z)[-1]
+
+with BuildPart() as boss:
+    with BuildSketch(base_top):
+        Rectangle(12, 10)
+    extrude(6)
+```
+
+Here the `BuildSketch(...)` plane comes from `base.part.faces().sort_by(Axis.Z)[-1]`, so the second part is constrained to the first part's top face rather than anchored by a free-form coordinate triple.
+
+## 5. Visual face selection tip
+
+When you are looking for a face to mate against, inspect the model visually first and then use an axis sort to confirm the likely candidate.
+The obvious mating face is often the first or last face along a principal axis, so `faces().sort_by(Axis.Z)[0]` or `faces().sort_by(Axis.Z)[-1]` is usually faster and less error-prone than trying to infer the face from coordinates alone.

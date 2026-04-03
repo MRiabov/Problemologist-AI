@@ -5,6 +5,15 @@ description: Engineer-side review workflow for validating plan and execution han
 
 # Engineer Solution Reviewer
 
+## Canonical Preview Helpers
+
+When plan or execution evidence needs visual checking, use the shared preview helpers explicitly:
+
+- `preview(...)` for live scene or engineer preview inspection
+- `preview_drawing()` for drafting-package review evidence
+- `objectives_geometry()` when a preview scene needs benchmark objective overlays reconstructed
+- Prefer `utils.preview` for new code paths; `utils.visualize` is compatibility-only
+
 ## Review Checklist
 
 - [ ] Confirm the latest revision and matching stage manifest.

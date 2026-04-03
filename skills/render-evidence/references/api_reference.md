@@ -1,38 +1,24 @@
-# Reference Documentation for Render Evidence
+# Render Query API Reference
 
-This is a placeholder for detailed reference documentation.
-Replace with actual reference content or delete if not needed.
+Use these references for the worker-light render-query helpers:
 
-Example real reference docs from other skills:
+- Preferred import surface:
 
-- product-management/references/communication.md - Comprehensive guide for status updates
-- product-management/references/context_building.md - Deep-dive on gathering context
-- bigquery/references/ - API references and query examples
+```python
+from utils.preview import (
+    list_render_bundles,
+    objectives_geometry,
+    pick_preview_pixel,
+    pick_preview_pixels,
+    preview,
+    preview_drawing,
+    query_render_bundle,
+)
 
-## When Reference Docs Are Useful
+from utils.visualize import preview as visualize_preview
+```
 
-Reference docs are ideal for:
+- `pick_preview_pixel(...)` and `pick_preview_pixels(...)`: see [point-pick.md](point-pick.md) for the required inputs, replayable call shape, and returned hit fields.
+- `list_render_bundles(...)` and `query_render_bundle(...)`: see [bundle-history.md](bundle-history.md) for bundle selection and metadata lookup.
 
-- Comprehensive API documentation
-- Detailed workflow guides
-- Complex multi-step processes
-- Information too lengthy for main SKILL.md
-- Content that's only needed for specific use cases
-
-## Structure Suggestions
-
-### API Reference Example
-
-- Overview
-- Authentication
-- Endpoints with examples
-- Error codes
-- Rate limits
-
-### Workflow Guide Example
-
-- Prerequisites
-- Step-by-step instructions
-- Common patterns
-- Troubleshooting
-- Best practices
+All render queries must stay bundle-local and replayable. Do not infer pixel-to-world coordinates from filenames, raw image bytes, or an unnamed latest render.

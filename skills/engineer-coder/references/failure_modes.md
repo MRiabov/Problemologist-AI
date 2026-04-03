@@ -89,6 +89,8 @@ Signals:
 - Unstable motion or flakiness
 - Static validation passes, but the moving object exits the build zone or goes the wrong way
 - A mirrored or reversed transfer path in video despite a plausible static layout
+- Static validation passes, the scene looks coherent in preview, but the moved object never gets onto the intended support surface
+- The first simulation frame shows the object falling through open space or landing below the path before any meaningful transfer begins
 
 Likely causes:
 
@@ -98,11 +100,15 @@ Likely causes:
 - The design has unnecessary degrees of freedom
 - Slope sign, handedness, or datum orientation is reversed
 - The motion stack was tuned with too many coupled changes at once
+- The support surface starts above the spawn height, so the object never makes initial contact
+- The path was debugged visually instead of checking the actual contact height at the start and handoff points
 
 First fix:
 
 - Inspect the first simulation frame or video, verify the real motion direction, and change only the dominant motion determinant.
 - Increase tolerance to runtime variation and remove fragile dependency points.
+- Compute the start-contact surface height and the goal-contact surface height before another simulation run.
+- If the object never touches the path, lower or reshape the support instead of tuning capture details.
 
 ## Evidence and review
 

@@ -14,6 +14,15 @@ Turn a benchmark brief into a complete handoff that the benchmark coder can impl
 3. Prefer passive geometry first. Add benchmark-owned motion only when it is necessary for the objective.
 4. Fail closed when required benchmark facts are missing, contradictory, or hidden behind placeholders.
 
+## Canonical Preview Helpers
+
+Use the shared preview helpers when evidence or objective overlays are part of the plan:
+
+- `preview(...)` for live scene inspection and benchmark preview renders
+- `preview_drawing()` for drafting packages and orthographic plan evidence
+- `objectives_geometry()` when a benchmark preview needs reconstructed objective overlays
+- Prefer `utils.preview` for new import paths; `utils.visualize` is compatibility-only
+
 ## Geometry Contract
 
 - Base every size, offset, and clearance on declared geometry, COTS dimensions, or an explicit formula.
@@ -32,8 +41,8 @@ Read these before drafting or revising the handoff:
 - `specs/architecture/agents/roles.md`
 - `specs/architecture/agents/handover-contracts.md`
 - `specs/architecture/agents/artifacts-and-filesystem.md`
-- `../engineer_coder/SKILL.md`
-- `../build123d_cad_drafting_skill/SKILL.md`
+- `../engineer-coder/SKILL.md`
+- `../build123d-cad-drafting-skill/SKILL.md`
 - `../render-evidence/SKILL.md` when render evidence already exists or preview judgment is needed
 - `../mechanical-engineering/SKILL.md` when geometry or motion needs mechanical reasoning
 - `../cots-parts/SKILL.md` when a benchmark-owned fixture uses a catalog-backed component
@@ -88,4 +97,4 @@ Read these before drafting or revising the handoff:
 
 ## Boundary With Engineer Coder
 
-Write the benchmark so `../engineer_coder/SKILL.md` can consume it as clean read-only context. If the downstream engineer would need to guess the benchmark intent, tighten the plan instead of handing off ambiguity.
+Write the benchmark so `../engineer-coder/SKILL.md` can consume it as clean read-only context. If the downstream engineer would need to guess the benchmark intent, tighten the plan instead of handing off ambiguity.
