@@ -149,8 +149,8 @@ Rules:
 5. Reviewer roles get `write/edit` tools, but policy only allows writes to their stage-specific persisted review YAML pairs.
 6. `.manifests/**` is non-overridable deny for all LLM agent roles; only backend runtime utilities may access it.
 7. No agent role may be granted access to filesystem paths outside its sandbox/workspace root.
-8. `config/agents_config.yaml` also owns preview-render modality policy under top-level `render: {rgb, depth, segmentation}`.
-9. Those flags control whether build123d/VTK-backed preview artifacts are persisted into `renders/**` for each modality; they do not change worker routing or backend selection policy. The bundle subdirectory still reflects the workflow that produced it.
+8. `config/agents_config.yaml` also owns preview-render modality policy under top-level `render: {rgb, depth, segmentation}` and the motion cadence/tolerance policy for benchmark planner, engineer planner, and engineer coder layers.
+9. Those flags control whether build123d/VTK-backed preview artifacts are persisted into `renders/**` for each modality; they do not change worker routing or backend selection policy. The motion policy controls waypoint frequency and tolerance budgets but does not relocate the contract structure out of the YAML artifacts. The bundle subdirectory still reflects the workflow that produced it.
 
 ## Immutability validation
 
@@ -167,7 +167,8 @@ Control-file ownership split:
 07. `solution_plan_evidence_script.py` owns engineering planner drafting evidence geometry.
 08. `solution_plan_technical_drawing_script.py` owns engineering planner technical-drawing exports.
 09. `assembly_definition.yaml` owns engineer-planned solution structure, costing inputs, and motion metadata.
-10. We do not duplicate engineer solution metadata into `benchmark_definition.yaml`.
+10. `precise_path_definition.yaml` owns engineer-coder higher-resolution path and contact proof; it refines the coarse planner forecast and must not contradict it.
+11. We do not duplicate engineer solution metadata into `benchmark_definition.yaml`.
 
 ## File updates
 

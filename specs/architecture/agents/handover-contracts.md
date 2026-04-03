@@ -179,7 +179,7 @@ Benchmark-owned authored labels are part of that read-only contract too: `moved_
 
 Additionally, the engineering agent will be supplied with preview evidence when the current revision has explicitly generated renders. Treat that preview as role-scoped render evidence under `renders/`, but keep the workflow-specific subdirectory inside that bundle. Benchmark preview evidence lives under `renders/benchmark_renders/`, engineer single-view inspection previews live under `renders/engineer_renders/`, and final engineer preview evidence lives under `renders/final_preview_renders/`. Handover and submission collectors recurse through the selected bucket directory, so nested render files and the bundle-local `render_manifest.json` survive the payload assembly step unchanged. The exact role-level render consumption policy stays config-driven in `config/agents_config.yaml`.
 
-These renders are not only passive assets in storage. Reviewer and other vision-using nodes must inspect existing render evidence through the dedicated media-inspection tool (`inspect_media(...)`) when visual evidence is required. When a fresh view needs to be materialized first, the same roles use `preview(...)` to generate it and then inspect the result. Merely listing files in `renders/` or reading text artifacts that mention render paths is not treated as image review.
+These renders are not only passive assets in storage. Reviewer and other vision-using nodes must inspect existing render evidence through the dedicated media-inspection tool (`inspect_media(...)`) when visual evidence is required. When a fresh view needs to be materialized first, the same roles use `preview(...)` to generate it and then inspect the result. For moving-solution reviews, `preview(..., motion_forecast=True)` may be used to materialize the finest available motion overlay into the static bundle before inspection. Merely listing files in `renders/` or reading text artifacts that mention render paths is not treated as image review.
 
 #### Render input contract
 
@@ -290,8 +290,11 @@ Engineer sends the planner handoff files to the coder agent who has to implement
 2. A stripped down `benchmark_definition.yaml` file, except the max price and weight are set by the planner now and remain under the benchmark/customer caps.
 3. A `todo.md` TODO-list.
 4. A `assembly_definition.yaml` file with per-part pricing inputs, `final_assembly` structure, assembly totals produced by `validate_costing_and_price.py`, and a planner-authored `motion_forecast` section whenever the approved solution includes moving engineer-owned parts.
-5. A `solution_plan_evidence_script.py` file that captures the build123d planning evidence for the proposed solution geometry.
-6. A `solution_plan_technical_drawing_script.py` file that captures the planner-authored technical drawing companion for that same solution geometry.
+5. A `precise_path_definition.yaml` file when the implementation needs a higher-resolution engineer-owned path/contact proof; it refines the coarse `motion_forecast` rather than replacing it.
+6. A `solution_plan_evidence_script.py` file that captures the build123d planning evidence for the proposed solution geometry.
+7. A `solution_plan_technical_drawing_script.py` file that captures the planner-authored technical drawing companion for that same solution geometry.
+
+The planner forecast is intentionally coarse and config-driven, while the engineer-coder may materialize `precise_path_definition.yaml` during implementation for backend-specific precision. The coder-owned precise path must remain consistent with the approved coarse forecast.
 
 Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
 

@@ -165,15 +165,25 @@ The render contract for dynamic simulation evidence is runtime-resolved and reco
 
 The rule is:
 
-1. Simulation video is intended to be a backend/service switch. Today it runs on `worker-heavy`/MuJoCo because that path already exists, avoids another HTTP hop, and was the lowest-overhead implementation; moving it later requires a renderer-side video backend such as VTK or an equivalent.
-2. The renderer backend exposes a typed capability record that states what artifact modes and view policies it supports.
-3. The runtime-selected simulation render choice is serialized in `simulation_result.json` so reviewers can replay the exact evidence path.
-4. Explicit build123d/VTK preview remains a separate preview contract, executed by the renderer worker, and continues to live in the preview manifest path.
-5. On-demand preview requests use the worker-light-facing `preview(...)` helper, normalize scalar/list camera inputs into zip-paired views, render a composed `Part | Compound` at the requested camera and modality set, stream queued/view-ready status over the websocket control path, and persist workflow-specific preview artifacts. The canonical RGB preview artifact stem is `{part_name}_render_{angle_1}_{angle_2}`, and the persisted file is `<stem>.png`; `part_name` comes from the rendered component label, so previewing `Part(Box(), label="test_part")` at the default 45/45 orbit uses the unchanged `e45_a45` angle family and produces `test_part_render_e45_a45.png`. They are separate from simulation evidence and from validation results.
-6. Every render-producing request publishes an immutable bundle directory with a bundle-local manifest. Historical discovery flows through the render bundle contract in [CAD and other infrastructure](./CAD-and-other-infra.md); `renders/render_manifest.json` may remain as a current-bundle compatibility alias. Simulation bundles may also persist `frames.jsonl` and `objects.parquet` sidecars when the active `PhysicsBackend` export path provides them.
-7. The `worker_light.utils.render_query` helper family resolves against that bundle-local snapshot when the model needs a point coordinate from a render.
-8. The render bundle path itself identifies whether the evidence belongs to benchmark input, engineer inspection, or final validation.
-9. If a backend cannot satisfy the selected render path, the failure should surface as a validation/runtime contract error rather than being hidden behind an unrelated global fallback.
+01. Simulation video is intended to be a backend/service switch. Today it runs on `worker-heavy`/MuJoCo because that path already exists, avoids another HTTP hop, and was the lowest-overhead implementation; moving it later requires a renderer-side video backend such as VTK or an equivalent.
+
+02. The renderer backend exposes a typed capability record that states what artifact modes and view policies it supports.
+
+03. The runtime-selected simulation render choice is serialized in `simulation_result.json` so reviewers can replay the exact evidence path.
+
+04. Explicit build123d/VTK preview remains a separate preview contract, executed by the renderer worker, and continues to live in the preview manifest path.
+
+05. On-demand preview requests use the worker-light-facing `preview(...)` helper, normalize scalar/list camera inputs into zip-paired views, render a composed `Part | Compound` at the requested camera and modality set, stream queued/view-ready status over the websocket control path, and persist workflow-specific preview artifacts. The canonical RGB preview artifact stem is `{part_name}_render_{angle_1}_{angle_2}`, and the persisted file is `<stem>.png`; `part_name` comes from the rendered component label, so previewing `Part(Box(), label="test_part")` at the default 45/45 orbit uses the unchanged `e45_a45` angle family and produces `test_part_render_e45_a45.png`. They are separate from simulation evidence and from validation results.
+
+06. When `preview(..., motion_forecast=True)` is requested, the static preview bundle may also include a motion-path overlay. The renderer resolves that overlay from the finest available motion artifact for the current workflow, preferring engineer-coder `precise_path_definition.yaml`, then planner `motion_forecast`, then benchmark motion evidence when applicable. The overlay is review context only and does not affect validation or simulation semantics.
+
+07. Every render-producing request publishes an immutable bundle directory with a bundle-local manifest. Historical discovery flows through the render bundle contract in [CAD and other infrastructure](./CAD-and-other-infra.md); `renders/render_manifest.json` may remain as a current-bundle compatibility alias. Simulation bundles may also persist `frames.jsonl` and `objects.parquet` sidecars when the active `PhysicsBackend` export path provides them.
+
+08. The `worker_light.utils.render_query` helper family resolves against that bundle-local snapshot when the model needs a point coordinate from a render.
+
+09. The render bundle path itself identifies whether the evidence belongs to benchmark input, engineer inspection, or final validation.
+
+10. If a backend cannot satisfy the selected render path, the failure should surface as a validation/runtime contract error rather than being hidden behind an unrelated global fallback.
 
 Any renderer-emitted file that crosses the `worker-renderer` boundary should already be backed by S3, with worker-light or controller code using the object key to re-materialize it locally if needed.
 
@@ -339,8 +349,8 @@ The contract is:
 01. The forecast captures the nominal path; the tolerance bands define the envelope around that path.
 02. The canonical location is a dedicated `motion_forecast` section inside `assembly_definition.yaml` for engineering handoffs that include moving engineer-owned parts.
 03. The forecast is sparse and ordered. It is not a full per-timestep replay of the physics engine.
-04. The default planner cadence is coarse, typically `0.5s`. The planner may add event-driven anchors around impacts, mode switches, settle events, or other contact transitions when those points matter for review.
-05. The coder may generate a denser implementation/verification trace, typically around `0.3s`, but that trace is derived evidence, not a replacement for the planner-owned contract.
+04. The default planner cadence is coarse, typically `0.5s`. The exact cadence and tolerance budgets for planner and coder layers are policy-driven via `config/agents_config.yaml`, not hardcoded in the schema. The benchmark planner may use an even coarser course-setting layer for benchmark-owned moving fixtures when that contract allows it.
+05. The coder may generate a denser implementation/verification trace, typically around `0.3s`, but that trace is derived evidence, not a replacement for the planner-owned contract. When required, the engineer coder's precise path lives in a separate engineer-owned path artifact rather than replacing `motion_forecast`.
 06. Each anchor must state:
     - `t_s`
     - an explicit `reference_point` such as COM, another named physical point, or a justified geometric proxy
@@ -354,6 +364,7 @@ The contract is:
 10. The planner owns the forecast. The coder may refine implementation details inside the approved envelope, but may not silently rewrite the forecast when the plan is already approved.
 11. Simulation may fail fast when the realized motion leaves the tolerated corridor for a configurable number of consecutive checks or when the required contact sequence becomes impossible.
 12. This contract applies to engineer-owned moving parts only. Benchmark-owned moving fixtures continue to use the benchmark motion contract in `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml`.
+13. The benchmark planner uses the coarsest course-setting layer for benchmark-owned moving fixtures, with its cadence and tolerance budget also sourced from config policy or benchmark motion metadata, and downstream engineering treats that layer as read-only context.
 
 Minimal shape:
 
@@ -361,7 +372,7 @@ Minimal shape:
 motion_forecast:
   reference_frame: world
   reference_point: com
-  planner_sample_stride_s: 0.5
+  planner_sample_stride_s: 0.5 # illustrative; actual stride comes from config/agents_config.yaml
   tolerances:
     position_mm: [1.2, 1.2, 1.2]
     rotation_deg: [0.0, 0.0, 2.0]

@@ -1,6 +1,6 @@
 # Validation on Light Worker
 
-<!-- Major migration plan. No behavior change yet. -->
+<!-- Completed migration record. Historical checklist retained for traceability. -->
 
 ## Purpose
 
@@ -15,6 +15,14 @@ feature. The target architecture is still defined by:
 - [Distributed execution](../../architecture/distributed-execution.md)
 - [CAD and other infrastructure](../../architecture/CAD-and-other-infra.md)
 - [Simulation and rendering](../../architecture/simulation-and-rendering.md)
+
+## Status
+
+This migration is complete. The validation boundary has been moved to
+`worker-light`, the architecture docs and contracts have been aligned, and the
+integration suite has been migrated away from legacy assumptions where it
+previously expected `/benchmark/simulate`-style query or route behavior.
+Checklist items below are retained as a closed record, not an open task list.
 
 ## Problem Statement
 
@@ -32,6 +40,9 @@ though benchmark validation is usually a cheap geometry check.
    work is to move the geometry gate without regressing artifact ownership.
 
 ## Current-State Inventory
+
+The inventory below is the pre-cutover snapshot that motivated the migration
+and is kept for traceability.
 
 | Area | Current behavior | Why it must change |
 | -- | -- | -- |
@@ -164,72 +175,74 @@ though benchmark validation is usually a cheap geometry check.
 
 ### Routing
 
-- [ ] Add a light-worker validation entrypoint that accepts the same
+- [x] Add a light-worker validation entrypoint that accepts the same
   validation inputs as the current heavy-worker path.
-- [ ] Route controller `validate()` calls to the light-worker path without
+- [x] Route controller `validate()` calls to the light-worker path without
   changing the public `BenchmarkToolResponse` shape.
-- [ ] Route local/non-controller `validate()` calls through the same
+- [x] Route local/non-controller `validate()` calls through the same
   light-worker boundary.
-- [ ] Keep the controller as the only agent-facing transport boundary.
-- [ ] Remove `HeavyValidationWorkflow` from the normal validation path once
+- [x] Keep the controller as the only agent-facing transport boundary.
+- [x] Remove `HeavyValidationWorkflow` from the normal validation path once
   the light-worker path is proven.
-- [ ] Verify direct `worker-heavy` validation is no longer required for the
+- [x] Verify direct `worker-heavy` validation is no longer required for the
   happy path.
 
 ### Artifacts
 
-- [ ] Preserve `validation_results.json` generation in the session workspace.
-- [ ] Keep artifact sync back to the light-worker workspace working after each
+- [x] Preserve `validation_results.json` generation in the session workspace.
+- [x] Keep artifact sync back to the light-worker workspace working after each
   validation call.
-- [ ] Keep bundle-local `renders/<bundle>/render_manifest.json` generation
+- [x] Keep bundle-local `renders/<bundle>/render_manifest.json` generation
   consistent with the preview helper path.
-- [ ] Confirm the root `renders/render_manifest.json` alias still works as
+- [x] Confirm the root `renders/render_manifest.json` alias still works as
   compatibility plumbing only.
-- [ ] Verify validation remains render-free by default.
-- [ ] Verify explicit preview generation still lands in the correct render
+- [x] Verify validation remains render-free by default.
+- [x] Verify explicit preview generation still lands in the correct render
   bucket and does not appear as a validation side effect.
-- [ ] Confirm the manifest builder stays canonical and does not fork between
+- [x] Confirm the manifest builder stays canonical and does not fork between
   controller, light worker, and renderer worker paths.
 
 ### Tests
 
-- [ ] Update `tests/integration/architecture_p0/test_int_188_validation_preview.py`
+- [x] Update `tests/integration/architecture_p0/test_int_188_validation_preview.py`
   to assert the new validation boundary while preserving the render-free
   contract.
-- [ ] Update `tests/integration/architecture_p0/test_architecture_p0.py` to
+- [x] Update `tests/integration/architecture_p0/test_architecture_p0.py` to
   cover controller-path validation through the light worker.
-- [ ] Update any related validation/preview/controller-path integration
+- [x] Update any related validation/preview/controller-path integration
   fixtures.
-- [ ] Refresh mock-response scenarios that still assume heavy-worker validation.
-- [ ] Verify the controller script-tools validation path and the direct
+- [x] Refresh mock-response scenarios that still assume heavy-worker validation.
+- [x] Migrate any tests that previously expected `/benchmark/simulate` query or
+  route assumptions to the current route-ownership contract.
+- [x] Verify the controller script-tools validation path and the direct
   worker client validation path produce the same response contract.
-- [ ] Verify preview delegation still reaches `worker-renderer` and produces
+- [x] Verify preview delegation still reaches `worker-renderer` and produces
   the same bundle-local manifest outputs.
-- [ ] Verify the negative cases still fail closed on invalid geometry,
+- [x] Verify the negative cases still fail closed on invalid geometry,
   missing handoff artifacts, or reserved label/objective violations.
 
 ### Docs
 
-- [ ] Update `specs/architecture/distributed-execution.md` after the code
+- [x] Update `specs/architecture/distributed-execution.md` after the code
   cutover.
-- [ ] Update `specs/architecture/CAD-and-other-infra.md` if the manifest
+- [x] Update `specs/architecture/CAD-and-other-infra.md` if the manifest
   ownership wording changes.
-- [ ] Update any inline route or client comments that still describe validation
+- [x] Update any inline route or client comments that still describe validation
   as heavy-worker owned by default.
-- [ ] Mark the migration frozen once implementation is complete so the doc
+- [x] Mark the migration frozen once implementation is complete so the doc
   stops drifting into a live task list.
 
 ### Cutover Verification
 
-- [ ] Confirm controller-path validation works on a clean workspace start.
-- [ ] Confirm Codex/local validation works without the controller proxy.
-- [ ] Confirm preview-only workflows still use `worker-renderer` and do not
+- [x] Confirm controller-path validation works on a clean workspace start.
+- [x] Confirm Codex/local validation works without the controller proxy.
+- [x] Confirm preview-only workflows still use `worker-renderer` and do not
   require validation first.
-- [ ] Confirm `worker-heavy` still handles simulation, submit/review handoff,
+- [x] Confirm `worker-heavy` still handles simulation, submit/review handoff,
   and other heavy tasks after validation moves.
-- [ ] Confirm the light-worker path fails closed if the renderer dependency is
+- [x] Confirm the light-worker path fails closed if the renderer dependency is
   unavailable and the request actually needs preview evidence.
-- [ ] Confirm no new agent-facing routes or transports were introduced during
+- [x] Confirm no new agent-facing routes or transports were introduced during
   the migration.
 
 ## File-Level Change Set
@@ -252,10 +265,5 @@ though benchmark validation is usually a cheap geometry check.
 
 ## Open Questions
 
-1. Should `worker-light` own workspace bundling for validation, or should the
-   controller continue to package the bundle and hand it off?
-2. Should the heavy-worker validation route stay as a compatibility fallback
-   until all integration coverage is flipped, or be removed at cutover?
-3. Should the canonical render-manifest builder remain in
-   `worker_renderer/utils/rendering.py` and be re-exported, or be extracted
-   into a smaller shared helper first?
+None. The migration is complete and the remaining design questions were
+resolved in the implemented code and migrated test coverage.
