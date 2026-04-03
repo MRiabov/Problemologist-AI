@@ -1,0 +1,74 @@
+{
+  "version": "1.0",
+  "bundle_id": "b14cfc09-2c1c-54eb-b666-f6c4c284c163",
+  "created_at": "2026-04-03T09:48:45.508722+00:00",
+  "episode_id": "c0239ef8-8f2c-5ef3-8f8f-2a99ed181179",
+  "worker_session_id": "seed-ep-003-drawing-full-engineer-v2",
+  "revision": "4d495c80eede2c6192e5733fad3dc8cd3cd5b2e7",
+  "scene_hash": "81bb7cad5dca295a1a7664eb69e5f9fd777e10cc26eb96dfb3f7f5566f4ad630",
+  "bundle_path": "renders/engineer_renders",
+  "environment_version": "1.0",
+  "drafting": true,
+  "source_script_sha256": "10efc24d29922073857e261012a3cc19757b9c98f74441248c07925a4c326afe",
+  "preview_evidence_paths": [
+    "renders/engineer_renders/00_front_overview.png",
+    "renders/engineer_renders/01_top_route.png",
+    "renders/engineer_renders/02_side_goal.png"
+  ],
+  "artifacts": {
+    "renders/engineer_renders/00_front_overview.png": {
+      "modality": "unknown",
+      "group_key": "00_front_overview",
+      "view_index": 0,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/00_front_overview.png",
+        "depth": null,
+        "segmentation": null,
+        "svg": "renders/engineer_renders/00_front_overview.svg",
+        "dxf": "renders/engineer_renders/00_front_overview.dxf"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/01_top_route.png": {
+      "modality": "unknown",
+      "group_key": "01_top_route",
+      "view_index": 1,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/01_top_route.png",
+        "depth": null,
+        "segmentation": null,
+        "svg": "renders/engineer_renders/01_top_route.svg",
+        "dxf": "renders/engineer_renders/01_top_route.dxf"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/02_side_goal.png": {
+      "modality": "unknown",
+      "group_key": "02_side_goal",
+      "view_index": 2,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/02_side_goal.png",
+        "depth": null,
+        "segmentation": null,
+        "svg": "renders/engineer_renders/02_side_goal.svg",
+        "dxf": "renders/engineer_renders/02_side_goal.dxf"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    }
+  }
+}

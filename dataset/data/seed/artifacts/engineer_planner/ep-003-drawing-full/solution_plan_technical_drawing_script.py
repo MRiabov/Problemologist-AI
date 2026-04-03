@@ -1,4 +1,4 @@
-from build123d import Align, Box, Compound, Location
+from build123d import Align, Box, Compound, Location, TechnicalDrawing
 
 from utils.metadata import CompoundMetadata, PartMetadata
 
@@ -20,6 +20,7 @@ def _build_part(
 
 
 def build():
+    TechnicalDrawing(title="Routed transfer drafting")
     children = [
         _build_part(
             label="route_base",
@@ -34,7 +35,7 @@ def build():
             length=170.0,
             width=140.0,
             height=35.0,
-            x=900.0,
+            x=-200.0,
             material_id="hdpe",
         ),
         _build_part(
@@ -42,7 +43,7 @@ def build():
             length=560.0,
             width=18.0,
             height=28.0,
-            x=1200.0,
+            x=140.0,
             material_id="hdpe",
         ),
         _build_part(
@@ -50,7 +51,7 @@ def build():
             length=520.0,
             width=18.0,
             height=28.0,
-            x=1800.0,
+            x=120.0,
             material_id="hdpe",
         ),
         _build_part(
@@ -58,7 +59,7 @@ def build():
             length=210.0,
             width=20.0,
             height=60.0,
-            x=2400.0,
+            x=280.0,
             material_id="hdpe",
         ),
         _build_part(
@@ -66,10 +67,16 @@ def build():
             length=160.0,
             width=120.0,
             height=35.0,
-            x=2800.0,
+            x=330.0,
             material_id="hdpe",
         ),
     ]
+
+    children[1] = children[1].moved(Location((0.0, 0.0, 10.0)))
+    children[2] = children[2].moved(Location((0.0, 90.0, 10.0)))
+    children[3] = children[3].moved(Location((0.0, -90.0, 10.0)))
+    children[4] = children[4].moved(Location((0.0, 0.0, 10.0)))
+    children[5] = children[5].moved(Location((0.0, 70.0, 80.0)))
 
     assembly = Compound(children=children)
     assembly.label = "solution_plan_technical_drawing"

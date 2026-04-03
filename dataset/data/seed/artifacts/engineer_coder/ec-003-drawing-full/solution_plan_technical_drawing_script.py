@@ -24,7 +24,7 @@ def _build_part(
 
 def _build_base_plate():
     base_plate = Box(520.0, 130.0, 10.0, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    cutout = Box(120.0, 145.0, 12.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    cutout = Box(130.0, 155.0, 12.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
     cutout = cutout.moved(Location((115.0, 0.0, 5.0)))
     base_plate = base_plate.cut(cutout)
     base_plate.label = "base_plate"
@@ -61,9 +61,9 @@ def build():
             length=150.0,
             width=18.0,
             height=24.0,
-            x=80.0,
-            y=100.0,
-            z=85.0,
+            x=125.0,
+            y=82.0,
+            z=68.0,
             material_id="hdpe",
         ),
         _build_part(
@@ -71,9 +71,9 @@ def build():
             length=220.0,
             width=70.0,
             height=30.0,
-            x=180.0,
-            y=-105.0,
-            z=112.0,
+            x=300.0,
+            y=-60.0,
+            z=55.0,
             material_id="hdpe",
         ),
         _build_part(
@@ -81,9 +81,9 @@ def build():
             length=95.0,
             width=95.0,
             height=35.0,
-            x=320.0,
-            y=0.0,
-            z=145.0,
+            x=335.0,
+            y=30.0,
+            z=65.0,
             material_id="hdpe",
         ),
         _build_motor(),
@@ -97,7 +97,7 @@ def build():
 
 def _build_motor():
     motor = ServoMotor.from_catalog_id("ServoMotor_DS3218")
-    motor = motor.move(Location((-92.0, -68.0, 191.0)))
+    motor = motor.move(Location((-92.0, -68.0, 35.0)))
     motor.label = "ServoMotor_DS3218"
     motor.metadata.cots_id = None
     return motor

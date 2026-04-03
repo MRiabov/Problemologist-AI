@@ -1,23 +1,77 @@
 {
   "version": "1.0",
-  "bundle_id": "1ed26dfd-bbb3-56e1-b9fa-572b58693e2c",
-  "created_at": "2026-04-03T00:00:00+00:00",
+  "bundle_id": "631874d0-8ec4-52de-8ffc-99f55eb034ac",
+  "created_at": "2026-04-03T09:36:17.780764+00:00",
   "episode_id": "6a2d103d-62a7-5cd0-9bcf-0f0b04727eb7",
   "worker_session_id": "seed-ec-003-drawing-full",
-  "revision": "7184a01a67ac3320deafd0c3cc58a47ee0bd90a7",
-  "scene_hash": "9be0218209a24490cdf530710d75cce12107712324409e309a669b23231474e1",
+  "revision": "e005fc5ed400acf1237544fcf33c079b233a25be",
+  "scene_hash": "f2ca4577d424424695961396e30b6823e8f6d5ea974336b6cf6854a306131eb6",
   "bundle_path": "renders/engineer_renders",
   "environment_version": "1.0",
-  "drafting": false,
-  "source_script_sha256": null,
+  "drafting": true,
+  "source_script_sha256": "dd8fbfed031154079de52e5f264afe0bb01b9f666c5e724a888fe31cb73f214a",
   "preview_evidence_paths": [
     "renders/engineer_renders/preview.png"
   ],
   "artifacts": {
+    "renders/engineer_renders/00_front_gate_overview.png": {
+      "modality": "unknown",
+      "group_key": "00_front_gate_overview",
+      "view_index": 0,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/preview.png",
+        "depth": null,
+        "segmentation": null,
+        "svg": "renders/engineer_renders/preview.svg",
+        "dxf": "renders/engineer_renders/preview.dxf"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/01_top_transfer_path.png": {
+      "modality": "unknown",
+      "group_key": "01_top_transfer_path",
+      "view_index": 1,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/01_top_transfer_path.png",
+        "depth": null,
+        "segmentation": null,
+        "svg": "renders/engineer_renders/01_top_transfer_path.svg",
+        "dxf": "renders/engineer_renders/01_top_transfer_path.dxf"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/engineer_renders/02_side_goal_capture.png": {
+      "modality": "unknown",
+      "group_key": "02_side_goal_capture",
+      "view_index": 2,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/engineer_renders/02_side_goal_capture.png",
+        "depth": null,
+        "segmentation": null,
+        "svg": "renders/engineer_renders/02_side_goal_capture.svg",
+        "dxf": "renders/engineer_renders/02_side_goal_capture.dxf"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
     "renders/engineer_renders/preview.png": {
-      "modality": "rgb",
-      "group_key": null,
-      "view_index": null,
+      "modality": "unknown",
+      "group_key": "00_front_gate_overview",
+      "view_index": 0,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
