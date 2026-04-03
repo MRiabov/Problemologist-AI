@@ -18,7 +18,7 @@ Terminology is strict:
 There is a controller node which runs the LLM and tool calls, and a split worker plane:
 
 1. `worker-light` for filesystem + execution tooling,
-2. `worker-heavy` for simulation + validation coordination,
+2. `worker-heavy` for simulation + heavy-task coordination,
 3. `worker-renderer` for preview rendering and preview post-processing,
 4. Temporal worker service (`controller-temporal-worker` in compose) for durable orchestration.
 
@@ -32,8 +32,8 @@ In the future we may well refactor to run on distributed nodes, perhaps even IPv
 
 - `controller` (FastAPI): public API, LLM/tool orchestration, business logic.
 - Temporal worker service (`controller-temporal-worker` in compose): durable execution for long-running workflows/retries and heavy-task queue consumption/dispatch.
-- `worker-light` (FastAPI): session filesystem, git, linting, runtime execution, static asset serving.
-- `worker-heavy` (FastAPI single-flight executor): simulation, validation coordination, manufacturability analysis, review handover.
+- `worker-light` (FastAPI single-flight for validation-capable light ops): session filesystem, git, linting, runtime execution, geometric validation, static asset serving.
+- `worker-heavy` (FastAPI single-flight executor): simulation, manufacturability analysis, review handover, backend-native simulation render coordination.
 - `worker-renderer` (FastAPI single-flight executor): headless rendering for static preview, selection snapshots, depth/segmentation previews, and preview-manifest persistence. Unlike `worker-light` and `worker-heavy`, it stays in the containerized renderer deployment in development, integration, eval, and production because the graphics stack must not depend on the host display session. EGL remains the desired default, but the current native EGL render probes segfault for reasons that are not yet isolated, so the current renderer image falls back to an OSMesa-backed VTK window class.
 - Shared dependencies: `temporal`, `postgres`, `minio`.
 
@@ -60,6 +60,7 @@ The worker API is physically split into three specialized services to optimize r
   - Filesystem CRUD operations (`/fs/*`).
   - Git repository management (`/git/*`).
   - Python code execution (short-lived) (`/runtime/execute`).
+  - Geometric validation (`/benchmark/validate`).
   - Asset serving (`/assets/*`).
   - Code linting (`/lint`).
   - Topology inspection (`/topology/inspect`).
@@ -71,7 +72,6 @@ The worker API is physically split into three specialized services to optimize r
 - **Purpose**: Handles compute-intensive, long-running tasks.
 - **Responsibilities**:
   - Physics simulation (`/benchmark/simulate`).
-  - Geometric validation (`/benchmark/validate`).
   - Design handover and DFM checks (`/benchmark/submit`).
   - Manufacturing analysis (`/benchmark/analyze`).
   - Render-request coordination for simulation jobs.
@@ -87,17 +87,63 @@ The worker API is physically split into three specialized services to optimize r
   - Explicit preview generation through build123d/VTK, including multi-view bundles and progressive status updates.
   - Selection snapshots, depth images, segmentation images, and render-manifest persistence.
   - Preview-only post-processing that does not require physics stepping.
-- **HTTP boundary**: renderer endpoints are internal-only; public benchmark routes stay on the controller and worker-heavy paths.
+- **HTTP boundary**: renderer endpoints are internal-only; public benchmark routes stay on the controller, worker-light, and worker-heavy paths.
 - **Operational profile**: headless single-flight rendering; one active render job at a time per renderer instance, no internal render queue.
 
 ### Routing Contract (Controller -> Workers)
 
 - Controller routes light operations to light worker over the WebSocket control channel. The light worker executes scripts, can stream queued/view-ready preview status back over that channel, and can ping the load balancer handling heavy workers.
+- Controller routes validation to `worker-light`; the light worker owns the fast geometry gate and the controller still remains the only agent-facing boundary.
 - Controller routes heavy operations through Temporal workflows, not directly to `WORKER_HEAVY_URL`.
 - Preview render jobs are dispatched to `worker-renderer`.
 - All non-Temporal worker calls are session-scoped with `X-Session-ID`.
 - The `WorkerClient` is the single boundary adapter; agents do not know about service split.
 - Heavy-worker and renderer-worker admission are fail-closed: direct worker HTTP busy responses are allowed on the worker boundary, but controller and agent-facing product routes must not surface those raw `503 WORKER_BUSY` responses. Product routes either wait/retry through Temporal or fail closed at the orchestration layer if Temporal itself cannot complete.
+
+## Networking
+
+### Scope summary
+
+- Standardizes server-to-server transport choices for the controller, worker plane, renderer, and Temporal boundary.
+- Keeps the control plane small and predictable: send control metadata over JSON or WebSockets, send bytes as bytes, and use object-store pointers for large immutable artifacts.
+- This is a transport policy, not a gRPC, mesh, or zero-copy optimization program.
+
+### Transport selection
+
+| Use case | Preferred transport | Notes |
+| -- | -- | -- |
+| Small control request or response | HTTP JSON | Use typed request/response models, short timeouts, and idempotent methods. |
+| Live progress, queue state, or status streaming | WebSockets | Use for queued/running/view-ready updates and other long-lived bidirectional control traffic. |
+| Single binary file upload or download | `multipart/form-data` or `application/octet-stream` | Prefer raw bytes over base64-in-JSON when the payload is the file itself. |
+| Multiple files that belong to one logical change | Batch file endpoint | Preserve per-file paths and write the set in one logical request. |
+| Whole workspace or scene snapshot | Gzipped tarball | Use only when the next stage truly needs a portable snapshot of the current tree. |
+| Large immutable artifact | Object-store pointer | Upload once, then return a key plus manifest or path metadata. |
+
+### Payload rules
+
+1. Every cross-service request carries `X-Session-ID`.
+2. Calls that can be retried or correlated should also carry a stable request identifier or idempotency key.
+3. Paths stay workspace-relative and are resolved at the owning service boundary.
+4. The controller must not become a byte relay between workers when the owning service can write bytes directly to its own workspace or storage.
+5. Base64-in-JSON is compatibility-only for JSON-only boundaries or very small payloads; it is not the default for bulk bytes.
+6. Batch file transfer is preferred over N sequential file round-trips when several files cross the boundary together.
+7. A full workspace bundle is only acceptable when the caller truly needs the whole tree as the unit of work.
+8. WebSockets are for interactive control and progress, not for bulk artifact transport.
+
+### Batch file transfer
+
+- Batch uploads should preserve file boundaries, paths, and per-file status.
+- When a worker must receive many files, prefer one batch request over repeated single-file calls.
+- When a worker only needs a few files, send only those files instead of a whole workspace snapshot.
+- When a payload is too large or too repetitive for JSON relay, stage it as an archive or object-store-backed artifact and pass a manifest.
+- Large outputs should be written once and referenced by path, manifest, or object key rather than copied through the controller multiple times.
+
+### Backpressure and retries
+
+- Busy responses should be explicit and deterministic.
+- Controller-facing routes may translate worker busy into bounded retry or wait behavior, but agent-facing routes must not surface raw worker admission noise.
+- Retries should be limited by deadline and idempotency; do not blindly retry file uploads or other non-idempotent mutations.
+- Streaming channels should be resumable by request/session identifiers where practical, but they should still fail closed on protocol mismatch or missing correlation.
 
 ### Heavy Execution Path Contract
 
@@ -110,7 +156,7 @@ Heavy compute execution has one production path:
 Backend responsibility is split by operation purpose:
 
 1. `/benchmark/simulate` uses the selected physics backend.
-2. `/benchmark/validate` performs fast validation and does not generate preview artifacts.
+2. `/benchmark/validate` performs fast validation on `worker-light` and does not generate preview artifacts.
 3. Explicit preview requests use the renderer worker through the preview helper, normalize multi-view camera inputs, and remain separate from validation.
 4. `/benchmark/validate` does not add a separate Genesis load/render gate solely for parity checking; Genesis-specific runtime behavior is established by actual Genesis simulation runs where Genesis behavior is required.
 5. Preview render jobs use `worker-renderer`.
@@ -142,12 +188,11 @@ Worker-specific logic stays in:
   - FS
   - runtime
   - git
-  - build123d validation (and maybe, lightweight rendering *in the future*);
+  - build123d validation;
   - DFM validation
   - linting
 - `worker_heavy/*` for:
   - heavy simulation
-  - validation
   - simulation/validation coordination that dispatches render jobs.
   - any GPU work, if necessary.
 - `worker_renderer/*` for:
@@ -155,7 +200,7 @@ Worker-specific logic stays in:
   - selection snapshots and render-manifest generation for preview bundles
   - all headless rendering dependencies and preview post-processing
 
-Validation is still part of `worker-heavy`, but the static preview part of validation is executed by `worker-renderer`. The point of the split is to keep validation on the build123d/VTK geometry path while isolating the graphics stack from simulation state.
+Validation now lives in `worker-light`; the static preview part of validation is still executed by `worker-renderer`. The point of the split is to keep validation on the build123d/VTK geometry path while isolating the graphics stack from simulation state and keeping the fast geometry gate off the heavy worker.
 
 Note: we want to offload work from `worker_heavy` as much as possible because:
 
@@ -166,9 +211,9 @@ Note: we want to offload work from `worker_heavy` as much as possible because:
 
 ### Worker filesystem and communication
 
-Upon requesting simulation or rendering, worker light prepares the session bundle and git state needed for heavy execution. The Temporal orchestration path owns the actual heavy dispatch, render dispatch, retry, and completion tracking.
+Upon requesting simulation or rendering, worker light prepares the session state needed for the next stage. Depending on the operation, that can be a workspace snapshot, a batch file delta, or a manifest of paths and keys. The Temporal orchestration path owns the actual heavy dispatch, render dispatch, retry, and completion tracking.
 
-Predominantly, worker light communicates with Temporal orchestration for heavy dispatch through the WebSocket control plane; direct worker-heavy contact is reserved for integration tests that verify worker-level boundaries and for termination signals from the controller. There is a load balancer pinging `/ready` status in worker. Ideally, the worker-heavy and worker-renderer are hidden behind Temporal orchestration, which also acts as the admission and retry boundary.
+Predominantly, worker light communicates with Temporal orchestration for heavy dispatch through the WebSocket control plane; direct worker-heavy contact is reserved for integration tests that verify worker-level boundaries and for termination signals from the controller. Bulk bytes should move through binary file transfer, batch endpoints, or object-store pointers rather than through the WebSocket control plane. There is a load balancer pinging `/ready` status in worker. Ideally, the worker-heavy and worker-renderer are hidden behind Temporal orchestration, which also acts as the admission and retry boundary.
 
 ### OpenAPI Artifacts
 
