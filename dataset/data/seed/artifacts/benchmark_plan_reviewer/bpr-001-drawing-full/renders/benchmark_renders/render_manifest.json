@@ -4,7 +4,7 @@
   "created_at": "2026-04-02T00:00:00Z",
   "episode_id": "seed-bpr-001-drawing-full",
   "worker_session_id": "seed-bpr-001-drawing-full",
-  "revision": "21133f228c1244d84f6c65ea79e1f97e3dab7c17",
+  "revision": "45f3613ca6a053280b3b092de5122bae147317ad",
   "scene_hash": "2ba9fc6efa24e4c7aea36fef14a1ef0c96e01e8411a5909e470172630373183c",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",
