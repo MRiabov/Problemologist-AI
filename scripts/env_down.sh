@@ -36,7 +36,7 @@ if [ "$STACK_PROFILE" = "eval" ] && [ "${PROBLEMOLOGIST_EVAL_LOCK_HELD:-0}" != "
   if ! flock -n 9; then
     echo "Be careful - another eval run is already running." >&2
     echo "Your requested command: [scripts/env_down.sh --profile eval]" >&2
-    echo "If you only need validation, rerun that check with --skip-env-up to bypass the shared eval lock." >&2
+    echo "If you only need validation, rerun that check with --skip-env-up so it can join the shared validation lock." >&2
     echo "If you want to wait for the shared lock, rerun via the eval runner with --queue." >&2
     exit 1
   fi

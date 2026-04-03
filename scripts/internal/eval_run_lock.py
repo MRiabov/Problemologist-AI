@@ -40,10 +40,13 @@ class EvalRunState:
 class EvalRunLease:
     lock_file: TextIO
     lock_path: Path
-    state_path: Path
-    state: EvalRunState
+    state_path: Path | None
+    state: EvalRunState | None
+    state_writable: bool = True
 
     def update_state(self, **updates: object) -> None:
+        if self.state is None or self.state_path is None or not self.state_writable:
+            raise RuntimeError("shared eval lock leases do not carry writable state")
         for key, value in updates.items():
             setattr(self.state, key, value)
         _write_json_atomic(self.state_path, asdict(self.state))
@@ -120,17 +123,19 @@ def _format_eval_run_block_message(
         f"Active logs: [{active_log_dir}]",
         f"Your requested command: [{_join_command(requested_command)}]",
         "If these match, you can reuse the active run's logs under logs/evals/current/ instead of starting a duplicate run.",
-        "If you only need validation, rerun that check with --skip-env-up to bypass the shared eval lock.",
+        "If you only need validation, rerun that check with --skip-env-up to join the shared validation lock.",
         "If you want to wait for the shared lock, rerun with --queue.",
     ]
     return "\n".join(lines)
 
 
-def acquire_eval_run_lock(
+def _acquire_eval_run_flock(
     *,
+    mode: int,
     queue: bool,
     requested_command: list[str],
-    requested_selection: EvalRunSelection | None = None,
+    requested_selection: EvalRunSelection | None,
+    write_state: bool,
 ) -> EvalRunLease | None:
     lock_path = _eval_run_lock_path()
     state_path = _eval_run_state_path()
@@ -148,11 +153,14 @@ def acquire_eval_run_lock(
                     ),
                     file=sys.stderr,
                 )
-            print(f"[eval-run-lock] Waiting for eval lock at {lock_path}...")
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            shared_label = "shared " if mode == fcntl.LOCK_SH else ""
+            print(
+                f"[eval-run-lock] Waiting for {shared_label}eval lock at {lock_path}..."
+            )
+            fcntl.flock(lock_file.fileno(), mode)
         else:
             try:
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(lock_file.fileno(), mode | fcntl.LOCK_NB)
             except BlockingIOError:
                 state = _read_json_file(state_path)
                 print(
@@ -164,6 +172,15 @@ def acquire_eval_run_lock(
                 )
                 lock_file.close()
                 return None
+
+        if not write_state:
+            return EvalRunLease(
+                lock_file=lock_file,
+                lock_path=lock_path,
+                state_path=None,
+                state=None,
+                state_writable=False,
+            )
 
         lease = EvalRunLease(
             lock_file=lock_file,
@@ -201,11 +218,47 @@ def acquire_eval_run_lock(
         raise
 
 
+def acquire_eval_run_lock(
+    *,
+    queue: bool,
+    requested_command: list[str],
+    requested_selection: EvalRunSelection | None = None,
+) -> EvalRunLease | None:
+    return _acquire_eval_run_flock(
+        mode=fcntl.LOCK_EX,
+        queue=queue,
+        requested_command=requested_command,
+        requested_selection=requested_selection,
+        write_state=True,
+    )
+
+
+def acquire_eval_run_shared_lock(
+    *,
+    queue: bool,
+    requested_command: list[str],
+    requested_selection: EvalRunSelection | None = None,
+) -> EvalRunLease | None:
+    return _acquire_eval_run_flock(
+        mode=fcntl.LOCK_SH,
+        queue=queue,
+        requested_command=requested_command,
+        requested_selection=requested_selection,
+        write_state=False,
+    )
+
+
+def downgrade_eval_run_lock_to_shared(lease: EvalRunLease) -> None:
+    fcntl.flock(lease.lock_file.fileno(), fcntl.LOCK_SH)
+    lease.state_writable = False
+
+
 def release_eval_run_lock(lease: EvalRunLease | None) -> None:
     if lease is None:
         return
     try:
-        lease.state_path.unlink(missing_ok=True)
+        if lease.state_path is not None:
+            lease.state_path.unlink(missing_ok=True)
     except OSError:
         pass
     try:

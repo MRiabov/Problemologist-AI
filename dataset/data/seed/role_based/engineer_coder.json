@@ -140,7 +140,8 @@
     "id": "ec-005",
     "task": "Use the seeded engineering planner handoff package in the workspace to implement the around-obstacle route for the central-forbid benchmark in `solution_script.py`. Keep the reviewed planner artifacts coherent, preserve the planned passive routing strategy, and update `todo.md` and `journal.md` as execution progresses.",
     "complexity_level": 0,
-    "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-005-central-forbid-route",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-005-drawing-full",
+    "technical_drawing_mode": "full",
     "expected_criteria": "Engineer coder begins from a reviewed around-obstacle handoff package, implements the routed transport path in `solution_script.py`, and preserves the planner contract and clearance assumptions."
   },
   {

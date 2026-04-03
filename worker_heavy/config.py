@@ -29,6 +29,7 @@ class WorkerSettings(BaseSettings):
     git_repo_url: str | None = Field(default=None, alias="GIT_REPO_URL")
     git_pat: str | None = Field(default=None, alias="GIT_PAT")
 
+    controller_url: str | None = Field(default=None, alias="CONTROLLER_URL")
     sessions_dir: str | None = Field(default=None, alias="WORKER_SESSIONS_DIR")
 
     @property

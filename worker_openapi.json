@@ -546,6 +546,75 @@
         }
       }
     },
+    "/fs/upload_files": {
+      "post": {
+        "tags": [
+          "worker-light"
+        ],
+        "summary": "Upload Files",
+        "description": "Upload multiple files in a single JSON payload.",
+        "operationId": "upload_files_fs_upload_files_post",
+        "parameters": [
+          {
+            "name": "X-System-FS-Bypass",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-System-Fs-Bypass"
+            }
+          },
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadFilesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/fs/read_blob": {
       "post": {
         "tags": [
@@ -3744,6 +3813,50 @@
         "title": "StatusResponse",
         "description": "Generic status response."
       },
+      "UploadFilePayload": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Path"
+          },
+          "content_b64": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Content B64"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "content_b64"
+        ],
+        "title": "UploadFilePayload",
+        "description": "A single file payload for batch workspace upload."
+      },
+      "UploadFilesRequest": {
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/UploadFilePayload"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Files"
+          },
+          "bypass_agent_permissions": {
+            "type": "boolean",
+            "title": "Bypass Agent Permissions",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "files"
+        ],
+        "title": "UploadFilesRequest",
+        "description": "Request to upload multiple files in one JSON payload."
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -3862,6 +3975,12 @@
             "title": "Smoke Test Mode",
             "description": "If true: cap particles to 5000, label results as approximate."
           },
+          "stream_render_frames": {
+            "type": "boolean",
+            "title": "Stream Render Frames",
+            "description": "If true, stream low-frequency simulation frames to the episode websocket.",
+            "default": false
+          },
           "particle_budget": {
             "anyOf": [
               {
@@ -3968,6 +4087,12 @@
             ],
             "title": "Smoke Test Mode",
             "description": "If true: cap particles to 5000, label results as approximate."
+          },
+          "stream_render_frames": {
+            "type": "boolean",
+            "title": "Stream Render Frames",
+            "description": "If true, stream low-frequency simulation frames to the episode websocket.",
+            "default": false
           },
           "particle_budget": {
             "anyOf": [
@@ -4835,6 +4960,12 @@
             ],
             "title": "Smoke Test Mode",
             "description": "If true: cap particles to 5000, label results as approximate."
+          },
+          "stream_render_frames": {
+            "type": "boolean",
+            "title": "Stream Render Frames",
+            "description": "If true, stream low-frequency simulation frames to the episode websocket.",
+            "default": false
           },
           "particle_budget": {
             "anyOf": [

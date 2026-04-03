@@ -28,6 +28,7 @@ from shared.workers.workbench_models import ManufacturingMethod
 from worker_heavy.simulation.electronics import ElectronicsManager
 from worker_heavy.simulation.evaluator import SuccessEvaluator
 from worker_heavy.simulation.factory import get_physics_backend
+from worker_heavy.simulation.frame_stream import SimulationFrameStreamPublisher
 from worker_heavy.simulation.media import MediaRecorder
 from worker_heavy.simulation.metrics import MetricCollector
 from worker_heavy.simulation.naming import moved_object_scene_name
@@ -375,6 +376,7 @@ class SimulationLoop:
         duration: float = 10.0,
         dynamic_controllers: dict[str, callable] | None = None,
         video_path: Path | None = None,
+        frame_stream_publisher: SimulationFrameStreamPublisher | None = None,
         reset_metrics: bool = True,
     ) -> SimulationMetrics:
         """Runs the simulation for the specified duration."""
@@ -392,11 +394,12 @@ class SimulationLoop:
             backend_type=self.backend_type,
             session_id=self.session_id,
             render_resolution=get_video_render_resolution(),
+            frame_stream_publisher=frame_stream_publisher,
         )
 
         # 3. Apply initial controls
         self._apply_gated_controls(control_inputs)
-        media_recorder.update(0, self.backend)
+        media_recorder.update(0.0, self.backend)
 
         # 4. Determine timestep and steps
         dt = self._get_simulation_timestep()
@@ -423,7 +426,7 @@ class SimulationLoop:
                 break
 
             # Video recording
-            media_recorder.update(step_idx, self.backend)
+            media_recorder.update(current_time, self.backend)
             current_time = self.backend.get_state()["time"]
 
         # 7. Finalization

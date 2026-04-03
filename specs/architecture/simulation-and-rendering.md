@@ -179,9 +179,7 @@ This keeps MuJoCo and Genesis distinct while still allowing each backend to use 
 
 Agent-facing inspection of persisted simulation video is config-driven. When `config/agents_config.yaml` sets `render.split_video_renders_to_images=true`, `inspect_media(...)` may decode an `.mp4` artifact into representative image frames and attach those frames to the model instead of exposing the raw video bytes as a dead end. The sampling stride is controlled by `render.video_frame_attachment_stride`, so a 60-frame video with stride 6 yields 10 attached frames, while a 6-frame video yields 1 attached frame. `render.video_frame_jpeg_quality_percent` controls the JPEG encoding quality as a percent value. The stored MP4 remains the canonical simulation artifact; the split only affects multimodal review.
 
-<!-- TODO: add a low-frequency simulation-time frame sync path for simulation evidence, targeting roughly one PNG every 0.5s of simulated time, uploaded incrementally to S3 and surfaced over the control plane instead of waiting for final MP4 persistence. -->
-
-<!-- This is intended to stay manageable because the cadence is low and the control plane carries only metadata, not raw image bytes; the implementation should keep the transport bounded and avoid per-step uploads. -->
+The low-frequency simulation-time frame sync path is now supported as an opt-in websocket stream for simulation evidence. The stream targets roughly one PNG every 0.5s of simulated time and is designed to stay manageable because the cadence is low; the final MP4 remains the canonical persisted artifact. Incremental S3 upload of those live frames remains an extension point if a future revision needs bundle-backed persistence for the stream itself.
 
 <!-- Downsides of MuJoCo?
 
@@ -214,6 +212,10 @@ Constraints done by the engineer should be enforced for validity. E.g.: two part
 ##### Fixed parts for the simulation definition
 
 Some parts will need to be "fixed" despite physics *during benchmark generation, not agents*, specifically for the implementation. We can pass `fixed=True` to the models as a custom parameter (or metadata).
+
+- Engineer fixed=True is allowed only when explicitly constrained by fasteners; otherwise reject.
+
+Note: this is a known implementation bug in the current runtime path, where engineer-authored `fixed=True` can still act as a static skip signal outside the explicit fastener case. We are documenting the mismatch here and deferring the fix for now because the current agent capability set is not sufficient to solve the benchmark class that would exercise it.
 
 ##### Fasteners
 

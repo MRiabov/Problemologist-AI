@@ -24,5 +24,6 @@ export type ScriptToolRequest = {
     duration?: (number | null);
     seed?: (number | null);
     episode_id?: (string | null);
+    stream_render_frames?: boolean;
 };
 

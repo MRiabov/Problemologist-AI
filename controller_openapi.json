@@ -6519,6 +6519,11 @@
               }
             ],
             "title": "Episode Id"
+          },
+          "stream_render_frames": {
+            "type": "boolean",
+            "title": "Stream Render Frames",
+            "default": false
           }
         },
         "type": "object",
@@ -6894,6 +6899,17 @@
               }
             ],
             "title": "Resolved Default View Label"
+          },
+          "capture_interval_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capture Interval Seconds"
           },
           "capture_interval_steps": {
             "anyOf": [

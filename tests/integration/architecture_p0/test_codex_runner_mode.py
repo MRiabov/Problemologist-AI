@@ -427,11 +427,14 @@ def test_resume_codex_exec_uses_codex_exec_resume_command(tmp_path: Path, monkey
     )
 
     assert result.return_code == 0
-    logged_args = codex_args_log.read_text(encoding="utf-8")
-    assert "exec" in logged_args
-    assert "resume" in logged_args
-    assert "019d0000-0000-7000-9000-000000000099" in logged_args
+    logged_args = codex_args_log.read_text(encoding="utf-8").splitlines()
+    assert logged_args[0] == "exec"
+    assert logged_args[1] == "-C"
+    assert logged_args[2] == str(workspace_dir)
+    assert logged_args[3] == "resume"
+    assert logged_args[4] == "019d0000-0000-7000-9000-000000000099"
     assert "--full-auto" in logged_args
+    assert "--cd" not in logged_args
 
 
 @pytest.mark.integration_p0
@@ -914,6 +917,10 @@ def test_run_evals_codex_env_uses_isolated_home_and_workspace_pythonpath(tmp_pat
     ]
     assert env["PROBLEMOLOGIST_REPO_ROOT"] == str(ROOT)
     assert env["PYTHON_BIN"] == str(ROOT / ".venv" / "bin" / "python")
+    assert env["CONTROLLER_URL"] == "http://127.0.0.1:28000"
+    assert env["WORKER_LIGHT_URL"] == "http://127.0.0.1:28001"
+    assert env["WORKER_HEAVY_URL"] == "http://127.0.0.1:28002"
+    assert env["WORKER_RENDERER_URL"] == "http://127.0.0.1:28003"
     assert (
         json.loads((codex_home_dir / "auth.json").read_text(encoding="utf-8"))[
             "tokens"
@@ -2442,7 +2449,54 @@ def test_validate_eval_seed_errors_only_suppresses_pass_output():
 
 
 @pytest.mark.integration_p0
-def test_validate_eval_seed_skip_env_up_does_not_require_eval_lock(tmp_path: Path):
+def test_validate_eval_seed_skip_env_up_can_join_shared_eval_lock(tmp_path: Path):
+    lock_path = tmp_path / "problemologist-eval.lock"
+    state_path = tmp_path / "problemologist-eval.run.json"
+
+    with lock_path.open("a+", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_SH)
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "scripts/validate_eval_seed.py",
+                "--skip-env-up",
+                "--agent",
+                "benchmark_planner",
+                "--task-id",
+                "bp-001-drawing-full",
+                "--technical-drawing-mode",
+                "full",
+                "--fail-fast",
+                "--concurrency",
+                "1",
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=300,
+            env={
+                **os.environ,
+                "EVAL_RUN_LOCK_PATH": str(lock_path),
+                "EVAL_RUN_STATE_PATH": str(state_path),
+            },
+        )
+
+    combined_output = "\n".join(
+        part for part in (completed.stdout, completed.stderr) if part
+    )
+
+    assert completed.returncode == 0, combined_output
+    assert "PASS benchmark_planner bp-001-drawing-full:" in completed.stdout, (
+        completed.stdout
+    )
+    assert not state_path.exists(), state_path
+
+
+@pytest.mark.integration_p0
+def test_validate_eval_seed_skip_env_up_fails_while_exclusive_eval_lock_is_held(
+    tmp_path: Path,
+):
     lock_path = tmp_path / "problemologist-eval.lock"
     state_path = tmp_path / "problemologist-eval.run.json"
 
@@ -2479,10 +2533,50 @@ def test_validate_eval_seed_skip_env_up_does_not_require_eval_lock(tmp_path: Pat
         part for part in (completed.stdout, completed.stderr) if part
     )
 
-    assert completed.returncode == 0, combined_output
-    assert "PASS benchmark_planner bp-001-drawing-full:" in completed.stdout, (
-        completed.stdout
+    assert completed.returncode == 1, combined_output
+    assert "another eval run is already running." in completed.stderr
+    assert not state_path.exists(), state_path
+
+
+@pytest.mark.integration_p0
+def test_run_evals_skip_env_up_can_join_shared_eval_lock(tmp_path: Path):
+    lock_path = tmp_path / "problemologist-eval.lock"
+    state_path = tmp_path / "problemologist-eval.run.json"
+
+    with lock_path.open("a+", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_SH)
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "dataset/evals/run_evals.py",
+                "--skip-env-up",
+                "--agent",
+                "benchmark_planner",
+                "--task-id",
+                "bp-does-not-exist",
+                "--concurrency",
+                "1",
+                "--no-rate-limit",
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=300,
+            env={
+                **os.environ,
+                "EVAL_RUN_LOCK_PATH": str(lock_path),
+                "EVAL_RUN_STATE_PATH": str(state_path),
+            },
+        )
+
+    combined_output = "\n".join(
+        part for part in (completed.stdout, completed.stderr) if part
     )
+
+    assert completed.returncode == 0, combined_output
+    assert "Agent evals started:" in completed.stdout, completed.stdout
+    assert "Agent evals finished:" in completed.stdout, completed.stdout
     assert not state_path.exists(), state_path
 
 

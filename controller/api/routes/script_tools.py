@@ -65,6 +65,7 @@ class ScriptToolRequest(BaseModel):
     duration: float | None = None
     seed: int | None = None
     episode_id: str | None = None
+    stream_render_frames: bool = False
 
     @field_validator("smoke_test_mode", mode="after")
     @classmethod
@@ -257,6 +258,7 @@ async def simulate_script(
                 payload.script_path,
                 backend=payload.backend,
                 smoke_test_mode=payload.smoke_test_mode,
+                stream_render_frames=payload.stream_render_frames,
             )
             if isinstance(result, BenchmarkToolResponse):
                 await middleware.client._sync_handover_artifacts_to_light(result)

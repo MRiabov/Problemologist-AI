@@ -444,6 +444,38 @@ async def _collect_preview_status_phases(
     return phases
 
 
+async def _collect_simulation_frames(
+    websocket, *, required_count: int = 1, timeout_s: float = 120.0
+) -> list[dict[str, object]]:
+    frames: list[dict[str, object]] = []
+    deadline = asyncio.get_running_loop().time() + timeout_s
+
+    while asyncio.get_running_loop().time() < deadline:
+        remaining = deadline - asyncio.get_running_loop().time()
+        if remaining <= 0:
+            break
+        try:
+            raw_message = await asyncio.wait_for(
+                websocket.recv(), timeout=min(remaining, 5.0)
+            )
+        except asyncio.TimeoutError:
+            if len(frames) >= required_count:
+                break
+            continue
+        payload = (
+            json.loads(raw_message) if isinstance(raw_message, str) else raw_message
+        )
+        if not isinstance(payload, dict):
+            continue
+        if payload.get("type") != "simulation_frame":
+            continue
+        frames.append(payload)
+        if len(frames) >= required_count:
+            break
+
+    return frames
+
+
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
 async def test_int_192_controller_script_tools_validate_waits_through_temporal_queue():
@@ -1052,6 +1084,78 @@ async def test_int_215_preview_websocket_stream_exposes_queued_running_and_view_
         )
 
         assert required_phases.issubset(set(phases)), phases
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_int_216_simulation_frame_stream_broadcasts_live_frames():
+    """
+    INT-216: opt-in simulation frame streaming should relay live frames to the
+    episode websocket while the simulation is still running.
+    """
+    session_id = f"INT-216-{uuid.uuid4().hex[:8]}"
+
+    async with httpx.AsyncClient(timeout=1000.0) as client:
+        await _write_session_workspace(client, session_id, "sample_script.py")
+
+        create_episode_resp = await client.post(
+            f"{CONTROLLER_URL}/api/test/episodes",
+            json=AgentRunRequest(
+                task="INT-216 simulation frame stream",
+                session_id=session_id,
+                agent_name=AgentName.BENCHMARK_CODER,
+            ).model_dump(mode="json"),
+            timeout=120.0,
+        )
+        assert create_episode_resp.status_code == 201, create_episode_resp.text
+        episode = EpisodeCreateResponse.model_validate(create_episode_resp.json())
+        episode_id = str(episode.episode_id)
+
+        ws_url = f"ws://127.0.0.1:18000/api/episodes/{episode_id}/ws"
+        async with websocket_connect(ws_url, open_timeout=10.0) as websocket:
+            simulate_task = asyncio.create_task(
+                client.post(
+                    f"{CONTROLLER_URL}/api/script-tools/simulate",
+                    json={
+                        "script_path": "sample_script.py",
+                        "agent_role": AgentName.BENCHMARK_CODER.value,
+                        "episode_id": episode_id,
+                        "smoke_test_mode": True,
+                        "stream_render_frames": True,
+                    },
+                    headers={"X-Session-ID": session_id},
+                    timeout=1000.0,
+                )
+            )
+            frames = await _collect_simulation_frames(
+                websocket, required_count=1, timeout_s=120.0
+            )
+            simulate_resp = await simulate_task
+
+        assert simulate_resp.status_code == 200, simulate_resp.text
+        simulate_data = BenchmarkToolResponse.model_validate(simulate_resp.json())
+        assert simulate_data.success, simulate_data.message
+        assert simulate_data.artifacts is not None
+        assert simulate_data.artifacts.simulation_result_json is not None
+        assert simulate_data.artifacts.render_paths
+        assert any(
+            Path(path).suffix.lower() == ".mp4"
+            for path in simulate_data.artifacts.render_paths
+        ), simulate_data.artifacts.render_paths
+
+        assert len(frames) >= 1, frames
+        first_frame = frames[0]
+        assert first_frame["episode_id"] == episode_id
+        assert first_frame["session_id"] == session_id
+        assert first_frame["type"] == "simulation_frame"
+        assert first_frame["frame_index"] == 0, first_frame
+        assert first_frame["content_type"] == "image/png", first_frame
+        assert first_frame["capture_interval_seconds"] == pytest.approx(0.5)
+
+        encoded_image = first_frame["image_bytes_base64"]
+        assert isinstance(encoded_image, str) and encoded_image
+        decoded_image = base64.b64decode(encoded_image)
+        assert decoded_image.startswith(b"\x89PNG\r\n\x1a\n"), decoded_image[:8]
 
 
 @pytest.mark.integration_p1

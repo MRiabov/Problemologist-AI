@@ -71,5 +71,9 @@ class WorkerLightWebSocketClient:
 
         try:
             await self._connection.close()
+        except Exception:
+            # Teardown must not turn a successful RPC into a transport failure.
+            # Some worker-light runs do not return a clean close frame.
+            pass
         finally:
             self._connection = None

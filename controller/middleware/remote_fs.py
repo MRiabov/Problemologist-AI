@@ -863,6 +863,7 @@ class RemoteFilesystemMiddleware:
         script_path: str | Path,
         backend: SimulatorBackendType | None = None,
         smoke_test_mode: bool | None = None,
+        stream_render_frames: bool = False,
     ) -> BenchmarkToolResponse:
         """Trigger physics simulation via worker client (with bundling)."""
         p_str = str(script_path)
@@ -890,6 +891,8 @@ class RemoteFilesystemMiddleware:
                 backend=resolved_backend,
                 smoke_test_mode=smoke_test_mode,
                 session_id=self.client.session_id,
+                episode_id=self.episode_id,
+                stream_render_frames=stream_render_frames,
             ),
             result_type=BenchmarkToolResponse,
         )

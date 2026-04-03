@@ -37,6 +37,26 @@ async def test_worker_light_websocket_transport_round_trip():
         bundle = await client.bundle_session()
         assert len(bundle) > 0
 
+        batch_session_id = f"INT-WS-BATCH-{uuid.uuid4().hex[:8]}"
+        batch_client = WorkerClient(
+            base_url=WORKER_LIGHT_URL,
+            session_id=batch_session_id,
+            heavy_url=WORKER_HEAVY_URL,
+            light_transport="ws",
+        )
+        try:
+            assert await batch_client.upload_files(
+                [
+                    ("alpha.txt", b"alpha\n"),
+                    ("nested/beta.txt", b"beta\n"),
+                ],
+                bypass_agent_permissions=True,
+            )
+            assert "alpha" in await batch_client.read_file("alpha.txt")
+            assert "beta" in await batch_client.read_file("nested/beta.txt")
+        finally:
+            await batch_client.aclose()
+
         execution = await client.execute_command(
             "python script.py", timeout=30, episode_id=session_id
         )

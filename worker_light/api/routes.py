@@ -63,6 +63,7 @@ from shared.workers.schema import (
     RenderBundleQueryRequest,
     RenderBundleQueryResult,
     StatusResponse,
+    UploadFilesRequest,
     WorkerLightRpcError,
     WorkerLightRpcRequest,
     WorkerLightRpcResponse,
@@ -456,6 +457,23 @@ async def _handle_light_rpc_action(
 
         if responses and responses[0].error:
             raise HTTPException(status_code=403, detail=responses[0].error)
+        return {"status": ResponseStatus.SUCCESS}
+
+    if action == "fs_upload_files":
+        request = UploadFilesRequest.model_validate(payload)
+        files = [
+            (entry.path, base64.b64decode(entry.content_b64)) for entry in request.files
+        ]
+        if request.bypass_agent_permissions:
+            responses = fs_router.local_backend.upload_files(files)
+        else:
+            responses = fs_router.upload_files(files)
+
+        first_error = next(
+            (response.error for response in responses if response.error), None
+        )
+        if first_error is not None:
+            raise HTTPException(status_code=403, detail=first_error)
         return {"status": ResponseStatus.SUCCESS}
 
     if action == "fs_delete":
@@ -871,6 +889,36 @@ async def upload_file(
         raise
     except Exception as e:
         logger.warning("api_upload_file_failed", path=path, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@light_router.post("/fs/upload_files", response_model=StatusResponse)
+async def upload_files(
+    request: UploadFilesRequest,
+    fs_router=Depends(get_router),
+    x_system_fs_bypass: str | None = Header(default=None, alias="X-System-FS-Bypass"),
+):
+    """Upload multiple files in a single JSON payload."""
+    try:
+        files = [
+            (entry.path, base64.b64decode(entry.content_b64)) for entry in request.files
+        ]
+        if _bypass_enabled(request.bypass_agent_permissions, x_system_fs_bypass):
+            responses = fs_router.local_backend.upload_files(files)
+        else:
+            responses = fs_router.upload_files(files)
+
+        first_error = next(
+            (response.error for response in responses if response.error), None
+        )
+        if first_error is not None:
+            raise HTTPException(status_code=403, detail=first_error)
+
+        return StatusResponse(status=ResponseStatus.SUCCESS)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning("api_upload_files_failed", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 

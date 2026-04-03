@@ -127,6 +127,7 @@ services:
     environment:
       WORKER_TYPE: heavy
       TEMPORAL_URL: temporal.railway.internal:7233
+      CONTROLLER_URL: http://controller.railway.internal:8000
       WORKER_RENDERER_URL: http://worker-renderer.railway.internal:8003
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LIBGL_ALWAYS_SOFTWARE: "1"
@@ -161,6 +162,7 @@ services:
     command: ["sh", "-c", "exec python -m worker_heavy.temporal_worker"]
     environment:
       TEMPORAL_URL: temporal.railway.internal:7233
+      CONTROLLER_URL: http://controller.railway.internal:8000
       WORKER_RENDERER_URL: http://worker-renderer.railway.internal:8003
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       S3_ENDPOINT: ${ENDPOINT:-https://storage.railway.app}

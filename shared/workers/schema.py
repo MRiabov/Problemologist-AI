@@ -193,6 +193,20 @@ class WriteFileRequest(BaseModel):
     bypass_agent_permissions: bool = False
 
 
+class UploadFilePayload(BaseModel):
+    """A single file payload for batch workspace upload."""
+
+    path: StrictStr = Field(..., min_length=1)
+    content_b64: StrictStr = Field(..., min_length=1)
+
+
+class UploadFilesRequest(BaseModel):
+    """Request to upload multiple files in one JSON payload."""
+
+    files: list[UploadFilePayload] = Field(..., min_length=1)
+    bypass_agent_permissions: bool = False
+
+
 class EditOp(BaseModel):
     """A single edit operation (find and replace)."""
 
@@ -278,6 +292,10 @@ class BenchmarkToolRequest(BaseModel):
         default=None,
         description="If true: cap particles to 5000, label results as approximate.",
     )
+    stream_render_frames: bool = Field(
+        default=False,
+        description="If true, stream low-frequency simulation frames to the episode websocket.",
+    )
     particle_budget: int | None = Field(
         default=None,
         description="Optional particle budget override.",
@@ -362,6 +380,24 @@ class SimulationArtifacts(BaseModel):
     review_manifests_json: dict[StrictStr, StrictStr] = Field(default_factory=dict)
 
     model_config = {"extra": "allow"}
+
+
+class SimulationFrameStreamMessage(BaseModel):
+    """Frame payload streamed live from worker-heavy during simulation."""
+
+    type: Literal["simulation_frame"] = "simulation_frame"
+    episode_id: StrictStr
+    session_id: StrictStr
+    frame_index: StrictInt = Field(ge=0)
+    simulation_time_s: float = Field(ge=0.0)
+    capture_interval_seconds: float = Field(gt=0.0)
+    backend_type: SimulatorBackendType
+    backend_name: StrictStr
+    resolved_camera_name: StrictStr | None = None
+    used_default_view: StrictBool = False
+    resolved_default_view_label: StrictStr | None = None
+    content_type: StrictStr = "image/png"
+    image_bytes_base64: StrictStr
 
 
 class BenchmarkToolResponse(BaseModel):
@@ -503,6 +539,7 @@ WorkerLightRpcAction: TypeAlias = Literal[
     "fs_read",
     "fs_read_blob",
     "fs_write",
+    "fs_upload_files",
     "fs_edit",
     "fs_upload_file",
     "fs_delete",
@@ -709,6 +746,8 @@ class HeavySimulationParams(BaseModel):
     backend: SimulatorBackendType
     smoke_test_mode: bool | None = None
     session_id: str
+    episode_id: str | None = None
+    stream_render_frames: bool = False
 
 
 class HeavyValidationParams(BaseModel):

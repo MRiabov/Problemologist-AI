@@ -57,6 +57,7 @@ from shared.observability.schemas import ReviewDecisionEvent
 from shared.workers.schema import (
     PlanReviewManifest,
     ReviewManifest,
+    SimulationFrameStreamMessage,
     ValidationResultRecord,
 )
 
@@ -1374,6 +1375,78 @@ async def episode_websocket(
             "episode_websocket_error",
             episode_id=str(episode_id),
             error=str(e),
+        )
+        raise
+
+
+@router.websocket("/{episode_id}/simulation-stream/ws")
+async def episode_simulation_stream_websocket(
+    websocket: WebSocket,
+    episode_id: uuid.UUID,
+):
+    session_id = websocket.headers.get("x-session-id")
+    if not session_id:
+        await websocket.accept()
+        await websocket.close(code=1008)
+        return
+
+    await websocket.accept()
+    logger.info(
+        "episode_simulation_stream_connected",
+        episode_id=str(episode_id),
+        session_id=session_id,
+    )
+
+    try:
+        while True:
+            raw_message = await websocket.receive_text()
+            try:
+                payload = SimulationFrameStreamMessage.model_validate_json(raw_message)
+            except Exception as exc:
+                logger.warning(
+                    "episode_simulation_stream_message_invalid",
+                    episode_id=str(episode_id),
+                    session_id=session_id,
+                    error=str(exc),
+                )
+                continue
+
+            if payload.episode_id != str(episode_id):
+                logger.warning(
+                    "episode_simulation_stream_episode_mismatch",
+                    episode_id=str(episode_id),
+                    payload_episode_id=payload.episode_id,
+                    session_id=session_id,
+                )
+                continue
+
+            await manager.broadcast(
+                episode_id,
+                {
+                    **payload.model_dump(mode="json"),
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
+            )
+    except WebSocketDisconnect:
+        logger.info(
+            "episode_simulation_stream_disconnected",
+            episode_id=str(episode_id),
+            session_id=session_id,
+        )
+    except Exception as exc:
+        if _is_closed_websocket_error(exc):
+            logger.info(
+                "episode_simulation_stream_closed",
+                episode_id=str(episode_id),
+                session_id=session_id,
+                error=str(exc),
+            )
+            return
+        logger.exception(
+            "episode_simulation_stream_error",
+            episode_id=str(episode_id),
+            session_id=session_id,
+            error=str(exc),
         )
         raise
 

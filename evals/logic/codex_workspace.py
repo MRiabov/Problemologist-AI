@@ -24,6 +24,7 @@ from evals.logic.review_checks import (
     review_artifacts_complete_for_prefix,
     review_filename_candidates,
 )
+from evals.logic.stack_profiles import apply_stack_profile_env
 from evals.logic.workspace import resolve_seed_artifact_dir
 from shared.agent_templates import (
     load_codex_template_files,
@@ -883,6 +884,7 @@ def _run_codex_exec_command(
     )
 
     cmd = ["codex", "exec"]
+    cmd.extend(["-C", str(workspace_dir)])
     if resume_session_id is not None:
         cmd.extend(["resume", resume_session_id])
     cmd.extend(_codex_execution_flags(yolo=yolo))
@@ -893,8 +895,6 @@ def _run_codex_exec_command(
         [
             "-c",
             "shell_environment_policy.inherit=all",
-            "--cd",
-            str(workspace_dir),
             "--skip-git-repo-check",
             "-",
         ]
@@ -1083,6 +1083,10 @@ def build_codex_env(
     """Prepare a generic Codex subprocess environment for a local workspace run."""
 
     env = dict(os.environ)
+    # Apply the eval stack profile explicitly so the Codex workspace can reach
+    # the same localhost services as the runner process, including the
+    # dedicated renderer worker used by validation previews.
+    apply_stack_profile_env("eval", env=env, root=ROOT)
     # Codex runs are headless by contract. Strip ambient display state so the
     # submission helpers and validation paths cannot depend on host X11/Wayland.
     env.pop("DISPLAY", None)

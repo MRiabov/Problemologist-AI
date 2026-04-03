@@ -666,6 +666,52 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
+    async def upload_files(
+        self,
+        files: list[tuple[str, bytes]],
+        *,
+        bypass_agent_permissions: bool = False,
+    ) -> bool:
+        """Upload multiple files in one request."""
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request(
+                "fs_upload_files",
+                {
+                    "files": [
+                        {
+                            "path": path,
+                            "content_b64": base64.b64encode(content).decode("ascii"),
+                        }
+                        for path, content in files
+                    ],
+                    "bypass_agent_permissions": bypass_agent_permissions,
+                },
+            )
+            return bool((result or {}).get("status") == ResponseStatus.SUCCESS)
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.base_url}/fs/upload_files",
+                json={
+                    "files": [
+                        {
+                            "path": path,
+                            "content_b64": base64.b64encode(content).decode("ascii"),
+                        }
+                        for path, content in files
+                    ],
+                    "bypass_agent_permissions": bypass_agent_permissions,
+                },
+                headers=self._request_headers(
+                    bypass_agent_permissions=bypass_agent_permissions
+                ),
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            return response.json()["status"] == ResponseStatus.SUCCESS
+        finally:
+            await self._close_client(client)
+
     async def read_file_binary(
         self, path: str, *, bypass_agent_permissions: bool = False
     ) -> bytes:
@@ -855,6 +901,8 @@ class WorkerClient:
         script_content: str | None = None,
         backend: SimulatorBackendType | None = None,
         smoke_test_mode: bool | None = None,
+        episode_id: str | None = None,
+        stream_render_frames: bool = False,
     ) -> BenchmarkToolResponse:
         """Trigger physics simulation via worker."""
         resolved_backend = backend or get_default_simulator_backend()
@@ -867,6 +915,8 @@ class WorkerClient:
                 "agent_role": self.agent_role,
                 "backend": resolved_backend,
                 "smoke_test_mode": smoke_test_mode,
+                "episode_id": episode_id,
+                "stream_render_frames": stream_render_frames,
             }
             if script_content is not None:
                 raise NotImplementedError(
@@ -887,6 +937,9 @@ class WorkerClient:
                 payload["script_content"] = script_content
             if smoke_test_mode is not None:
                 payload["smoke_test_mode"] = smoke_test_mode
+            if episode_id is not None:
+                payload["episode_id"] = episode_id
+            payload["stream_render_frames"] = stream_render_frames
 
             await self._add_bundle_to_payload(payload)
 

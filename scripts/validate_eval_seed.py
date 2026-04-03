@@ -18,6 +18,8 @@ from evals.logic.stack_profiles import apply_stack_profile_env  # noqa: E402
 from scripts.internal.eval_run_lock import (  # noqa: E402
     EvalRunSelection,
     acquire_eval_run_lock,
+    acquire_eval_run_shared_lock,
+    downgrade_eval_run_lock_to_shared,
     release_eval_run_lock,
 )
 
@@ -33,13 +35,14 @@ from evals.logic.curation import load_dataset_curation_manifest  # noqa: E402
 from evals.logic.models import EvalDatasetItem  # noqa: E402
 from evals.logic.specs import AGENT_SPECS  # noqa: E402
 from evals.logic.workspace import (  # noqa: E402
+    InMemorySeedWorkspaceClient,
+    materialize_seed_workspace_snapshot,
+)
+from evals.logic.workspace import (
     preflight_seeded_entry_contract as _preflight_seeded_entry_contract,
 )
 from evals.logic.workspace import (  # noqa: E402
     resolve_seed_artifact_dir as _resolve_seed_artifact_dir,
-)
-from evals.logic.workspace import (  # noqa: E402
-    seed_eval_workspace as _seed_eval_workspace,
 )
 from scripts.internal.eval_seed_renders import (  # noqa: E402
     update_seed_artifact_renders,
@@ -146,16 +149,17 @@ def _parse_args() -> argparse.Namespace:
         "--skip-env-up",
         action="store_true",
         help=(
-            "Skip running scripts/env_up.sh before validation. This also keeps "
-            "validation-only runs off the shared eval lock."
+            "Skip running scripts/env_up.sh before validation. Validation "
+            "still joins the shared eval lock so the stack stays protected."
         ),
     )
     parser.add_argument(
         "--queue",
         action="store_true",
         help=(
-            "Wait for the shared eval lock when this command is bootstrapping "
-            "the eval stack instead of failing fast when another eval run is active."
+            "Wait for the eval lock when this command is bootstrapping the "
+            "eval stack or joining the shared validation lock instead of "
+            "failing fast when another eval run is active."
         ),
     )
     parser.add_argument(
@@ -291,6 +295,7 @@ def _filter_dataset_rows_by_technical_drawing_mode(
     for row in rows:
         raw_mode = row.get("technical_drawing_mode")
         if raw_mode is None or str(raw_mode).strip() == "":
+            filtered.append(row)
             continue
         if DraftingMode(raw_mode) != technical_drawing_mode:
             continue
@@ -412,13 +417,13 @@ async def _validate_item(
             artifact_dir = _resolve_seed_artifact_dir(item, root=ROOT)
             if artifact_dir is not None:
                 update_seed_artifact_renders(artifact_dir)
-        await _seed_eval_workspace(
+        snapshot_client = InMemorySeedWorkspaceClient(session_id=session_id)
+        await materialize_seed_workspace_snapshot(
             item=item,
             session_id=session_id,
             agent_name=agent,
             root=ROOT,
-            worker_light_url=WORKER_LIGHT_URL,
-            logger=item_logger,
+            workspace_client=snapshot_client,
             update_manifests=update_manifests,
         )
         # The shared preflight now also enforces the drafting prompt gate and
@@ -431,6 +436,7 @@ async def _validate_item(
             root=ROOT,
             worker_light_url=WORKER_LIGHT_URL,
             logger=item_logger,
+            workspace_client=snapshot_client,
         )
     except Exception as exc:
         return False, str(exc)
@@ -484,6 +490,12 @@ async def _async_main(args: argparse.Namespace) -> int:
             continue
         work_items.extend((agent, item) for item in dataset)
 
+    if args.run_judge and not failures and len(work_items) > 10 and not args.yes:
+        raise SystemExit(
+            f"--run-judge selected {len(work_items)} seed rows; rerun with -y to "
+            "confirm the extra judge cost."
+        )
+
     lock_lease = None
     if not args.skip_env_up:
         lock_lease = acquire_eval_run_lock(
@@ -499,42 +511,55 @@ async def _async_main(args: argparse.Namespace) -> int:
         if lock_lease is None:
             return 1
         atexit.register(release_eval_run_lock, lock_lease)
-
-    if args.run_judge and not failures and len(work_items) > 10 and not args.yes:
-        raise SystemExit(
-            f"--run-judge selected {len(work_items)} seed rows; rerun with -y to "
-            "confirm the extra judge cost."
-        )
-
-    try:
-        if lock_lease is not None:
+        if lock_lease.state is not None:
             lock_lease.update_state(current_phase="manifest_validation")
-        _validate_generated_curation_manifests(errors_only=args.errors_only)
-    except Exception as exc:
-        print("Generated curation manifest validation failed.", file=sys.stderr)
-        print(str(exc), file=sys.stderr)
-        return 1
+        try:
+            _validate_generated_curation_manifests(errors_only=args.errors_only)
+        except Exception as exc:
+            print("Generated curation manifest validation failed.", file=sys.stderr)
+            print(str(exc), file=sys.stderr)
+            return 1
 
-    if not args.skip_env_up:
-        if lock_lease is not None:
+        if lock_lease.state is not None:
             lock_lease.update_state(current_phase="env_up")
         _run_env_up()
-
-    try:
-        if lock_lease is not None:
-            lock_lease.update_state(current_phase="worker_ready")
-        await _wait_for_worker_ready(errors_only=args.errors_only)
-    except Exception as exc:
-        print(
-            "Worker is not healthy. Start the local services first if needed "
-            "(for example `uv run dataset/evals/run_evals.py ...` or `./scripts/env_up.sh`).",
-            file=sys.stderr,
+        if lock_lease.state is not None:
+            lock_lease.update_state(current_phase="validation")
+        # Keep the lock exclusive only through bootstrap, then let other
+        # validation consumers join the shared lock on the same file.
+        downgrade_eval_run_lock_to_shared(lock_lease)
+    else:
+        lock_lease = acquire_eval_run_shared_lock(
+            queue=args.queue,
+            requested_command=[sys.argv[0], *sys.argv[1:]],
+            requested_selection=EvalRunSelection(
+                agent=agents[0].value if len(agents) == 1 else None,
+                task_ids=[args.task_id] if args.task_id else [],
+                levels=sorted(levels) if levels else [],
+                technical_drawing_mode=technical_drawing_mode.value,
+            ),
         )
-        print(str(exc), file=sys.stderr)
-        return 1
+        if lock_lease is None:
+            return 1
+        atexit.register(release_eval_run_lock, lock_lease)
+        try:
+            _validate_generated_curation_manifests(errors_only=args.errors_only)
+        except Exception as exc:
+            print("Generated curation manifest validation failed.", file=sys.stderr)
+            print(str(exc), file=sys.stderr)
+            return 1
 
-    if lock_lease is not None:
-        lock_lease.update_state(current_phase="validation")
+    if not args.skip_env_up:
+        try:
+            await _wait_for_worker_ready(errors_only=args.errors_only)
+        except Exception as exc:
+            print(
+                "Worker is not healthy. Start the local services first if needed "
+                "(for example `uv run dataset/evals/run_evals.py ...` or `./scripts/env_up.sh`).",
+                file=sys.stderr,
+            )
+            print(str(exc), file=sys.stderr)
+            return 1
 
     if not failures or not args.fail_fast:
         if args.fail_fast or args.concurrency == 1:

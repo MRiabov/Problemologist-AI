@@ -33,6 +33,7 @@ class SimulationRenderProvenance(BaseModel):
     resolved_camera_name: str | None = None
     used_default_view: bool = False
     resolved_default_view_label: str | None = None
+    capture_interval_seconds: float | None = None
     capture_interval_steps: int | None = None
     captured_frame_count: int = 0
     render_error: str | None = None

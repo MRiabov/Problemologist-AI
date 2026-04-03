@@ -286,6 +286,8 @@ async def run_simulation_task(
     smoke_test_mode,
     backend_type,
     x_session_id,
+    episode_id,
+    stream_render_frames,
     particle_budget,
 ):
     """Run simulation in an isolated child process (crash containment boundary)."""
@@ -297,6 +299,8 @@ async def run_simulation_task(
         smoke_test_mode=smoke_test_mode,
         backend=backend_type,
         session_id=x_session_id,
+        episode_id=episode_id,
+        stream_render_frames=stream_render_frames,
         particle_budget=particle_budget,
     )
 
@@ -361,6 +365,8 @@ async def api_simulate(
                     request.smoke_test_mode,
                     backend_type,
                     x_session_id,
+                    request.episode_id,
+                    request.stream_render_frames,
                     request.particle_budget,
                 )
 

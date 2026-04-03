@@ -323,6 +323,8 @@ async def run_simulation_in_isolated_process(
     smoke_test_mode: bool,
     backend: Any,
     session_id: str,
+    episode_id: str | None,
+    stream_render_frames: bool,
     particle_budget: int | None,
 ) -> SimulationResult:
     """
@@ -343,6 +345,8 @@ async def run_simulation_in_isolated_process(
             smoke_test_mode,
             backend,
             session_id,
+            episode_id,
+            stream_render_frames,
             particle_budget,
             timeout_seconds=_SIMULATION_WALL_CLOCK_TIMEOUT_SECONDS,
         )

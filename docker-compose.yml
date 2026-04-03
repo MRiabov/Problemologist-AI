@@ -176,6 +176,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - WORKER_TYPE=heavy
       - TEMPORAL_URL=temporal:7233
+      - CONTROLLER_URL=http://controller:8000
       - WORKER_RENDERER_URL=http://worker-renderer:8003
     networks:
       - default
@@ -224,6 +225,7 @@ services:
     image: problemologist-ai-worker-heavy:latest
     environment:
       - TEMPORAL_URL=temporal:7233
+      - CONTROLLER_URL=http://controller:8000
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - WORKER_RENDERER_URL=http://worker-renderer:8003
     networks:

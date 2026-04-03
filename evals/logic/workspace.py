@@ -280,6 +280,199 @@ def _drafting_prompt_text(agent_name: AgentName) -> str:
     )
 
 
+class InMemorySeedWorkspaceClient:
+    """In-memory workspace client used to build seeded snapshots."""
+
+    def __init__(self, session_id: str):
+        self.session_id = session_id
+        self._files: dict[str, bytes] = {}
+
+    @staticmethod
+    def _normalize(virtual_path: str) -> str:
+        normalized = str(virtual_path).strip()
+        if normalized in {"/workspace", "workspace"}:
+            normalized = "/"
+        elif normalized.startswith("/workspace/"):
+            normalized = "/" + normalized[len("/workspace/") :]
+        elif normalized.startswith("workspace/"):
+            normalized = normalized[len("workspace/") :]
+
+        rel = normalized.lstrip("/")
+        if not rel or rel == ".":
+            return ""
+        if rel == ".." or rel.startswith("../") or "/../" in rel:
+            raise ValueError(f"Path escapes workspace root: {virtual_path}")
+        return Path(rel).as_posix()
+
+    def snapshot_files(self) -> list[tuple[str, bytes]]:
+        return sorted(self._files.items())
+
+    async def exists(
+        self, path: str, *, bypass_agent_permissions: bool = False
+    ) -> bool:  # noqa: ARG002
+        return self._normalize(path) in self._files
+
+    async def read_file(
+        self, path: str, *, bypass_agent_permissions: bool = False
+    ) -> str:  # noqa: ARG002
+        try:
+            raw = self._files[self._normalize(path)]
+            return raw.decode("utf-8")
+        except (KeyError, UnicodeDecodeError):
+            return f"Error: File '{path}' not found."
+
+    async def read_file_optional(
+        self, path: str, *, bypass_agent_permissions: bool = False
+    ) -> str | None:  # noqa: ARG002
+        try:
+            raw = self._files[self._normalize(path)]
+            return raw.decode("utf-8")
+        except (KeyError, UnicodeDecodeError):
+            return None
+
+    async def write_file(
+        self,
+        path: str,
+        content: str,
+        overwrite: bool = True,
+        *,
+        bypass_agent_permissions: bool = False,
+    ) -> bool:  # noqa: ARG002
+        key = self._normalize(path)
+        if key in self._files and not overwrite:
+            raise FileExistsError(f"Cannot write to {path} because it already exists.")
+        self._files[key] = content.encode("utf-8")
+        return True
+
+    async def upload_file(
+        self,
+        path: str,
+        content: bytes,
+        *,
+        bypass_agent_permissions: bool = False,
+    ) -> bool:  # noqa: ARG002
+        self._files[self._normalize(path)] = content
+        return True
+
+    async def aclose(self) -> None:
+        return None
+
+
+async def materialize_seed_workspace_snapshot(
+    *,
+    item: EvalDatasetItem,
+    session_id: str,
+    agent_name: AgentName,
+    root: Path,
+    workspace_client: InMemorySeedWorkspaceClient,
+    update_manifests: bool = True,
+) -> list[str]:
+    artifact_dir = resolve_seed_artifact_dir(item, root=root)
+    inline_files = item.seed_files or {}
+    template_files = load_common_template_files()
+    seeded_paths: list[str] = []
+
+    if artifact_dir is None and not inline_files and not template_files:
+        return seeded_paths
+
+    if artifact_dir is not None:
+        if not artifact_dir.exists():
+            raise FileNotFoundError(
+                f"Seed artifact directory not found: {artifact_dir}"
+            )
+
+        updated_paths = refresh_seed_artifact_manifests(
+            artifact_dir, fix=update_manifests
+        )
+        if updated_paths and not update_manifests:
+            raise ValueError(
+                "Seed artifact manifest drift detected; rerun with --update-manifests."
+            )
+
+    for rel_path, content in template_files.items():
+        await workspace_client.write_file(
+            rel_path,
+            content,
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        seeded_paths.append(rel_path)
+
+    if artifact_dir is not None:
+        for path in sorted(p for p in artifact_dir.rglob("*") if p.is_file()):
+            rel_path = path.relative_to(artifact_dir).as_posix()
+            raw_bytes = path.read_bytes()
+            try:
+                content = raw_bytes.decode("utf-8")
+            except UnicodeDecodeError:
+                await workspace_client.upload_file(
+                    rel_path,
+                    raw_bytes,
+                    bypass_agent_permissions=True,
+                )
+            else:
+                await workspace_client.write_file(
+                    rel_path,
+                    content,
+                    overwrite=True,
+                    bypass_agent_permissions=True,
+                )
+            seeded_paths.append(rel_path)
+
+    for rel_path, content in inline_files.items():
+        await workspace_client.write_file(
+            rel_path,
+            content,
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        seeded_paths.append(rel_path)
+
+    if (
+        agent_name in _ENGINEER_DRAFTING_TARGETS
+        and _engineering_technical_drawing_mode_active()
+    ):
+        seeded_paths.extend(
+            await _write_missing_template_files(
+                workspace_client, load_template_repo_files("engineer/drafting")
+            )
+        )
+        seeded_paths.extend(await _ensure_engineer_drafting_contract(workspace_client))
+    if (
+        agent_name in _ENGINEER_BENCHMARK_CONTEXT_TARGETS
+        and _benchmark_technical_drawing_mode_active()
+    ):
+        seeded_paths.extend(
+            await _write_missing_template_files(
+                workspace_client,
+                load_template_repo_files("benchmark_generator/drafting"),
+            )
+        )
+    if (
+        agent_name in _BENCHMARK_DRAFTING_TARGETS
+        and _benchmark_technical_drawing_mode_active()
+    ):
+        seeded_paths.extend(
+            await _write_missing_template_files(
+                workspace_client,
+                load_template_repo_files("benchmark_generator/drafting"),
+            )
+        )
+        seeded_paths.extend(await _ensure_benchmark_drafting_contract(workspace_client))
+    if (
+        agent_name in _ENGINEER_DRAFTING_TARGETS
+        and _engineering_technical_drawing_mode_active()
+    ) or (
+        agent_name in _BENCHMARK_DRAFTING_TARGETS
+        and _benchmark_technical_drawing_mode_active()
+    ):
+        seeded_paths.extend(
+            await _ensure_drafting_prompt(workspace_client, agent_name=agent_name)
+        )
+
+    return seeded_paths
+
+
 async def _load_benchmark_caps(worker: WorkerClient) -> tuple[float, float]:
     default_unit_cost = 100.0
     default_weight = 1000.0
@@ -653,6 +846,7 @@ async def preflight_seeded_entry_contract(
     root: Path,
     worker_light_url: str,
     logger: Any,
+    workspace_client: Any | None = None,
 ) -> None:
     if item.seed_artifact_dir is None and not item.seed_files:
         return
@@ -734,7 +928,10 @@ async def preflight_seeded_entry_contract(
         ),
     }
 
-    worker = WorkerClient(base_url=worker_light_url, session_id=session_id)
+    worker = workspace_client or WorkerClient(
+        base_url=worker_light_url, session_id=session_id
+    )
+    owns_worker = workspace_client is None
     errors: list[str] = []
     result = None
 
@@ -796,7 +993,8 @@ async def preflight_seeded_entry_contract(
             for error in supplemental_errors:
                 add_error(f"{error.code}: {error.message}")
     finally:
-        await worker.aclose()
+        if owns_worker:
+            await worker.aclose()
 
     if not errors and result is not None and result.ok:
         logger.info(

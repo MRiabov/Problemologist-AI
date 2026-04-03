@@ -15,6 +15,7 @@ export type SimulationRenderProvenance = {
     resolved_camera_name?: (string | null);
     used_default_view?: boolean;
     resolved_default_view_label?: (string | null);
+    capture_interval_seconds?: (number | null);
     capture_interval_steps?: (number | null);
     captured_frame_count?: number;
     render_error?: (string | null);

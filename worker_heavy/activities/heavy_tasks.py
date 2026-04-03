@@ -246,6 +246,8 @@ async def run_simulation_activity(
             smoke_test_mode=smoke_test_mode,
             backend=backend_type,
             session_id=session_id or "",
+            episode_id=params.episode_id,
+            stream_render_frames=params.stream_render_frames,
             particle_budget=None,
         )
         artifacts = _collect_simulation_artifacts(root, result, session_id=session_id)

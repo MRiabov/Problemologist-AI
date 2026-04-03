@@ -115,6 +115,8 @@ from evals.logic.workspace import (
 from scripts.internal.eval_run_lock import (
     EvalRunSelection,
     acquire_eval_run_lock,
+    acquire_eval_run_shared_lock,
+    downgrade_eval_run_lock_to_shared,
     release_eval_run_lock,
 )
 from shared.agents.config import (
@@ -4025,7 +4027,9 @@ def _build_parser() -> argparse.ArgumentParser:
         "--no-rate-limit", action="store_true", help="Disable the 50 RPM rate limit"
     )
     parser.add_argument(
-        "--skip-env-up", action="store_true", help="Skip running scripts/env_up.sh"
+        "--skip-env-up",
+        action="store_true",
+        help=("Skip running scripts/env_up.sh and join the shared eval lock directly."),
     )
     parser.add_argument(
         "--queue",
@@ -4117,11 +4121,18 @@ async def main():
         levels=sorted(selected_levels),
         technical_drawing_mode=technical_drawing_mode.value,
     )
-    lock_lease = acquire_eval_run_lock(
-        queue=args.queue,
-        requested_command=requested_command,
-        requested_selection=requested_selection,
-    )
+    if runner_backend == EvalRunnerBackend.CONTROLLER and not args.skip_env_up:
+        lock_lease = acquire_eval_run_lock(
+            queue=args.queue,
+            requested_command=requested_command,
+            requested_selection=requested_selection,
+        )
+    else:
+        lock_lease = acquire_eval_run_shared_lock(
+            queue=args.queue,
+            requested_command=requested_command,
+            requested_selection=requested_selection,
+        )
     if lock_lease is None:
         sys.exit(1)
     atexit.register(release_eval_run_lock, lock_lease)
@@ -4161,7 +4172,8 @@ async def main():
         log_dir = runs_root / f"{run_name}_{suffix}"
         suffix += 1
     log_dir.mkdir(parents=True, exist_ok=True)
-    lock_lease.update_state(current_log_dir=str(log_dir), current_phase="startup")
+    if lock_lease.state is not None:
+        lock_lease.update_state(current_log_dir=str(log_dir), current_phase="startup")
 
     now = time.time()
     cutoff_seconds = 24 * 60 * 60
@@ -4241,13 +4253,15 @@ async def main():
     start_time = time.time()
     _console_message(f"Agent evals started: {time.ctime(start_time)}")
 
-    lock_lease.update_state(current_phase="startup_checks")
+    if lock_lease.state is not None:
+        lock_lease.update_state(current_phase="startup_checks")
 
     # Run env_up.sh before checking health or starting evaluations.
     # Codex backend runs locally against the materialized workspace and does not
     # require controller/worker services to be booted for the agent loop.
     if runner_backend == EvalRunnerBackend.CONTROLLER and not args.skip_env_up:
-        lock_lease.update_state(current_phase="env_up")
+        if lock_lease.state is not None:
+            lock_lease.update_state(current_phase="env_up")
         logger.info("env_up_start")
         try:
             env_up_path = ROOT / "scripts" / "env_up.sh"
@@ -4421,7 +4435,9 @@ async def main():
         for item in dataset:
             tasks.append((item, agent))
 
-    lock_lease.update_state(current_phase="running")
+    if lock_lease.state is not None:
+        lock_lease.update_state(current_phase="running")
+        downgrade_eval_run_lock_to_shared(lock_lease)
 
     if tasks and runner_backend == EvalRunnerBackend.CONTROLLER:
         logger.info("eval_seed_preflight_start", total_tasks=len(tasks))

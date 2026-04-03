@@ -41,7 +41,7 @@ if [ "$STACK_PROFILE" = "eval" ] && [ "${PROBLEMOLOGIST_EVAL_LOCK_HELD:-0}" != "
   elif ! flock -n 9; then
     echo "Be careful - another eval run is already running." >&2
     echo "Your requested command: [scripts/env_up.sh --profile eval]" >&2
-    echo "If you only need validation, rerun that check with --skip-env-up to bypass the shared eval lock." >&2
+    echo "If you only need validation, rerun that check with --skip-env-up so it can join the shared validation lock." >&2
     echo "If you want to wait for the shared lock, rerun via the eval runner with --queue." >&2
     exit 1
   fi
@@ -82,6 +82,9 @@ if [ -f .env ]; then
     fi
   done < .env
 fi
+
+echo "Syncing skill mirrors from canonical skills/..."
+python3 scripts/sync_skill_mirrors.py
 
 eval "$(python3 -m evals.logic.stack_profiles --profile "$STACK_PROFILE" --root "$(pwd)" --format shell)"
 

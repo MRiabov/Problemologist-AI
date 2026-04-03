@@ -25,6 +25,7 @@ from evals.logic.stack_profiles import apply_stack_profile_env  # noqa: E402
 from scripts.internal.eval_run_lock import (  # noqa: E402
     EvalRunSelection,
     acquire_eval_run_lock,
+    downgrade_eval_run_lock_to_shared,
     release_eval_run_lock,
 )
 
@@ -105,7 +106,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--queue",
         action="store_true",
-        help="Wait for the shared eval lock instead of failing fast when another eval run is active.",
+        help="Wait for the eval lock instead of failing fast when another eval run is active.",
     )
     parser.add_argument(
         "--technical-drawing-mode",
@@ -280,6 +281,9 @@ def main() -> None:
         lock_lease.update_state(current_phase="env_up")
         _env_up()
         lock_lease.update_state(current_phase="ready")
+        # Keep the lock exclusive only through bootstrap, then downgrade so
+        # other workspace consumers can coexist on the shared lock.
+        downgrade_eval_run_lock_to_shared(lock_lease)
         fail_closed_if_integration_test_setup(
             os.getenv("CONTROLLER_URL", "http://localhost:18000"),
             context="seed workspace materializer startup",

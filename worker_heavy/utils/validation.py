@@ -1338,6 +1338,8 @@ def simulate_subprocess(
     smoke_test_mode: bool | None = None,
     backend: Any | None = None,
     session_id: str | None = None,
+    episode_id: str | None = None,
+    stream_render_frames: bool = False,
     particle_budget: int | None = None,
 ) -> SimulationResult:
     """Serializable entry point for ProcessPoolExecutor."""
@@ -1362,6 +1364,8 @@ def simulate_subprocess(
         smoke_test_mode=smoke_test_mode,
         backend=backend,
         session_id=session_id,
+        episode_id=episode_id,
+        stream_render_frames=stream_render_frames,
         particle_budget=particle_budget,
         script_path=script_path,
         script_content=script_content,
@@ -1423,11 +1427,14 @@ def simulate(
     smoke_test_mode: bool | None = None,
     backend: SimulatorBackendType | None = None,
     session_id: str | None = None,
+    episode_id: str | None = None,
+    stream_render_frames: bool = False,
     script_path: str | Path | None = None,
     script_content: str | None = None,
 ) -> SimulationResult:
     """Provide a physics-backed stability and objective check."""
     from worker_heavy.config import settings
+    from worker_heavy.simulation.frame_stream import SimulationFrameStreamPublisher
     from worker_heavy.simulation.loop import SimulationLoop
 
     if smoke_test_mode is None:
@@ -1440,6 +1447,8 @@ def simulate(
         smoke_test_mode=smoke_test_mode,
         backend=backend,
         session_id=session_id,
+        episode_id=episode_id,
+        stream_render_frames=stream_render_frames,
     )
     label_contract_error = _validate_unique_top_level_labels(component)
     if label_contract_error:
@@ -1697,7 +1706,22 @@ def simulate(
         except Exception as e:
             logger.warning("failed_to_load_controllers", error=str(e))
 
+    frame_stream_publisher = None
     try:
+        if stream_render_frames and episode_id:
+            frame_stream_publisher = SimulationFrameStreamPublisher(
+                controller_url=settings.controller_url,
+                episode_id=episode_id,
+                session_id=session_id,
+                enabled=True,
+            )
+        elif stream_render_frames:
+            logger.warning(
+                "simulation_frame_stream_disabled",
+                reason="missing_episode_id",
+                session_id=session_id,
+            )
+
         simulation_bundle_id = f"{session_id or 'simulation'}-{uuid.uuid4().hex[:12]}"
         video_bundle_root = renders_dir / "simulation_video" / simulation_bundle_id
         video_path = video_bundle_root / "simulation.mp4"
@@ -1709,6 +1733,7 @@ def simulate(
             duration=sim_duration,
             dynamic_controllers=dynamic_controllers,
             video_path=video_path,
+            frame_stream_publisher=frame_stream_publisher,
         )
         render_provenance = loop.render_provenance
         if loop.render_object_store_key:
@@ -1762,6 +1787,7 @@ def simulate(
                 duration=sim_duration,
                 dynamic_controllers=dynamic_controllers,
                 video_path=None,  # Skip video during emergency retry path
+                frame_stream_publisher=frame_stream_publisher,
             )
             render_provenance = loop.render_provenance
             if loop.render_object_store_key:
@@ -1965,6 +1991,10 @@ def simulate(
                 reason=FailureReason.PHYSICS_INSTABILITY, detail=str(e)
             ),
         )
+    finally:
+        if frame_stream_publisher is not None:
+            with contextlib.suppress(Exception):
+                frame_stream_publisher.close()
 
 
 def validate(
