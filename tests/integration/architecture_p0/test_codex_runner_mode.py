@@ -49,8 +49,7 @@ from shared.models.schemas import (
     PartMetadata,
     PlannerSubmissionResult,
 )
-from shared.workers.schema import RenderManifest, ValidationResultRecord
-from tests.integration.agent.helpers import repo_git_revision
+from shared.workers.schema import ValidationResultRecord
 from worker_renderer.utils.build123d_rendering import render_preview_view
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -1439,12 +1438,7 @@ result = build()
     assert validation_record.success is True
     assert validation_record.script_path == "solution_script.py"
 
-    render_manifest = RenderManifest.model_validate_json(
-        (workspace_dir / "renders" / "render_manifest.json").read_text(encoding="utf-8")
-    )
-    assert render_manifest.revision == repo_git_revision()
-    assert render_manifest.preview_evidence_paths
-    assert render_manifest.artifacts
+    assert not (workspace_dir / "renders" / "render_manifest.json").exists()
 
 
 @pytest.mark.integration_p0

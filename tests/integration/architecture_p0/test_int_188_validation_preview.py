@@ -59,6 +59,7 @@ from shared.workers.schema import (
 )
 from shared.workers.workbench_models import ManufacturingMethod
 from tests.integration.agent.helpers import seed_benchmark_assembly_definition
+from tests.integration.architecture_p0.test_architecture_p0 import get_bundle
 
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
@@ -300,26 +301,14 @@ async def _write_benchmark_submit_inputs(
 @pytest.mark.asyncio
 async def test_int_188_validation_preview_uses_build123d_even_for_genesis_objectives():
     """
-    INT-188: /benchmark/validate routes static preview rendering to build123d/VTK
-    even when objectives request Genesis for physics simulation.
+    INT-188: /benchmark/validate stays geometry-only even when objectives
+    request Genesis for physics simulation, while explicit preview still works.
     """
-    original_config = _set_render_modalities(
-        rgb=True,
-        depth=True,
-        segmentation=True,
-        rgb_axes=False,
-        rgb_edges=False,
-        depth_axes=False,
-        depth_edges=False,
-        segmentation_axes=False,
-        segmentation_edges=False,
-    )
-    try:
-        async with httpx.AsyncClient(timeout=300.0) as client:
-            session_id = f"INT-188-{uuid.uuid4().hex[:8]}"
-            headers = {"X-Session-ID": session_id}
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        session_id = f"INT-188-{uuid.uuid4().hex[:8]}"
+        headers = {"X-Session-ID": session_id}
 
-            script = """
+        script = """
 from build123d import *
 from shared.models.schemas import PartMetadata
 def build():
@@ -328,345 +317,169 @@ def build():
     p.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     return p
 """
-            write_resp = await client.post(
-                f"{WORKER_LIGHT_URL}/fs/write",
-                json=WriteFileRequest(
-                    path="script.py", content=script, overwrite=True
-                ).model_dump(mode="json"),
-                headers=headers,
-            )
-            assert write_resp.status_code == 200, write_resp.text
+        write_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="script.py", content=script, overwrite=True
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert write_resp.status_code == 200, write_resp.text
 
-            objectives = BenchmarkDefinition(
-                objectives=ObjectivesSection(
-                    goal_zone=BoundingBox(
-                        min=(10.0, -20.0, 0.0), max=(20.0, 20.0, 20.0)
-                    ),
-                    forbid_zones=[
-                        ForbidZone(
-                            name="preview_blocker",
-                            min=(-20.0, -20.0, 0.0),
-                            max=(-10.0, 20.0, 20.0),
-                        )
-                    ],
-                    build_zone=BoundingBox(
-                        min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)
-                    ),
-                ),
-                physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
-                simulation_bounds=BoundingBox(
-                    min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
-                ),
-                moved_object=MovedObject(
-                    label="target_box",
-                    shape="sphere",
-                    material_id="aluminum_6061",
-                    start_position=(0.0, 0.0, 10.0),
-                    runtime_jitter=(0.0, 0.0, 0.0),
-                ),
-                constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
-                benchmark_parts=_default_benchmark_parts(),
-            )
-            objectives_resp = await client.post(
-                f"{WORKER_LIGHT_URL}/fs/write",
-                json=WriteFileRequest(
-                    path="benchmark_definition.yaml",
-                    content=yaml.dump(objectives.model_dump(mode="json")),
-                    overwrite=True,
-                ).model_dump(mode="json"),
-                headers=headers,
-            )
-            assert objectives_resp.status_code == 200, objectives_resp.text
+        objectives = BenchmarkDefinition(
+            objectives=ObjectivesSection(
+                goal_zone=BoundingBox(min=(10.0, -20.0, 0.0), max=(20.0, 20.0, 20.0)),
+                forbid_zones=[
+                    ForbidZone(
+                        name="preview_blocker",
+                        min=(-20.0, -20.0, 0.0),
+                        max=(-10.0, 20.0, 20.0),
+                    )
+                ],
+                build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)),
+            ),
+            physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
+            simulation_bounds=BoundingBox(
+                min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
+            ),
+            moved_object=MovedObject(
+                label="target_box",
+                shape="sphere",
+                material_id="aluminum_6061",
+                start_position=(0.0, 0.0, 10.0),
+                runtime_jitter=(0.0, 0.0, 0.0),
+            ),
+            constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+            benchmark_parts=_default_benchmark_parts(),
+        )
+        objectives_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="benchmark_definition.yaml",
+                content=yaml.dump(objectives.model_dump(mode="json")),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert objectives_resp.status_code == 200, objectives_resp.text
 
-            validate_resp = await client.post(
-                f"{WORKER_HEAVY_URL}/benchmark/validate",
-                json=BenchmarkToolRequest(script_path="script.py").model_dump(
-                    mode="json"
-                ),
-                headers=headers,
-                timeout=180.0,
-            )
-            assert validate_resp.status_code == 200, validate_resp.text
-            validate_payload = validate_resp.json()
-            validate_data = BenchmarkToolResponse.model_validate(validate_payload)
-            assert validate_data.success, validate_data.message
-            assert validate_data.artifacts is not None
-            assert validate_data.artifacts.validation_results_json is not None
+        bundle64 = await get_bundle(client, session_id)
 
-            benchmark_render_events = [
-                event
-                for event in validate_payload.get("events", [])
-                if event.get("event_type") == "render_request_benchmark"
-            ]
-            assert benchmark_render_events, validate_payload.get("events", [])
-            assert any(
-                event.get("backend") == "build123d_vtk"
-                and event.get("purpose") == "validation_static_preview"
-                for event in benchmark_render_events
-            ), benchmark_render_events
+        validate_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=BenchmarkToolRequest(
+                script_path="script.py",
+                bundle_base64=bundle64,
+            ).model_dump(mode="json"),
+            headers=headers,
+            timeout=180.0,
+        )
+        assert validate_resp.status_code == 200, validate_resp.text
+        validate_payload = validate_resp.json()
+        validate_data = BenchmarkToolResponse.model_validate(validate_payload)
+        assert validate_data.success, validate_data.message
+        assert validate_data.artifacts is not None
+        assert validate_data.artifacts.validation_results_json is not None
+        assert validate_data.artifacts.render_paths == [], validate_data.artifacts
+        assert not any(
+            event.get("event_type") == "render_request_benchmark"
+            for event in validate_payload.get("events", [])
+        ), validate_payload.get("events", [])
 
-            ls_resp = await client.post(
-                f"{WORKER_LIGHT_URL}/fs/ls",
-                json=ListFilesRequest(path=BENCHMARK_RENDER_DIR).model_dump(
-                    mode="json"
-                ),
-                headers=headers,
-            )
-            assert ls_resp.status_code == 200, ls_resp.text
-            render_entries = ls_resp.json()
-            render_names = [
-                entry["name"] for entry in render_entries if not entry["is_dir"]
-            ]
-            png_renders = [name for name in render_names if name.endswith(".png")]
-            assert png_renders, render_names
-            rgb_renders = sorted(
-                name
-                for name in png_renders
-                if not name.endswith("_depth.png")
-                and not name.endswith("_segmentation.png")
-            )
-            depth_renders = sorted(
-                name for name in png_renders if name.endswith("_depth.png")
-            )
-            segmentation_renders = sorted(
-                name for name in png_renders if name.endswith("_segmentation.png")
-            )
-            assert rgb_renders, render_names
-            assert len(depth_renders) == len(rgb_renders), render_names
-            assert len(segmentation_renders) == len(rgb_renders), render_names
+        validate_ls_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/ls",
+            json=ListFilesRequest(path=BENCHMARK_RENDER_DIR).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert validate_ls_resp.status_code == 200, validate_ls_resp.text
+        validate_render_names = [
+            entry["name"] for entry in validate_ls_resp.json() if not entry["is_dir"]
+        ]
+        assert "render_manifest.json" not in validate_render_names, (
+            validate_render_names
+        )
+        assert not any(name.endswith(".png") for name in validate_render_names), (
+            validate_render_names
+        )
+        assert not any(
+            name.endswith(".jpg") or name.endswith(".jpeg")
+            for name in validate_render_names
+        ), validate_render_names
 
-            sample_rgb_off_resp = await client.post(
-                f"{WORKER_LIGHT_URL}/fs/read_blob",
-                json=ReadFileRequest(
-                    path=f"{BENCHMARK_RENDER_DIR}/{rgb_renders[0]}"
-                ).model_dump(mode="json"),
-                headers=headers,
-            )
-            assert sample_rgb_off_resp.status_code == 200, sample_rgb_off_resp.text
-            sample_rgb_off = sample_rgb_off_resp.content
+        preview_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/preview",
+            json=PreviewDesignRequest(
+                script_path="script.py",
+                bundle_base64=bundle64,
+                orbit_pitch=-35.0,
+                orbit_yaw=45.0,
+                rendering_type=PreviewRenderingType.RGB,
+            ).model_dump(mode="json"),
+            headers=headers,
+            timeout=180.0,
+        )
+        assert preview_resp.status_code == 200, preview_resp.text
+        preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
+        assert preview_data.success, preview_data.message
+        assert preview_data.image_path is not None
+        assert preview_data.render_manifest_json is not None
 
-            manifest_resp = await client.post(
-                f"{WORKER_LIGHT_URL}/fs/read",
-                json=ReadFileRequest(path=BENCHMARK_MANIFEST_PATH).model_dump(
-                    mode="json"
-                ),
-                headers=headers,
-            )
-            assert manifest_resp.status_code == 200, manifest_resp.text
-            manifest = json.loads(manifest_resp.json()["content"])
-            depth_meta = manifest["artifacts"][
-                f"{BENCHMARK_RENDER_DIR}/{depth_renders[0]}"
-            ]
-            assert depth_meta["depth_min_m"] is not None, depth_meta
-            assert depth_meta["depth_max_m"] is not None, depth_meta
-            assert (
-                "Camera-space depth in meters" in depth_meta["depth_interpretation"]
-            ), depth_meta
-            segmentation_meta = manifest["artifacts"][
-                f"{BENCHMARK_RENDER_DIR}/{segmentation_renders[0]}"
-            ]
-            assert segmentation_meta["modality"] == "segmentation", segmentation_meta
-            assert segmentation_meta["segmentation_legend"], segmentation_meta
-            first_legend_entry = segmentation_meta["segmentation_legend"][0]
-            assert first_legend_entry["semantic_label"], first_legend_entry
-            assert first_legend_entry["instance_id"], first_legend_entry
+        fail_session_id = f"INT-188-{uuid.uuid4().hex[:8]}"
+        fail_headers = {"X-Session-ID": fail_session_id}
+        wire_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="script.py",
+                content=_build_open_wire_script("aluminum_6061"),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=fail_headers,
+        )
+        assert wire_resp.status_code == 200, wire_resp.text
 
-            zone_types = {"goal", "forbid", "build"}
-            verified_zone_types: set[str] = set()
-            for rgb_name, segmentation_name in zip(
-                rgb_renders, segmentation_renders, strict=True
-            ):
-                segmentation_meta = manifest["artifacts"][
-                    f"{BENCHMARK_RENDER_DIR}/{segmentation_name}"
-                ]
-                legend = segmentation_meta["segmentation_legend"]
-                assert legend, segmentation_meta
-                assert not any(
-                    str(entry.get("semantic_label") or "").startswith("zone_")
-                    for entry in legend
-                ), legend
+        wire_objectives_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="benchmark_definition.yaml",
+                content=yaml.dump(_default_objectives().model_dump(mode="json")),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=fail_headers,
+        )
+        assert wire_objectives_resp.status_code == 200, wire_objectives_resp.text
 
-                rgb_resp = await client.post(
-                    f"{WORKER_LIGHT_URL}/fs/read_blob",
-                    json=ReadFileRequest(
-                        path=f"{BENCHMARK_RENDER_DIR}/{rgb_name}"
-                    ).model_dump(mode="json"),
-                    headers=headers,
-                )
-                assert rgb_resp.status_code == 200, rgb_resp.text
-                rgb_image = np.array(
-                    Image.open(io.BytesIO(rgb_resp.content)).convert("RGB")
-                )
+        wire_validate_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
+            headers=fail_headers,
+            timeout=180.0,
+        )
+        assert wire_validate_resp.status_code == 200, wire_validate_resp.text
+        wire_validate_data = BenchmarkToolResponse.model_validate(
+            wire_validate_resp.json()
+        )
+        assert wire_validate_data.success, wire_validate_data
+        assert wire_validate_data.message is not None
 
-                for zone_type in zone_types:
-                    if zone_type in verified_zone_types:
-                        continue
-                    if _image_has_zone_tint(rgb_image, zone_type):
-                        verified_zone_types.add(zone_type)
+        wire_validate_events = wire_validate_resp.json().get("events", [])
+        assert not any(
+            event.get("event_type") == "render_request_benchmark"
+            for event in wire_validate_events
+        ), wire_validate_events
 
-            assert verified_zone_types == zone_types, verified_zone_types
-
-            _set_render_modalities(
-                rgb=True,
-                depth=False,
-                segmentation=True,
-                rgb_axes=True,
-                rgb_edges=True,
-                depth_axes=True,
-                depth_edges=True,
-                segmentation_axes=True,
-                segmentation_edges=True,
-            )
-            session_id_on = f"INT-188-{uuid.uuid4().hex[:8]}"
-            headers_on = {"X-Session-ID": session_id_on}
-            write_resp_on = await client.post(
-                f"{WORKER_LIGHT_URL}/fs/write",
-                json=WriteFileRequest(
-                    path="script.py", content=script, overwrite=True
-                ).model_dump(mode="json"),
-                headers=headers_on,
-            )
-            assert write_resp_on.status_code == 200, write_resp_on.text
-
-            objectives_resp_on = await client.post(
-                f"{WORKER_LIGHT_URL}/fs/write",
-                json=WriteFileRequest(
-                    path="benchmark_definition.yaml",
-                    content=yaml.dump(objectives.model_dump(mode="json")),
-                    overwrite=True,
-                ).model_dump(mode="json"),
-                headers=headers_on,
-            )
-            assert objectives_resp_on.status_code == 200, objectives_resp_on.text
-
-            validate_resp_on = await client.post(
-                f"{WORKER_HEAVY_URL}/benchmark/validate",
-                json=BenchmarkToolRequest(script_path="script.py").model_dump(
-                    mode="json"
-                ),
-                headers=headers_on,
-                timeout=180.0,
-            )
-            assert validate_resp_on.status_code == 200, validate_resp_on.text
-            validate_data_on = BenchmarkToolResponse.model_validate(
-                validate_resp_on.json()
-            )
-            assert validate_data_on.success, validate_data_on.message
-
-            ls_resp_on = await client.post(
-                f"{WORKER_LIGHT_URL}/fs/ls",
-                json=ListFilesRequest(path=BENCHMARK_RENDER_DIR).model_dump(
-                    mode="json"
-                ),
-                headers=headers_on,
-            )
-            assert ls_resp_on.status_code == 200, ls_resp_on.text
-            render_entries_on = ls_resp_on.json()
-            render_names_on = [
-                entry["name"] for entry in render_entries_on if not entry["is_dir"]
-            ]
-            rgb_renders_on = sorted(
-                name
-                for name in render_names_on
-                if name.endswith(".png")
-                and not name.endswith("_depth.png")
-                and not name.endswith("_segmentation.png")
-            )
-            assert rgb_renders_on, render_names_on
-
-            sample_rgb_on_resp = await client.post(
-                f"{WORKER_LIGHT_URL}/fs/read_blob",
-                json=ReadFileRequest(
-                    path=f"{BENCHMARK_RENDER_DIR}/{rgb_renders_on[0]}"
-                ).model_dump(mode="json"),
-                headers=headers_on,
-            )
-            assert sample_rgb_on_resp.status_code == 200, sample_rgb_on_resp.text
-            assert sample_rgb_off != sample_rgb_on_resp.content
-
-            for render_name in (
-                rgb_renders[0],
-                depth_renders[0],
-                segmentation_renders[0],
-            ):
-                blob_resp = await client.post(
-                    f"{WORKER_LIGHT_URL}/fs/read_blob",
-                    json=ReadFileRequest(
-                        path=f"{BENCHMARK_RENDER_DIR}/{render_name}"
-                    ).model_dump(mode="json"),
-                    headers=headers,
-                )
-                assert blob_resp.status_code == 200, blob_resp.text
-                image = Image.open(io.BytesIO(blob_resp.content)).convert("RGB")
-                extrema = image.getextrema()
-                assert any(high > 0 for _, high in extrema), extrema
-
-            fail_session_id = f"INT-188-{uuid.uuid4().hex[:8]}"
-            fail_headers = {"X-Session-ID": fail_session_id}
-            wire_resp = await client.post(
-                f"{WORKER_LIGHT_URL}/fs/write",
-                json=WriteFileRequest(
-                    path="script.py",
-                    content=_build_open_wire_script("aluminum_6061"),
-                    overwrite=True,
-                ).model_dump(mode="json"),
-                headers=fail_headers,
-            )
-            assert wire_resp.status_code == 200, wire_resp.text
-
-            wire_objectives_resp = await client.post(
-                f"{WORKER_LIGHT_URL}/fs/write",
-                json=WriteFileRequest(
-                    path="benchmark_definition.yaml",
-                    content=yaml.dump(_default_objectives().model_dump(mode="json")),
-                    overwrite=True,
-                ).model_dump(mode="json"),
-                headers=fail_headers,
-            )
-            assert wire_objectives_resp.status_code == 200, wire_objectives_resp.text
-
-            wire_validate_resp = await client.post(
-                f"{WORKER_HEAVY_URL}/benchmark/validate",
-                json=BenchmarkToolRequest(script_path="script.py").model_dump(
-                    mode="json"
-                ),
-                headers=fail_headers,
-                timeout=180.0,
-            )
-            assert wire_validate_resp.status_code == 200, wire_validate_resp.text
-            wire_validate_data = BenchmarkToolResponse.model_validate(
-                wire_validate_resp.json()
-            )
-            assert not wire_validate_data.success, wire_validate_data
-            assert wire_validate_data.message is not None
-            assert (
-                "preview" in wire_validate_data.message.lower()
-                or "render" in wire_validate_data.message.lower()
-            ), wire_validate_data.message
-
-            wire_events = wire_validate_resp.json().get("events", [])
-            assert any(
-                event.get("event_type") == "render_request_benchmark"
-                and event.get("backend") == "build123d_vtk"
-                and event.get("purpose") == "validation_static_preview"
-                for event in wire_events
-            ), wire_events
-
-            wire_ls_resp = await client.post(
-                f"{WORKER_LIGHT_URL}/fs/ls",
-                json=ListFilesRequest(path="renders").model_dump(mode="json"),
-                headers=fail_headers,
-            )
-            assert wire_ls_resp.status_code == 200, wire_ls_resp.text
-            wire_render_names = [
-                entry["name"] for entry in wire_ls_resp.json() if not entry["is_dir"]
-            ]
-            assert "render_manifest.json" not in wire_render_names, wire_render_names
-            assert not any(name.endswith(".png") for name in wire_render_names), (
-                wire_render_names
-            )
-    finally:
-        AGENTS_CONFIG_PATH.write_text(original_config, encoding="utf-8")
+        wire_ls_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/ls",
+            json=ListFilesRequest(path="renders").model_dump(mode="json"),
+            headers=fail_headers,
+        )
+        assert wire_ls_resp.status_code == 200, wire_ls_resp.text
+        wire_render_names = [
+            entry["name"] for entry in wire_ls_resp.json() if not entry["is_dir"]
+        ]
+        assert "render_manifest.json" not in wire_render_names, wire_render_names
+        assert not any(name.endswith(".png") for name in wire_render_names), (
+            wire_render_names
+        )
 
 
 @pytest.mark.integration_p0
@@ -867,7 +680,7 @@ async def test_int_188_engineer_planner_submit_plan_rejects_empty_drafting_manif
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_188_validation_preview_honors_render_modality_config():
-    """INT-188: validation preview respects render modality toggles in agents_config."""
+    """INT-188: preview respects render modality toggles in agents_config."""
     original_config = _set_render_modalities(
         rgb=True,
         depth=False,
@@ -931,23 +744,28 @@ def build():
             )
             assert objectives_resp.status_code == 200, objectives_resp.text
 
-            validate_resp = await client.post(
-                f"{WORKER_HEAVY_URL}/benchmark/validate",
-                json=BenchmarkToolRequest(script_path="script.py").model_dump(
-                    mode="json"
-                ),
+            preview_resp = await client.post(
+                f"{WORKER_HEAVY_URL}/benchmark/preview",
+                json=PreviewDesignRequest(
+                    script_path="script.py",
+                    orbit_pitch=-35.0,
+                    orbit_yaw=45.0,
+                    rgb=True,
+                    depth=False,
+                    segmentation=True,
+                ).model_dump(mode="json"),
                 headers=headers,
                 timeout=180.0,
             )
-            assert validate_resp.status_code == 200, validate_resp.text
-            validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
-            assert validate_data.success, validate_data.message
+            assert preview_resp.status_code == 200, preview_resp.text
+            preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
+            assert preview_data.success, preview_data.message
+            assert preview_data.manifest_path is not None
 
+            preview_root = Path(preview_data.manifest_path).parent
             ls_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/ls",
-                json=ListFilesRequest(path=BENCHMARK_RENDER_DIR).model_dump(
-                    mode="json"
-                ),
+                json=ListFilesRequest(path=str(preview_root)).model_dump(mode="json"),
                 headers=headers,
             )
             assert ls_resp.status_code == 200, ls_resp.text
@@ -970,7 +788,7 @@ def build():
 
             manifest_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/read",
-                json=ReadFileRequest(path=BENCHMARK_MANIFEST_PATH).model_dump(
+                json=ReadFileRequest(path=preview_data.manifest_path).model_dump(
                     mode="json"
                 ),
                 headers=headers,
@@ -1282,7 +1100,7 @@ def build():
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_188_validation_preview_rejects_all_disabled_modalities():
-    """INT-188: validation preview fails closed when every preview modality is disabled."""
+    """INT-188: preview fails closed when every preview modality is disabled."""
     original_config = _set_render_modalities(
         rgb=False,
         depth=False,
@@ -1303,22 +1121,21 @@ async def test_int_188_validation_preview_rejects_all_disabled_modalities():
                 client, headers, material_id="aluminum_6061"
             )
 
-            validate_resp = await client.post(
-                f"{WORKER_HEAVY_URL}/benchmark/validate",
-                json=BenchmarkToolRequest(script_path="script.py").model_dump(
-                    mode="json"
-                ),
+            preview_resp = await client.post(
+                f"{WORKER_HEAVY_URL}/benchmark/preview",
+                json={
+                    "script_path": "script.py",
+                    "orbit_pitch": -35.0,
+                    "orbit_yaw": 45.0,
+                    "rgb": False,
+                    "depth": False,
+                    "segmentation": False,
+                },
                 headers=headers,
                 timeout=180.0,
             )
-            assert validate_resp.status_code == 200, validate_resp.text
-            validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
-            assert not validate_data.success, validate_data
-            assert validate_data.message is not None
-            lowered_message = validate_data.message.lower()
-            assert "at least one enabled render modality" in lowered_message, (
-                validate_data.message
-            )
+            assert preview_resp.status_code == 422, preview_resp.text
+            assert "at least one preview modality must be enabled" in preview_resp.text
 
             exists_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/exists",
@@ -1382,23 +1199,30 @@ def build():
             )
             assert objectives_resp_off.status_code == 200, objectives_resp_off.text
 
-            validate_resp_off = await client.post(
-                f"{WORKER_HEAVY_URL}/benchmark/validate",
-                json=BenchmarkToolRequest(script_path="script.py").model_dump(
-                    mode="json"
-                ),
+            preview_resp_off = await client.post(
+                f"{WORKER_HEAVY_URL}/benchmark/preview",
+                json=PreviewDesignRequest(
+                    script_path="script.py",
+                    orbit_pitch=-35.0,
+                    orbit_yaw=45.0,
+                    rgb=False,
+                    depth=True,
+                    segmentation=True,
+                ).model_dump(mode="json"),
                 headers=headers_off,
                 timeout=180.0,
             )
-            assert validate_resp_off.status_code == 200, validate_resp_off.text
-            validate_data_off = BenchmarkToolResponse.model_validate(
-                validate_resp_off.json()
+            assert preview_resp_off.status_code == 200, preview_resp_off.text
+            preview_data_off = PreviewDesignResponse.model_validate(
+                preview_resp_off.json()
             )
-            assert validate_data_off.success, validate_data_off.message
+            assert preview_data_off.success, preview_data_off.message
+            assert preview_data_off.manifest_path is not None
 
+            preview_root_off = Path(preview_data_off.manifest_path).parent
             ls_resp_off = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/ls",
-                json=ListFilesRequest(path=BENCHMARK_RENDER_DIR).model_dump(
+                json=ListFilesRequest(path=str(preview_root_off)).model_dump(
                     mode="json"
                 ),
                 headers=headers_off,
@@ -1469,23 +1293,30 @@ def build():
             )
             assert objectives_resp_on.status_code == 200, objectives_resp_on.text
 
-            validate_resp_on = await client.post(
-                f"{WORKER_HEAVY_URL}/benchmark/validate",
-                json=BenchmarkToolRequest(script_path="script.py").model_dump(
-                    mode="json"
-                ),
+            preview_resp_on = await client.post(
+                f"{WORKER_HEAVY_URL}/benchmark/preview",
+                json=PreviewDesignRequest(
+                    script_path="script.py",
+                    orbit_pitch=-35.0,
+                    orbit_yaw=45.0,
+                    rgb=False,
+                    depth=True,
+                    segmentation=True,
+                ).model_dump(mode="json"),
                 headers=headers_on,
                 timeout=180.0,
             )
-            assert validate_resp_on.status_code == 200, validate_resp_on.text
-            validate_data_on = BenchmarkToolResponse.model_validate(
-                validate_resp_on.json()
+            assert preview_resp_on.status_code == 200, preview_resp_on.text
+            preview_data_on = PreviewDesignResponse.model_validate(
+                preview_resp_on.json()
             )
-            assert validate_data_on.success, validate_data_on.message
+            assert preview_data_on.success, preview_data_on.message
+            assert preview_data_on.manifest_path is not None
 
+            preview_root_on = Path(preview_data_on.manifest_path).parent
             ls_resp_on = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/ls",
-                json=ListFilesRequest(path=BENCHMARK_RENDER_DIR).model_dump(
+                json=ListFilesRequest(path=str(preview_root_on)).model_dump(
                     mode="json"
                 ),
                 headers=headers_on,
@@ -1553,23 +1384,29 @@ async def test_int_188_validation_preview_reflects_material_color_in_rgb():
                 client, headers, material_id=material_id
             )
 
-            validate_resp = await client.post(
-                f"{WORKER_HEAVY_URL}/benchmark/validate",
-                json=BenchmarkToolRequest(script_path="script.py").model_dump(
-                    mode="json"
-                ),
+            preview_resp = await client.post(
+                f"{WORKER_HEAVY_URL}/benchmark/preview",
+                json=PreviewDesignRequest(
+                    script_path="script.py",
+                    orbit_pitch=-35.0,
+                    orbit_yaw=45.0,
+                    rgb=True,
+                    depth=False,
+                    segmentation=False,
+                ).model_dump(mode="json"),
                 headers=headers,
                 timeout=180.0,
             )
-            assert validate_resp.status_code == 200, validate_resp.text
-            validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
-            assert validate_data.success, validate_data.message
+            assert preview_resp.status_code == 200, preview_resp.text
+            preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
+            assert preview_data.success, preview_data.message
+            assert preview_data.manifest_path is not None
 
             ls_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/ls",
-                json=ListFilesRequest(path=BENCHMARK_RENDER_DIR).model_dump(
-                    mode="json"
-                ),
+                json=ListFilesRequest(
+                    path=str(Path(preview_data.manifest_path).parent)
+                ).model_dump(mode="json"),
                 headers=headers,
             )
             assert ls_resp.status_code == 200, ls_resp.text
@@ -1587,7 +1424,7 @@ async def test_int_188_validation_preview_reflects_material_color_in_rgb():
             rgb_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/read_blob",
                 json=ReadFileRequest(
-                    path=f"{BENCHMARK_RENDER_DIR}/{rgb_name}"
+                    path=f"{Path(preview_data.manifest_path).parent}/{rgb_name}"
                 ).model_dump(mode="json"),
                 headers=headers,
             )
@@ -1677,19 +1514,28 @@ async def test_int_188_validation_preview_rejects_stale_render_manifest_bundle()
         )
         assert objectives_resp.status_code == 200, objectives_resp.text
 
-        validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
-            json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
+        preview_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/preview",
+            json=PreviewDesignRequest(
+                script_path="script.py",
+                orbit_pitch=-35.0,
+                orbit_yaw=45.0,
+                rgb=True,
+                depth=False,
+                segmentation=False,
+            ).model_dump(mode="json"),
             headers=headers,
             timeout=180.0,
         )
-        assert validate_resp.status_code == 200, validate_resp.text
-        validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
-        assert validate_data.success, validate_data.message
+        assert preview_resp.status_code == 200, preview_resp.text
+        preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
+        assert preview_data.success, preview_data.message
+        assert preview_data.manifest_path is not None
 
+        preview_root = Path(preview_data.manifest_path).parent
         ls_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/ls",
-            json=ListFilesRequest(path=BENCHMARK_RENDER_DIR).model_dump(mode="json"),
+            json=ListFilesRequest(path=str(preview_root)).model_dump(mode="json"),
             headers=headers,
         )
         assert ls_resp.status_code == 200, ls_resp.text
@@ -1702,7 +1548,7 @@ async def test_int_188_validation_preview_rejects_stale_render_manifest_bundle()
         simulation_result = SimulationResult(
             success=True,
             summary="Goal achieved in green zone.",
-            render_paths=[f"{BENCHMARK_RENDER_DIR}/{name}" for name in png_renders],
+            render_paths=[f"{preview_root}/{name}" for name in png_renders],
         )
         simulation_result_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
@@ -1716,7 +1562,9 @@ async def test_int_188_validation_preview_rejects_stale_render_manifest_bundle()
         assert simulation_result_resp.status_code == 200, simulation_result_resp.text
         manifest_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/read",
-            json=ReadFileRequest(path=BENCHMARK_MANIFEST_PATH).model_dump(mode="json"),
+            json=ReadFileRequest(path=preview_data.manifest_path).model_dump(
+                mode="json"
+            ),
             headers=headers,
         )
         assert manifest_resp.status_code == 200, manifest_resp.text

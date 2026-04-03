@@ -47,13 +47,18 @@ async def test_worker_light_websocket_transport_round_trip():
         try:
             assert await batch_client.upload_files(
                 [
-                    ("alpha.txt", b"alpha\n"),
-                    ("nested/beta.txt", b"beta\n"),
+                    ("alpha.bin", b"\x00alpha\x01\n"),
+                    ("nested/beta.bin", b"\x00beta\x02\n"),
                 ],
                 bypass_agent_permissions=True,
             )
-            assert "alpha" in await batch_client.read_file("alpha.txt")
-            assert "beta" in await batch_client.read_file("nested/beta.txt")
+            assert (
+                await batch_client.read_file_binary("alpha.bin") == b"\x00alpha\x01\n"
+            )
+            assert (
+                await batch_client.read_file_binary("nested/beta.bin")
+                == b"\x00beta\x02\n"
+            )
         finally:
             await batch_client.aclose()
 

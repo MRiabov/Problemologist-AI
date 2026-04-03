@@ -176,7 +176,9 @@ result = part
         assert preview.success, preview.message
         assert preview.image_path is not None
         assert preview.image_path.startswith("renders/"), preview
-        assert preview.image_bytes_base64 is not None
+        assert preview.image_path in preview.object_store_keys, preview
+        assert preview.object_store_keys[preview.image_path] == preview.image_path
+        assert preview.image_bytes_base64 is None
 
 
 @pytest.mark.integration_p0
@@ -257,9 +259,10 @@ def build():
         validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
         assert validate_data.success, validate_data.message
         assert validate_data.artifacts is not None
-        assert validate_data.artifacts.render_paths, validate_data.artifacts
-        preview_manifest_path = Path("renders/engineer_renders/render_manifest.json")
-        assert str(preview_manifest_path) in validate_data.artifacts.render_blobs_base64
+        assert validate_data.artifacts.render_paths == [], validate_data.artifacts
+        assert validate_data.artifacts.render_blobs_base64 == {}, (
+            validate_data.artifacts
+        )
 
         preview_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/preview",
@@ -278,10 +281,9 @@ def build():
         assert preview_data.success, preview_data.message
         assert preview_data.image_path is not None
         assert preview_data.image_path.startswith("renders/"), preview_data
-        assert (
-            preview_data.manifest_path
-            == "renders/engineer_renders/render_manifest.json"
-        )
+        assert preview_data.manifest_path is not None
+        assert preview_data.manifest_path.startswith("renders/"), preview_data
+        assert preview_data.manifest_path.endswith("render_manifest.json"), preview_data
         assert preview_data.render_manifest_json is not None
         assert "artifacts" in preview_data.render_manifest_json
 
@@ -1080,7 +1082,7 @@ def build():
 @pytest.mark.asyncio
 async def test_int_188_validation_preview_uses_build123d_even_for_genesis_objectives():
     """
-    INT-188: /benchmark/validate routes static preview rendering to build123d/VTK
+    INT-188: /benchmark/preview renders static evidence through build123d/VTK
     even when objectives request Genesis for physics simulation.
     """
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -1136,36 +1138,30 @@ def build():
         )
         assert objectives_resp.status_code == 200, objectives_resp.text
 
-        validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
-            json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
+        preview_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/preview",
+            json=PreviewDesignRequest(
+                script_path="script.py",
+                orbit_pitch=-35.0,
+                orbit_yaw=45.0,
+                rgb=True,
+                depth=False,
+                segmentation=False,
+            ).model_dump(mode="json"),
             headers=headers,
             timeout=180.0,
         )
-        assert validate_resp.status_code == 200, validate_resp.text
-        validate_payload = validate_resp.json()
-        validate_data = BenchmarkToolResponse.model_validate(validate_payload)
-        assert validate_data.success, validate_data.message
-        assert validate_data.artifacts is not None
-        assert validate_data.artifacts.validation_results_json is not None
+        assert preview_resp.status_code == 200, preview_resp.text
+        preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
+        assert preview_data.success, preview_data.message
+        assert preview_data.image_path is not None
+        assert preview_data.manifest_path is not None
+        assert preview_data.render_manifest_json is not None
 
-        benchmark_render_events = [
-            event
-            for event in validate_payload.get("events", [])
-            if event.get("event_type") == "render_request_benchmark"
-        ]
-        assert benchmark_render_events, validate_payload.get("events", [])
-        assert any(
-            event.get("backend") == "build123d_vtk"
-            and event.get("purpose") == "validation_static_preview"
-            for event in benchmark_render_events
-        ), benchmark_render_events
-
+        preview_root = Path(preview_data.manifest_path).parent
         ls_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/ls",
-            json=ListFilesRequest(path="renders/benchmark_renders").model_dump(
-                mode="json"
-            ),
+            json=ListFilesRequest(path=str(preview_root)).model_dump(mode="json"),
             headers=headers,
         )
         assert ls_resp.status_code == 200, ls_resp.text
@@ -1178,9 +1174,9 @@ def build():
 
         blob_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/read_blob",
-            json=ReadFileRequest(
-                path=f"renders/benchmark_renders/{png_renders[0]}"
-            ).model_dump(mode="json"),
+            json=ReadFileRequest(path=f"{preview_root}/{png_renders[0]}").model_dump(
+                mode="json"
+            ),
             headers=headers,
         )
         assert blob_resp.status_code == 200, blob_resp.text

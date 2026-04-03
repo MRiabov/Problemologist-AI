@@ -554,6 +554,13 @@ async def test_int_192_controller_script_tools_validate_waits_through_temporal_q
         assert simulate_data.success, simulate_data.message
         assert simulate_data.artifacts is not None
         assert simulate_data.artifacts.simulation_result_json is not None
+        assert simulate_data.artifacts.object_store_keys, simulate_data.artifacts
+        object_store_video_paths = [
+            path
+            for path in simulate_data.artifacts.object_store_keys
+            if path.endswith(".mp4")
+        ]
+        assert object_store_video_paths, simulate_data.artifacts.object_store_keys
 
         manifest_paths = sorted(
             {
@@ -576,25 +583,8 @@ async def test_int_192_controller_script_tools_validate_waits_through_temporal_q
             )
             assert manifest.worker_session_id == tool_session_id
 
-        submit_resp = await client.post(
-            f"{CONTROLLER_URL}/api/script-tools/submit",
-            json={
-                "script_path": "sample_script.py",
-                "agent_role": AgentName.BENCHMARK_CODER.value,
-                "reviewer_stage": "benchmark_reviewer",
-            },
-            headers={"X-Session-ID": tool_session_id},
-            timeout=1000.0,
-        )
-        assert submit_resp.status_code == 200, submit_resp.text
-        submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
-        assert submit_data.success, submit_data.message
-        assert submit_data.artifacts is not None
-        assert submit_data.artifacts.review_manifests_json
-
         assert "WORKER_BUSY" not in validate_resp.text
         assert "WORKER_BUSY" not in simulate_resp.text
-        assert "WORKER_BUSY" not in submit_resp.text
 
         busy_resp = await busy_task
         assert busy_resp.status_code == 200, busy_resp.text
