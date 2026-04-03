@@ -1,38 +1,17 @@
 # TODO List
 
-<!--
-For the CAD designer engineer (not lead technician/planner):
-This is your execution checklist. Update it as you work.
-Mark items [x] when complete, [-] when skipped.
-
-WORKFLOW:
-1. Read benchmark_definition.yaml to understand the goal
-2. Read plan.md to understand the solution strategy
-3. Implement each part from the Parts List
-4. Assemble parts according to Assembly Strategy
-5. Validate geometry (build zone, no intersections)
-6. Run simulation to verify ball reaches goal
-7. If simulation fails, iterate on geometry
-
-TIPS:
-- Start with the simplest part first
-- Test individual parts before full assembly
-- Use validate_geometry() after each major change
-- Check build_zone bounds frequently
-- Log decisions in journal.md
--->
-
 ## Phase 1: Setup
 
-- [ ] Read benchmark_definition.yaml and extract key constraints
-- [ ] Read plan.md and understand solution approach
-- [ ] Note: goal_zone, build_zone, spawn position, jitter values
+- [ ] Read `benchmark_definition.yaml` and extract key constraints
+- [ ] Read `plan.md` and understand the bridge-span solution approach
+- [ ] Note the goal zone, build zone, spawn position, and jitter values
 
 ## Phase 2: Build Parts
 
-- [ ] Create [part_1_name] - [brief purpose]
-- [ ] Create [part_2_name] - [brief purpose]
-- [ ] ... (add more as needed from plan.md Parts List)
+- [ ] Create `bridge_deck` - main passive span
+- [ ] Create `left_support` - left anchor for the span
+- [ ] Create `right_support` - right anchor for the span
+- [ ] Create `stop_lip` - small capture guard at the exit
 
 ## Phase 3: Assemble
 
