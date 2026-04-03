@@ -80,6 +80,7 @@ cots_parts:
 - part_id: ServoMotor_DS3218
   manufacturer: pololu
   unit_cost_usd: 18.0
+  weight_g: 60.0
   quantity: 1
   source: catalog
 drafting:
@@ -269,7 +270,7 @@ final_assembly:
     - rotate_x
 totals:
   estimated_unit_cost_usd: 62.0
-  estimated_weight_g: 1240.0
+  estimated_weight_g: 610.9
   estimate_confidence: high
 dfm_suggestions:
 - Keep the roller lane profile constant along its length to reduce machining setups.
