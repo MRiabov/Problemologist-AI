@@ -122,7 +122,7 @@ motor corridor.
 #### Derivation
 
 - Base footprint area: `980.0 * 170.0 = 166600.0 mm^2`.
-- Footprint aspect ratio: `980.0 / 170.0 = 5.764705...`.
+- Footprint aspect ratio: `980.0 / 170.0 = 5.764706`.
 - Base volume: `166600.0 mm^3 = 166.6 cm^3`.
 - Base mass: `166.6 * 2.7 = 449.82 g`.
 - Remaining non-base mass: `608.34 - 449.82 = 158.52 g`.
