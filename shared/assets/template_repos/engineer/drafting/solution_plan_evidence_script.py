@@ -16,8 +16,8 @@ def build():
     solution = Compound(
         children=[
             _make_box("bridge_deck", (64.0, 8.0, 4.0), (0.0, 0.0, 18.0)),
-            _make_box("left_support", (8.0, 12.0, 12.0), (-28.0, 0.0, 6.0)),
-            _make_box("right_support", (8.0, 12.0, 12.0), (28.0, 0.0, 6.0)),
+            _make_box("left_support", (8.0, 12.0, 12.0), (-28.0, 0.0, 10.0)),
+            _make_box("right_support", (8.0, 12.0, 12.0), (28.0, 0.0, 10.0)),
             _make_box("stop_lip", (4.0, 8.0, 2.0), (30.0, 0.0, 19.0)),
         ]
     )

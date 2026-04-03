@@ -33,7 +33,56 @@
 4. Verify every part remains inside the build zone and keeps the central void
    clear.
 
-## 4. Cost & Weight Budget
+## 4. Assumption Register
+
+| ID | Assumption | Source | Used By |
+| -- | -- | -- | -- |
+| ASSUMP-001 | ... | ... | CALC-001 |
+
+## 5. Detailed Calculations
+
+| ID | Problem / Decision | Result | Impact |
+| -- | -- | -- | -- |
+| CALC-001 | ... | ... | ... |
+
+### CALC-001: Example calculation
+
+#### Problem Statement
+
+...
+
+#### Assumptions
+
+- `ASSUMP-001`: ...
+
+#### Derivation
+
+- ...
+
+#### Worst-Case Check
+
+- ...
+
+#### Result
+
+- ...
+
+#### Design Impact
+
+- ...
+
+#### Cross-References
+
+- `plan.md#4-assumption-register`
+- `plan.md#6-critical-constraints--operating-envelope`
+
+## 6. Critical Constraints / Operating Envelope
+
+| Limit ID | Limit | Bound | Basis |
+| -- | -- | -- | -- |
+| LIMIT-001 | Minimum slope | `21.7deg` | `CALC-001` |
+
+## 7. Cost & Weight Budget
 
 | Item | Volume (cm³) | Weight (g) | Cost ($) |
 | -- | -- | -- | -- |
@@ -46,7 +95,7 @@
 **Budget Margin**: 48% remaining versus the benchmark caps and 30% versus the
 planner target caps.
 
-## 5. Risk Assessment
+## 8. Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 | -- | -- | -- | -- |

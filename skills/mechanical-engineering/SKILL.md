@@ -34,9 +34,12 @@ Use this skill as a router. Keep the main prompt lean and load only the referenc
    `get_stress_report(...)`, `preview_stress(...)`, and `define_fluid(...)` are the current repo-level hooks; do not invent alternate analysis paths in prompts.
 5. Keep manufacturing and physics aligned.
    Benchmark-owned fixtures are not priced as manufactured parts, but engineer-authored parts still need realistic geometry, materials, and attachment logic.
-6. Before relying on a passive slide or chute, compare the slope to the actual friction coefficient in `manufacturing_config.yaml`.
+6. Never guess a size.
+   Derive every length, thickness, gap, capture width, wall height, clearance, and support offset from declared source dimensions, measured geometry, or manufacturing constants. If the required value is missing, stop and surface the missing input instead of inventing a plausible number.
+7. When the mechanism is joint-driven, place parts from joint axes, contact surfaces, and datum offsets instead of arbitrary world coordinates.
+8. Before relying on a passive slide or chute, compare the slope to the actual friction coefficient in `manufacturing_config.yaml`.
    If `tan(theta)` does not beat the relevant `friction_coef`, treat the mechanism as stalled until geometry or family changes.
-7. If the mechanism uses COTS components, keep the concrete part contract separate from the motion contract.
+9. If the mechanism uses COTS components, keep the concrete part contract separate from the motion contract.
    Do not treat motors, fixtures, or other catalog-backed parts as generic geometry.
 
 ## Passive-Transfer Debugging

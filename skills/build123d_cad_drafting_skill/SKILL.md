@@ -9,15 +9,16 @@ Read this skill and the relevant reference files below before planning any `buil
 
 ## Core Directives
 
-1. **Solid Modeling**: Prefer `with BuildPart()` plus primitives, booleans, fillets, chamfers, and shells for solid modeling. Use joint or placement helpers when they reduce manual coordinate tweaking.
-2. **Semantic Selectors**: Avoid indices. Use `faces()`, `edges()`, `vertices()` with `sort_by(Axis.Z)` or `last()`/`first()`.
-3. **2D Joint Sketching**: When a sketch is defined by tangency, fixed radius, or datum relationships, use the constrained line/arc helpers instead of hand-tuning vertices. These helpers are for CAD sketch layout, not MJCF joints or simulation joints. See [2d_joints.md](references/2d_joints.md).
-4. **3D Placement Joints**: When assembly layout depends on repeated, mirrored, or rotated placement, use `Location`, `Locations`, `.move(...)`, `.moved(...)`, `Align`, and `Compound(children=[...])` placement patterns instead of hand-deriving every coordinate. See [3d_joints.md](references/3d_joints.md).
-5. **MJCF Compliance**: Ensure parts are non-intersecting if they belong to different simulation links.
-6. **Assembly Labels**: Use `.label = "stator"` and `.label = "rotor"` for automatic motor/joint injection in MJCF.
-7. **Label Namespace Hygiene**: Top-level authored labels must be unique and must not be `environment` or start with `zone_`. The simulator reserves those names for the scene root and generated objective bodies, and duplicate labels collide with MJCF mesh/body names.
-8. **Intersection Checks**: For pairwise geometry, use `shape_a.intersect(shape_b)`. The returned shape has a `.volume` property; if that volume is greater than zero, the shapes intersect, and you can inspect or render the returned intersection shape for debugging. For grouped children, wrap the parts in `Compound(children=[...])` and call `do_children_intersect()` on the compound; in this runtime it returns `(intersects, (shape_a, shape_b), volume)`, so unpack it for logging.
-9. **COTS Parts**: If the geometry includes catalog-backed components, load `skills/cots-parts/SKILL.md` and keep the concrete COTS instance intact. Do not strip provenance or replace it with anonymous solids when the task still depends on part identity.
+01. **Solid Modeling**: Prefer `with BuildPart()` plus primitives, booleans, fillets, chamfers, and shells for solid modeling. Use joint or placement helpers when they reduce manual coordinate tweaking.
+02. **Parametric Dimensioning**: Never guess a size. Drive each dimension from named inputs, source geometry, or formulas. Compute secondary offsets, wall thicknesses, clearances, and manufacturing constants from those inputs. If a value is missing, stop and surface the missing source instead of inventing a number.
+03. **Semantic Selectors**: Avoid indices. Use `faces()`, `edges()`, `vertices()` with `sort_by(Axis.Z)` or `last()`/`first()`.
+04. **2D Joint Sketching**: When a sketch is defined by tangency, fixed radius, or datum relationships, use the constrained line/arc helpers instead of hand-tuning vertices. Compute radii and spans from named parameters rather than by eye. These helpers are for CAD sketch layout, not MJCF joints or simulation joints. See [2d_joints.md](references/2d_joints.md).
+05. **3D Placement Joints**: When assembly layout depends on repeated, mirrored, or rotated placement, use `Location`, `Locations`, `.move(...)`, `.moved(...)`, `Align`, and `Compound(children=[...])` placement patterns to derive poses from joint frames and datums instead of hand-deriving world coordinates. This is joint-driven placement, not random position-driven layout. See [3d_joints.md](references/3d_joints.md).
+06. **MJCF Compliance**: Ensure parts are non-intersecting if they belong to different simulation links.
+07. **Assembly Labels**: Use `.label = "stator"` and `.label = "rotor"` for automatic motor/joint injection in MJCF.
+08. **Label Namespace Hygiene**: Top-level authored labels must be unique and must not be `environment` or start with `zone_`. The simulator reserves those names for the scene root and generated objective bodies, and duplicate labels collide with MJCF mesh/body names.
+09. **Intersection Checks**: For pairwise geometry, use `shape_a.intersect(shape_b)`. The returned shape has a `.volume` property; if that volume is greater than zero, the shapes intersect, and you can inspect or render the returned intersection shape for debugging. For grouped children, wrap the parts in `Compound(children=[...])` and call `do_children_intersect()` on the compound; in this runtime it returns `(intersects, (shape_a, shape_b), volume)`, so unpack it for logging.
+10. **COTS Parts**: If the geometry includes catalog-backed components, load `skills/cots-parts/SKILL.md` and keep the concrete COTS instance intact. Do not strip provenance or replace it with anonymous solids when the task still depends on part identity.
 
 For orthographic sheets, title blocks, and vector export, use the companion [build123d-technical-drawing](../build123d-technical-drawing/SKILL.md) skill and the technical-drawing reference below. Keep the 3D model authoritative; drawings are projections, not a second source of truth.
 
@@ -82,6 +83,11 @@ rail_lower = rail_builder.part.moved(Location((0, -0.06, 0.09), (0, 2, 0)))
 - Repeated datum placement with `Locations(...)`
 - Rotated top-level parts with `Location(...)`
 - Compound assembly placement and overlap checks
+
+### [formula-driven-modelling.md](references/formula-driven-modelling.md) (Formula-Driven Modeling Example)
+
+- Source-value tables, derived dimensions, and joint-driven placement
+- Spreadsheet-style modeling with formulas instead of guessed sizes
 
 ### [technical_drawing.md](references/technical_drawing.md) (Technical Drawing)
 

@@ -14,6 +14,12 @@ Turn a benchmark brief into a complete handoff that the benchmark coder can impl
 3. Prefer passive geometry first. Add benchmark-owned motion only when it is necessary for the objective.
 4. Fail closed when required benchmark facts are missing, contradictory, or hidden behind placeholders.
 
+## Geometry Contract
+
+- Base every size, offset, and clearance on declared geometry, COTS dimensions, or an explicit formula.
+- Do not guess a number. If the handoff is missing a needed value, treat the draft as incomplete instead of inventing one.
+- When a fixture moves, derive its pose from the declared axis or joint frame instead of a world-coordinate guess.
+
 ## Read First
 
 Read these before drafting or revising the handoff:
@@ -58,6 +64,7 @@ Read these before drafting or revising the handoff:
 - Keep `plan.md` narrative-first and specific enough that the benchmark coder can implement without re-deciding the benchmark shape.
 - Keep `todo.md` actionable and ordered for the benchmark coder.
 - Keep `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` aligned with the same geometry, labels, repeated quantities, and COTS identities as the approved inventory, and ensure every planner-declared inventory label and selected COTS `part_id` appears in `plan.md` at least once as an exact identifier mention.
+- Keep every dimension formula-backed; if the handoff is missing a needed length, thickness, clearance, or placement datum, fix the source rather than guessing.
 - When drawings are part of the handoff, inspect the drafted package with `preview_drawing()` before `submit_plan()`.
 - Make the benchmark-owned motion contract explicit if any fixture moves. In this repo, keep each moving fixture to one explicit DOF axis and spell out the controller facts and limits.
 - Keep the moved object inside `build_zone` under static variation plus runtime jitter.

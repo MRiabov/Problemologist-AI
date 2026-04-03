@@ -82,6 +82,22 @@ Size the support path from the moved object envelope, not only from nominal geom
 - Include runtime jitter.
 - Include enough margin that small contact errors do not eject the object immediately.
 
+### Dimensioning contract
+
+Derive every dimension from named source values or formulas.
+
+- Use sums and differences of known dimensions for spans, offsets, wall thicknesses, and clearances.
+- Pull material or manufacturing constants from the workspace config or part specs, not from memory.
+- If a required value is missing, stop and mark the design incomplete instead of guessing a plausible size.
+
+### Joint-driven placement
+
+Treat the joint frame or contact datum as the source of pose.
+
+- Compute part locations from joint axes and mating features.
+- Do not place parts by arbitrary world coordinates when the mechanism is built around a real connection point.
+- If a placement looks right only in one camera view, re-derive it from the geometry before trusting it.
+
 ### Friction check
 
 For passive ramps and chutes, compare the actual slope to the workspace friction coefficient before spending time on capture details.

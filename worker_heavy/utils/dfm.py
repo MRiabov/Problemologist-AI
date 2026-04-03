@@ -506,6 +506,15 @@ def validate_and_price(
     metadata = getattr(part, "metadata", None)
     label = _part_label(part)
 
+    cots_id = _metadata_cots_id(metadata)
+    if cots_id:
+        return _build_cots_workbench_result(
+            part,
+            quantity=quantity,
+            build_zone=build_zone,
+            session_id=session_id,
+        )
+
     if _metadata_is_fixed(metadata):
         return WorkbenchResult(
             is_manufacturable=True,
@@ -520,15 +529,6 @@ def validate_and_price(
                     "skipped_fixed_context": True,
                 }
             ),
-        )
-
-    cots_id = _metadata_cots_id(metadata)
-    if cots_id:
-        return _build_cots_workbench_result(
-            part,
-            quantity=quantity,
-            build_zone=build_zone,
-            session_id=session_id,
         )
 
     # First, check build zone if provided
@@ -754,6 +754,35 @@ def validate_and_price_assembly(
     for child in reports:
         label = getattr(child, "label", None) or "unnamed_part"
         metadata = getattr(child, "metadata", None)
+        cots_id = _metadata_cots_id(metadata)
+        if cots_id:
+            child_result = validate_and_price(
+                child,
+                default_method,
+                config,
+                build_zone=build_zone,
+                quantity=quantity,
+                fem_required=fem_required,
+                session_id=session_id,
+            )
+            total_cost += child_result.unit_cost
+            total_weight += child_result.weight_g
+            overall_ok = overall_ok and child_result.is_manufacturable
+            per_part.append(
+                {
+                    "label": label,
+                    "method": "COTS",
+                    "is_manufacturable": child_result.is_manufacturable,
+                    "unit_cost": child_result.unit_cost,
+                    "weight_g": child_result.weight_g,
+                }
+            )
+            violations.extend(
+                _prefix_part_violation(label, violation)
+                for violation in child_result.violations
+            )
+            continue
+
         if _metadata_is_fixed(metadata):
             per_part.append(
                 {
@@ -766,10 +795,10 @@ def validate_and_price_assembly(
                 }
             )
             continue
+
         method = getattr(metadata, "manufacturing_method", None) or default_method
         if isinstance(method, str):
             method = ManufacturingMethod(method)
-        cots_id = _metadata_cots_id(metadata)
 
         child_result = validate_and_price(
             child,

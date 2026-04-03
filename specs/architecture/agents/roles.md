@@ -298,7 +298,7 @@ Notably, if the plan is higher than the max_unit_cost, it can't proceed and need
 
 - Create `plan.md` using the strict engineering structure:
   `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Assumption Register`, `## 5. Detailed Calculations`, `## 6. Critical Constraints / Operating Envelope`, `## 7. Cost & Weight Budget`, `## 8. Risk Assessment`.
-- In `plan.md`, include manufacturing method/material choices, assumption sources, detailed derivations, operating limits, assembly strategy (including rigid-connection fastener strategy), and risk mitigations.
+- In `plan.md`, include manufacturing method/material choices, assumption sources, the detailed-calculation index table and matching `CALC-*` proof subsections from the handover contract, operating limits, assembly strategy (including rigid-connection fastener strategy), and risk mitigations.
 - Create `todo.md` as an implementation checklist for the Engineering Coder (initially `- [ ]` items).
 - Create `assembly_definition.yaml` with per-part costing fields (method-specific) and a `final_assembly` structure for reuse/quantity accounting.
 - Write `solution_plan_evidence_script.py` as the build123d sketch/evidence companion for the drafted solution geometry.
@@ -307,7 +307,7 @@ Notably, if the plan is higher than the max_unit_cost, it can't proceed and need
 
 At this point, the planner can handoff the documents to the Engineering Coder. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `assembly_definition.yaml` and compute assembly totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
 
-The Engineering Planner also self-validates that `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` preserve the same labels, repeated quantities, and COTS identities as `assembly_definition.yaml`, and that `solution_plan_evidence_script.py` passes the 3D self-intersection and overlap gate before `submit_plan()`. Binding numeric claims should have a trace from `Assumption Register` through `Detailed Calculations` into `Critical Constraints / Operating Envelope`.
+The Engineering Planner also self-validates that `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` preserve the same labels, repeated quantities, and COTS identities as `assembly_definition.yaml`, and that `solution_plan_evidence_script.py` passes the 3D self-intersection and overlap gate before `submit_plan()`. Binding numeric claims should have a trace from `Assumption Register` through `Detailed Calculations` into `Critical Constraints / Operating Envelope`, with the calculation table rows and `CALC-*` subsections remaining one-to-one.
 The Engineering Planner also ensures every planner-declared inventory label and selected COTS `part_id` appears at least once in `plan.md` as an exact identifier mention; backticks are preferred for the first mention.
 
 ### Unified implementation ownership

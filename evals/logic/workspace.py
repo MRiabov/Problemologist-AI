@@ -271,6 +271,15 @@ def _starter_drafting_sheet(target_name: str) -> DraftingSheet:
     )
 
 
+def _drafting_prompt_text(agent_name: AgentName) -> str:
+    return (
+        "# Drafting Prompt\n\n"
+        f"Agent: {agent_name.value}\n\n"
+        "Use `preview_drawing()` to inspect the drafted package before the next "
+        "handoff step.\n"
+    )
+
+
 async def _load_benchmark_caps(worker: WorkerClient) -> tuple[float, float]:
     default_unit_cost = 100.0
     default_weight = 1000.0
@@ -496,6 +505,22 @@ async def _ensure_benchmark_drafting_contract(worker: WorkerClient) -> list[str]
     return [assembly_path]
 
 
+async def _ensure_drafting_prompt(
+    worker: WorkerClient, *, agent_name: AgentName
+) -> list[str]:
+    prompt_path = "prompt.md"
+    if await worker.exists(prompt_path):
+        return []
+
+    await worker.write_file(
+        prompt_path,
+        _drafting_prompt_text(agent_name),
+        overwrite=True,
+        bypass_agent_permissions=True,
+    )
+    return [prompt_path]
+
+
 async def seed_eval_workspace(
     *,
     item: EvalDatasetItem,
@@ -597,6 +622,16 @@ async def seed_eval_workspace(
                 )
             )
             seeded_paths.extend(await _ensure_benchmark_drafting_contract(worker))
+        if (
+            agent_name in _ENGINEER_DRAFTING_TARGETS
+            and _engineering_technical_drawing_mode_active()
+        ) or (
+            agent_name in _BENCHMARK_DRAFTING_TARGETS
+            and _benchmark_technical_drawing_mode_active()
+        ):
+            seeded_paths.extend(
+                await _ensure_drafting_prompt(worker, agent_name=agent_name)
+            )
     finally:
         await worker.aclose()
 
@@ -700,6 +735,14 @@ async def preflight_seeded_entry_contract(
     }
 
     worker = WorkerClient(base_url=worker_light_url, session_id=session_id)
+    errors: list[str] = []
+    result = None
+
+    def add_error(message: str) -> None:
+        normalized = str(message).strip()
+        if normalized and normalized not in errors:
+            errors.append(normalized)
+
     try:
         expected_seed_paths = collect_seed_workspace_artifact_paths(item, root=root)
         missing_seed_paths = await validate_workspace_has_artifacts(
@@ -708,45 +751,54 @@ async def preflight_seeded_entry_contract(
         )
 
         if missing_seed_paths:
-            raise ValueError(
+            add_error(
                 "Seeded workspace is missing copied seed artifact(s): "
                 + ", ".join(missing_seed_paths)
             )
 
-        result = await evaluate_node_entry_contract(
-            contract=contract,
-            state={
-                "task": item.task,
-                "episode_id": session_id,
-                "session_id": session_id,
-                "session": {
+        try:
+            result = await evaluate_node_entry_contract(
+                contract=contract,
+                state={
+                    "task": item.task,
+                    "episode_id": session_id,
                     "session_id": session_id,
-                    "custom_objectives": None,
+                    "session": {
+                        "session_id": session_id,
+                        "custom_objectives": None,
+                    },
                 },
-            },
-            artifact_exists=worker.exists,
-            graph=graph,
-            custom_checks=custom_checks,
-            integration_mode=True,
-        )
-        if result.ok:
+                artifact_exists=worker.exists,
+                graph=graph,
+                custom_checks=custom_checks,
+                integration_mode=True,
+            )
+        except Exception as exc:
+            add_error(
+                f"Seeded entry contract evaluation failed for {target_node.value}: {exc}"
+            )
+        else:
+            if not result.ok:
+                for error in result.errors:
+                    add_error(f"{error.code}: {error.message}")
+
+        try:
             supplemental_errors = await validate_seeded_workspace_handoff_artifacts(
                 worker_client=worker,
                 target_node=target_node,
             )
-
-            if supplemental_errors:
-                raise ValueError(
-                    f"Seeded entry contract invalid for {target_node.value}: "
-                    + "; ".join(
-                        f"{error.code}: {error.message}"
-                        for error in supplemental_errors
-                    )
-                )
+        except Exception as exc:
+            add_error(
+                "Seeded workspace supplemental handoff validation failed for "
+                f"{target_node.value}: {exc}"
+            )
+        else:
+            for error in supplemental_errors:
+                add_error(f"{error.code}: {error.message}")
     finally:
         await worker.aclose()
 
-    if result.ok:
+    if not errors and result is not None and result.ok:
         logger.info(
             "eval_seed_entry_preflight_passed",
             session_id=session_id,
@@ -755,8 +807,6 @@ async def preflight_seeded_entry_contract(
         )
         return
 
-    errors = [error.model_dump(mode="json") for error in result.errors]
     raise ValueError(
-        f"Seeded entry contract invalid for {target_node.value}: "
-        + "; ".join(f"{error['code']}: {error['message']}" for error in errors)
+        f"Seeded entry contract invalid for {target_node.value}: " + "; ".join(errors)
     )

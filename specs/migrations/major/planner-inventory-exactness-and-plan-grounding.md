@@ -15,7 +15,9 @@ enforce the same contract.
 Engineering planner handoffs also require a source-backed planning proof
 layer: `plan.md` must carry an Assumption Register, Detailed Calculations, and
 Critical Constraints / Operating Envelope sections so binding numeric claims
-can be audited before handoff.
+can be audited before handoff. The Detailed Calculations section is a summary
+index table plus matching `CALC-*` proof subsections, and the calculation IDs
+are required anchors rather than optional labels.
 
 This migration also treats two validator gaps as bugs: deterministic weight
 exactness and drafting geometry validity must be fixed, not parked as future
@@ -63,6 +65,9 @@ enforcement is still fragmented.
 7. Engineering planner handoffs still let binding numeric claims live only in
    prose. That makes slope thresholds, actuator load limits, and power budgets
    hard to audit before handoff.
+8. The detailed-calculation proof layer is still underspecified: the summary
+   table schema and the one-to-one `CALC-*` subsection contract are not yet
+   explicit enough in the plan template and reviewer guidance.
 
 ## Current-State Inventory
 
@@ -70,7 +75,7 @@ enforcement is still fragmented.
 | -- | -- | -- |
 | `specs/architecture/agents/handover-contracts.md` | Defines the binding inventory contract and exact-mention rule. | The runtime and tests still need to enforce it consistently. |
 | `specs/architecture/agents/roles.md` | States that benchmark and engineering planners/reviewers/coders must honor inventory exactness. | The role docs are ahead of the implementation and eval coverage. |
-| `shared/assets/template_repos/engineer/plan.md`, `shared/workers/markdown_validator.py`, `controller/api/routes/episodes.py`, `controller/api/tasks.py`, `config/prompts.yaml` | The engineering plan surface carries the eight-section shape, and the validator, prompt text, and replay/normalization paths are the enforcement points for that contract. | The three proof sections stay useful only if the same exact headings and validation rules are enforced at prompt time, submit time, and replay time. |
+| `shared/assets/template_repos/engineer/plan.md`, `shared/workers/markdown_validator.py`, `controller/api/routes/episodes.py`, `controller/api/tasks.py`, `config/prompts.yaml` | The engineering plan surface carries the eight-section shape, and the validator, prompt text, and replay/normalization paths are the enforcement points for that contract. | The three proof sections stay useful only if the same exact headings, calculation-index schema, and validation rules are enforced at prompt time, submit time, and replay time. |
 | `controller/agent/node_entry_validation.py` | Validates node entry and some handoff constraints. | It needs fail-closed exactness gates for planner handoff packages. |
 | `worker_heavy/utils/file_validation.py` | Validates schema and placeholder hygiene. | It must also participate in exact-mention and inventory-multiset checks where planner artifacts are validated. |
 | `worker_heavy/utils/handover.py` | Collects and packages handoff artifacts. | It must reject mismatched inventory before a coder or reviewer sees it. |
@@ -105,10 +110,12 @@ enforcement is still fragmented.
 7. The drafting-geometry bug is fixed here as a separate requirement so
    future geometry work cannot relegate self-intersection or overlap checks to
    follow-up notes.
-8. Engineering planner `plan.md` includes an Assumption Register, Detailed
-   Calculations, and Critical Constraints / Operating Envelope section, so
-   binding numeric claims are traceable from source-backed assumptions through
-   derivations into reviewable operating limits.
+8. Engineering planner `plan.md` includes an Assumption Register, a Detailed
+   Calculations section with a summary table (`ID`, `Problem / Decision`,
+   `Result`, `Impact`) plus matching `CALC-*` subsections, and a Critical
+   Constraints / Operating Envelope section, so binding numeric claims are
+   traceable from source-backed assumptions through derivations into
+   reviewable operating limits.
 
 ## Required Work
 
@@ -203,27 +210,31 @@ The safe order is:
 
 ## Acceptance Criteria
 
-1. A planner handoff fails if `plan.md` is missing an exact mention for any
-   declared inventory label or selected COTS `part_id`.
-2. A planner handoff fails if the evidence or technical-drawing scripts omit,
-   relabel, duplicate, or change the quantity of any declared inventory item.
-3. Plan reviewers, coders, and execution reviewers reject the same inventory
-   mismatch in both benchmark and engineering flows.
-4. Seeded evals that still assume the old loose artifact shape fail during
-   preflight rather than silently passing.
-5. The updated integration suite covers the exact-mention, quantity, label,
-   and COTS identity failure modes for both planner families.
-6. A planner handoff fails if the written weight total does not match the
-   deterministic total from the priced assembly breakdown.
-7. Planner-authored drafting artifacts fail if their geometry self-intersects,
-   overlaps, or otherwise violates the physical-validity contract, even when
-   inventory grounding and `TechnicalDrawing` usage pass.
-8. A planner handoff fails if a binding numeric claim in `plan.md` lacks a
-   source-backed assumption, stable calculation ID, or operating-envelope
-   limit.
-9. An engineering planner handoff fails if `plan.md` is missing or malformed
-   with respect to `Assumption Register`, `Detailed Calculations`, or
-   `Critical Constraints / Operating Envelope`.
+01. A planner handoff fails if `plan.md` is missing an exact mention for any
+    declared inventory label or selected COTS `part_id`.
+02. A planner handoff fails if the evidence or technical-drawing scripts omit,
+    relabel, duplicate, or change the quantity of any declared inventory item.
+03. Plan reviewers, coders, and execution reviewers reject the same inventory
+    mismatch in both benchmark and engineering flows.
+04. Seeded evals that still assume the old loose artifact shape fail during
+    preflight rather than silently passing.
+05. The updated integration suite covers the exact-mention, quantity, label,
+    and COTS identity failure modes for both planner families.
+06. A planner handoff fails if the written weight total does not match the
+    deterministic total from the priced assembly breakdown.
+07. Planner-authored drafting artifacts fail if their geometry self-intersects,
+    overlaps, or otherwise violates the physical-validity contract, even when
+    inventory grounding and `TechnicalDrawing` usage pass.
+08. A planner handoff fails if a binding numeric claim in `plan.md` lacks a
+    source-backed assumption, stable calculation ID, or operating-envelope
+    limit.
+09. An engineering planner handoff fails if `plan.md` is missing or malformed
+    with respect to `Assumption Register`, `Detailed Calculations`, or
+    `Critical Constraints / Operating Envelope`.
+10. An engineering planner handoff fails if the Detailed Calculations section
+    does not contain the required summary table or if any `CALC-*` row lacks a
+    matching subsection with problem statement, assumptions, derivation,
+    worst-case check, result, design impact, and cross-reference.
 
 ## Migration Checklist
 
@@ -239,6 +250,8 @@ The safe order is:
   validator: `Assumption Register`, `Detailed Calculations`, and `Critical Constraints / Operating Envelope`.
 - [ ] Make binding numeric claims fail closed unless they carry a source-backed
   assumption, a stable calculation ID, and an operating-envelope limit.
+- [ ] Enforce the Detailed Calculations summary-table schema and the one-to-one
+  `CALC-*` subsection contract.
 
 ### Plan review and coder intake
 

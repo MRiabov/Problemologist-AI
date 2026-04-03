@@ -4,6 +4,8 @@ This document explains how the 2D sketch joints work for layout, tangency, and a
 
 These helpers are for sketch layout. They are not MJCF joints or simulation joints.
 
+When a sketch dimension matters, derive it from named source values or formulas before sketching. Do not tune bridge length, arc radius, or extension offsets by eye if the inputs are known.
+
 ## 1. Tangent bridge between repeated features
 
 `Edge.make_constrained_lines(...)` can return multiple valid tangent solutions. Pick the one that matches the intended layout.
@@ -50,5 +52,6 @@ with BuildSketch() as sk:
 ## 4. Rule of thumb
 
 - Use joint helpers when the sketch is relationship-driven.
+- Use formulas and named parameters when the sketch size is relationship-driven.
 - Use `BuildSketch`, `BuildLine`, and `BuildPart` for the actual CAD shape.
 - Multiple solutions are normal; choose by length, orientation, or datum fit.

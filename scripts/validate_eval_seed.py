@@ -145,12 +145,18 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--skip-env-up",
         action="store_true",
-        help="Skip running scripts/env_up.sh before validation.",
+        help=(
+            "Skip running scripts/env_up.sh before validation. This also keeps "
+            "validation-only runs off the shared eval lock."
+        ),
     )
     parser.add_argument(
         "--queue",
         action="store_true",
-        help="Wait for the shared eval lock instead of failing fast when another eval run is active.",
+        help=(
+            "Wait for the shared eval lock when this command is bootstrapping "
+            "the eval stack instead of failing fast when another eval run is active."
+        ),
     )
     parser.add_argument(
         "--update-manifests",
@@ -478,19 +484,21 @@ async def _async_main(args: argparse.Namespace) -> int:
             continue
         work_items.extend((agent, item) for item in dataset)
 
-    lock_lease = acquire_eval_run_lock(
-        queue=args.queue,
-        requested_command=[sys.argv[0], *sys.argv[1:]],
-        requested_selection=EvalRunSelection(
-            agent=agents[0].value if len(agents) == 1 else None,
-            task_ids=[args.task_id] if args.task_id else [],
-            levels=sorted(levels) if levels else [],
-            technical_drawing_mode=technical_drawing_mode.value,
-        ),
-    )
-    if lock_lease is None:
-        return 1
-    atexit.register(release_eval_run_lock, lock_lease)
+    lock_lease = None
+    if not args.skip_env_up:
+        lock_lease = acquire_eval_run_lock(
+            queue=args.queue,
+            requested_command=[sys.argv[0], *sys.argv[1:]],
+            requested_selection=EvalRunSelection(
+                agent=agents[0].value if len(agents) == 1 else None,
+                task_ids=[args.task_id] if args.task_id else [],
+                levels=sorted(levels) if levels else [],
+                technical_drawing_mode=technical_drawing_mode.value,
+            ),
+        )
+        if lock_lease is None:
+            return 1
+        atexit.register(release_eval_run_lock, lock_lease)
 
     if args.run_judge and not failures and len(work_items) > 10 and not args.yes:
         raise SystemExit(
@@ -499,7 +507,8 @@ async def _async_main(args: argparse.Namespace) -> int:
         )
 
     try:
-        lock_lease.update_state(current_phase="manifest_validation")
+        if lock_lease is not None:
+            lock_lease.update_state(current_phase="manifest_validation")
         _validate_generated_curation_manifests(errors_only=args.errors_only)
     except Exception as exc:
         print("Generated curation manifest validation failed.", file=sys.stderr)
@@ -507,11 +516,13 @@ async def _async_main(args: argparse.Namespace) -> int:
         return 1
 
     if not args.skip_env_up:
-        lock_lease.update_state(current_phase="env_up")
+        if lock_lease is not None:
+            lock_lease.update_state(current_phase="env_up")
         _run_env_up()
 
     try:
-        lock_lease.update_state(current_phase="worker_ready")
+        if lock_lease is not None:
+            lock_lease.update_state(current_phase="worker_ready")
         await _wait_for_worker_ready(errors_only=args.errors_only)
     except Exception as exc:
         print(
@@ -522,7 +533,8 @@ async def _async_main(args: argparse.Namespace) -> int:
         print(str(exc), file=sys.stderr)
         return 1
 
-    lock_lease.update_state(current_phase="validation")
+    if lock_lease is not None:
+        lock_lease.update_state(current_phase="validation")
 
     if not failures or not args.fail_fast:
         if args.fail_fast or args.concurrency == 1:

@@ -13,6 +13,12 @@ description: Engineering planning role for turning benchmark handoff context int
 4. Preserve benchmark-owned fixtures and geometry as read-only context.
 5. Fail closed on contradictory, under-specified, or infeasible handoffs.
 
+## Geometry Contract
+
+- Base every size, offset, and clearance on explicit source geometry, COTS dimensions, or formulas.
+- Do not guess a number. If the handoff is missing a needed value, correct the source instead of inventing one.
+- When a fixture moves, derive its pose from the declared axis or joint chain instead of a hand-placed coordinate.
+
 ## What This Skill Owns
 
 - Planner-side reasoning for the engineering graph.
@@ -82,12 +88,14 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 - Add actuation only when a passive path cannot satisfy the objective.
 - Give every DOF a real physical reason and clear limits.
 - Keep benchmark-owned fixtures read-only and never reassign their ownership.
+- Keep every dimension formula-backed; if the handoff is missing a needed length, thickness, clearance, or placement datum, correct the source instead of guessing.
 - Keep part labels unique and stable.
 - Every planner-declared inventory label and selected COTS `part_id` must appear in `plan.md` at least once as an exact identifier mention; backticks are preferred for the first mention, but the exact string match is the validation rule.
 - Keep `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` aligned with the same preserved geometry, repeated quantities, and COTS identities when drafting mode is enabled.
 - Bind dimensions, datums, and notes to the preserved mechanism only.
 - Avoid over-specifying implementation details that belong in `solution_script.py`.
 - If the plan depends on exact catalog identity, keep provenance explicit rather than substituting anonymous solids.
+- If a placement depends on a real interface, derive it from the joint frame or mating datum instead of a world-space guess.
 - If the plan truly needs more than three DOFs, document that exception explicitly with a standalone `DOF_JUSTIFICATION` marker instead of burying the rationale.
 
 ## Drafting And Review

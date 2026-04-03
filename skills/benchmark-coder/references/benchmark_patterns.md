@@ -34,6 +34,7 @@ Drafting cues:
 - Check the final placed envelope, not just the sketch or local part.
 - Leave enough lateral margin for runtime jitter.
 - Avoid unsupported gaps, tiny ledges, or exact-seed-only clearance.
+- Base every wall, gap, capture span, and offset on benchmark-owned geometry or an explicit formula. Never eyeball a clearance when the inputs are already known.
 
 ## Moving benchmark fixtures
 
@@ -53,6 +54,7 @@ Drafting cues:
 - Preserve the declared axis, path, travel range, and trigger behavior.
 - Make the motion visible in evidence and reviewable from the handoff.
 - Avoid extra DOFs that do not improve the benchmark.
+- Derive the resting pose and travel limits from the declared joint or axis, not from an arbitrary placement guess.
 
 ## Convergence heuristics
 

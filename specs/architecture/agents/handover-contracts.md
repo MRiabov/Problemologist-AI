@@ -341,13 +341,16 @@ For each part:
 <!-- - Order of assembly --> 
 <!-- Order of assembly is partially unnecessary because we kind of work in CAD. However, it's a good thing to think of. -->
 ## 4. Assumption Register
+- Stable assumption IDs such as `ASSUMP-001`, `ASSUMP-002`, etc.
 - Non-obvious inputs and their sources, such as friction coefficient, motor stall torque, gearbox efficiency, cable drop, or safety factor.
 - Each assumption should state what calculation or constraint depends on it.
 ## 5. Detailed Calculations
-- Stable calculation IDs such as `CALC-001`, `CALC-002`, etc.
-- Each calculation should include a problem statement, assumptions, derivation, worst-case check, result, design impact, and cross-reference.
+- The section starts with a compact index table whose columns are `ID`, `Problem / Decision`, `Result`, and `Impact`.
+- Each index row must map to a matching `### CALC-001: <short title>` subsection below; the `CALC-*` heading is required, not optional.
+- Each calculation subsection should include a problem statement, assumptions, derivation, worst-case check, result, design impact, and cross-reference.
 ## 6. Critical Constraints / Operating Envelope
 - Derived numeric limits that the mechanism must satisfy, such as minimum slope, maximum torque, minimum current, or clearance bounds.
+- Each derived limit should be traceable back to one or more calculation IDs.
 - The operating envelope is the distilled output of the detailed calculations.
 ## 7. Cost & Weight Budget
 - `max_unit_cost`: $X (from benchmark_definition.yaml, planner's allocation)
@@ -364,7 +367,7 @@ For each part:
 <!-- Note: the planner explicitly doesn't specify the CAD approach. It doesn't need to think about plans, it's about the geometry. -->
 ```
 
-The Assumption Register captures the source-backed inputs that make the plan auditable. The Detailed Calculations section proves the binding numeric claims. The Critical Constraints / Operating Envelope section distills those proofs into reviewable pass/fail limits that the budget and drawing intent must respect.
+The Assumption Register captures the source-backed inputs that make the plan auditable. The Detailed Calculations section proves the binding numeric claims by pairing an index table with matching `CALC-*` subsections. The Critical Constraints / Operating Envelope section distills those proofs into reviewable pass/fail limits that the budget and drawing intent must respect.
 
 ### `benchmark_definition.yaml`
 

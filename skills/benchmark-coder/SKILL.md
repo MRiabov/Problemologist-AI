@@ -10,10 +10,16 @@ This skill operationalizes the `benchmark_coder` prompt in `config/prompts.yaml`
 ## Mission
 
 1. Turn the approved benchmark handoff into a working `benchmark_script.py`.
-2. Implement the benchmark geometry exactly as declared, without inventing new fixture behavior.
+2. Implement the benchmark geometry exactly as declared, without inventing new fixture behavior or sizes.
 3. Keep the authored benchmark import-safe, reviewable, and easy to revise.
 4. Validate and simulate the latest revision before handoff.
 5. Refuse cleanly when the approved plan is genuinely infeasible.
+
+## Geometry Contract
+
+- Base every size, offset, and clearance on approved geometry, COTS dimensions, or explicit formulas.
+- Do not guess a number. If the handoff or workspace context is missing a needed value, treat it as a defect and stop.
+- For moving benchmark fixtures, derive pose and travel from the declared axis or joint frame, not from an arbitrary world coordinate.
 
 ## What This Skill Owns
 

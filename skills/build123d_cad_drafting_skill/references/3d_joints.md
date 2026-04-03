@@ -4,6 +4,8 @@ This document explains how the 3D placement joints work for part placement, repe
 
 These are placement joints, not physics joints.
 
+Treat the joint frame or mating datum as the source of truth for pose. Derive every repeated or rotated placement from that relationship instead of placing parts by arbitrary world coordinates.
+
 ## 1. Repeated placements from one builder result
 
 `Locations(...)` is the context manager for repeated placement. Use it to keep multiple solids aligned without manual coordinate bookkeeping.
@@ -39,5 +41,6 @@ assembly = Compound(children=[base_part, bracket_part])
 ## 3. Rule of thumb
 
 - Use `Location(...)` as pose data and `Locations(...)` as the context manager.
+- Use the joint or datum chain to calculate pose before calling `Location(...)`.
 - Derive separate `.moved(...)` copies when you need multiple instances.
 - Run `do_children_intersect()` on the final compound if placement risk matters.

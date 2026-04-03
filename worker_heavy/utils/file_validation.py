@@ -272,6 +272,31 @@ def _validate_drafting_artifact_inventory_exactness(
     )
 
 
+def _validate_benchmark_drafting_no_cots_identity(
+    *,
+    artifact_name: str,
+    component: Any,
+) -> list[str]:
+    """Reject benchmark-owned drafting artifacts that smuggle COTS identity."""
+    errors: list[str] = []
+
+    def _visit(node: Any) -> None:
+        metadata = getattr(node, "metadata", None)
+        cots_id = getattr(metadata, "cots_id", None)
+        if isinstance(cots_id, str) and cots_id.strip():
+            label = getattr(node, "label", None) or "<unlabeled>"
+            errors.append(
+                f"{artifact_name}: benchmark-owned fixture '{label}' must not "
+                "declare cots_id; use label and material_id only"
+            )
+
+        for child in getattr(node, "children", ()) or ():
+            _visit(child)
+
+    _visit(component)
+    return errors
+
+
 def _collect_component_identity_counts(
     component: Any,
 ) -> tuple[Counter[str], list[tuple[str | None, str | None]]]:
@@ -878,7 +903,9 @@ def validate_drafting_preview_manifest(
 
             def _resolve_manifest_path(raw_path: str) -> Path:
                 candidate = Path(raw_path)
-                return candidate if candidate.is_absolute() else resolved_root / candidate
+                return (
+                    candidate if candidate.is_absolute() else resolved_root / candidate
+                )
 
             missing_evidence = sorted(
                 path
@@ -1728,6 +1755,14 @@ def validate_planner_handoff_cross_contract(
                     f"geometry validation: {exc}"
                 )
                 continue
+
+            if artifact_name.startswith("benchmark_"):
+                errors.extend(
+                    _validate_benchmark_drafting_no_cots_identity(
+                        artifact_name=artifact_name,
+                        component=component,
+                    )
+                )
 
             errors.extend(
                 validate_planner_drafting_geometry_contract(

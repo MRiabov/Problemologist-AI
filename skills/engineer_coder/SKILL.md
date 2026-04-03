@@ -1,6 +1,6 @@
 ---
 name: engineer_coder
-description: Problemologist engineering implementation role. Use when turning approved engineering handoffs into solution_script.py, solving engineering evals with bounded retries, selecting mechanism patterns, validating and simulating revisions, inspecting render evidence, preserving planner inventory exactness, or refusing an infeasible plan with plan_refusal.md.
+description: Problemologist engineering implementation role. Use when turning approved engineering handoffs into solution_script.py, solving engineering evals with bounded retries, selecting mechanism patterns, validating and simulating revisions, inspecting render evidence, preserving planner inventory exactness, grounding work in proof-backed plan.md contracts, or refusing an infeasible plan with plan_refusal.md.
 ---
 
 # Engineer Coder
@@ -14,6 +14,7 @@ This skill is the operating manual for the engineering implementation agent. Kee
 3. Optimize for first-pass correctness, then tighten robustness, manufacturability, and cost.
 4. Keep the authored solution import-safe, reviewable, and easy to revise.
 5. Fail closed when the handoff is inconsistent or infeasible.
+6. Treat `plan.md` as a binding engineering contract with exact-grounded inventory and proof sections.
 
 ## Core Capabilities
 
@@ -51,6 +52,8 @@ Start with the handoff package:
 - `benchmark_script.py` if present
 - `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` when drafting mode is active
 
+For engineering handoffs, treat `plan.md` as the source of truth for mechanism narrative, exact inventory mentions, assumptions, calculations, and operating limits. The tightened template includes an Assumption Register, Detailed Calculations, and Critical Constraints / Operating Envelope sections; if the handoff expects those proof sections and they are missing or ungrounded, surface the defect rather than inferring missing numbers.
+
 Then load specialist knowledge only as needed:
 
 - [render-evidence](../render-evidence/SKILL.md) when the task needs preview generation, media inspection, bundle selection, or point-pick queries
@@ -76,15 +79,16 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 
 ## Operating Loop
 
-1. Reconstruct the objective, objective zones, runtime jitter, attachment policy, and budget caps.
-2. Identify the mechanism family before drafting geometry.
-3. Load only the specialist skills that materially affect the design.
-4. Draft the smallest physically credible solution that can survive the declared runtime variation.
-5. Keep `solution_script.py` import-safe and bind the final object as `result`.
-6. Run a cheap syntax/import check, then a real validation probe, then simulation.
-7. Inspect render or video evidence as soon as motion is uncertain. Do not spend extra geometry effort before checking the first failing dynamic result.
-8. Fix the narrowest failure mode and repeat.
-9. Submit for review only when the latest revision is actually ready.
+01. Reconstruct the objective, objective zones, runtime jitter, attachment policy, and budget caps.
+02. Identify the mechanism family before drafting geometry.
+03. Load only the specialist skills that materially affect the design.
+04. Draft the smallest physically credible solution that can survive the declared runtime variation.
+05. Keep `solution_script.py` import-safe and bind the final object as `result`.
+06. Run a cheap syntax/import check, then a real validation probe, then simulation.
+07. Inspect render or video evidence as soon as motion is uncertain. Do not spend extra geometry effort before checking the first failing dynamic result.
+08. Fix the narrowest failure mode and repeat.
+09. Submit for review only when the latest revision is actually ready.
+10. Anchor any binding numeric claim to the tightened `plan.md` proof structure; do not implement against prose-only assumptions when `ASSUMP-*` and `CALC-*` scaffolding is expected.
 
 ## Design Rules
 
@@ -99,6 +103,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 09. Keep COTS components intact when provenance or exact part identity matters.
 10. Keep electronics separate from mechanical guessing; only load electronics logic when the handoff explicitly demands it.
 11. Treat cost, weight, and manufacturability as design constraints, not afterthoughts.
+12. When the approved handoff uses the engineering planner template, keep every declared inventory label and selected COTS `part_id` grounded by an exact identifier mention in `plan.md`, and preserve planner-authored assumptions, calculations, and operating-envelope limits without renaming them.
 
 ## Retry Discipline
 
@@ -114,6 +119,7 @@ This role should behave like a high-confidence solver, not a wandering explorer.
 - Avoid unrelated repo spelunking after the objective is clear.
 - Verify against the real validation/simulation/integration gates, not unit-test substitutes or mocked stand-ins.
 - If a failure repeats after one targeted fix, treat that as evidence that the current assumption or mechanism family is wrong.
+- If the planner handoff is missing exact inventory grounding or the required proof sections for a binding numeric claim, stop and surface the handoff defect instead of compensating inside `solution_script.py`.
 
 ## Evidence And Review
 
@@ -143,6 +149,7 @@ Refuse only when the handoff is genuinely infeasible or self-contradictory.
 
 - Write `plan_refusal.md` with concrete evidence.
 - If the planner handoff is not exact-grounded or the drafting scripts drift from the inventory, surface the defect instead of compensating in `solution_script.py`.
+- If `plan.md` is missing required proof sections or calculation anchors for the engineering plan, write `plan_refusal.md` with the concrete gap rather than filling in the missing assumptions yourself.
 - Keep the refusal specific to the blocked plan.
 - Do not silently pivot to an unrelated solution.
 

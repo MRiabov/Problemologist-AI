@@ -59,6 +59,8 @@ Before submission, verify all of the following:
 - `plan.md`, `todo.md`, the YAML files, and both scripts use the same object names and labels.
 - Every planner-declared inventory label and selected COTS `part_id` appears in `plan.md` at least once as an exact identifier mention.
 - The evidence and technical-drawing scripts preserve the same labels, repeated quantities, and COTS identities as the YAML inventory.
+- Every length, offset, clearance, and travel limit is formula-backed from declared source geometry, COTS specs, or manufacturing constants. If a value is missing, the handoff is incomplete.
+- Any moving fixture position is defined by its joint frame or axis, not by an arbitrary world coordinate.
 - Every top-level authored label is unique and not `environment` or `zone_*`.
 - `moved_object.material_id` is a known material from `manufacturing_config.yaml`.
 - `moved_object.start_position` is a top-level field under `moved_object`.

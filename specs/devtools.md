@@ -155,6 +155,7 @@ The validation helpers are developer tooling, not product behavior.
 - For planner rows, that contract includes exact inventory preservation, exact identifier mention coverage in `plan.md`, and the latest handoff cross-contract checks from the controller validation path.
 - It can refresh deterministic seed manifests and render bundles when asked.
 - It can optionally run the eval runner in judge mode after validation, using the codex backend by default.
+- Validation-only `--skip-env-up` runs stay lock-free so multiple seed checks can proceed in parallel; the shared eval lock is only taken when the script boots the eval stack.
 - If `--run-judge` is requested for more than 10 selected seed rows, the script requires `-y` before it will launch the expensive judge pass.
 - It must fail closed when required eval-row artifacts are missing, malformed, or no longer match the expected workspace contract.
 

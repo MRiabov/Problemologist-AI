@@ -120,6 +120,7 @@ def _format_eval_run_block_message(
         f"Active logs: [{active_log_dir}]",
         f"Your requested command: [{_join_command(requested_command)}]",
         "If these match, you can reuse the active run's logs under logs/evals/current/ instead of starting a duplicate run.",
+        "If you only need validation, rerun that check with --skip-env-up to bypass the shared eval lock.",
         "If you want to wait for the shared lock, rerun with --queue.",
     ]
     return "\n".join(lines)

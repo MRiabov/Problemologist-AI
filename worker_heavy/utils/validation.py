@@ -34,12 +34,6 @@ from shared.models.schemas import (
     FluidProperties,
     FluidVolume,
 )
-from shared.script_contracts import (
-    BENCHMARK_SCRIPT_PATH,
-    SOLUTION_SCRIPT_PATH,
-    drafting_render_manifest_path_for_agent,
-    technical_drawing_script_path_for_agent,
-)
 from shared.models.simulation import (
     SimulationFailure,
     SimulationResult,
@@ -55,6 +49,12 @@ from shared.rendering import (
     normalize_render_manifest,
     render_stress_heatmap_artifact,
     select_static_preview_render_subdir,
+)
+from shared.script_contracts import (
+    BENCHMARK_SCRIPT_PATH,
+    SOLUTION_SCRIPT_PATH,
+    drafting_render_manifest_path_for_agent,
+    technical_drawing_script_path_for_agent,
 )
 from shared.simulation.schemas import (
     SimulatorBackendType,
@@ -1069,8 +1069,6 @@ def calculate_assembly_totals(
         metadata = getattr(child, "metadata", None)
         if not metadata:
             continue
-        if _metadata_is_fixed(metadata):
-            continue
 
         cots_id = _metadata_cots_id(metadata)
         if cots_id:
@@ -1109,6 +1107,9 @@ def calculate_assembly_totals(
                     raise ValueError(
                         f"{part_label}: {field_name} '{observed}' does not match catalog value '{expected}'"
                     )
+            continue
+
+        if _metadata_is_fixed(metadata):
             continue
 
         method = getattr(metadata, "manufacturing_method", None)

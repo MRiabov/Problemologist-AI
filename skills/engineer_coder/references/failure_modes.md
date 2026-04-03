@@ -39,6 +39,8 @@ Signals:
 - Import-time side effects
 - Wrote benchmark-owned files from the engineer side
 - `plan.md` is missing an exact identifier mention for a declared label or selected COTS `part_id`
+- `plan.md` is missing the tightened proof sections for a binding engineering claim, such as the Assumption Register, Detailed Calculations, or Critical Constraints / Operating Envelope
+- A numeric claim in `plan.md` has no `CALC-*` anchor or relies on prose-only assumptions
 - Planner-authored evidence or technical-drawing scripts change labels, quantities, or COTS identities
 
 Likely causes:
@@ -47,12 +49,14 @@ Likely causes:
 - Ownership boundaries were ignored
 - A fallback was invented instead of fixing the source
 - The planner handoff was not exact-grounded
+- The planner handoff did not supply the proof structure needed to justify a binding numeric claim
 - The planner scripts drifted from the approved inventory
 
 First fix:
 
 - Restore the file contract and ownership boundaries before changing the design.
 - Stop and surface the handoff defect; do not compensate in `solution_script.py`.
+- Treat missing proof sections or calculation anchors as a handoff defect, not a modeling gap.
 
 ## Manufacturability and cost
 
@@ -126,12 +130,14 @@ Signals:
 - The plan cannot be implemented as written
 - The handoff contradicts itself
 - Budgets or objective geometry make the task impossible
+- The plan relies on missing proof sections or ungrounded numeric claims that the coder cannot safely infer
 
 Likely causes:
 
 - The planner handoff is internally inconsistent
 - Required benchmark-owned facts are missing
 - The task requires a different mechanism family than the handoff allows
+- The engineering plan omitted the proof scaffolding required by the tightened template
 
 First fix:
 

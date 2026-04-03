@@ -112,6 +112,30 @@ INVALID_CHECKBOX_PATTERN = re.compile(r"^\s*-\s*\[[^\]]*\]", re.MULTILINE)
 BULLET_LIST_PATTERN = re.compile(r"^\s*[-*+]\s+\S+", re.MULTILINE)
 NUMBERED_LIST_PATTERN = re.compile(r"^\s*\d+\.\s+\S+", re.MULTILINE)
 
+CALC_INDEX_TABLE_HEADERS = [
+    "ID",
+    "Problem / Decision",
+    "Result",
+    "Impact",
+]
+CALC_SUBSECTION_HEADING_PATTERN = re.compile(
+    r"^\s*###\s*(CALC-\d{3})\s*:\s*(.+?)\s*$",
+    re.IGNORECASE,
+)
+CALC_ANY_HEADING_PATTERN = re.compile(r"^\s*###\s*CALC-", re.IGNORECASE)
+CALC_REQUIRED_SUBHEADINGS = [
+    "#### Problem Statement",
+    "#### Assumptions",
+    "#### Derivation",
+    "#### Worst-Case Check",
+    "#### Result",
+    "#### Design Impact",
+    "#### Cross-References",
+]
+CALC_REQUIRED_SUBHEADINGS_SET = {
+    heading.lower() for heading in CALC_REQUIRED_SUBHEADINGS
+}
+
 
 def _extract_sections(
     content: str,
@@ -198,14 +222,64 @@ def _validate_plan_md_with_spec(
             )
 
         calculation_lines = sections.get("## 5. Detailed Calculations", [])
-        if "## 5. Detailed Calculations" in sections and not (
-            _has_table(calculation_lines)
-            or BULLET_LIST_PATTERN.search("\n".join(calculation_lines))
-            or NUMBERED_LIST_PATTERN.search("\n".join(calculation_lines))
-        ):
-            violations.append(
-                "Detailed Calculations must contain a numbered list, bullet list, or table of derivations."
-            )
+        if "## 5. Detailed Calculations" in sections:
+            calc_table = _find_calc_index_table(calculation_lines)
+            if calc_table is None:
+                violations.append(
+                    "Detailed Calculations must use the exact summary table with columns `ID`, `Problem / Decision`, `Result`, and `Impact`."
+                )
+            else:
+                _, _, calc_rows = calc_table
+                if not calc_rows:
+                    violations.append(
+                        "Detailed Calculations summary table must include at least one `CALC-*` row."
+                    )
+
+                table_ids: list[str] = []
+                for row_idx, cells in calc_rows:
+                    row_id = cells[0].strip().upper()
+                    if not re.fullmatch(r"CALC-\d{3}", row_id):
+                        violations.append(
+                            f"Detailed Calculations row {row_idx + 1} must use a `CALC-###` identifier in the first column."
+                        )
+                        continue
+                    if not all(cell.strip() for cell in cells[1:]):
+                        violations.append(
+                            f"Detailed Calculations row {row_idx + 1} must populate the `Problem / Decision`, `Result`, and `Impact` columns."
+                        )
+                    table_ids.append(row_id)
+
+                calc_heading_entries: list[tuple[int, str]] = []
+                for line_idx, line in enumerate(calculation_lines):
+                    heading_match = CALC_SUBSECTION_HEADING_PATTERN.match(line)
+                    if heading_match:
+                        calc_heading_entries.append(
+                            (line_idx, heading_match.group(1).upper())
+                        )
+                        continue
+                    if CALC_ANY_HEADING_PATTERN.match(line):
+                        violations.append(
+                            "Detailed Calculations subsection headings must use the exact `### CALC-001: <short title>` form."
+                        )
+
+                heading_ids = [entry[1] for entry in calc_heading_entries]
+                if not calc_heading_entries:
+                    violations.append(
+                        "Detailed Calculations must include matching `### CALC-001: <short title>` subsections for every summary-table row."
+                    )
+                elif table_ids and heading_ids != table_ids:
+                    violations.append(
+                        "Detailed Calculations summary-table rows and `CALC-*` subsections must match one-to-one in the same order."
+                    )
+
+                for idx, (line_idx, calc_id) in enumerate(calc_heading_entries):
+                    end_idx = (
+                        calc_heading_entries[idx + 1][0]
+                        if idx + 1 < len(calc_heading_entries)
+                        else len(calculation_lines)
+                    )
+                    block_lines = calculation_lines[line_idx + 1 : end_idx]
+                    violations.extend(_validate_calc_block(block_lines, calc_id))
 
         envelope_lines = sections.get(
             "## 6. Critical Constraints / Operating Envelope", []
@@ -253,6 +327,94 @@ def _has_table(lines: list[str]) -> bool:
         if "|" in lines[i] and re.match(r"^\s*\|?[\s:-]+\|?[\s|:-]*$", lines[i + 1]):
             return True
     return False
+
+
+def _split_table_row(line: str) -> list[str] | None:
+    if "|" not in line:
+        return None
+    return [cell.strip() for cell in line.strip().strip("|").split("|")]
+
+
+def _is_table_separator_line(line: str) -> bool:
+    cells = _split_table_row(line)
+    if cells is None or not cells:
+        return False
+    return all(re.fullmatch(r"[:\-\s]+", cell) is not None for cell in cells)
+
+
+def _find_calc_index_table(
+    lines: list[str],
+) -> tuple[int, int, list[tuple[int, list[str]]]] | None:
+    """Return the exact calculation table location and rows if present."""
+    for idx in range(len(lines) - 1):
+        header_cells = _split_table_row(lines[idx])
+        if header_cells != CALC_INDEX_TABLE_HEADERS:
+            continue
+        if not _is_table_separator_line(lines[idx + 1]):
+            continue
+
+        rows: list[tuple[int, list[str]]] = []
+        row_idx = idx + 2
+        while row_idx < len(lines):
+            line = lines[row_idx]
+            if not line.strip() or "|" not in line:
+                break
+            row_cells = _split_table_row(line)
+            if row_cells is None or len(row_cells) != len(CALC_INDEX_TABLE_HEADERS):
+                break
+            rows.append((row_idx, row_cells))
+            row_idx += 1
+
+        return idx, row_idx, rows
+
+    return None
+
+
+def _ordered_heading_positions(
+    lines: list[str], headings: list[str]
+) -> tuple[list[int], list[str]]:
+    positions: list[int] = []
+    missing: list[str] = []
+    cursor = 0
+
+    for heading in headings:
+        pattern = re.compile(rf"^\s*{re.escape(heading)}\s*$", re.IGNORECASE)
+        found_idx: int | None = None
+        for idx in range(cursor, len(lines)):
+            if pattern.match(lines[idx]):
+                found_idx = idx
+                break
+        if found_idx is None:
+            missing.append(heading)
+            continue
+        positions.append(found_idx)
+        cursor = found_idx + 1
+
+    return positions, missing
+
+
+def _validate_calc_block(lines: list[str], calc_id: str) -> list[str]:
+    violations: list[str] = []
+
+    for line in lines:
+        if line.lstrip().startswith("#### "):
+            normalized = re.sub(r"\s+", " ", line.strip()).lower()
+            if normalized not in CALC_REQUIRED_SUBHEADINGS_SET:
+                violations.append(
+                    f"{calc_id}: Detailed Calculations subsection contains unsupported heading: {line.strip()}"
+                )
+
+    positions, missing = _ordered_heading_positions(lines, CALC_REQUIRED_SUBHEADINGS)
+    if missing:
+        violations.append(
+            f"{calc_id}: Detailed Calculations subsection is missing required headings: {', '.join(missing)}"
+        )
+    if positions != sorted(positions):
+        violations.append(
+            f"{calc_id}: Detailed Calculations subsection headings must appear in the required order."
+        )
+
+    return violations
 
 
 def validate_plan_md(content: str, plan_type: str = "engineering") -> ValidationResult:
