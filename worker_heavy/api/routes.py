@@ -24,7 +24,6 @@ from shared.rendering import select_single_preview_render_subdir
 from shared.workers.loader import load_component_from_script
 from shared.workers.persistence import (
     collect_and_cleanup_events,
-    record_validation_result,
 )
 from shared.workers.schema import (
     AnalyzeRequest,
@@ -37,6 +36,7 @@ from shared.workers.schema import (
     SimulationArtifacts,
     VerificationRequest,
 )
+from shared.workers.validation_artifacts import build_validation_response
 from shared.workers.workbench_models import WorkbenchResult
 from worker_heavy.config import settings
 from worker_heavy.runtime.simulation_runner import (
@@ -107,36 +107,6 @@ def _normalize_render_paths(root: Path, render_paths: list[str]) -> list[str]:
         except Exception:
             normalized.append(raw_path)
     return normalized
-
-
-def _collect_validation_render_artifacts(
-    root: Path,
-) -> tuple[list[str], dict[str, str]]:
-    render_paths: list[str] = []
-    render_blobs_base64: dict[str, str] = {}
-    renders_dir = root / "renders"
-    if not renders_dir.exists():
-        return render_paths, render_blobs_base64
-
-    for render_path in sorted(renders_dir.rglob("*")):
-        if not render_path.is_file():
-            continue
-        if render_path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".mp4"}:
-            continue
-        rel_path = str(render_path.relative_to(root))
-        render_paths.append(rel_path)
-        render_blobs_base64[rel_path] = base64.b64encode(
-            render_path.read_bytes()
-        ).decode("ascii")
-
-    render_manifest_path = renders_dir / "render_manifest.json"
-    if render_manifest_path.exists():
-        render_blobs_base64[str(Path("renders") / "render_manifest.json")] = (
-            base64.b64encode(render_manifest_path.read_bytes()).decode("ascii")
-        )
-
-    render_blobs_base64.update(_collect_render_payload_blobs(root))
-    return render_paths, render_blobs_base64
 
 
 def _collect_render_payload_blobs(root: Path) -> dict[str, str]:
@@ -483,37 +453,12 @@ async def api_validate(
                     particle_budget=request.particle_budget,
                 )
 
-                record_validation_result(
-                    root,
-                    is_valid,
-                    message,
+                return build_validation_response(
+                    root=root,
+                    is_valid=is_valid,
+                    message=message,
                     script_path=request.script_path,
                     session_id=x_session_id,
-                )
-
-                events = _collect_events(fs_router, root=root, session_id=x_session_id)
-                artifacts = SimulationArtifacts()
-                validation_result_path = root / "validation_results.json"
-                if validation_result_path.exists():
-                    artifacts.validation_results_json = (
-                        validation_result_path.read_text(encoding="utf-8")
-                    )
-                render_paths, render_blobs_base64 = (
-                    _collect_validation_render_artifacts(root)
-                )
-                artifacts.render_paths = _normalize_render_paths(root, render_paths)
-                artifacts.render_blobs_base64 = render_blobs_base64
-                if not is_valid:
-                    artifacts.failure = SimulationFailure(
-                        reason=FailureReason.VALIDATION_FAILED,
-                        detail=message,
-                    )
-
-                return BenchmarkToolResponse(
-                    success=is_valid,
-                    message=message or "Validation successful",
-                    events=events,
-                    artifacts=artifacts,
                 )
 
     except HTTPException:

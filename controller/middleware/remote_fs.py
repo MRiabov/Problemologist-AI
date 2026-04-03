@@ -27,7 +27,6 @@ from controller.workflows.execution import ScriptExecutionWorkflow
 from controller.workflows.heavy import (
     HeavySimulationWorkflow,
     HeavySubmitWorkflow,
-    HeavyValidationWorkflow,
     HeavyVerifyWorkflow,
 )
 from controller.workflows.preview import PreviewWorkflow
@@ -63,8 +62,6 @@ from shared.workers.schema import (
     GrepMatch,
     HeavySimulationParams,
     HeavySubmitParams,
-    HeavyValidationParams,
-    HeavyValidationResponse,
     HeavyVerifyParams,
     InspectTopologyResponse,
     MediaInspectionResult,
@@ -1016,26 +1013,11 @@ class RemoteFilesystemMiddleware:
             script_content=script_content,
         )
 
-    async def validate(
-        self, script_path: str | Path
-    ) -> BenchmarkToolResponse | HeavyValidationResponse:
-        """Trigger geometric validation via worker client (with bundling)."""
+    async def validate(self, script_path: str | Path) -> BenchmarkToolResponse:
+        """Trigger geometric validation via the worker-light validation path."""
         p_str = str(script_path)
 
-        self._require_temporal_for_heavy_operation("validate")
-
-        bundle = await self.client.bundle_session()
-        workflow_id = _bundle_workflow_id("val", self.client.session_id, bundle)
-        res = await self._execute_or_use_existing_workflow(
-            HeavyValidationWorkflow.run,
-            workflow_id,
-            HeavyValidationParams(
-                bundle_base64=base64.b64encode(bundle).decode("utf-8"),
-                script_path=p_str,
-                session_id=self.client.session_id,
-            ),
-            result_type=HeavyValidationResponse,
-        )
+        res = await self.client.validate(p_str)
 
         await record_events(
             episode_id=self.episode_id,
@@ -1045,8 +1027,8 @@ class RemoteFilesystemMiddleware:
                     method=ManufacturingMethod.THREE_DP,
                     # FIXME: why 3dp and not a particular method?
                     result=res.success,
-                    price=getattr(res, "price", None),
-                    weight_g=getattr(res, "weight_g", None),
+                    price=None,
+                    weight_g=None,
                     metadata=res.model_dump(),
                 )
             ],

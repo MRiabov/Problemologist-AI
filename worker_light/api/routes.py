@@ -3,6 +3,7 @@ import base64
 import json
 import os
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -22,18 +23,22 @@ from fastapi import (
 )
 from fastapi.encoders import jsonable_encoder
 
-from shared.enums import ResponseStatus
+from shared.enums import FailureReason, ResponseStatus
+from shared.models.simulation import SimulationFailure
 from shared.rendering import (
     materialize_preview_response,
     render_preview,
     select_single_preview_render_subdir,
 )
+from shared.workers.bundling import extract_bundle_base64
 from shared.workers.filesystem.router import (
     WritePermissionError,
     create_filesystem_router,
 )
 from shared.workers.persistence import collect_and_cleanup_events
 from shared.workers.schema import (
+    BenchmarkToolRequest,
+    BenchmarkToolResponse,
     DeleteFileRequest,
     EditFileRequest,
     ExecuteRequest,
@@ -62,6 +67,7 @@ from shared.workers.schema import (
     RenderBundlePointPickResult,
     RenderBundleQueryRequest,
     RenderBundleQueryResult,
+    SimulationArtifacts,
     StatusResponse,
     UploadFilesRequest,
     WorkerLightRpcError,
@@ -69,6 +75,8 @@ from shared.workers.schema import (
     WorkerLightRpcResponse,
     WriteFileRequest,
 )
+from shared.workers.validation_artifacts import build_validation_response
+from worker_heavy.runtime.simulation_runner import run_validation_in_isolated_process
 from worker_light.runtime.executor import RuntimeConfig, run_command_async
 from worker_light.utils.assets import get_media_type, validate_asset_source
 from worker_light.utils.git import (
@@ -99,6 +107,23 @@ def _write_text_atomic(path: Path, content: str) -> None:
         tmp.write(content)
         tmp_path = Path(tmp.name)
     tmp_path.replace(path)
+
+
+@contextmanager
+def bundle_context(bundle_base64: str | None, default_root: Path):
+    """Context manager to optionally extract a workspace bundle."""
+    if not bundle_base64:
+        yield default_root
+        return
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_root = Path(tmpdir)
+        try:
+            extract_bundle_base64(bundle_base64, tmp_root)
+            yield tmp_root
+        except Exception as e:
+            logger.warning("bundle_extraction_failed", error=str(e))
+            raise RuntimeError(f"Failed to extract bundle: {e}") from e
 
 
 def _rewrite_manifest_preview_paths(
@@ -318,6 +343,52 @@ async def api_preview(
             if isinstance(request.orbit_pitch, float)
             else None,
             yaw=request.orbit_yaw if isinstance(request.orbit_yaw, float) else None,
+        )
+
+
+@light_router.post("/benchmark/validate", response_model=BenchmarkToolResponse)
+async def api_validate(
+    request: BenchmarkToolRequest,
+    x_session_id: str = Header(...),
+    fs_router=Depends(get_router),
+):
+    """Geometric validity check in isolated session."""
+    try:
+        with bundle_context(
+            request.bundle_base64, fs_router.local_backend.root
+        ) as root:
+            is_valid, message = await run_validation_in_isolated_process(
+                script_path=(
+                    str(root / request.script_path)
+                    if request.bundle_base64
+                    else fs_router.local_backend._resolve(request.script_path)
+                ),
+                session_root=root,
+                script_content=request.script_content,
+                output_dir=root,
+                smoke_test_mode=request.smoke_test_mode,
+                session_id=x_session_id,
+                particle_budget=request.particle_budget,
+            )
+
+            return build_validation_response(
+                root=root,
+                is_valid=is_valid,
+                message=message,
+                script_path=request.script_path,
+                session_id=x_session_id,
+            )
+    except Exception as exc:
+        logger.warning("api_benchmark_validate_failed", error=str(exc))
+        return BenchmarkToolResponse(
+            success=False,
+            message=str(exc),
+            artifacts=SimulationArtifacts(
+                failure=SimulationFailure(
+                    reason=FailureReason.VALIDATION_FAILED,
+                    detail=str(exc),
+                )
+            ),
         )
 
 

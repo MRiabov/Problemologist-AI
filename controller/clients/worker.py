@@ -996,10 +996,8 @@ class WorkerClient:
             if script_content is not None:
                 payload["script_content"] = script_content
 
-            await self._add_bundle_to_payload(payload)
-
             response = await client.post(
-                f"{self.heavy_url}/benchmark/validate",
+                f"{self.light_url}/benchmark/validate",
                 json=payload,
                 headers=self._request_headers(stage=self.agent_role),
                 timeout=60.0,

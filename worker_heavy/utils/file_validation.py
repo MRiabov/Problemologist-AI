@@ -614,7 +614,21 @@ def _plan_explicitly_allows_goal_zone_overlap(
     if not any(term in lower_text for term in zone_terms):
         return False
 
-    return any(term in lower_text for term in intent_terms)
+    for intent_term in intent_terms:
+        for zone_term in zone_terms:
+            if re.search(
+                rf"\b{re.escape(intent_term)}\b.{{0,80}}\b{re.escape(zone_term)}\b",
+                lower_text,
+                flags=re.DOTALL,
+            ):
+                return True
+            if re.search(
+                rf"\b{re.escape(zone_term)}\b.{{0,80}}\b{re.escape(intent_term)}\b",
+                lower_text,
+                flags=re.DOTALL,
+            ):
+                return True
+    return False
 
 
 def validate_planner_drafting_geometry_contract(

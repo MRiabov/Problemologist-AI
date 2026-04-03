@@ -105,6 +105,26 @@ def drafting_script_paths_for_agent(
     return (_as_path(LEGACY_SCRIPT_PATH), _as_path(LEGACY_SCRIPT_PATH))
 
 
+def planner_role_for_drafting_script_path(
+    script_path: str | Path | None,
+) -> AgentName | None:
+    if script_path is None:
+        return None
+
+    script_name = Path(script_path).name
+    if script_name in {
+        BENCHMARK_PLAN_EVIDENCE_SCRIPT_PATH,
+        BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH,
+    }:
+        return AgentName.BENCHMARK_PLANNER
+    if script_name in {
+        SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH,
+        SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH,
+    }:
+        return AgentName.ENGINEER_PLANNER
+    return None
+
+
 def drafting_render_manifest_path_for_agent(
     agent_name: AgentName | str | None,
 ) -> Path:

@@ -89,6 +89,41 @@ def _call_heavy_worker(endpoint: str, payload: dict | BaseModel) -> dict:
         return {"success": False, "message": str(e)}
 
 
+def _call_worker_light(endpoint: str, payload: dict | BaseModel) -> dict:
+    light_url = _worker_light_base_url()
+    session_id = os.getenv("SESSION_ID", "default")
+    json_payload = payload.model_dump() if isinstance(payload, BaseModel) else payload
+    agent_role = str(json_payload.get("agent_role") or _script_agent_role())
+    stage = str(json_payload.get("reviewer_stage") or agent_role)
+
+    if not light_url:
+        error_message = "worker-light URL is not configured"
+        logger.error(
+            "worker_light_call_failed",
+            error=error_message,
+            session_id=session_id,
+        )
+        return {"success": False, "message": error_message}
+
+    headers = {
+        "X-Session-ID": session_id,
+        "X-Agent-Role": agent_role,
+        "X-Stage": stage,
+    }
+    if json_payload.get("reviewer_stage") is not None:
+        headers["X-Reviewer-Stage"] = str(json_payload["reviewer_stage"])
+
+    url = f"{light_url.rstrip('/')}/{endpoint.lstrip('/')}"
+    try:
+        with httpx.Client(timeout=300.0) as client:
+            resp = client.post(url, json=json_payload, headers=headers)
+            resp.raise_for_status()
+            return resp.json()
+    except Exception as e:
+        logger.error(f"Worker-light call failed: {e}")
+        return {"success": False, "message": str(e)}
+
+
 def _controller_base_url() -> str | None:
     url = os.getenv(CONTROLLER_URL_ENV)
     if not url:
@@ -513,10 +548,10 @@ def validate(compound: Compound, **kwargs) -> tuple[bool, str | None]:
         parsed = BenchmarkToolResponse.model_validate(controller_res)
         return parsed.success, parsed.message
 
-    # In non-controller contexts, fall back to the heavy worker for standalone
+    # In non-controller contexts, use the light worker directly for standalone
     # local tooling and worker-level tests.
     payload = {"script_path": script_path, **kwargs}
-    res = _call_heavy_worker("/benchmark/validate", payload)
+    res = _call_worker_light("/benchmark/validate", payload)
     parsed = BenchmarkToolResponse.model_validate(res)
     return parsed.success, parsed.message
 

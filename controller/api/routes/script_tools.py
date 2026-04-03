@@ -1,7 +1,5 @@
 import asyncio
 import base64
-import hashlib
-import time
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 
@@ -29,12 +27,10 @@ from shared.simulation.smoke_mode import (
 )
 from shared.workers.schema import (
     BenchmarkToolResponse,
-    HeavyValidationResponse,
     PreviewDesignResponse,
     PreviewRenderingType,
     ReviewerStage,
     SimulationArtifacts,
-    ValidationResultRecord,
 )
 
 router = APIRouter(prefix="/script-tools", tags=["script-tools"])
@@ -201,43 +197,8 @@ async def validate_script(
             x_session_id, payload.agent_role, request, payload.episode_id
         ) as middleware:
             result = await middleware.validate(payload.script_path)
-            if isinstance(result, BenchmarkToolResponse):
-                await middleware.client._sync_handover_artifacts_to_light(result)
-                return result
-            if isinstance(result, HeavyValidationResponse) and result.artifacts:
-                response = BenchmarkToolResponse(
-                    success=result.success,
-                    message=result.message or "Validation completed",
-                    confidence="high",
-                    artifacts=result.artifacts,
-                )
-                await middleware.client._sync_handover_artifacts_to_light(response)
-                return response
-            if not await middleware.client.exists(payload.script_path):
-                raise FileNotFoundError(
-                    f"script missing while materializing validation record: {payload.script_path}"
-                )
-            script_content = await middleware.client.read_file(payload.script_path)
-            script_sha256 = hashlib.sha256(script_content.encode("utf-8")).hexdigest()
-
-            validation_record = ValidationResultRecord(
-                success=result.success,
-                message=result.message,
-                timestamp=time.time(),
-                script_path=payload.script_path,
-                script_sha256=script_sha256,
-                verification_result=None,
-            )
-            response = BenchmarkToolResponse(
-                success=result.success,
-                message=result.message or "Validation completed",
-                confidence="high",
-                artifacts=SimulationArtifacts(
-                    validation_results_json=validation_record.model_dump_json(indent=2),
-                ),
-            )
-            await middleware.client._sync_handover_artifacts_to_light(response)
-            return response
+            await middleware.client._sync_handover_artifacts_to_light(result)
+            return result
 
 
 @router.post("/simulate", response_model=BenchmarkToolResponse)
