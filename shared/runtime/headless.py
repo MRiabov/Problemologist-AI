@@ -91,7 +91,7 @@ class HeadlessOpenGLConfig(BaseModel):
     @classmethod
     def from_environment(
         cls, environ: Mapping[str, str] | None = None
-    ) -> "HeadlessOpenGLConfig":
+    ) -> HeadlessOpenGLConfig:
         env = os.environ if environ is None else environ
         backend_type = _resolve_simulation_backend(env)
         physics_gl_backend = _resolve_physics_backend(backend_type, env)

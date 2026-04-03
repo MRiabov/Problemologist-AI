@@ -100,6 +100,27 @@ class ReadFileResponse(BaseModel):
     content: StrictStr
 
 
+class ReadFileBlobEntry(BaseModel):
+    """One binary file returned from a batch read request."""
+
+    path: StrictStr
+    content_b64: StrictStr
+
+
+class ReadFilesRequest(BaseModel):
+    """Request to read multiple files as binary blobs."""
+
+    paths: list[StrictStr] = Field(..., min_length=1)
+    bypass_agent_permissions: bool = False
+
+
+class ReadFilesResponse(BaseModel):
+    """Response from a batch binary file read."""
+
+    files: list[ReadFileBlobEntry] = Field(default_factory=list)
+    missing_paths: list[StrictStr] = Field(default_factory=list)
+
+
 class ExistsResponse(BaseModel):
     """Response for file existence check."""
 
@@ -538,6 +559,7 @@ WorkerLightRpcAction: TypeAlias = Literal[
     "fs_exists",
     "fs_read",
     "fs_read_blob",
+    "fs_read_files",
     "fs_write",
     "fs_upload_files",
     "fs_edit",

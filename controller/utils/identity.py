@@ -35,7 +35,7 @@ class EpisodeIdentity(BaseModel):
         cls,
         session_id: str | uuid.UUID,
         episode_id: str | uuid.UUID | None = None,
-    ) -> "EpisodeIdentity":
+    ) -> EpisodeIdentity:
         normalized_session_id = str(session_id)
         resolved_episode_id = resolve_episode_id(episode_id or session_id)
         return cls(

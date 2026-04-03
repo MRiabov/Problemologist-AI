@@ -4,7 +4,7 @@ import contextlib
 import hashlib
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from shared.git_utils import repo_revision
@@ -106,7 +106,7 @@ def _build_render_identity(
         bundle_path=resolved_bundle_path,
         artifacts=artifacts,
     )
-    resolved_created_at = created_at or datetime.now(timezone.utc).isoformat()
+    resolved_created_at = created_at or datetime.now(UTC).isoformat()
     resolved_bundle_id = bundle_id
     if not resolved_bundle_id:
         seed = "|".join(

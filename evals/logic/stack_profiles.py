@@ -3,9 +3,9 @@ from __future__ import annotations
 import argparse
 import os
 import shlex
+from collections.abc import MutableMapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import MutableMapping
 
 STACK_PROFILE_INTEGRATION = "integration"
 STACK_PROFILE_EVAL = "eval"

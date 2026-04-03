@@ -922,7 +922,7 @@ def _start_worker_renderer_container(
         raise RuntimeError("Worker Renderer container id not found after startup")
 
     with log_file.open("ab") as handle:
-        handle.write(f"Worker Renderer container id: {container_id}\n".encode("utf-8"))
+        handle.write(f"Worker Renderer container id: {container_id}\n".encode())
 
     print(f"Worker Renderer container started (ID: {container_id})")
     return container_id

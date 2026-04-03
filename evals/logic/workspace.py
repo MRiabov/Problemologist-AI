@@ -309,12 +309,12 @@ class InMemorySeedWorkspaceClient:
 
     async def exists(
         self, path: str, *, bypass_agent_permissions: bool = False
-    ) -> bool:  # noqa: ARG002
+    ) -> bool:
         return self._normalize(path) in self._files
 
     async def read_file(
         self, path: str, *, bypass_agent_permissions: bool = False
-    ) -> str:  # noqa: ARG002
+    ) -> str:
         try:
             raw = self._files[self._normalize(path)]
             return raw.decode("utf-8")
@@ -323,7 +323,7 @@ class InMemorySeedWorkspaceClient:
 
     async def read_file_optional(
         self, path: str, *, bypass_agent_permissions: bool = False
-    ) -> str | None:  # noqa: ARG002
+    ) -> str | None:
         try:
             raw = self._files[self._normalize(path)]
             return raw.decode("utf-8")
@@ -337,7 +337,7 @@ class InMemorySeedWorkspaceClient:
         overwrite: bool = True,
         *,
         bypass_agent_permissions: bool = False,
-    ) -> bool:  # noqa: ARG002
+    ) -> bool:
         key = self._normalize(path)
         if key in self._files and not overwrite:
             raise FileExistsError(f"Cannot write to {path} because it already exists.")
@@ -350,7 +350,7 @@ class InMemorySeedWorkspaceClient:
         content: bytes,
         *,
         bypass_agent_permissions: bool = False,
-    ) -> bool:  # noqa: ARG002
+    ) -> bool:
         self._files[self._normalize(path)] = content
         return True
 
@@ -896,11 +896,9 @@ async def preflight_seeded_entry_contract(
             )
         ),
         ENGINEER_BENCHMARK_HANDOVER_CHECK: (
-            lambda *, contract, state: (  # noqa: ARG005
-                engineer_benchmark_handover_custom_check(
-                    contract=contract,
-                    state=state,
-                )
+            lambda *, contract, state: engineer_benchmark_handover_custom_check(
+                contract=contract,
+                state=state,
             )
         ),
         ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK: (

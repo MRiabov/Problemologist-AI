@@ -138,8 +138,9 @@ async def _collect_render_blobs(
     middleware: RemoteFilesystemMiddleware, render_paths: list[str]
 ) -> dict[str, str]:
     render_blobs_base64: dict[str, str] = {}
-    render_image_paths: list[str] = []
     manifest_candidates: list[str] = []
+    render_image_paths: list[str] = []
+    requested_paths: list[str] = []
 
     for raw_path in render_paths:
         rel_path = str(Path(raw_path))
@@ -150,26 +151,22 @@ async def _collect_render_blobs(
         manifest_path = str(Path(rel_path).parent / "render_manifest.json")
         if manifest_path not in manifest_candidates:
             manifest_candidates.append(manifest_path)
+        if rel_path not in requested_paths:
+            requested_paths.append(rel_path)
 
-        try:
-            if not await middleware.client.exists(rel_path):
-                continue
-            render_blobs_base64[rel_path] = base64.b64encode(
-                await middleware.client.read_file_binary(rel_path)
-            ).decode("ascii")
-            if suffix in {".png", ".jpg", ".jpeg"}:
-                render_image_paths.append(rel_path)
-        except Exception:
-            continue
+        if suffix in {".png", ".jpg", ".jpeg"}:
+            render_image_paths.append(rel_path)
 
-    manifest_found = False
     for manifest_path in manifest_candidates:
-        if not await middleware.client.exists(manifest_path):
-            continue
-        render_blobs_base64[manifest_path] = base64.b64encode(
-            await middleware.client.read_file_binary(manifest_path)
-        ).decode("ascii")
-        manifest_found = True
+        if manifest_path not in requested_paths:
+            requested_paths.append(manifest_path)
+
+    if requested_paths:
+        file_blobs = await middleware.client.read_files_binary(requested_paths)
+        for rel_path, blob in file_blobs.items():
+            render_blobs_base64[rel_path] = base64.b64encode(blob).decode("ascii")
+
+    manifest_found = any(path in render_blobs_base64 for path in manifest_candidates)
 
     if render_image_paths and not manifest_found:
         raise ValueError(

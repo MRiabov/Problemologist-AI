@@ -32,6 +32,7 @@ from shared.workers.schema import (
     InspectTopologyResponse,
     PreviewDesignResponse,
     PreviewRenderingType,
+    ReadFilesResponse,
     ReviewerStage,
     WorkerLightRpcAction,
     WorkerLightRpcRequest,
@@ -575,28 +576,12 @@ class WorkerClient:
                 )
             )
 
-        for path, content in writes:
-            ok = await self.write_file(
-                path,
-                content,
-                overwrite=True,
-                bypass_agent_permissions=True,
-            )
-            if not ok:
-                logger.warning("handover_artifact_sync_write_failed", path=path)
-            else:
-                logger.info("handover_artifact_synced", path=path)
+        batch_uploads: list[tuple[str, bytes]] = [
+            (path, content.encode("utf-8")) for path, content in writes
+        ]
 
         for path, encoded in artifacts.render_blobs_base64.items():
-            ok = await self.upload_file(
-                path,
-                base64.b64decode(encoded),
-                bypass_agent_permissions=True,
-            )
-            if not ok:
-                logger.warning("handover_render_sync_upload_failed", path=path)
-            else:
-                logger.info("handover_render_synced", path=path)
+            batch_uploads.append((path, base64.b64decode(encoded)))
 
         object_store_keys = getattr(artifacts, "object_store_keys", None) or {}
         if object_store_keys:
@@ -612,19 +597,20 @@ class WorkerClient:
                         continue
                     with tempfile.NamedTemporaryFile(suffix=Path(path).suffix) as tmp:
                         storage_client.download_file(object_key, tmp.name)
-                        ok = await self.upload_file(
-                            path,
-                            Path(tmp.name).read_bytes(),
-                            bypass_agent_permissions=True,
-                        )
-                    if not ok:
-                        logger.warning(
-                            "handover_render_sync_upload_failed",
-                            path=path,
-                            source="object_store",
-                        )
-                    else:
-                        logger.info("handover_render_synced", path=path)
+                        batch_uploads.append((path, Path(tmp.name).read_bytes()))
+
+        if batch_uploads:
+            if not await self.upload_files(
+                batch_uploads,
+                bypass_agent_permissions=True,
+            ):
+                logger.warning(
+                    "handover_artifact_batch_upload_failed",
+                    paths=[path for path, _ in batch_uploads],
+                )
+            else:
+                for path, _ in batch_uploads:
+                    logger.info("handover_artifact_synced", path=path)
 
     async def upload_file(
         self,
@@ -743,6 +729,44 @@ class WorkerClient:
             return response.content
         finally:
             await self._close_client(client)
+
+    async def read_files_binary(
+        self,
+        paths: list[str],
+        *,
+        bypass_agent_permissions: bool = False,
+    ) -> dict[str, bytes]:
+        """Read multiple files as binary blobs in one request."""
+        normalized_paths = [str(path) for path in paths if str(path)]
+        if not normalized_paths:
+            return {}
+
+        payload = {
+            "paths": normalized_paths,
+            "bypass_agent_permissions": bypass_agent_permissions,
+        }
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request("fs_read_files", payload)
+            response = ReadFilesResponse.model_validate(result)
+        else:
+            client = await self._get_client()
+            try:
+                http_response = await client.post(
+                    f"{self.base_url}/fs/read_files",
+                    json=payload,
+                    headers=self._request_headers(
+                        bypass_agent_permissions=bypass_agent_permissions
+                    ),
+                    timeout=60.0,
+                )
+                http_response.raise_for_status()
+                response = ReadFilesResponse.model_validate(http_response.json())
+            finally:
+                await self._close_client(client)
+
+        return {
+            entry.path: base64.b64decode(entry.content_b64) for entry in response.files
+        }
 
     async def preview(
         self,

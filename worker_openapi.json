@@ -735,6 +735,75 @@
         }
       }
     },
+    "/fs/read_files": {
+      "post": {
+        "tags": [
+          "worker-light"
+        ],
+        "summary": "Read Files",
+        "description": "Read multiple files as base64-encoded binary blobs in one request.",
+        "operationId": "read_files_fs_read_files_post",
+        "parameters": [
+          {
+            "name": "X-System-FS-Bypass",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-System-Fs-Bypass"
+            }
+          },
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadFilesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadFilesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/fs/grep": {
       "post": {
         "tags": [
@@ -3240,6 +3309,25 @@
         "title": "PreviewViewSpec",
         "description": "One requested preview camera view after normalization."
       },
+      "ReadFileBlobEntry": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "content_b64": {
+            "type": "string",
+            "title": "Content B64"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "content_b64"
+        ],
+        "title": "ReadFileBlobEntry",
+        "description": "One binary file returned from a batch read request."
+      },
       "ReadFileRequest": {
         "properties": {
           "path": {
@@ -3273,6 +3361,50 @@
         ],
         "title": "ReadFileResponse",
         "description": "Response from reading a file."
+      },
+      "ReadFilesRequest": {
+        "properties": {
+          "paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Paths"
+          },
+          "bypass_agent_permissions": {
+            "type": "boolean",
+            "title": "Bypass Agent Permissions",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "paths"
+        ],
+        "title": "ReadFilesRequest",
+        "description": "Request to read multiple files as binary blobs."
+      },
+      "ReadFilesResponse": {
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/ReadFileBlobEntry"
+            },
+            "type": "array",
+            "title": "Files"
+          },
+          "missing_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Paths"
+          }
+        },
+        "type": "object",
+        "title": "ReadFilesResponse",
+        "description": "Response from a batch binary file read."
       },
       "RenderBundleIndexEntry": {
         "properties": {

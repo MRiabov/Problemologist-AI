@@ -17,9 +17,7 @@ logger = structlog.get_logger(__name__)
 _TINY_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W8FcAAAAASUVORK5CYII="
 )
-_TINY_SVG = (
-    "<svg xmlns='http://www.w3.org/2000/svg' width='1' height='1'></svg>"
-).encode("utf-8")
+_TINY_SVG = b"<svg xmlns='http://www.w3.org/2000/svg' width='1' height='1'></svg>"
 _TINY_DXF = b"0\nSECTION\n2\nENTITIES\n0\nENDSEC\n0\nEOF\n"
 
 

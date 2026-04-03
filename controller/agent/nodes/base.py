@@ -341,29 +341,26 @@ class BaseNode:
             )
             return [render_paths[0]]
 
-        else:
-            for preview_path in (
-                "renders/render_e45_a45.png",
-                "renders/dof_review_preview.png",
-            ):
-                preview_exists = await self.ctx.worker_client.exists(preview_path)
-                if not preview_exists:
-                    continue
-                db_callback = self.ctx.get_database_recorder(self.ctx.episode_id)
-                input_data = json.dumps({"args": [preview_path]})
-                trace_id = db_callback.record_tool_start_sync(
-                    "inspect_media", input_data
-                )
-                try:
-                    result = await self.ctx.fs.inspect_media(preview_path)
-                except Exception as exc:
-                    db_callback.record_tool_end_sync(trace_id, str(exc), is_error=True)
-                    raise
-                self._record_tool_usage("inspect_media", result)
-                db_callback.record_tool_end_sync(
-                    trace_id, self._serialize_tool_observation(result)
-                )
-                return [preview_path]
+        for preview_path in (
+            "renders/render_e45_a45.png",
+            "renders/dof_review_preview.png",
+        ):
+            preview_exists = await self.ctx.worker_client.exists(preview_path)
+            if not preview_exists:
+                continue
+            db_callback = self.ctx.get_database_recorder(self.ctx.episode_id)
+            input_data = json.dumps({"args": [preview_path]})
+            trace_id = db_callback.record_tool_start_sync("inspect_media", input_data)
+            try:
+                result = await self.ctx.fs.inspect_media(preview_path)
+            except Exception as exc:
+                db_callback.record_tool_end_sync(trace_id, str(exc), is_error=True)
+                raise
+            self._record_tool_usage("inspect_media", result)
+            db_callback.record_tool_end_sync(
+                trace_id, self._serialize_tool_observation(result)
+            )
+            return [preview_path]
         return []
 
     def _get_visual_inspection_policy(

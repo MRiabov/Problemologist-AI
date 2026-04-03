@@ -342,15 +342,15 @@ def _normalize_signature_value(value: Any, *, depth: int = 0) -> Any:
         return round(value, 3) if math.isfinite(value) else repr(value)
     if all(hasattr(value, attr) for attr in ("X", "Y", "Z")):
         return {
-            "x": round(float(getattr(value, "X")), 3),
-            "y": round(float(getattr(value, "Y")), 3),
-            "z": round(float(getattr(value, "Z")), 3),
+            "x": round(float(value.X), 3),
+            "y": round(float(value.Y), 3),
+            "z": round(float(value.Z), 3),
         }
     if all(hasattr(value, attr) for attr in ("x", "y", "z")):
         return {
-            "x": round(float(getattr(value, "x")), 3),
-            "y": round(float(getattr(value, "y")), 3),
-            "z": round(float(getattr(value, "z")), 3),
+            "x": round(float(value.x), 3),
+            "y": round(float(value.y), 3),
+            "z": round(float(value.z), 3),
         }
     if isinstance(value, (list, tuple)):
         return [_normalize_signature_value(item, depth=depth + 1) for item in value]
@@ -755,7 +755,7 @@ async def _preview_async(
         if not candidate:
             continue
         candidate_path = Path(candidate)
-        if candidate_path.parent == Path("."):
+        if candidate_path.parent == Path():
             continue
         if candidate_path.is_absolute():
             preview_output_dir = candidate_path.parent

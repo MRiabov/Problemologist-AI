@@ -43,7 +43,7 @@ def _current_env_snapshot() -> dict[str, Any]:
 def _codex_env_snapshot() -> dict[str, Any]:
     env = build_codex_env(
         task_id="syntax-display-probe",
-        workspace_dir=Path("."),
+        workspace_dir=Path(),
         codex_home_root=Path("/tmp/codex-home-syntax-display-probe"),
         agent_name=AgentName.ENGINEER_CODER,
     )

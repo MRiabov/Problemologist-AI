@@ -157,12 +157,11 @@ class MediaRecorder:
                 )
         except Exception as e:
             # T024: Skip rendering if display is not available (e.g. CI without GPU)
-            if "EGL" in str(e) or "display" in str(e).lower():
-                logger.warning("camera_render_failed_skipping_video", error=str(e))
-                if self.render_provenance is not None:
-                    self.render_provenance.render_error = str(e)
-                self._capture_disabled = True
-            elif "Unknown MuJoCo camera" in str(e):
+            if (
+                "EGL" in str(e)
+                or "display" in str(e).lower()
+                or "Unknown MuJoCo camera" in str(e)
+            ):
                 logger.warning("camera_render_failed_skipping_video", error=str(e))
                 if self.render_provenance is not None:
                     self.render_provenance.render_error = str(e)

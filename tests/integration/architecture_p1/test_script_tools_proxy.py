@@ -423,7 +423,7 @@ async def _collect_preview_status_phases(
             raw_message = await asyncio.wait_for(
                 websocket.recv(), timeout=min(remaining, 5.0)
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             if required_phases.issubset(set(phases)):
                 break
             continue
@@ -458,7 +458,7 @@ async def _collect_simulation_frames(
             raw_message = await asyncio.wait_for(
                 websocket.recv(), timeout=min(remaining, 5.0)
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             if len(frames) >= required_count:
                 break
             continue

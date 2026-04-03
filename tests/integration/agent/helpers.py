@@ -1070,7 +1070,7 @@ async def _wait_for_resource_state(
                     raw_message = await asyncio.wait_for(
                         ws.recv(), timeout=recv_timeout
                     )
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     resource = await fetch_resource()
                     if resource is None:
                         continue

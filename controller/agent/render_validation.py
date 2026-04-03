@@ -74,9 +74,13 @@ async def validate_render_images_non_black(
     if not image_paths:
         return None
 
+    binary_map = await worker_client.read_files_binary(image_paths)
+
     for path in image_paths:
         try:
-            binary = await worker_client.read_file_binary(path)
+            binary = binary_map.get(path)
+            if binary is None:
+                return f"render artifact unreadable: {path}: missing from batch read"
             if not binary:
                 logger.error(
                     "render_artifact_empty",

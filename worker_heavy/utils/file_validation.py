@@ -826,9 +826,7 @@ def _technical_drawing_script_imports_and_calls_technical_drawing(
 
         def visit_Call(self, node: ast.Call) -> Any:  # type: ignore[override]
             func = node.func
-            if isinstance(func, ast.Name) and func.id in direct_import_names:
-                self.found = True
-            elif (
+            if (isinstance(func, ast.Name) and func.id in direct_import_names) or (
                 isinstance(func, ast.Attribute)
                 and isinstance(func.value, ast.Name)
                 and func.value.id in module_aliases
@@ -1695,9 +1693,8 @@ def validate_planner_handoff_cross_contract(
     if plan_text is not None:
         if is_benchmark_planner:
             plan_tokens = Counter(
-                {
-                    token: 1
-                    for token in set(
+                dict.fromkeys(
+                    set(
                         _planner_plan_grounding_tokens_from_benchmark(
                             benchmark_definition
                         ).keys()
@@ -1706,17 +1703,15 @@ def validate_planner_handoff_cross_contract(
                         _planner_plan_grounding_tokens_from_assembly(
                             assembly_definition
                         ).keys()
-                    )
-                }
+                    ),
+                    1,
+                )
             )
         elif is_engineer_planner:
             plan_tokens = Counter(
-                {
-                    token: 1
-                    for token in _planner_plan_grounding_tokens_from_assembly(
-                        assembly_definition
-                    )
-                }
+                dict.fromkeys(
+                    _planner_plan_grounding_tokens_from_assembly(assembly_definition), 1
+                )
             )
         else:
             plan_tokens = Counter()

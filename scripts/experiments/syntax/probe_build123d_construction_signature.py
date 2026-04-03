@@ -24,15 +24,15 @@ def _normalize(value: Any, *, _depth: int = 0) -> Any:
         return round(value, 6) if math.isfinite(value) else repr(value)
     if all(hasattr(value, attr) for attr in ("X", "Y", "Z")):
         return {
-            "x": round(float(getattr(value, "X")), 6),
-            "y": round(float(getattr(value, "Y")), 6),
-            "z": round(float(getattr(value, "Z")), 6),
+            "x": round(float(value.X), 6),
+            "y": round(float(value.Y), 6),
+            "z": round(float(value.Z), 6),
         }
     if all(hasattr(value, attr) for attr in ("x", "y", "z")):
         return {
-            "x": round(float(getattr(value, "x")), 6),
-            "y": round(float(getattr(value, "y")), 6),
-            "z": round(float(getattr(value, "z")), 6),
+            "x": round(float(value.x), 6),
+            "y": round(float(value.y), 6),
+            "z": round(float(value.z), 6),
         }
     if isinstance(value, (list, tuple)):
         return [_normalize(item, _depth=_depth + 1) for item in value]

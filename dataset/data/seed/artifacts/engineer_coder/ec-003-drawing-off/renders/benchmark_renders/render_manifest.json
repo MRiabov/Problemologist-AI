@@ -4,7 +4,7 @@
   "created_at": "2026-04-03T00:00:00+00:00",
   "episode_id": "fc1fb069-c7c2-5c64-a713-b6807d5fd5f2",
   "worker_session_id": "seed-ec-003-drawing-off",
-  "revision": "dc63b2cd1b33b4022ea870f528a1203adf0bfe0d",
+  "revision": "681feeeb473f748a36edf0d346906bf650f51d99",
   "scene_hash": "3c79f5366531c62e9dca8cacf6851431aefc64a596c77a1d1fdb707aa022ef48",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",

@@ -1056,7 +1056,7 @@ def test_run_evals_build_dspy_lm_uses_configured_reasoning_effort_and_toggle(
             self.node_type = None
             self.session_id = None
 
-        def copy(self) -> "DummyLM":
+        def copy(self) -> DummyLM:
             return self
 
     def fake_build_cached_dspy_lm(

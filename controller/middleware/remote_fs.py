@@ -638,7 +638,7 @@ class RemoteFilesystemMiddleware:
         candidate_dirs = [
             parent
             for parent in Path(render_path).parents
-            if parent.name != "renders" and parent != Path(".")
+            if parent.name != "renders" and parent != Path()
         ]
         seen_candidates: set[str] = set()
         for candidate_dir in candidate_dirs:

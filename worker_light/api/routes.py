@@ -60,8 +60,11 @@ from shared.workers.schema import (
     PreviewDesignRequest,
     PreviewDesignResponse,
     PreviewRenderingType,
+    ReadFileBlobEntry,
     ReadFileRequest,
     ReadFileResponse,
+    ReadFilesRequest,
+    ReadFilesResponse,
     RenderBundleIndexEntry,
     RenderBundlePointPickRequest,
     RenderBundlePointPickResult,
@@ -169,6 +172,37 @@ def _is_host_session_absolute_path(path: str, session_dir: Path) -> bool:
     return normalized == session_root or normalized.startswith(f"{session_root}/")
 
 
+def _read_file_bytes(fs_router, path: str, *, bypass_agent_permissions: bool) -> bytes:
+    if bypass_agent_permissions:
+        local_path = fs_router.local_backend._resolve(path)
+        if not local_path.exists():
+            raise FileNotFoundError
+        return local_path.read_bytes()
+    return fs_router.read(path)
+
+
+def _read_file_blob_entries(
+    fs_router, paths: list[str], *, bypass_agent_permissions: bool
+) -> ReadFilesResponse:
+    files: list[ReadFileBlobEntry] = []
+    missing_paths: list[str] = []
+    for path in paths:
+        try:
+            content = _read_file_bytes(
+                fs_router, path, bypass_agent_permissions=bypass_agent_permissions
+            )
+        except FileNotFoundError:
+            missing_paths.append(path)
+            continue
+        files.append(
+            ReadFileBlobEntry(
+                path=path,
+                content_b64=base64.b64encode(content).decode("ascii"),
+            )
+        )
+    return ReadFilesResponse(files=files, missing_paths=missing_paths)
+
+
 async def get_router(x_session_id: str = Header(...)):
     """Dependency to create a filesystem router for the current session."""
     try:
@@ -261,7 +295,7 @@ async def api_preview(
             if not candidate:
                 continue
             candidate_path = Path(candidate)
-            if candidate_path.parent == Path("."):
+            if candidate_path.parent == Path():
                 continue
             source_preview_prefix = str(candidate_path.parent)
             break
@@ -446,13 +480,22 @@ async def _handle_light_rpc_action(
 
     if action == "fs_read_blob":
         if payload.get("bypass_agent_permissions", False):
-            local_path = fs_router.local_backend._resolve(payload["path"])
-            if not local_path.exists():
-                raise FileNotFoundError
-            content = local_path.read_bytes()
+            content = _read_file_bytes(
+                fs_router,
+                payload["path"],
+                bypass_agent_permissions=True,
+            )
         else:
             content = fs_router.read(payload["path"])
         return {"content_b64": base64.b64encode(content).decode("ascii")}
+
+    if action == "fs_read_files":
+        request = ReadFilesRequest.model_validate(payload)
+        return _read_file_blob_entries(
+            fs_router,
+            request.paths,
+            bypass_agent_permissions=request.bypass_agent_permissions,
+        )
 
     if action == "fs_write":
         if payload.get("bypass_agent_permissions", False):
@@ -1017,6 +1060,27 @@ async def read_blob(
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         logger.warning("api_read_blob_failed", path=request.path, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@light_router.post("/fs/read_files", response_model=ReadFilesResponse)
+async def read_files(
+    request: ReadFilesRequest,
+    fs_router=Depends(get_router),
+    x_system_fs_bypass: str | None = Header(default=None, alias="X-System-FS-Bypass"),
+):
+    """Read multiple files as base64-encoded binary blobs in one request."""
+    try:
+        bypass = _bypass_enabled(request.bypass_agent_permissions, x_system_fs_bypass)
+        return _read_file_blob_entries(
+            fs_router,
+            list(request.paths),
+            bypass_agent_permissions=bypass,
+        )
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        logger.warning("api_read_files_failed", paths=request.paths, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
