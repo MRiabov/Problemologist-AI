@@ -1,0 +1,4 @@
+interface:
+  display_name: "Engineer Plan Reviewer"
+  short_description: "Review engineering plan, execution, and refusal handoffs."
+  default_prompt: "Use $engineer-plan-reviewer to review engineering plan, execution, or refusal handoffs against the stage manifest and the checklists in `SKILL.md` and `references/review_contracts.md`; inspect renders or simulation media through the runtime media-inspection path when they exist; treat the planner evidence and technical-drawing scripts as the source of the approved plan; verify exact inventory grounding, motion-contract plausibility, and review-output schema correctness; and write the stage-specific decision/comments YAML pair before submitting through the review gate."
