@@ -2,7 +2,7 @@
 
 ## 1. Solution Overview
 
-Use a freestanding bridge deck with shallow side fences to move `transfer_cube` from the seeded `left_start_deck` across the `floor_gap` and into the `right_goal_deck` capture zone. The passive path uses a 300 mm `bridge_deck` that clears the 160 mm void with 70 mm nominal overlap on each side, and a 130 x 110 x 30 `landing_pocket` that overlaps the `goal_zone` to catch the cube before rebound. The benchmark-owned `bridge_reference_table` and `gap_floor_guard` stay read-only context; the solution uses them only as spatial references while keeping the bridge passive and within the planner budgets.
+Use a freestanding bridge deck with shallow side fences to move `transfer_cube` from the seeded `left_start_deck` across the `floor_gap` and into the `right_goal_deck` capture zone. The passive path uses a 300 mm `bridge_deck` that clears the 160 mm void with 70 mm nominal overlap on each side, and a 130 x 110 x 30 `landing_pocket` that docks to the deck exit while still overlapping the `goal_zone` to catch the cube before rebound. The benchmark-owned `bridge_reference_table` and `gap_floor_guard` stay read-only context; the solution uses them only as spatial references while keeping the bridge passive and within the planner budgets.
 
 ## 2. Parts List
 
@@ -22,7 +22,7 @@ Use a freestanding bridge deck with shallow side fences to move `transfer_cube` 
 1. Place `base_frame` centered in the build zone so its 560 x 180 mm footprint stays inside the 700 x 360 mm build footprint with 70 mm x 90 mm nominal margin and the support feet remain clear of the `floor_gap` keep-out volume.
 2. Mount `bridge_deck` along the x-axis so the 300 mm span covers the 160 mm gap with 70 mm of contact length on each side and points toward `right_goal_deck`.
 3. Mount `left_fence` and `right_fence` along the deck edges to keep the 16 x 16 x 10 mm runtime jitter envelope centered on the 95 mm deck without letting the cube climb the rails.
-4. Position `landing_pocket` so its 130 x 110 x 30 mm body overlaps the `goal_zone` with 10 mm of x-overlap and 15 mm of y-side clearance while damping rebound.
+4. Position `landing_pocket` so its 130 x 110 x 30 mm body docks to the deck exit and still overlaps the `goal_zone` with 80 mm of x-overlap and 15 mm of y-side clearance while damping rebound.
 5. Keep `bridge_reference_table` and `gap_floor_guard` as read-only spatial references only, and keep every part label grounded in `plan.md`, `todo.md`, and `assembly_definition.yaml`.
 6. The drafting sheet callouts `1`-`5` track the base frame, bridge deck, left fence, right fence, and landing pocket, respectively.
 
@@ -33,7 +33,7 @@ Use a freestanding bridge deck with shallow side fences to move `transfer_cube` 
 | ASSUMP-001 | The `floor_gap` keep-out stays fixed at 160 mm in x and 300 mm in y, and the support frame can be centered without touching it. | `benchmark_definition.yaml` | CALC-001, CALC-002 |
 | ASSUMP-002 | The bridge remains fully passive; no actuators, hinges, or benchmark-side moving fixtures are added. | `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml` | CALC-002, CALC-004 |
 | ASSUMP-003 | Runtime jitter on `transfer_cube` is limited to `±8 mm` in x and y and `±5 mm` in z. | `benchmark_definition.yaml` | CALC-003 |
-| ASSUMP-004 | `landing_pocket` is allowed to overlap the `goal_zone` as the capture feature. | `benchmark_definition.yaml` | CALC-004 |
+| ASSUMP-004 | `landing_pocket` is allowed to overlap the `goal_zone` as the capture feature while docking to the deck exit. | `benchmark_definition.yaml` | CALC-004 |
 | ASSUMP-005 | `bridge_reference_table` and `gap_floor_guard` remain read-only references and are not touched by the implementation. | `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml` | CALC-001, CALC-004 |
 
 ## 5. Detailed Calculations
@@ -43,7 +43,7 @@ Use a freestanding bridge deck with shallow side fences to move `transfer_cube` 
 | CALC-001 | Can the `base_frame` fit inside the `build_zone` with enough placement slack to keep the support structure clear of the `floor_gap`? | The `build_zone` footprint is 700 x 360 mm, the `base_frame` footprint is 560 x 180 mm, and the centered slack is 140 mm in x and 180 mm in y, leaving 70 mm and 90 mm per side. | Confirms the freestanding support has enough placement margin to stay clear of the gap keep-out once the bridge deck is aligned. |
 | CALC-002 | Does the passive bridge path span the full void with enough overlap to remain stable? | The `bridge_deck` length is 300 mm and the `floor_gap` x-span is 160 mm, so the deck has 140 mm of total excess length, or 70 mm of nominal overlap on each side. | Gives the bridge adequate contact area at both ends without adding motion or powered correction. |
 | CALC-003 | Does the `transfer_cube` jitter envelope stay centered between the side fences and within the deck corridor? | Runtime jitter totals 16 mm in x, 16 mm in y, and 10 mm in z; the 95 mm deck width leaves 79 mm of lateral slack, and the 35 mm fences stand 5 mm taller than the 30 mm goal-side pocket height. | Keeps the cube on a passive, repeatable path across the bridge. |
-| CALC-004 | Does the `landing_pocket` overlap the `goal_zone` enough to catch the cube and suppress rebound? | The `goal_zone` spans 110 mm in x, 140 mm in y, and 95 mm in z. The `landing_pocket` spans 130 mm in x, 110 mm in y, and 30 mm in z, so it has 20 mm of x excess, 15 mm of y clearance per side, and occupies the lower third of the goal volume. | Lets the pocket capture the cube inside the goal area while leaving the rest of the zone unobstructed. |
+| CALC-004 | Does the `landing_pocket` overlap the `goal_zone` enough to catch the cube and suppress rebound? | The `goal_zone` spans 110 mm in x, 140 mm in y, and 95 mm in z. The `landing_pocket` spans 130 mm in x, 110 mm in y, and 30 mm in z, so when docked to the deck exit it still overlaps the `goal_zone` by 80 mm in x, leaves 15 mm of y clearance per side, and occupies the lower third of the goal volume. | Lets the pocket capture the cube inside the goal area without leaving a gap at the bridge exit. |
 
 ### CALC-001: Base frame fit and void clearance
 

@@ -10,10 +10,12 @@ def _build_part(
     width: float,
     height: float,
     x: float,
+    y: float,
+    z: float,
     material_id: str,
 ):
     part = Box(length, width, height, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    part = part.moved(Location((x, 0.0, 0.0)))
+    part = part.moved(Location((x, y, z)))
     part.label = label
     part.metadata = PartMetadata(material_id=material_id, fixed=True)
     return part
@@ -27,6 +29,8 @@ def build():
             width=180.0,
             height=12.0,
             x=0.0,
+            y=0.0,
+            z=48.0,
             material_id="aluminum_6061",
         ),
         _build_part(
@@ -34,7 +38,9 @@ def build():
             length=300.0,
             width=95.0,
             height=8.0,
-            x=420.0,
+            x=10.0,
+            y=0.0,
+            z=60.0,
             material_id="aluminum_6061",
         ),
         _build_part(
@@ -42,7 +48,9 @@ def build():
             length=300.0,
             width=20.0,
             height=35.0,
-            x=780.0,
+            x=10.0,
+            y=-57.5,
+            z=60.0,
             material_id="hdpe",
         ),
         _build_part(
@@ -50,7 +58,9 @@ def build():
             length=300.0,
             width=20.0,
             height=35.0,
-            x=1120.0,
+            x=10.0,
+            y=57.5,
+            z=60.0,
             material_id="hdpe",
         ),
         _build_part(
@@ -58,7 +68,9 @@ def build():
             length=130.0,
             width=110.0,
             height=30.0,
-            x=1460.0,
+            x=225.0,
+            y=0.0,
+            z=68.0,
             material_id="hdpe",
         ),
     ]
