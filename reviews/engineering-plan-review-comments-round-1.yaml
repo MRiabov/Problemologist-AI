@@ -1,0 +1,15 @@
+summary: >-
+  REJECT_PLAN: the bundle has no `.manifests/engineering_plan_review_manifest.json`,
+  so the latest revision cannot be verified and the handoff fails closed.
+comments:
+  - "No `.manifests/engineering_plan_review_manifest.json` exists in the workspace, so there is no valid latest-revision plan-review gate."
+  - "The preview PNGs and SVGs under `renders/benchmark_renders/` and `renders/engineer_renders/` are inspectable and show a coherent timed-gate metering package."
+  - "The plan, assembly totals, and drafting scripts stay aligned on the declared part inventory and the `ServoMotor_DS3218` COTS identity."
+required_fixes:
+  - "Materialize `.manifests/engineering_plan_review_manifest.json` for the latest revision."
+  - "Re-run the handoff so the manifest and render evidence are tied to the same revision before requesting review again."
+checklist:
+  cross_artifact_consistency: fail
+  feasible_mechanism: pass
+  budget_realism: pass
+  dof_minimality: pass
