@@ -40,6 +40,18 @@ powered axis remains the `ServoMotor_DS3218` drive.
 6. The drafting sheet callouts `1`-`6` track the `base_plate`,
    `entry_funnel`, `roller_bed`, `idler_guide`, `goal_tray`, and the
    `ServoMotor_DS3218` drive, respectively.
+7. Treat the coarse `motion_forecast` in `assembly_definition.yaml` as the
+   reviewable start-to-finish trajectory for `transfer_lane`: it begins in a
+   build-safe parked pose and ends with goal-zone entry.
+8. Narrow that same `transfer_lane` motion again in
+   `precise_path_definition.yaml`, keeping the moving-part set unchanged while
+   tightening the cadence and explicit goal-contact proof.
+9. If the current 2° downhill lane geometry is kept, the ball’s ideal rolling
+   exit speed is about 0.62 m/s, with an average travel speed near 0.31 m/s
+   over the 780 mm lane. Keep the real motion in roughly the 0.55-0.65 m/s
+   exit band so it is brisk without overshooting the goal tray; the earlier
+   175-190 mm/s anchor interpolation rate is only the coarse lane-motion
+   timeline, not the ball’s physical speed.
 
 ## 4. Assumption Register
 

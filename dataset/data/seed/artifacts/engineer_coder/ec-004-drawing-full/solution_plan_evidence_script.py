@@ -86,6 +86,6 @@ def build():
     ]
 
     assembly = Compound(children=children)
-    assembly.label = "solution_plan_evidence"
+    assembly.label = "starter_assembly"
     assembly.metadata = CompoundMetadata()
     return assembly

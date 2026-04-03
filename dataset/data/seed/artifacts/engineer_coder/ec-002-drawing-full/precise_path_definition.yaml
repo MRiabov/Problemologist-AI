@@ -1,0 +1,40 @@
+backend: GENESIS
+moving_part_names:
+- bridge_deck
+initial_pose:
+  reference_point: bridge_deck_center
+  pos_mm: [10.0, 0.0, 60.0]
+  rot_deg: [0.0, 0.0, 0.0]
+sample_stride_s: 0.3
+anchors:
+- t_s: 0.0
+  reference_point: bridge_deck_center
+  pos_mm: [10.0, 0.0, 60.0]
+  rot_deg: [0.0, 0.0, 0.0]
+  position_tolerance_mm: [0.6, 0.6, 0.6]
+  rotation_tolerance_deg: [0.1, 0.1, 2.0]
+  build_zone_valid: true
+  first_contacts:
+  - order: 1
+    surface: base_frame
+    first_touch_window_s: [0.0, 0.3]
+- t_s: 0.6
+  reference_point: bridge_deck_center
+  pos_mm: [85.0, 0.0, 60.0]
+  rot_deg: [0.0, 0.0, 0.0]
+  position_tolerance_mm: [0.6, 0.6, 0.6]
+  rotation_tolerance_deg: [0.1, 0.1, 2.0]
+- t_s: 1.2
+  reference_point: bridge_deck_center
+  pos_mm: [170.0, 0.0, 60.0]
+  rot_deg: [0.0, 0.0, 0.0]
+  position_tolerance_mm: [0.6, 0.6, 0.6]
+  rotation_tolerance_deg: [0.1, 0.1, 2.0]
+terminal_event:
+  kind: goal_zone_contact
+  t_s: 1.5
+  reference_point: bridge_deck_center
+  pos_mm: [225.0, 0.0, 60.0]
+  contact_surfaces:
+  - landing_pocket
+  zone_name: goal_zone

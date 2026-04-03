@@ -13,11 +13,12 @@ def _build_part(
     y: float,
     z: float,
     material_id: str,
+    fixed: bool = True,
 ):
     part = Box(length, width, height, align=(Align.CENTER, Align.CENTER, Align.MIN))
     part = part.moved(Location((x, y, z)))
     part.label = label
-    part.metadata = PartMetadata(material_id=material_id, fixed=True)
+    part.metadata = PartMetadata(material_id=material_id, fixed=fixed)
     return part
 
 
@@ -43,6 +44,7 @@ def build():
             y=0.0,
             z=60.0,
             material_id="aluminum_6061",
+            fixed=False,
         ),
         _build_part(
             label="left_fence",

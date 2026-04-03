@@ -4,12 +4,12 @@
   "created_at": "2026-04-03T00:00:00+00:00",
   "episode_id": "529259fe-a3db-5197-ba54-1179463ce631",
   "worker_session_id": "seed-ec-002-drawing-full",
-  "revision": "7193b98970385462246397a4045d79dd4f2540a8",
+  "revision": "12c68691df7a2077e4ce527bbf2fdf83043f531c",
   "scene_hash": "9be0218209a24490cdf530710d75cce12107712324409e309a669b23231474e1",
   "bundle_path": "renders/engineer_renders",
   "environment_version": "1.0",
   "drafting": true,
-  "source_script_sha256": "d0e29656b08f601455a76806260f8107ed6066af8a17b0d0a9d66f7784ddebeb",
+  "source_script_sha256": "b75ab619027e248a9d4ea3dd03647d829214f780a19ab0e45ec1160f4b8cff18",
   "preview_evidence_paths": [
     "renders/engineer_renders/preview.png"
   ],

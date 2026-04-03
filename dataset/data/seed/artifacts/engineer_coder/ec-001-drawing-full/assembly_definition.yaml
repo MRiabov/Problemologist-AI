@@ -151,6 +151,38 @@ drafting:
       text: "Front view shows the capture mouth, lane width, and goal tray width that hold the ball centered."
       critical: true
       plan_ref: "plan.md#assembly-strategy"
+motion_forecast:
+  moving_part_names:
+  - transfer_lane
+  reference_frame: world
+  sample_stride_s: 0.5
+  anchors:
+  - t_s: 0.0
+    reference_point: transfer_lane_tip
+    pos_mm: [258.0, 0.0, 48.0]
+    rot_deg: [0.0, 0.0, 0.0]
+    position_tolerance_mm: [1.2, 1.2, 1.2]
+    rotation_tolerance_deg: [0.1, 0.1, 5.0]
+    build_zone_valid: true
+    first_contacts: []
+  - t_s: 0.6
+    reference_point: transfer_lane_tip
+    pos_mm: [382.0, 0.0, 58.0]
+    rot_deg: [45.0, 0.0, 0.0]
+    position_tolerance_mm: [1.2, 1.2, 1.2]
+    rotation_tolerance_deg: [0.1, 0.1, 5.0]
+    first_contacts: []
+  - t_s: 1.2
+    reference_point: transfer_lane_tip
+    pos_mm: [468.0, 0.0, 64.0]
+    rot_deg: [90.0, 0.0, 0.0]
+    position_tolerance_mm: [1.2, 1.2, 1.2]
+    rotation_tolerance_deg: [0.1, 0.1, 5.0]
+    goal_zone_entry: true
+    first_contacts:
+    - order: 1
+      surface: goal_tray_lip
+      first_touch_window_s: [1.05, 1.20]
 final_assembly:
 - name: transfer_lane
   config:

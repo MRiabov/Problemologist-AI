@@ -82,6 +82,80 @@ cots_parts:
   weight_g: 60.0
   quantity: 1
   source: catalog
+motion_forecast:
+  moving_part_names:
+  - shelf_lift
+  reference_frame: world
+  sample_stride_s: 0.5
+  anchors:
+  - t_s: 0.0
+    reference_point: shelf_lift_tray_tip
+    pos_mm:
+    - 0.0
+    - 0.0
+    - 20.0
+    rot_deg:
+    - 0.0
+    - 0.0
+    - 0.0
+    position_tolerance_mm:
+    - 1.2
+    - 1.2
+    - 1.2
+    rotation_tolerance_deg:
+    - 0.1
+    - 0.1
+    - 5.0
+    first_contacts:
+    - order: 1
+      surface: belt_bed
+      first_touch_window_s:
+      - 0.0
+      - 0.5
+    build_zone_valid: true
+  - t_s: 1.5
+    reference_point: shelf_lift_tray_tip
+    pos_mm:
+    - 180.0
+    - 0.0
+    - 140.0
+    rot_deg:
+    - 0.0
+    - 0.0
+    - 30.0
+    position_tolerance_mm:
+    - 1.2
+    - 1.2
+    - 1.2
+    rotation_tolerance_deg:
+    - 0.1
+    - 0.1
+    - 5.0
+    first_contacts:
+    - order: 1
+      surface: upper_tray
+      first_touch_window_s:
+      - 1.1
+      - 1.9
+  - t_s: 3.0
+    reference_point: shelf_lift_tray_tip
+    pos_mm:
+    - 370.0
+    - 0.0
+    - 230.0
+    rot_deg:
+    - 0.0
+    - 0.0
+    - 90.0
+    position_tolerance_mm:
+    - 1.2
+    - 1.2
+    - 1.2
+    rotation_tolerance_deg:
+    - 0.1
+    - 0.1
+    - 5.0
+    goal_zone_contact: true
 final_assembly:
 - name: shelf_lift
   config:

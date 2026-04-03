@@ -95,11 +95,44 @@ cots_parts:
   weight_g: 60.0
   quantity: 1
   source: catalog
+motion_forecast:
+  moving_part_names:
+  - timed_metering_stage
+  reference_frame: world
+  sample_stride_s: 0.5
+  anchors:
+  - t_s: 0.0
+    reference_point: build_zone_start
+    pos_mm: [-92.0, -68.0, 35.0]
+    rot_deg: [0.0, 0.0, 0.0]
+    position_tolerance_mm: [1.0, 1.0, 1.0]
+    rotation_tolerance_deg: [0.1, 0.1, 3.0]
+    build_zone_valid: true
+  - t_s: 1.0
+    reference_point: gate_window_pass
+    pos_mm: [115.0, 0.0, 48.0]
+    rot_deg: [0.0, 0.0, 12.0]
+    position_tolerance_mm: [1.0, 1.0, 1.0]
+    rotation_tolerance_deg: [0.1, 0.1, 3.0]
+    first_contacts:
+    - order: 1
+      surface: gate_housing
+      first_touch_window_s: [0.8, 1.2]
+  - t_s: 2.0
+    reference_point: goal_zone_finish
+    pos_mm: [335.0, 30.0, 65.0]
+    rot_deg: [0.0, 0.0, 18.0]
+    position_tolerance_mm: [1.0, 1.0, 1.0]
+    rotation_tolerance_deg: [0.1, 0.1, 3.0]
+    goal_zone_contact: true
 final_assembly:
 - name: timed_metering_stage
   config:
     dofs:
     - rotate_z
+    control:
+      mode: ON_OFF
+      speed: 0.6
 - name: drive_motor
   config:
     dofs: []

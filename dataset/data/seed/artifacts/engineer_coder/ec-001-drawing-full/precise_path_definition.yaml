@@ -1,0 +1,55 @@
+backend: GENESIS
+moving_part_names:
+  - transfer_lane
+initial_pose:
+  reference_point: transfer_lane_tip
+  pos_mm: [258.0, 0.0, 48.0]
+  rot_deg: [0.0, 0.0, 0.0]
+sample_stride_s: 0.3
+anchors:
+  - t_s: 0.0
+    reference_point: transfer_lane_tip
+    pos_mm: [258.0, 0.0, 48.0]
+    rot_deg: [0.0, 0.0, 0.0]
+    position_tolerance_mm: [0.6, 0.6, 0.6]
+    rotation_tolerance_deg: [0.1, 0.1, 2.0]
+    build_zone_valid: true
+    first_contacts: []
+  - t_s: 0.3
+    reference_point: transfer_lane_tip
+    pos_mm: [312.0, 0.0, 52.0]
+    rot_deg: [22.5, 0.0, 0.0]
+    position_tolerance_mm: [0.6, 0.6, 0.6]
+    rotation_tolerance_deg: [0.1, 0.1, 2.0]
+    first_contacts: []
+  - t_s: 0.6
+    reference_point: transfer_lane_tip
+    pos_mm: [372.0, 0.0, 57.0]
+    rot_deg: [45.0, 0.0, 0.0]
+    position_tolerance_mm: [0.6, 0.6, 0.6]
+    rotation_tolerance_deg: [0.1, 0.1, 2.0]
+    first_contacts: []
+  - t_s: 0.9
+    reference_point: transfer_lane_tip
+    pos_mm: [432.0, 0.0, 61.0]
+    rot_deg: [67.5, 0.0, 0.0]
+    position_tolerance_mm: [0.6, 0.6, 0.6]
+    rotation_tolerance_deg: [0.1, 0.1, 2.0]
+    first_contacts:
+      - order: 1
+        surface: goal_tray_lip
+        first_touch_window_s: [0.84, 0.96]
+  - t_s: 1.2
+    reference_point: transfer_lane_tip
+    pos_mm: [486.0, 0.0, 66.0]
+    rot_deg: [90.0, 0.0, 0.0]
+    position_tolerance_mm: [0.6, 0.6, 0.6]
+    rotation_tolerance_deg: [0.1, 0.1, 2.0]
+    goal_zone_contact: true
+    first_contacts:
+      - order: 1
+        surface: goal_tray_lip
+        first_touch_window_s: [1.08, 1.20]
+      - order: 2
+        surface: goal_tray_floor
+        first_touch_window_s: [1.12, 1.30]

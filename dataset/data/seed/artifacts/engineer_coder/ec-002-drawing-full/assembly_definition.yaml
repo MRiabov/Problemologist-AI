@@ -76,13 +76,88 @@ manufactured_parts:
   removed_volume_mm3: 404000.0
   estimated_unit_cost_usd: 13.0
 cots_parts: []
+motion_forecast:
+  moving_part_names:
+  - bridge_deck
+  reference_frame: world
+  sample_stride_s: 0.5
+  anchors:
+  - t_s: 0.0
+    reference_point: bridge_deck_center
+    pos_mm:
+    - 10.0
+    - 0.0
+    - 60.0
+    rot_deg:
+    - 0.0
+    - 0.0
+    - 0.0
+    position_tolerance_mm:
+    - 1.2
+    - 1.2
+    - 1.2
+    rotation_tolerance_deg:
+    - 0.1
+    - 0.1
+    - 5.0
+    build_zone_valid: true
+    first_contacts:
+    - order: 1
+      surface: base_frame
+      first_touch_window_s:
+      - 0.0
+      - 0.5
+  - t_s: 1.0
+    reference_point: bridge_deck_center
+    pos_mm:
+    - 120.0
+    - 0.0
+    - 60.0
+    rot_deg:
+    - 0.0
+    - 0.0
+    - 0.0
+    position_tolerance_mm:
+    - 1.2
+    - 1.2
+    - 1.2
+    rotation_tolerance_deg:
+    - 0.1
+    - 0.1
+    - 5.0
+  - t_s: 2.0
+    reference_point: bridge_deck_center
+    pos_mm:
+    - 225.0
+    - 0.0
+    - 60.0
+    rot_deg:
+    - 0.0
+    - 0.0
+    - 0.0
+    position_tolerance_mm:
+    - 1.2
+    - 1.2
+    - 1.2
+    rotation_tolerance_deg:
+    - 0.1
+    - 0.1
+    - 5.0
+    first_contacts:
+    - order: 1
+      surface: landing_pocket
+      first_touch_window_s:
+      - 1.5
+      - 2.0
+    goal_zone_contact: true
 final_assembly:
 - name: base_frame
   config:
     dofs: []
 - name: bridge_deck
   config:
-    dofs: []
+    dofs:
+    - translate_x
 - name: left_fence
   config:
     dofs: []
@@ -94,7 +169,7 @@ final_assembly:
     dofs: []
 drafting:
   sheet_id: sheet_1
-  title: Passive gap bridge technical drawing
+  title: Deployable gap bridge technical drawing
   units: mm
   projection_standard: orthographic
   views:
