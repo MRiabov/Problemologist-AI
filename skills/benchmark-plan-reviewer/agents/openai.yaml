@@ -1,0 +1,4 @@
+interface:
+  display_name: "Benchmark Plan Reviewer"
+  short_description: "Review benchmark planner handoffs against strict geometry, motion, and inventory contracts."
+  default_prompt: "Use this skill when reviewing benchmark planner handoffs before coding starts. Read the latest planner artifacts, the stage manifest, and the relevant architecture docs; follow the checklist in `SKILL.md` and `references/review_contracts.md`; inspect any render or drawing evidence with inspect_media(...) and preview_drawing() when needed; treat the planner evidence and technical-drawing scripts as the source of the approved benchmark contract; verify exact label, quantity, COTS identity, motion, and schema grounding; and write the stage-scoped decision/comments YAML pair under reviews/ before submitting the review gate."
