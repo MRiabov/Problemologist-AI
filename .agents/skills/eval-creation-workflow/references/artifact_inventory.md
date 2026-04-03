@@ -103,7 +103,6 @@ Some older references still say `engineering_execution_review_manifest.json`; tr
 
 ## Known Gaps
 
-- `precise_path_definition.yaml` now has a dedicated criteria reference, and the workspace contract should stay aligned with it.
 - Render history files (`render_index.jsonl`, `frames.jsonl`, `objects.parquet`, `preview_scene.json`) are covered by the broader render family doc, but they still deserve their own narrower docs if we want file-by-file coverage instead of one broad render reference.
 - `benchmark.xml`, `solution.xml`, and `events.jsonl` still need dedicated criteria docs if we want every eval-visible file family to have its own reference.
 - The git eval support files and prompt files are currently only covered by task prose, not per-file acceptance docs.

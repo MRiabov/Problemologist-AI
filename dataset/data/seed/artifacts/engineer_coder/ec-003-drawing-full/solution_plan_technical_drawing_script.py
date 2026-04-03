@@ -99,5 +99,4 @@ def _build_motor():
     motor = ServoMotor.from_catalog_id("ServoMotor_DS3218")
     motor = motor.move(Location((-92.0, -68.0, 35.0)))
     motor.label = "ServoMotor_DS3218"
-    motor.metadata.cots_id = None
     return motor

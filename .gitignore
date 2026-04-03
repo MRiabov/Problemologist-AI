@@ -57,6 +57,7 @@ events.jsonl
 
 # Local agent skills and suggestions
 suggested_skills/
+.codex/
 
 gha-creds-*.json
 logs/

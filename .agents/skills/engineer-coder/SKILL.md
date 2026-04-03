@@ -78,6 +78,7 @@ Prefer selector-driven placement over free-form XYZ positioning. Use face/axis s
 For engineering handoffs, treat `plan.md` as the source of truth for mechanism narrative, exact inventory mentions, assumptions, calculations, and operating limits. The tightened template includes an Assumption Register, Detailed Calculations, and Critical Constraints / Operating Envelope sections; if the handoff expects those proof sections and they are missing or ungrounded, surface the defect rather than inferring missing numbers.
 When the planner template is in use, read `plan.md` as a sectioned contract with named parts: `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Assumption Register`, `## 5. Detailed Calculations`, `## 6. Critical Constraints / Operating Envelope`, `## 7. Cost & Weight Budget`, and `## 8. Risk Assessment`. The `Detailed Calculations` section is where the binding math lives, and `Risk Assessment` is where known failure modes and mitigations should be documented.
 If the geometry or physics derivation is hand-wavy instead of formula-backed, stop and treat that as a plan defect. In practice, handoffs that cannot derive the payload trajectory, contact timing, or clearance math rigorously are not reliable enough to implement.
+If `precise_path_definition.yaml` is present, treat it as the engineer-owned motion envelope for the implementation pass: keep the waypoint geometry, contact windows, and terminal proof aligned with the coarse forecast, and make any timing or speed math in `plan.md` use the exact same anchors rather than a hand-waved estimate.
 
 Then load specialist knowledge only as needed:
 
@@ -130,6 +131,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 11. Treat cost, weight, and manufacturability as design constraints, not afterthoughts.
 12. When multiple viable implementations satisfy the handoff, prefer the more stable, cheaper, simpler, and more manufacturable one.
 13. When the approved handoff uses the engineering planner template, keep every declared inventory label and selected COTS `part_id` grounded by an exact identifier mention in `plan.md`, and preserve planner-authored assumptions, calculations, operating-envelope limits, and collision-validated layout geometry without renaming, resizing, or re-spacing them.
+14. If the motion math and the precise path disagree, repair the source handoff first; do not "prove" a different path by changing only the implementation.
 
 ## Retry Discipline
 

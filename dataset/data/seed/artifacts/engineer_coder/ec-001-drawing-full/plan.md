@@ -33,10 +33,13 @@ powered axis remains the `ServoMotor_DS3218` drive.
    toward positive X while `idler_guide` keeps the ball centered and prevents
    lift-out.
 4. Mount `goal_tray` so its interior volume overlaps the seeded `goal_zone`
-   and sits slightly below the roller exit to bleed off speed.
+   in the lower capture band. The placement target is roughly
+   `(430.0, 80.0, 37.5)` mm, which yields an `x` span of `355.0-505.0` mm,
+   a `y` span of `20.0-140.0` mm, and a `z` span of `20.0-55.0` mm.
 5. Keep the `ServoMotor_DS3218` and wiring on the left side of the base so
    downstream electronics work can route power without crossing the moving
-   lane.
+   lane. A placement near `(-120.0, 80.0, 37.5)` mm preserves the left-side
+   corridor while staying clear of the goal tray and roller lane.
 6. The drafting sheet callouts `1`-`6` track the `base_plate`,
    `entry_funnel`, `roller_bed`, `idler_guide`, `goal_tray`, and the
    `ServoMotor_DS3218` drive, respectively.
@@ -47,11 +50,12 @@ powered axis remains the `ServoMotor_DS3218` drive.
    `precise_path_definition.yaml`, keeping the moving-part set unchanged while
    tightening the cadence and explicit goal-contact proof.
 9. If the current 2° downhill lane geometry is kept, the ball’s ideal rolling
-   exit speed is about 0.62 m/s, with an average travel speed near 0.31 m/s
-   over the 780 mm lane. Keep the real motion in roughly the 0.55-0.65 m/s
-   exit band so it is brisk without overshooting the goal tray; the earlier
-   175-190 mm/s anchor interpolation rate is only the coarse lane-motion
-   timeline, not the ball’s physical speed.
+   exit speed is `v = sqrt((10/7) * g * sin(2°) * 0.780 m) ≈ 0.618 m/s`, with
+   an average travel speed of about `0.309 m/s` over the 780 mm lane. Keep
+   the real motion in the 0.55-0.65 m/s exit band so it is brisk without
+   overshooting the goal tray; the earlier 175-190 mm/s anchor interpolation
+   rate is only the coarse lane-motion timeline, not the ball’s physical
+   speed.
 
 ## 4. Assumption Register
 
@@ -70,7 +74,7 @@ powered axis remains the `ServoMotor_DS3218` drive.
 | CALC-001 | Size the `entry_funnel` mouth to cover the worst-case ball envelope plus runtime jitter. | Worst-case envelope is 104 mm in X and 96 mm in Y; the 180 x 140 mm mouth leaves 76 mm and 44 mm of margin. | The funnel captures the seeded spawn variation without needing a wider base plate. |
 | CALC-002 | Verify that the `base_plate` is long and heavy enough to keep the transfer lane stable. | The plate aspect ratio is 980 / 170 = 5.76, and the base mass is 449.82 g, which is 73.97 percent of the full assembly mass. | The freestanding solution stays stable without drilling or anchoring to the benchmark fixture. |
 | CALC-003 | Compute the exact priced assembly totals from the part breakdown. | Exact totals are 62.00 USD and 608.34 g, which are below the 67.00 USD / 1300 g planner target. | The plan stays within budget with deterministic headroom. |
-| CALC-004 | Check that `goal_tray` can overlap the seeded goal volume while still damping rebound. | The goal zone footprint is 100 x 110 mm, so the 150 x 120 mm tray footprint leaves 50 mm and 10 mm of margin, while the 35 mm tray height occupies the lower band of the 85 mm tall goal zone. | The ball can settle in the goal capture region instead of bouncing through it. |
+| CALC-004 | Check that `goal_tray` can overlap the seeded goal volume while still damping rebound. | With the tray centered at `(430.0, 80.0, 37.5)`, the tray spans `x=[355.0, 505.0]`, `y=[20.0, 140.0]`, `z=[20.0, 55.0]`; this overlaps the goal zone by `75.0 mm` in X, `35.0 mm` in Y, and the full `35.0 mm` in Z, while leaving `25.0 mm` of X headroom before the goal-zone max. | The ball can settle in the goal capture region instead of bouncing through it. |
 
 ### CALC-001: Capture envelope
 
@@ -227,10 +231,13 @@ overshooting the benchmark volume or losing the ball on rebound.
 - Goal zone X span: `530.0 - 430.0 = 100.0 mm`.
 - Goal zone Y span: `55.0 - (-55.0) = 110.0 mm`.
 - Goal zone Z span: `105.0 - 20.0 = 85.0 mm`.
-- Tray footprint X span: `150.0 mm`, leaving `50.0 mm` of X margin.
-- Tray footprint Y span: `120.0 mm`, leaving `10.0 mm` of Y margin.
-- Tray height: `35.0 mm`, which fits within the lower band of the 85.0 mm tall
-  goal zone.
+- Tray center placement: `(430.0, 80.0, 37.5)` mm.
+- Tray X span: `430.0 - 75.0 = 355.0 mm` to `430.0 + 75.0 = 505.0 mm`.
+- Tray Y span: `80.0 - 60.0 = 20.0 mm` to `80.0 + 60.0 = 140.0 mm`.
+- Tray Z span: `37.5 - 17.5 = 20.0 mm` to `37.5 + 17.5 = 55.0 mm`.
+- X overlap with goal zone: `min(505.0, 530.0) - max(355.0, 430.0) = 75.0 mm`.
+- Y overlap with goal zone: `min(140.0, 55.0) - max(20.0, -55.0) = 35.0 mm`.
+- Z overlap with goal zone: `min(55.0, 105.0) - max(20.0, 20.0) = 35.0 mm`.
 
 #### Worst-Case Check
 
@@ -244,8 +251,8 @@ complex end effector.
 
 #### Design Impact
 
-Keep the tray shallow and wide, and keep the downstream exit aligned with the
-goal-zone centerline.
+Keep the tray shallow and wide, and preserve the goal-zone overlap window
+while maintaining a clear lane corridor.
 
 #### Cross-References
 
@@ -260,7 +267,7 @@ goal-zone centerline.
 | LIMIT-001 | `entry_funnel` capture margin | At least 76.0 mm X margin and 44.0 mm Y margin beyond the worst-case ball envelope | `CALC-001` |
 | LIMIT-002 | `base_plate` stability | Keep the 980 x 170 mm footprint and the 449.82 g aluminum base mass unchanged | `CALC-002` |
 | LIMIT-003 | Budget ceiling | Stay at or below 62.00 USD and 608.34 g, with no hidden parts or duplicate motors | `CALC-003` |
-| LIMIT-004 | Goal capture geometry | Keep the `goal_tray` footprint at least 150 x 120 mm and seat it in the lower band of the goal zone | `CALC-004` |
+| LIMIT-004 | Goal capture geometry | Keep the `goal_tray` footprint at least 150 x 120 mm and seat it in the lower band of the goal zone near `x=430 mm` | `CALC-004` |
 
 ## 7. Cost & Weight Budget
 
