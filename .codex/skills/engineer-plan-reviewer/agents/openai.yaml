@@ -1,0 +1,4 @@
+interface:
+  display_name: "Engineer Solution Reviewer"
+  short_description: "Review engineering plans, implementations, and refusal evidence against strict handoff contracts."
+  default_prompt: "Use this skill when reviewing engineering plan or execution handoffs. Load the current plan, TODO, benchmark_definition.yaml, assembly_definition.yaml, solution_script.py, validation and simulation artifacts, and the stage-specific review manifest; follow the checklist in `SKILL.md` and `references/review_contracts.md`; inspect renders or simulation media through the runtime media-inspection path when they exist; treat the planner evidence and technical-drawing scripts as the source of the approved plan; verify exact inventory grounding, motion-contract plausibility, and review-output schema correctness; confirm or reject plan refusals only with concrete evidence; and write the stage-specific decision/comments YAML pair before submitting through the review gate."

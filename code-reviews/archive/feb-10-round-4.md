@@ -9,7 +9,7 @@ This review records the planning and prompt infrastructure risks that could prev
 <!-- ### 1. Skill Path Mismatch in Planner Prompt
 
 - The planner prompt in `config/prompts.yaml` instructs reading:
-- `skills/build123d_cad_drafting_skill/SKILL.md`
+- `skills/build123d-cad-drafting-skill/SKILL.md`
 - `skills/manufacturing-knowledge/SKILL.md`
 - The repo only contains `skills/references/` and the skill files live under `/home/maksym/.codex/skills/...`.
 - Impact: If the planner follows the prompt literally, required skill guidance will be missing or unreadable, increasing plan quality risk.

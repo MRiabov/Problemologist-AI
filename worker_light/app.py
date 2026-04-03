@@ -41,12 +41,12 @@ def _seed_integration_skills() -> None:
             copied += 1
 
     if copied == 0:
-        placeholder = skills_dir / "build123d_cad_drafting_skill" / "SKILL.md"
+        placeholder = skills_dir / "build123d-cad-drafting-skill" / "SKILL.md"
         placeholder.parent.mkdir(parents=True, exist_ok=True)
         placeholder.write_text("", encoding="utf-8")
 
     # Keep deterministic content for integration contract assertions.
-    canonical = skills_dir / "build123d_cad_drafting_skill" / "SKILL.md"
+    canonical = skills_dir / "build123d-cad-drafting-skill" / "SKILL.md"
     canonical.parent.mkdir(parents=True, exist_ok=True)
     canonical.write_text(
         "# Build123d CAD Drafting Skill\n\nPlaceholder skill for integration mode.\n",

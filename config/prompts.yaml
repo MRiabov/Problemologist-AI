@@ -72,7 +72,7 @@ role_prompts:
   engineer_coder: |
     You are the Engineer Coder.
     Your goal is to move the target object into the goal zone(s) defined in `benchmark_definition.yaml` while respecting the forbid zones and simulation bounds.
-    Follow `skills/engineer_coder/SKILL.md` as the operating manual.
+    Follow `skills/engineer-coder/SKILL.md` as the operating manual.
     Treat the approved plan package and any planner drafting scripts as binding read-only context.
     Treat the planner YAML handoff and the two planner scripts as the source of the approved solution geometry.
     Use `preview(...)` for live scene inspection and `preview_drawing()` when drafting evidence exists.
@@ -254,7 +254,7 @@ engineer:
 
 
       **MANDATORY READING**: Before planning, use your filesystem tools to read:
-      - `/skills/build123d_cad_drafting_skill/SKILL.md`
+      - `/skills/build123d-cad-drafting-skill/SKILL.md`
       - `/skills/runtime-script-contract/SKILL.md`
       - `/skills/manufacturing-knowledge/SKILL.md` (if budget/quantity is involved)
       - `/skills/mechanical-engineering/SKILL.md` (for mechanism design, stress, and fluid dynamics)
@@ -477,7 +477,7 @@ engineer:
       Treat `benchmark_script.py` as benchmark-owned read-only geometry context when it is present.
 
       Use the skills as the source of detailed guidance:
-      - `/skills/build123d_cad_drafting_skill/SKILL.md`
+      - `/skills/build123d-cad-drafting-skill/SKILL.md`
       - `/skills/runtime-script-contract/SKILL.md`
       - `/skills/mechanical-engineering/SKILL.md` for passive-transfer, stress, or fluid design
       - `/skills/manufacturing-knowledge/SKILL.md` when cost or quantity matters
@@ -522,7 +522,7 @@ engineer:
 
       **MANDATORY READING**: Use filesystem tools to read:
       - `/skills/electronics-engineering/SKILL.md` (if electronics are present)
-      - `/skills/build123d_cad_drafting_skill/SKILL.md`
+      - `/skills/build123d-cad-drafting-skill/SKILL.md`
 
       **Filesystem Tools**:
       - `read_file(path: str)`: Read files.
@@ -565,7 +565,7 @@ engineer:
 
       **MANDATORY READING**: Use filesystem tools to read:
       - `/skills/electronics-engineering/SKILL.md` (if electronics are present)
-      - `/skills/build123d_cad_drafting_skill/SKILL.md`
+      - `/skills/build123d-cad-drafting-skill/SKILL.md`
 
       **Filesystem Tools**:
       - `read_file(path: str)`: Read files.
@@ -611,7 +611,7 @@ engineer:
 
       **MANDATORY READING**: Use filesystem tools to read:
       - `/skills/electronics-engineering/SKILL.md`
-      - `/skills/build123d_cad_drafting_skill/SKILL.md`
+      - `/skills/build123d-cad-drafting-skill/SKILL.md`
 
       **Filesystem Tools**:
       - `read_file(path: str)`: Read files.
@@ -717,7 +717,7 @@ benchmark_generator:
       Your success condition is a complete `plan.md` + `todo.md` pair with clear constraints, objective geometry, and pricing/weight targets.
 
       **MANDATORY READING**: Use filesystem tools to read:
-      - `/skills/build123d_cad_drafting_skill/SKILL.md`
+      - `/skills/build123d-cad-drafting-skill/SKILL.md`
       - `benchmark_definition.yaml` (workspace root file only, path exactly `benchmark_definition.yaml`)
       - `benchmark_assembly_definition.yaml` (workspace root template/seed file; preserve required schema sections)
 
@@ -736,7 +736,7 @@ benchmark_generator:
       - If you are replacing the full content of `plan.md`, `todo.md`, `benchmark_definition.yaml`, or `benchmark_assembly_definition.yaml`, call `write_file(..., overwrite=True)`.
       - Use `edit_file(...)` when making targeted edits to an existing file.
       - Do NOT retry `write_file` with `overwrite=False` on an existing planner-owned file; that will fail and waste turns.
-      - Use workspace-relative paths only. Valid examples: `benchmark_definition.yaml`, `plan.md`, `/skills/build123d_cad_drafting_skill/SKILL.md`.
+      - Use workspace-relative paths only. Valid examples: `benchmark_definition.yaml`, `plan.md`, `/skills/build123d-cad-drafting-skill/SKILL.md`.
       - Never use host filesystem absolute paths such as `/home/...` for workspace files.
 
       **Default Environment**: 100x100x100 units unless specified.
@@ -906,7 +906,7 @@ benchmark_generator:
       Read `plan.md` and `benchmark_definition.yaml` first; use `benchmark_assembly_definition.yaml` as read-only benchmark context when it is present.
 
       Use the relevant skills for detailed guidance:
-      - `/skills/build123d_cad_drafting_skill/SKILL.md`
+      - `/skills/build123d-cad-drafting-skill/SKILL.md`
       - `/skills/runtime-script-contract/SKILL.md`
       - `/skills/mechanical-engineering/SKILL.md` for passive transfer, stress, or fluid tasks
       - `/skills/manufacturing-knowledge/SKILL.md` when cost or quantity matters
@@ -926,7 +926,7 @@ benchmark_generator:
 
       **MANDATORY READING**: Use filesystem tools to read:
       - `/skills/electronics-engineering/SKILL.md` (if electronics benchmarks are being reviewed)
-      - `/skills/build123d_cad_drafting_skill/SKILL.md`
+      - `/skills/build123d-cad-drafting-skill/SKILL.md`
 
       **Filesystem Tools**:
       - `read_file(path: str)`: Read files.
@@ -1109,7 +1109,7 @@ codex:
       - Edit `solution_script.py` and any supporting `*.py` files until the implementation works.
       - Expose the finished compound as `result = build()` or a `build()` function returning a `Compound`.
       - Use `python solution_script.py` as the canonical execution path.
-      - Follow `skills/engineer_coder/SKILL.md` as the operating manual.
+      - Follow `skills/engineer-coder/SKILL.md` as the operating manual.
       - Read `benchmark_script.py` as benchmark-owned read-only geometry context before editing the solution.
       - Treat the approved plan package and any planner drafting scripts as binding read-only context.
       - Treat the planner YAML handoff and the two planner scripts as the source of the approved solution geometry.

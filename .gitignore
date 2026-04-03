@@ -9,21 +9,6 @@ wheels/
 # Virtual environments
 .venv
 
-# Added by Spec Kitty CLI (auto-managed)
-.claude/
-.codex/
-.opencode/
-.windsurf/
-.gemini/
-.cursor/
-.qwen/
-.kilocode/
-.augment/
-.roo/
-.amazonq/
-.github/copilot/
-.github/prompts/
-.kittify/.dashboard
 # kitty-specs/**/tasks/*.md
 
 # Database files

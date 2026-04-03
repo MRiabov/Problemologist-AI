@@ -39,6 +39,23 @@ def _catalog_paths(prompt_text: str) -> list[str]:
     return paths
 
 
+def _snapshot_tree(root: Path) -> tuple[set[str], dict[str, bytes]]:
+    dirs: set[str] = set()
+    snapshot: dict[str, bytes] = {}
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [name for name in dirnames if name != ".git"]
+        rel_dir = Path(dirpath).relative_to(root).as_posix()
+        if rel_dir != ".":
+            dirs.add(rel_dir)
+        for filename in filenames:
+            if filename == ".git":
+                continue
+            path = Path(dirpath, filename)
+            rel_path = path.relative_to(root).as_posix()
+            snapshot[rel_path] = path.read_bytes()
+    return dirs, snapshot
+
+
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
 async def test_int_045_skills_sync_lifecycle():
@@ -90,10 +107,10 @@ async def test_int_045_skills_sync_lifecycle():
         assert len(files) > 0
 
         # Check for a specific known skill
-        assert any("build123d_cad_drafting_skill" in f.name for f in files)
+        assert any("build123d-cad-drafting-skill" in f.name for f in files)
 
         # 4. Verify skill content is readable
-        skill_path = "/skills/build123d_cad_drafting_skill/SKILL.md"
+        skill_path = "/skills/build123d-cad-drafting-skill/SKILL.md"
         fs_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/read",
             json=ReadFileRequest(path=skill_path).model_dump(),
@@ -131,3 +148,11 @@ async def test_int_045_skills_sync_lifecycle():
             prompt_text = prompt_manager.render(agent_name)
             assert "Available skills you can read:" in prompt_text
             assert _catalog_paths(prompt_text) == expected_catalog_paths
+
+        # 7. Verify the checked-in skill mirrors stay equal to the canonical tree.
+        canonical_tree = _snapshot_tree(ROOT / "skills")
+        for mirror_root in (
+            ROOT / ".agents" / "skills",
+            ROOT / ".codex" / "skills",
+        ):
+            assert _snapshot_tree(mirror_root) == canonical_tree

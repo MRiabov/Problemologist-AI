@@ -112,10 +112,14 @@ The eval tooling mirrors the integration tooling, but it owns a separate lock, a
 
 - `evals/logic/runner.py` is the real eval runner.
 - It owns backend selection, task filtering, complexity-level filtering, concurrency, rate limiting, and run logging.
-- It serializes eval runs through `/tmp/problemologist-eval.lock` and `/tmp/problemologist-eval.run.json`.
+- It uses the eval run lock to protect the stack while bootstrapping and then runs as a shared consumer of the eval lock during execution.
+- Controller-backed runs bootstrap exclusively only while `scripts/env_up.sh` is running, then downgrade to the shared lock for the actual eval loop.
+- Codex-backed runs and `--skip-env-up` runs join the shared eval lock directly.
+- It records the active bootstrap owner in `/tmp/problemologist-eval.run.json` and updates that state only while the lease is writable.
 - It writes logs under `logs/evals/runs/run_*` and maintains `logs/evals/current/` plus `logs/evals/latest.log`.
 - It can run against the controller-backed path or the local Codex path.
 - Controller-backed eval runs bootstrap the `eval` profile through `scripts/env_up.sh` unless the caller explicitly skips that step.
+- `--skip-env-up` joins the shared eval lock directly so multiple eval consumers can coexist when the stack is already up.
 - Codex-backed eval runs remain local to the materialized workspace and do not require the controller/worker stack to be booted for the agent loop itself.
 
 ### `dataset/evals/materialize_seed_workspace.py`
@@ -124,7 +128,8 @@ The eval tooling mirrors the integration tooling, but it owns a separate lock, a
 - It materializes the row into a temp workspace, writes the Codex prompt to `prompt.md`, and prints the copied file list for inspection.
 - It is not the eval runner and should not be treated as the owner of the eval loop.
 - It can optionally bootstrap the `eval` profile, launch Codex, or open the Codex UI.
-- It uses the shared eval lock when it needs to coordinate with an active eval run.
+- It uses the exclusive eval lock while bootstrapping and then downgrades to the shared validation lock so multiple validation-only consumers can coexist while the stack remains protected.
+- After bootstrap it stops mutating the lock state and keeps only the shared lock file handle open.
 - It exposes explicit sandbox selection through `--yolo` and `--no-yolo`; the script should never invent a hidden bypass mode.
 
 ### Eval coordination helpers
@@ -155,7 +160,8 @@ The validation helpers are developer tooling, not product behavior.
 - For planner rows, that contract includes exact inventory preservation, exact identifier mention coverage in `plan.md`, and the latest handoff cross-contract checks from the controller validation path.
 - It can refresh deterministic seed manifests and render bundles when asked.
 - It can optionally run the eval runner in judge mode after validation, using the codex backend by default.
-- Validation-only `--skip-env-up` runs stay lock-free so multiple seed checks can proceed in parallel; the shared eval lock is only taken when the script boots the eval stack.
+- Validation-only `--skip-env-up` runs join the shared validation lock so multiple seed checks can proceed in parallel while still preventing eval teardown during an active validation consumer.
+- The script keeps the lock exclusive only while bootstrapping the eval stack, then downgrades to the shared validation lock before health checks and validation work continue.
 - If `--run-judge` is requested for more than 10 selected seed rows, the script requires `-y` before it will launch the expensive judge pass.
 - It must fail closed when required eval-row artifacts are missing, malformed, or no longer match the expected workspace contract.
 
