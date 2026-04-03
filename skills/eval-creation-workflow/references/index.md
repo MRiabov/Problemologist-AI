@@ -25,6 +25,8 @@ The acceptance-criteria files linked from this index should prefer `References` 
 | `simulation_result.json` | coder/reviewer flows | Latest-revision deterministic simulation evidence |
 | `plan_refusal.md` | refusal paths | Structured refusal proof with concrete evidence and role-specific reasons |
 | `file-contract-template.md` | new artifact types / fallback | Structural template for writing a concrete per-file acceptance reference |
+| `precise_path_definition.yaml` | engineer coder / motion proof | Higher-resolution engineer-owned path and contact proof |
+| `artifact_inventory.md` | all eval/file families | Inventory of file families observed in seeded evals and live workspace contracts |
 | `reviews/benchmark-plan-review-*.yaml` | benchmark plan review | `benchmark_plan_review_yaml_acceptance_criteria.md` |
 | `reviews/benchmark-execution-review-*.yaml` | benchmark execution review | `benchmark_execution_review_yaml_acceptance_criteria.md` |
 | `reviews/engineering-plan-review-*.yaml` | engineering plan review | `engineering_plan_review_yaml_acceptance_criteria.md` |

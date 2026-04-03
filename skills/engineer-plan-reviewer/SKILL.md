@@ -3,7 +3,9 @@ name: engineer-plan-reviewer
 description: Engineer-side review workflow for validating plan and execution handoffs, review manifests, render and simulation evidence, exact inventory grounding, motion-contract plausibility, plan refusals, and stage-scoped review YAML outputs. Use when reviewing engineering `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_script.py`, validation or simulation artifacts, review manifests, or refusal evidence for the Engineering Plan Reviewer or Engineering Execution Reviewer roles; or when applying the engineer review checklist for plan, execution, and refusal gates.
 ---
 
-# Engineer Solution Reviewer
+# Engineer Plan Reviewer
+
+Use this skill for both the engineering plan-review and execution-review gates. Keep the stage-specific checklists separate and treat planner and coder artifacts as read-only.
 
 ## Canonical Preview Helpers
 
@@ -53,4 +55,5 @@ When plan or execution evidence needs visual checking, use the shared preview he
 ## References
 
 - `references/review_contracts.md`
+- `specs/architecture/agents/roles.md`
 - `specs/architecture/agents/handover-contracts.md`

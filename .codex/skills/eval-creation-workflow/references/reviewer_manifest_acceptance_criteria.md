@@ -6,8 +6,10 @@ Use this reference for stage-scoped reviewer seeds.
 
 - `.manifests/benchmark_review_manifest.json`
 - `.manifests/engineering_plan_review_manifest.json`
-- `.manifests/engineering_execution_review_manifest.json`
+- `.manifests/engineering_execution_handoff_manifest.json`
 - `.manifests/electronics_review_manifest.json`
+
+Note: older docs in this repo may still use the legacy `engineering_execution_review_manifest.json` wording. The live runtime contract uses the handoff name above.
 
 ## Acceptance Criteria
 

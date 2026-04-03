@@ -7,6 +7,20 @@ description: Create or repair Problemologist eval seeds by adding role-based dat
 
 Use this skill when creating or fixing eval seeds for this repo.
 
+## Role-first reading
+
+When you are seeding a row that should look like another agent's output, read the skill(s) for the agent that would normally produce that workspace first. That keeps the seed representative of the real handoff instead of merely schema-valid.
+
+- `benchmark_planner`: `../benchmark-planner/SKILL.md`
+- `benchmark_plan_reviewer`: `../benchmark-planner/SKILL.md`, `../benchmark-coder/SKILL.md`, `../benchmark-plan-reviewer/SKILL.md`
+- `benchmark_coder`: `../benchmark-planner/SKILL.md`, `../benchmark-coder/SKILL.md`, `../benchmark-reviewer/SKILL.md`
+- `benchmark_reviewer`: `../benchmark-planner/SKILL.md`, `../benchmark-coder/SKILL.md`, `../benchmark-reviewer/SKILL.md`
+- `engineer_planner`: `../benchmark-planner/SKILL.md`, `../engineer-planner/SKILL.md`
+- `engineer_plan_reviewer`: `../engineer-planner/SKILL.md`, `../engineer-coder/SKILL.md`, `../engineer-plan-reviewer/SKILL.md`, `../benchmark-reviewer/SKILL.md`
+- `engineer_coder`: `../engineer-planner/SKILL.md`, `../benchmark-planner/SKILL.md`, `../benchmark-coder/SKILL.md`, `../engineer-plan-reviewer/SKILL.md`, `../benchmark-reviewer/SKILL.md`
+- `engineer_execution_reviewer`: `../engineer-coder/SKILL.md`, `../engineer-plan-reviewer/SKILL.md`, `../benchmark-reviewer/SKILL.md`, plus `../../../specs/architecture/agents/handover-contracts.md` when you need the stage contract instead of a local skill file
+- `electronics_reviewer`: `../electronics-engineering/SKILL.md`, `../engineer-planner/SKILL.md`, `../engineer-coder/SKILL.md`
+
 The main rule is simple: non-initial roles do not get plain prompt-only rows. They get seeded workspace files that match the handoff contract for that stage.
 
 Seeded artifacts must already satisfy any deterministic checks that will run before LLM evaluation; numeric, enum, and derived fields should be materialized exactly, not approximated later.
@@ -22,11 +36,16 @@ For the detailed seed-hygiene checklist, contract expectations, and command snip
 - [references/benchmark_definition_yaml_acceptance_criteria.md](references/benchmark_definition_yaml_acceptance_criteria.md)
 - [references/benchmark_assembly_definition_yaml_acceptance_criteria.md](references/benchmark_assembly_definition_yaml_acceptance_criteria.md)
 - [references/assembly_definition_yaml_acceptance_criteria.md](references/assembly_definition_yaml_acceptance_criteria.md)
+- [references/precise_path_definition_yaml_acceptance_criteria.md](references/precise_path_definition_yaml_acceptance_criteria.md)
+- [references/artifact_inventory.md](references/artifact_inventory.md)
 - [references/reviewer_manifest_acceptance_criteria.md](references/reviewer_manifest_acceptance_criteria.md)
+
+If a filename does not yet have a dedicated acceptance reference, start from `references/file-contract-template.md` and specialize it with the active role contract, validator, and cross-file checks.
+Use `references/artifact_inventory.md` when you need to discover which file families are in scope before authoring the per-file criteria.
 
 ## Read first
 
-Open only what you need, but default to these:
+Open only what you need, but default to these after the role skills above:
 
 1. `specs/desired_architecture.md`
 2. `specs/architecture/agents/handover-contracts.md`
@@ -103,6 +122,8 @@ Use these as the default minimums unless the target role contract requires more.
 - Engineering and electronics roles:
   Follow the exact handoff contract in `specs/architecture/agents/handover-contracts.md`. Do not guess file names.
 
+For engineering eval seeds with motion proof, keep `assembly_definition.yaml.motion_forecast` and `precise_path_definition.yaml` aligned on the same moving parts, build-safe start, contact order, and terminal goal proof. If `plan.md` includes timing or speed math, derive it from the exact waypoint sequence in the precise path and state whether the result is an average-segment envelope or a measured runtime trace.
+
 If the role consumes reviewer decisions, also seed the stage-specific review file under `reviews/`.
 
 ## File-Specific Reference Library
@@ -155,7 +176,7 @@ Reviewer stages are fail-closed.
 - Engineering plan reviewer manifest path:
   `.manifests/engineering_plan_review_manifest.json`
 - Engineering execution reviewer manifest path:
-  `.manifests/engineering_execution_review_manifest.json`
+  `.manifests/engineering_execution_handoff_manifest.json`
 - Electronics reviewer manifest path:
   `.manifests/electronics_review_manifest.json`
 

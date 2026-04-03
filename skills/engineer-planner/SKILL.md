@@ -93,6 +93,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 08. Use `validate_costing_and_price()` before submission and fix the source of any pricing or weight mismatch.
 09. Inspect relevant renders or draft drawings with `preview_drawing()` and media inspection when visual evidence exists.
 10. Call `submit_plan()` only when the handoff is coherent, physically plausible, and ready for implementation.
+11. When motion proof is required, make `assembly_definition.yaml.motion_forecast` the coarse contract and `precise_path_definition.yaml` the denser refinement; keep the same moving parts, preserve the same build-safe first anchor and terminal goal proof, and keep any math in `plan.md` synchronized with the actual waypoint sequence rather than with prose estimates.
 
 ## Plan Rules
 
@@ -111,6 +112,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 - If the plan depends on exact catalog identity, keep provenance explicit rather than substituting anonymous solids.
 - If a placement depends on a real interface, derive it from the joint frame or mating datum instead of a world-space guess.
 - If the plan truly needs more than three DOFs, document that exception explicitly with a standalone `DOF_JUSTIFICATION` marker instead of burying the rationale.
+- If the motion forecast changes, update the matching plan calculations and contact windows in the same revision so the coarse and precise path files cannot drift apart.
 
 ## Drafting And Review
 
