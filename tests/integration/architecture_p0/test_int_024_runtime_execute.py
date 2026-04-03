@@ -37,7 +37,7 @@ def _default_benchmark_parts():
 
 
 def _runtime_validate_command() -> str:
-    return "python script.py"
+    return "python solution_script.py"
 
 
 @pytest.mark.integration_p0
@@ -193,7 +193,7 @@ print(f"VALIDATE_MESSAGE={message}")
         write_script = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="script.py",
+                path="solution_script.py",
                 content=script,
                 overwrite=True,
             ).model_dump(mode="json"),
@@ -260,7 +260,7 @@ print(f"VALIDATE_MESSAGE={message}")
 async def test_int_024_runtime_validate_rejects_transient_shell_state_mismatch():
     """
     INT-024: utils.submission.validate() must fail closed when the live
-    compound differs from the persisted script.py semantic signature.
+    compound differs from the persisted solution_script.py semantic signature.
     """
     session_id = f"INT-024-SIG-{uuid.uuid4().hex[:8]}"
     headers = {"X-Session-ID": session_id}
@@ -289,7 +289,7 @@ PY
         write_script = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="script.py",
+                path="solution_script.py",
                 content=persisted_script,
                 overwrite=True,
             ).model_dump(mode="json"),
@@ -377,7 +377,7 @@ print(f"VALIDATE_MESSAGE={message}")
         write_script = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="script.py",
+                path="solution_script.py",
                 content=script,
                 overwrite=True,
             ).model_dump(mode="json"),
@@ -415,10 +415,12 @@ print(f"VALIDATE_MESSAGE={message}")
 @pytest.mark.integration_p0
 @pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.asyncio
-async def test_int_024_runtime_validate_rejects_translated_top_level_parts():
+async def test_int_024_runtime_validate_accepts_translated_top_level_parts_with_exact_solution_script():
     """
-    INT-024: benchmark validation fails closed when top-level parts are placed
-    with translated geometry instead of location-based transforms.
+    INT-024: benchmark validation should accept the exact authored
+    solution_script.py contract when top-level parts are placed with
+    build123d.translate(), since the transform carries explicit location
+    metadata in the current runtime.
     """
     session_id = f"INT-024-LOC-{uuid.uuid4().hex[:8]}"
     headers = {"X-Session-ID": session_id}
@@ -482,7 +484,7 @@ print(f"VALIDATE_MESSAGE={message}")
         write_script = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="script.py",
+                path="solution_script.py",
                 content=script,
                 overwrite=True,
             ).model_dump(mode="json"),
@@ -513,8 +515,8 @@ print(f"VALIDATE_MESSAGE={message}")
         assert exec_response.status_code == 200, exec_response.text
         data = ExecuteResponse.model_validate(exec_response.json())
         assert data.exit_code == 0
-        assert "VALIDATE_SUCCESS=False" in data.stdout
-        assert "Use `.move(Location(...))` or `.moved(Location(...))`" in data.stdout
+        assert "VALIDATE_SUCCESS=True" in data.stdout
+        assert "Validation successful" in data.stdout
 
 
 @pytest.mark.integration_p0
@@ -559,7 +561,7 @@ print(f"VALIDATE_MESSAGE={message}")
         write_script = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="script.py",
+                path="solution_script.py",
                 content=script,
                 overwrite=True,
             ).model_dump(mode="json"),
@@ -635,7 +637,7 @@ print(f"VALIDATE_MESSAGE={message}")
         write_script = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="script.py",
+                path="solution_script.py",
                 content=script,
                 overwrite=True,
             ).model_dump(mode="json"),
