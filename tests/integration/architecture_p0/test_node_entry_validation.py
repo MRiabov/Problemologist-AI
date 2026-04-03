@@ -35,6 +35,9 @@ from shared.models.schemas import (
     DraftingSheet,
     DraftingView,
     EntryValidationContext,
+    MotionForecast,
+    MotionForecastAnchor,
+    MotionForecastContact,
     MovedObject,
     ObjectivesSection,
     PartConfig,
@@ -207,6 +210,201 @@ def _drafting_validation_payloads(
     return (
         benchmark_definition.model_dump(mode="json", by_alias=True, exclude_none=True),
         assembly_definition.model_dump(mode="json", by_alias=True, exclude_none=True),
+    )
+
+
+def _motion_forecast_validation_payloads(
+    *,
+    first_anchor_pos: tuple[float, float, float],
+    terminal_anchor_pos: tuple[float, float, float],
+) -> tuple[dict[str, object], dict[str, object]]:
+    benchmark_definition = BenchmarkDefinition(
+        objectives=ObjectivesSection(
+            goal_zone=BoundingBox(min=(10.0, 10.0, 0.0), max=(20.0, 20.0, 10.0)),
+            forbid_zones=[],
+            build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 20.0)),
+        ),
+        physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
+        simulation_bounds=BoundingBox(
+            min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
+        ),
+        moved_object=MovedObject(
+            label="target_box",
+            shape="sphere",
+            material_id="aluminum_6061",
+            start_position=(0.0, 0.0, 5.0),
+            runtime_jitter=(0.0, 0.0, 0.0),
+        ),
+        constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+        benchmark_parts=_default_benchmark_parts(),
+    )
+    motion_forecast = MotionForecast(
+        moving_part_names=["moving_bracket"],
+        sample_stride_s=0.5,
+        anchors=[
+            MotionForecastAnchor(
+                t_s=0.0,
+                reference_point="build_zone_start",
+                pos_mm=first_anchor_pos,
+                rot_deg=(0.0, 0.0, 0.0),
+                position_tolerance_mm=(1.2, 1.2, 1.2),
+                rotation_tolerance_deg=(0.1, 0.1, 5.0),
+                first_contacts=[
+                    MotionForecastContact(
+                        order=1,
+                        surface="fixture_top",
+                        first_touch_window_s=(0.2, 0.4),
+                    )
+                ],
+                build_zone_valid=True,
+            ),
+            MotionForecastAnchor(
+                t_s=1.5,
+                reference_point="goal_zone_contact",
+                pos_mm=terminal_anchor_pos,
+                rot_deg=(0.0, 0.0, 0.0),
+                position_tolerance_mm=(1.2, 1.2, 1.2),
+                rotation_tolerance_deg=(0.1, 0.1, 5.0),
+                goal_zone_contact=True,
+            ),
+        ],
+    )
+    assembly_definition = AssemblyDefinition(
+        version="1.0",
+        constraints=AssemblyConstraints(
+            planner_target_max_unit_cost_usd=90.0,
+            planner_target_max_weight_g=900.0,
+        ),
+        manufactured_parts=[],
+        cots_parts=[],
+        final_assembly=[
+            PartConfig(
+                name="moving_bracket",
+                config=AssemblyPartConfig(dofs=["slide_z"]),
+            )
+        ],
+        motion_forecast=motion_forecast,
+        totals=CostTotals(
+            estimated_unit_cost_usd=0.0,
+            estimated_weight_g=0.0,
+            estimate_confidence="high",
+        ),
+    )
+    return (
+        benchmark_definition.model_dump(mode="json", by_alias=True, exclude_none=True),
+        assembly_definition.model_dump(mode="json", by_alias=True, exclude_none=True),
+    )
+
+
+def _engineering_motion_plan_md(moving_part_name: str = "moving_bracket") -> str:
+    return f"""## 1. Solution Overview
+- Move the approved part from the build zone into the goal zone.
+
+## 2. Parts List
+- {moving_part_name}
+
+## 3. Assembly Strategy
+1. Assemble the moving part inside the build zone.
+2. Guide it toward the goal zone using the approved coarse forecast.
+
+## 4. Assumption Register
+- Assumption: The planner relies on source-backed inputs that must be traceable.
+
+## 5. Detailed Calculations
+| ID | Problem / Decision | Result | Impact |
+| -- | -- | -- | -- |
+| CALC-001 | Example calculation supporting the plan | `N/A` | Replace this placeholder with the actual derived limit. |
+
+### CALC-001: Example calculation supporting the plan
+
+#### Problem Statement
+
+The plan needs a traceable calculation instead of a freeform claim.
+
+#### Assumptions
+
+- `ASSUMP-001`: The input values are taken from the benchmark or assembly definition.
+
+#### Derivation
+
+- Compute the binding quantity from the declared inputs.
+
+#### Worst-Case Check
+
+- The derived limit must hold under the worst-case allowed inputs.
+
+#### Result
+
+- The design remains valid only if the derived limit is respected.
+
+#### Design Impact
+
+- Update the design or inputs if the calculation changes.
+
+#### Cross-References
+
+- `plan.md#3-assembly-strategy`
+
+## 6. Critical Constraints / Operating Envelope
+- Constraint: The mechanism must remain inside the derived operating limits.
+
+## 7. Cost & Weight Budget
+- Stay within budget.
+
+## 8. Risk Assessment
+- Minimal risk.
+"""
+
+
+def _engineering_motion_todo_md() -> str:
+    return "- [ ] Review the motion forecast\n"
+
+
+async def _upload_engineer_motion_seed_workspace(
+    worker: WorkerClient,
+    *,
+    benchmark_definition: BenchmarkDefinition | dict[str, object],
+    assembly_definition: AssemblyDefinition | dict[str, object],
+) -> None:
+    benchmark_payload = (
+        benchmark_definition.model_dump(mode="json", by_alias=True, exclude_none=True)
+        if isinstance(benchmark_definition, BenchmarkDefinition)
+        else benchmark_definition
+    )
+    assembly_payload = (
+        assembly_definition.model_dump(mode="json", by_alias=True, exclude_none=True)
+        if isinstance(assembly_definition, AssemblyDefinition)
+        else assembly_definition
+    )
+    await worker.upload_file(
+        "plan.md",
+        _engineering_motion_plan_md().encode("utf-8"),
+        bypass_agent_permissions=True,
+    )
+    await worker.upload_file(
+        "todo.md",
+        _engineering_motion_todo_md().encode("utf-8"),
+        bypass_agent_permissions=True,
+    )
+    await worker.upload_file(
+        "benchmark_definition.yaml",
+        yaml.safe_dump(benchmark_payload, sort_keys=False).encode("utf-8"),
+        bypass_agent_permissions=True,
+    )
+    await worker.upload_file(
+        "assembly_definition.yaml",
+        yaml.safe_dump(assembly_payload, sort_keys=False).encode("utf-8"),
+        bypass_agent_permissions=True,
+    )
+    await worker.upload_file(
+        "benchmark_script.py",
+        b"# benchmark placeholder\n",
+        bypass_agent_permissions=True,
+    )
+    await worker.upload_file(
+        "manufacturing_config.yaml",
+        REPO_MANUFACTURING_CONFIG.encode("utf-8"),
+        bypass_agent_permissions=True,
     )
 
 
@@ -1085,12 +1283,12 @@ async def test_int_184_seeded_workspace_rejects_invalid_drafting_contract(
                 "## 5. Detailed Calculations\n"
                 "| ID | Problem / Decision | Result | Impact |\n"
                 "| -- | -- | -- | -- |\n"
-                "| CALC-001 | Example calculation supporting the plan | \`N/A\` | Replace this placeholder with the actual derived limit. |\n"
+                "| CALC-001 | Example calculation supporting the plan | `N/A` | Replace this placeholder with the actual derived limit. |\n"
                 "\n### CALC-001: Example calculation supporting the plan\n"
                 "\n#### Problem Statement\n"
                 "\nThe plan needs a traceable calculation instead of a freeform claim.\n"
                 "\n#### Assumptions\n"
-                "\n- \`ASSUMP-001\`: The input values are taken from the benchmark or assembly definition.\n"
+                "\n- `ASSUMP-001`: The input values are taken from the benchmark or assembly definition.\n"
                 "\n#### Derivation\n"
                 "\n- Compute the binding quantity from the declared inputs.\n"
                 "\n#### Worst-Case Check\n"
@@ -1100,7 +1298,7 @@ async def test_int_184_seeded_workspace_rejects_invalid_drafting_contract(
                 "\n#### Design Impact\n"
                 "\n- Update the design or inputs if the calculation changes.\n"
                 "\n#### Cross-References\n"
-                "\n- \`plan.md#3-assembly-strategy\`\n"
+                "\n- `plan.md#3-assembly-strategy`\n"
                 "\n"
                 "## 6. Critical Constraints / Operating Envelope\n"
                 "- Constraint: The mechanism must remain inside the derived operating limits.\n"
@@ -1534,6 +1732,110 @@ async def test_int_184_engineer_planner_rejects_stale_benchmark_bundle():
             trace.name == "benchmark_handoff_validation_failed"
             for trace in (episode.traces or [])
         )
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_184_seeded_workspace_rejects_motion_forecast_missing_build_zone_anchor(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """
+    INT-184: Seeded engineer-plan-reviewer entry must reject motion forecasts
+    whose first anchor is not build-zone valid in world space.
+    """
+    drafting_config = _agents_config_with_technical_drawing_modes(
+        engineer_mode=DraftingMode.OFF,
+        benchmark_mode=DraftingMode.OFF,
+    )
+    monkeypatch.setattr(
+        "controller.agent.node_entry_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+    monkeypatch.setattr(
+        "worker_heavy.utils.file_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+
+    session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        benchmark_definition, assembly_definition = (
+            _motion_forecast_validation_payloads(
+                first_anchor_pos=(40.0, 40.0, 5.0),
+                terminal_anchor_pos=(12.0, 12.0, 5.0),
+            )
+        )
+        await _upload_engineer_motion_seed_workspace(
+            worker,
+            benchmark_definition=benchmark_definition,
+            assembly_definition=assembly_definition,
+        )
+        errors = await validate_seeded_workspace_handoff_artifacts(
+            worker_client=worker,
+            target_node=AgentName.ENGINEER_PLAN_REVIEWER,
+        )
+    finally:
+        await worker.aclose()
+
+    assert errors, "Expected the motion forecast endpoint check to fail."
+    assert any(error.artifact_path == "assembly_definition.yaml" for error in errors)
+    assert any(
+        "motion_forecast" in error.message.lower()
+        and "build_zone" in error.message.lower()
+        for error in errors
+    ), errors
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_184_seeded_workspace_rejects_motion_forecast_missing_goal_zone_proof(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """
+    INT-184: Seeded engineer-plan-reviewer entry must reject motion forecasts
+    whose terminal anchor does not explicitly prove goal-zone entry/contact.
+    """
+    drafting_config = _agents_config_with_technical_drawing_modes(
+        engineer_mode=DraftingMode.OFF,
+        benchmark_mode=DraftingMode.OFF,
+    )
+    monkeypatch.setattr(
+        "controller.agent.node_entry_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+    monkeypatch.setattr(
+        "worker_heavy.utils.file_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+
+    session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        benchmark_definition, assembly_definition = (
+            _motion_forecast_validation_payloads(
+                first_anchor_pos=(0.0, 0.0, 5.0),
+                terminal_anchor_pos=(40.0, 40.0, 5.0),
+            )
+        )
+        await _upload_engineer_motion_seed_workspace(
+            worker,
+            benchmark_definition=benchmark_definition,
+            assembly_definition=assembly_definition,
+        )
+        errors = await validate_seeded_workspace_handoff_artifacts(
+            worker_client=worker,
+            target_node=AgentName.ENGINEER_PLAN_REVIEWER,
+        )
+    finally:
+        await worker.aclose()
+
+    assert errors, "Expected the motion forecast endpoint check to fail."
+    assert any(error.artifact_path == "assembly_definition.yaml" for error in errors)
+    assert any(
+        "motion_forecast" in error.message.lower()
+        and "goal_zone" in error.message.lower()
+        for error in errors
+    ), errors
 
 
 @pytest.mark.integration_p0

@@ -9,6 +9,7 @@ BENCHMARK_PLAN_EVIDENCE_SCRIPT_PATH = "benchmark_plan_evidence_script.py"
 BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH = (
     "benchmark_plan_technical_drawing_script.py"
 )
+PRECISE_PATH_DEFINITION_PATH = "precise_path_definition.yaml"
 SOLUTION_SCRIPT_PATH = "solution_script.py"
 SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH = "solution_plan_evidence_script.py"
 SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH = (

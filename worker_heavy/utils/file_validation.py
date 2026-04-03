@@ -33,8 +33,10 @@ from shared.models.schemas import (
     BenchmarkDefinition,
     CotsPartEstimate,
     ManufacturedPartEstimate,
+    MotionForecast,
     PartConfig,
     PlanRefusalFrontmatter,
+    PrecisePathDefinition,
     ReviewFrontmatter,
     SubassemblyEstimate,
 )
@@ -975,6 +977,282 @@ def _iter_benchmark_motion_configs(
     return motion_configs
 
 
+def _point_within_bounds(point: tuple[float, float, float], bounds: Any) -> bool:
+    return all(
+        float(bounds.min[index]) <= float(point[index]) <= float(bounds.max[index])
+        for index in range(3)
+    )
+
+
+def _motion_forecast_policy_role_for_stage(
+    node_type: AgentName | str | None,
+) -> AgentName:
+    node_value = (
+        node_type.value if isinstance(node_type, AgentName) else str(node_type or "")
+    )
+    if node_value in {
+        AgentName.BENCHMARK_PLANNER.value,
+        AgentName.BENCHMARK_PLAN_REVIEWER.value,
+        AgentName.BENCHMARK_CODER.value,
+        AgentName.BENCHMARK_REVIEWER.value,
+    }:
+        return AgentName.BENCHMARK_PLANNER
+    return AgentName.ENGINEER_PLANNER
+
+
+def _validate_motion_forecast_budget(
+    *,
+    artifact_name: str,
+    budget_role: AgentName,
+    sample_stride_s: float,
+    anchors: list[Any],
+) -> list[str]:
+    try:
+        policy = load_agents_config().get_motion_forecast_policy(budget_role)
+    except Exception as exc:
+        return [f"{artifact_name}: unable to load motion forecast policy: {exc}"]
+
+    errors: list[str] = []
+    if sample_stride_s - policy.sample_stride_s > 1e-9:
+        errors.append(
+            f"{artifact_name}: sample_stride_s ({sample_stride_s:.3f}s) exceeds "
+            f"the configured budget for {budget_role.value} "
+            f"({policy.sample_stride_s:.3f}s)"
+        )
+
+    for anchor_index, anchor in enumerate(anchors):
+        if any(
+            float(observed) - float(limit) > 1e-9
+            for observed, limit in zip(
+                anchor.position_tolerance_mm,
+                policy.position_tolerance_mm,
+                strict=True,
+            )
+        ):
+            errors.append(
+                f"{artifact_name}: anchors[{anchor_index}].position_tolerance_mm "
+                "exceeds the configured motion forecast budget"
+            )
+        if anchor.rotation_tolerance_deg is not None and any(
+            float(observed) - float(limit) > 1e-9
+            for observed, limit in zip(
+                anchor.rotation_tolerance_deg,
+                policy.rotation_tolerance_deg,
+                strict=True,
+            )
+        ):
+            errors.append(
+                f"{artifact_name}: anchors[{anchor_index}].rotation_tolerance_deg "
+                "exceeds the configured motion forecast budget"
+            )
+
+    return errors
+
+
+def _validate_motion_endpoint_positions(
+    *,
+    artifact_name: str,
+    benchmark_definition: BenchmarkDefinition,
+    first_anchor: Any,
+    last_anchor: Any,
+    terminal_event: Any | None,
+) -> list[str]:
+    errors: list[str] = []
+    build_zone = benchmark_definition.objectives.build_zone
+    goal_zone = benchmark_definition.objectives.goal_zone
+
+    if not _point_within_bounds(first_anchor.pos_mm, build_zone):
+        errors.append(
+            f"{artifact_name}: the first motion anchor must lie within "
+            "benchmark_definition.objectives.build_zone"
+        )
+
+    if last_anchor.goal_zone_contact or last_anchor.goal_zone_entry:
+        if not _point_within_bounds(last_anchor.pos_mm, goal_zone):
+            errors.append(
+                f"{artifact_name}: the terminal motion anchor must lie within "
+                "benchmark_definition.objectives.goal_zone"
+            )
+    elif terminal_event is not None:
+        if terminal_event.zone_name != "goal_zone":
+            errors.append(
+                f"{artifact_name}: terminal_event.zone_name must be 'goal_zone'"
+            )
+        if not _point_within_bounds(terminal_event.pos_mm, goal_zone):
+            errors.append(
+                f"{artifact_name}: terminal_event.pos_mm must lie within "
+                "benchmark_definition.objectives.goal_zone"
+            )
+    else:
+        errors.append(
+            f"{artifact_name}: motion forecast must prove the terminal goal-zone "
+            "entry/contact in the last anchor or terminal_event"
+        )
+
+    return errors
+
+
+def _validate_motion_path_contract(
+    *,
+    artifact_name: str,
+    benchmark_definition: BenchmarkDefinition,
+    moving_part_names: list[str],
+    sample_stride_s: float,
+    anchors: list[Any],
+    terminal_event: Any | None,
+    budget_role: AgentName,
+    expected_moving_part_names: list[str] | None = None,
+) -> list[str]:
+    errors: list[str] = []
+
+    expected_names = sorted(
+        name.strip() for name in (expected_moving_part_names or []) if name.strip()
+    )
+    observed_names = sorted(
+        name.strip() for name in moving_part_names if str(name).strip()
+    )
+    if expected_moving_part_names is not None and observed_names != expected_names:
+        errors.append(
+            f"{artifact_name}: moving_part_names {observed_names} do not match "
+            f"the expected moving parts {expected_names}"
+        )
+    elif expected_moving_part_names is None and not observed_names:
+        errors.append(f"{artifact_name}: moving_part_names must not be empty")
+
+    if len(anchors) < 2:
+        errors.append(f"{artifact_name}: motion path must contain at least two anchors")
+        return errors
+
+    errors.extend(
+        _validate_motion_forecast_budget(
+            artifact_name=artifact_name,
+            budget_role=budget_role,
+            sample_stride_s=sample_stride_s,
+            anchors=anchors,
+        )
+    )
+    errors.extend(
+        _validate_motion_endpoint_positions(
+            artifact_name=artifact_name,
+            benchmark_definition=benchmark_definition,
+            first_anchor=anchors[0],
+            last_anchor=anchors[-1],
+            terminal_event=terminal_event,
+        )
+    )
+    return errors
+
+
+def validate_precise_path_definition_yaml(
+    content: str,
+    *,
+    benchmark_definition: BenchmarkDefinition | None = None,
+    coarse_motion_forecast: MotionForecast | None = None,
+    expected_moving_part_names: list[str] | None = None,
+    session_id: str | None = None,
+) -> tuple[bool, PrecisePathDefinition | list[str]]:
+    try:
+        data = yaml.safe_load(content)
+        if data is None:
+            return False, ["Empty or invalid YAML content"]
+
+        found_placeholders = _find_template_placeholders(
+            "precise_path_definition.yaml", content
+        )
+        if found_placeholders:
+            return False, [
+                "precise_path_definition.yaml still contains template placeholders: "
+                f"{found_placeholders}"
+            ]
+
+        precise_path = PrecisePathDefinition(**data)
+    except yaml.YAMLError as e:
+        logger.error(
+            "precise_path_definition_yaml_parse_error",
+            error=str(e),
+            session_id=session_id,
+        )
+        return False, [f"YAML parse error: {e}"]
+    except ValidationError as e:
+        errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
+        logger.error(
+            "precise_path_definition_yaml_validation_error",
+            errors=errors,
+            session_id=session_id,
+        )
+        return False, errors
+
+    if benchmark_definition is None:
+        return True, precise_path
+
+    coarse_names = (
+        coarse_motion_forecast.moving_part_names
+        if coarse_motion_forecast is not None
+        else expected_moving_part_names
+    )
+    coarse_stride = (
+        coarse_motion_forecast.sample_stride_s
+        if coarse_motion_forecast is not None
+        else None
+    )
+    try:
+        coder_budget = load_agents_config().get_motion_forecast_policy(
+            AgentName.ENGINEER_CODER
+        )
+    except Exception as exc:
+        return False, [
+            f"precise_path_definition.yaml: unable to load motion forecast policy: {exc}"
+        ]
+
+    errors: list[str] = _validate_motion_path_contract(
+        artifact_name="precise_path_definition.yaml",
+        benchmark_definition=benchmark_definition,
+        moving_part_names=precise_path.moving_part_names,
+        sample_stride_s=precise_path.sample_stride_s,
+        anchors=precise_path.anchors,
+        terminal_event=precise_path.terminal_event,
+        budget_role=AgentName.ENGINEER_CODER,
+        expected_moving_part_names=coarse_names,
+    )
+
+    if (
+        coarse_stride is not None
+        and precise_path.sample_stride_s - coarse_stride > 1e-9
+    ):
+        errors.append(
+            "precise_path_definition.yaml: sample_stride_s "
+            f"({precise_path.sample_stride_s:.3f}s) must be less than or equal to "
+            "the coarse motion forecast sample_stride_s "
+            f"({coarse_stride:.3f}s)"
+        )
+    if precise_path.sample_stride_s - coder_budget.sample_stride_s > 1e-9:
+        errors.append(
+            "precise_path_definition.yaml: sample_stride_s "
+            f"({precise_path.sample_stride_s:.3f}s) exceeds the engineer_coder "
+            f"budget ({coder_budget.sample_stride_s:.3f}s)"
+        )
+
+    if coarse_motion_forecast is not None:
+        coarse_set = {
+            name.strip()
+            for name in coarse_motion_forecast.moving_part_names
+            if name.strip()
+        }
+        precise_set = {
+            name.strip() for name in precise_path.moving_part_names if name.strip()
+        }
+        if precise_set != coarse_set:
+            errors.append(
+                "precise_path_definition.yaml: moving_part_names must match the "
+                "approved coarse motion forecast"
+            )
+
+    if errors:
+        return False, errors
+    logger.info("precise_path_definition_yaml_valid", session_id=session_id)
+    return True, precise_path
+
+
 def validate_benchmark_definition_yaml(
     content: str, session_id: str | None = None
 ) -> tuple[bool, BenchmarkDefinition | list[str]]:
@@ -1475,6 +1753,16 @@ def validate_benchmark_assembly_motion_contract(
         if is_valid_refusal:
             return errors
 
+    if assembly_definition.motion_forecast is not None:
+        errors.append(
+            _benchmark_refusal_error(
+                BenchmarkRefusalReason.CONTRADICTORY_CONSTRAINTS,
+                "benchmark_assembly_definition.yaml must not declare motion_forecast; "
+                "benchmark motion is encoded through final_assembly DOFs instead",
+            )
+        )
+        return errors
+
     benchmark_part_ids = (
         {part.part_id for part in benchmark_definition.benchmark_parts}
         if benchmark_definition is not None
@@ -1861,6 +2149,29 @@ def validate_planner_handoff_cross_contract(
                 f"{expected_label} ({expected_value:.2f})"
             )
 
+    moving_part_names = [
+        part.part_name for part in assembly_definition.moving_parts if part.dofs
+    ]
+    motion_forecast = assembly_definition.motion_forecast
+    if motion_forecast is not None:
+        errors.extend(
+            _validate_motion_path_contract(
+                artifact_name="assembly_definition.yaml.motion_forecast",
+                benchmark_definition=benchmark_definition,
+                moving_part_names=motion_forecast.moving_part_names,
+                sample_stride_s=motion_forecast.sample_stride_s,
+                anchors=motion_forecast.anchors,
+                terminal_event=motion_forecast.terminal_event,
+                budget_role=_motion_forecast_policy_role_for_stage(planner_node_type),
+                expected_moving_part_names=moving_part_names,
+            )
+        )
+    elif is_engineer_planner and moving_part_names:
+        errors.append(
+            "assembly_definition.motion_forecast is required when final_assembly "
+            "contains moving engineer-owned parts"
+        )
+
     errors.extend(
         validate_exact_planner_cost_contract(
             assembly_definition=assembly_definition,
@@ -1995,6 +2306,7 @@ def validate_node_output(
     errors = []
     benchmark_definition_model: BenchmarkDefinition | None = None
     assembly_definition_models: dict[str, AssemblyDefinition] = {}
+    precise_path_definition_content: str | None = None
     effective_config = manufacturing_config
     try:
         node_enum = (
@@ -2196,6 +2508,8 @@ def validate_node_output(
                     )
                     if motion_errors:
                         errors.extend([f"{filename}: {e}" for e in motion_errors])
+        elif filename == "precise_path_definition.yaml":
+            precise_path_definition_content = content
         elif drafting_required and filename.endswith("_technical_drawing_script.py"):
             errors.extend(
                 _technical_drawing_script_imports_and_calls_technical_drawing(
@@ -2254,6 +2568,32 @@ def validate_node_output(
                 errors.extend(
                     [f"{filename}: {message}" for message in cross_contract_errors]
                 )
+
+    engineering_assembly_definition_model = assembly_definition_models.get(
+        "assembly_definition.yaml"
+    )
+    if precise_path_definition_content is not None:
+        is_valid, precise_result = validate_precise_path_definition_yaml(
+            precise_path_definition_content,
+            benchmark_definition=benchmark_definition_model,
+            coarse_motion_forecast=(
+                engineering_assembly_definition_model.motion_forecast
+                if engineering_assembly_definition_model is not None
+                else None
+            ),
+            expected_moving_part_names=(
+                [
+                    part.part_name
+                    for part in engineering_assembly_definition_model.moving_parts
+                    if part.dofs
+                ]
+                if engineering_assembly_definition_model is not None
+                else None
+            ),
+            session_id=session_id,
+        )
+        if not is_valid and isinstance(precise_result, list):
+            errors.extend(precise_result)
 
     return len(errors) == 0, errors
 

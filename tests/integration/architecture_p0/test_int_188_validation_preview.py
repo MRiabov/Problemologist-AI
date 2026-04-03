@@ -926,13 +926,17 @@ def build():
             assert preview_data.view_count == 1
             assert preview_data.image_path is not None
             assert preview_data.image_path.endswith(".png")
-            assert preview_data.render_blobs_base64
-            assert any(
-                path.endswith(".svg") for path in preview_data.render_blobs_base64
+            assert (
+                preview_data.image_path in preview_data.object_store_keys
+                or preview_data.image_path in preview_data.render_blobs_base64
             )
-            assert any(
-                path.endswith(".dxf") for path in preview_data.render_blobs_base64
-            )
+            assert preview_data.render_blobs_base64 or preview_data.object_store_keys
+            for suffix in (".svg", ".dxf", "render_manifest.json"):
+                assert any(
+                    path.endswith(suffix) for path in preview_data.object_store_keys
+                ) or any(
+                    path.endswith(suffix) for path in preview_data.render_blobs_base64
+                ), suffix
             assert preview_data.render_manifest_json is not None
 
             ls_resp = await client.post(

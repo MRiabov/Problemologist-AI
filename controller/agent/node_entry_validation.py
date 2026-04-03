@@ -79,6 +79,7 @@ from worker_heavy.utils.file_validation import (
     validate_plan_md_structure,
     validate_plan_refusal,
     validate_planner_handoff_cross_contract,
+    validate_precise_path_definition_yaml,
 )
 
 REASON_OK = "ok"
@@ -936,6 +937,7 @@ async def validate_seeded_workspace_handoff_artifacts(
     errors: list[NodeEntryValidationError] = []
     contents: dict[str, str] = {}
     benchmark_definition_model: BenchmarkDefinition | None = None
+    assembly_definition_model: AssemblyDefinition | None = None
     benchmark_assembly_definition_model: AssemblyDefinition | None = None
     manufacturing_config_model = None
 
@@ -1102,6 +1104,38 @@ async def validate_seeded_workspace_handoff_artifacts(
                         )
                         for message in motion_errors
                     )
+                else:
+                    assembly_definition_model = assembly_result
+            continue
+
+        if rel_path == "precise_path_definition.yaml":
+            is_valid, precise_result = validate_precise_path_definition_yaml(
+                content,
+                benchmark_definition=benchmark_definition_model,
+                coarse_motion_forecast=(
+                    assembly_definition_model.motion_forecast
+                    if assembly_definition_model is not None
+                    else None
+                ),
+                expected_moving_part_names=(
+                    [
+                        part.part_name
+                        for part in assembly_definition_model.moving_parts
+                        if part.dofs
+                    ]
+                    if assembly_definition_model is not None
+                    else None
+                ),
+                session_id=worker_client.session_id,
+            )
+            if not is_valid and isinstance(precise_result, list):
+                errors.extend(
+                    _seeded_schema_error(
+                        message=message,
+                        artifact_path=rel_path,
+                    )
+                    for message in precise_result
+                )
             continue
 
         try:

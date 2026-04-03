@@ -287,7 +287,7 @@ def render_technical_drawing_preview(
     view_specs: list[PreviewViewSpec] = []
     render_blobs_base64: dict[str, str] = {}
     object_store_keys: dict[str, str] = {}
-    png_upload_jobs: list[tuple[str, Path]] = []
+    artifact_upload_jobs: list[tuple[str, Path]] = []
     first_image_path: Path | None = None
     preview_client = _preview_storage_client()
 
@@ -329,47 +329,18 @@ def render_technical_drawing_preview(
             view_index=index,
             siblings=RenderSiblingPaths(rgb=png_rel, svg=svg_rel, dxf=dxf_rel),
         )
-        png_upload_jobs.append((png_rel, png_path))
-        render_blobs_base64[svg_rel] = base64.b64encode(svg_path.read_bytes()).decode(
-            "ascii"
-        )
-        render_blobs_base64[dxf_rel] = base64.b64encode(dxf_path.read_bytes()).decode(
-            "ascii"
+        artifact_upload_jobs.extend(
+            [
+                (png_rel, png_path),
+                (svg_rel, svg_path),
+                (dxf_rel, dxf_path),
+            ]
         )
         if first_image_path is None:
             first_image_path = png_path
 
     if first_image_path is None:
         raise ValueError("drafting preview produced no output")
-
-    if preview_client is not None and png_upload_jobs:
-        with ThreadPoolExecutor(max_workers=min(8, len(png_upload_jobs))) as executor:
-            futures = {
-                executor.submit(preview_client.upload_file, png_path, png_rel): (
-                    png_rel,
-                    png_path,
-                )
-                for png_rel, png_path in png_upload_jobs
-            }
-            for future in as_completed(futures):
-                png_rel, png_path = futures[future]
-                try:
-                    object_store_keys[png_rel] = future.result()
-                except Exception:
-                    logger.warning(
-                        "technical_drawing_preview_object_store_upload_failed",
-                        session_id=session_id,
-                        agent_role=agent_role,
-                        image_path=str(png_path),
-                    )
-                    render_blobs_base64[png_rel] = base64.b64encode(
-                        png_path.read_bytes()
-                    ).decode("ascii")
-    else:
-        for png_rel, png_path in png_upload_jobs:
-            render_blobs_base64[png_rel] = base64.b64encode(
-                png_path.read_bytes()
-            ).decode("ascii")
 
     manifest = build_render_manifest(
         artifacts,
@@ -382,9 +353,41 @@ def render_technical_drawing_preview(
     )
     manifest_path = output_dir / "render_manifest.json"
     manifest_path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
-    render_blobs_base64[str(manifest_path.relative_to(root))] = base64.b64encode(
-        manifest_path.read_bytes()
-    ).decode("ascii")
+    manifest_rel = str(manifest_path.relative_to(root))
+    artifact_upload_jobs.append((manifest_rel, manifest_path))
+
+    if preview_client is not None and artifact_upload_jobs:
+        with ThreadPoolExecutor(
+            max_workers=min(8, len(artifact_upload_jobs))
+        ) as executor:
+            futures = {
+                executor.submit(preview_client.upload_file, artifact_path, rel_path): (
+                    rel_path,
+                    artifact_path,
+                )
+                for rel_path, artifact_path in artifact_upload_jobs
+            }
+            for future in as_completed(futures):
+                rel_path, artifact_path = futures[future]
+                try:
+                    object_store_keys[rel_path] = future.result()
+                except Exception:
+                    logger.warning(
+                        "technical_drawing_preview_object_store_upload_failed",
+                        session_id=session_id,
+                        agent_role=agent_role,
+                        image_path=str(artifact_path),
+                    )
+                    render_blobs_base64[rel_path] = base64.b64encode(
+                        artifact_path.read_bytes()
+                    ).decode("ascii")
+    else:
+        for rel_path, artifact_path in artifact_upload_jobs:
+            render_blobs_base64[rel_path] = base64.b64encode(
+                artifact_path.read_bytes()
+            ).decode("ascii")
+
+    first_image_rel = str(first_image_path.relative_to(root))
 
     response = PreviewDesignResponse(
         success=True,
@@ -394,16 +397,16 @@ def render_technical_drawing_preview(
         queued=False,
         view_count=len(view_specs),
         view_specs=view_specs,
-        artifact_path=str(first_image_path.relative_to(root)),
-        manifest_path=str(manifest_path.relative_to(root)),
+        artifact_path=first_image_rel,
+        manifest_path=manifest_rel,
         rendering_type=PreviewRenderingType.RGB,
         drafting=True,
         pitch=None,
         yaw=None,
-        image_path=str(first_image_path.relative_to(root)),
+        image_path=first_image_rel,
         image_bytes_base64=(
             None
-            if object_store_keys
+            if first_image_rel in object_store_keys
             else base64.b64encode(first_image_path.read_bytes()).decode("ascii")
         ),
         render_blobs_base64=render_blobs_base64,

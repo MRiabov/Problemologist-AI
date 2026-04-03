@@ -88,6 +88,19 @@ execution:
       timeout_seconds: 120
       max_turns: 150
       max_total_tokens: 400000
+motion_forecast:
+  benchmark_planner:
+    sample_stride_s: 2.0
+    position_tolerance_mm: [6.0, 6.0, 6.0]
+    rotation_tolerance_deg: [0.1, 0.1, 15.0]
+  engineer_planner:
+    sample_stride_s: 0.5
+    position_tolerance_mm: [1.2, 1.2, 1.2]
+    rotation_tolerance_deg: [0.1, 0.1, 5.0]
+  engineer_coder:
+    sample_stride_s: 0.3
+    position_tolerance_mm: [0.6, 0.6, 0.6]
+    rotation_tolerance_deg: [0.1, 0.1, 2.0]
 defaults:
   reasoning_effort: high
   filesystem_permissions:
@@ -125,6 +138,7 @@ agents:
         - benchmark_plan_technical_drawing_script.py
         - solution_plan_evidence_script.py
         - solution_plan_technical_drawing_script.py
+        - precise_path_definition.yaml
         - plan.md
         - todo.md
         - journal.md
@@ -149,6 +163,7 @@ agents:
       - reviews/**
       - benchmark_script.py
       - solution_script.py
+      - precise_path_definition.yaml
       - .manifests/**
     tools:
     - list_files
@@ -185,6 +200,7 @@ agents:
         - assembly_definition.yaml
         - benchmark_script.py
         - solution_script.py
+        - precise_path_definition.yaml
         - '**/*.py'
         - reviews/**
         - renders/**
@@ -198,11 +214,12 @@ agents:
         - journal.md
         - renders/**
         - plan_refusal.md
+        - precise_path_definition.yaml
         - plan.md
         - assembly_definition.yaml
         - reviews/engineering-plan-review-decision-round-*.yaml
         - reviews/engineering-plan-review-comments-round-*.yaml
-        deny:
+      deny:
         - skills/**
         - utils/**
         - benchmark_script.py
@@ -294,6 +311,7 @@ agents:
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
         - assembly_definition.yaml
+        - precise_path_definition.yaml
         - plan_refusal.md
         - benchmark_script.py
         - solution_script.py
@@ -343,6 +361,7 @@ agents:
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
         - assembly_definition.yaml
+        - precise_path_definition.yaml
         - plan_refusal.md
         - solution_script.py
         - benchmark_script.py

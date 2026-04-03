@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from shared.script_contracts import BENCHMARK_SCRIPT_PATH, SOLUTION_SCRIPT_PATH
+from shared.script_contracts import (
+    BENCHMARK_SCRIPT_PATH,
+    PRECISE_PATH_DEFINITION_PATH,
+    SOLUTION_SCRIPT_PATH,
+)
 
 ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS: tuple[str, ...] = (
     "benchmark_assembly_definition.yaml",
@@ -67,6 +71,7 @@ SCHEMA_BACKED_HANDOFF_PATHS: tuple[str, ...] = (
     "plan_refusal.md",
     "benchmark_definition.yaml",
     "assembly_definition.yaml",
+    PRECISE_PATH_DEFINITION_PATH,
     "benchmark_assembly_definition.yaml",
     "benchmark_plan_evidence_script.py",
     "benchmark_plan_technical_drawing_script.py",

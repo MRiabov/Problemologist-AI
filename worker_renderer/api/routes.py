@@ -285,8 +285,10 @@ def _persist_preview_scene_bundle(
     return scene_path
 
 
-def _bundle_sidecar_blobs(bundle_root: Path, *, workspace_root: Path) -> dict[str, str]:
-    blobs: dict[str, str] = {}
+def _bundle_sidecar_candidates(
+    bundle_root: Path, *, workspace_root: Path
+) -> dict[str, Path]:
+    candidates: dict[str, Path] = {}
     for rel_path in (
         "preview_scene.json",
         "render_manifest.json",
@@ -295,17 +297,13 @@ def _bundle_sidecar_blobs(bundle_root: Path, *, workspace_root: Path) -> dict[st
     ):
         sidecar_path = bundle_root / rel_path
         if sidecar_path.exists() and sidecar_path.is_file():
-            blobs[str(sidecar_path.relative_to(workspace_root))] = base64.b64encode(
-                sidecar_path.read_bytes()
-            ).decode("ascii")
+            candidates[str(sidecar_path.relative_to(workspace_root))] = sidecar_path
 
     index_path = workspace_root / "renders" / "render_index.jsonl"
     if index_path.exists() and index_path.is_file():
-        blobs[str(index_path.relative_to(workspace_root))] = base64.b64encode(
-            index_path.read_bytes()
-        ).decode("ascii")
+        candidates[str(index_path.relative_to(workspace_root))] = index_path
 
-    return blobs
+    return candidates
 
 
 def _collect_render_artifacts(
@@ -383,11 +381,44 @@ def _collect_render_artifacts(
         for render_path in normalized_render_paths
         if render_path
     }
+    sidecar_candidates: dict[str, Path] = {}
     for bundle_root in sorted(bundle_roots):
         with contextlib.suppress(Exception):
-            render_blobs_base64.update(
-                _bundle_sidecar_blobs(bundle_root, workspace_root=root)
+            sidecar_candidates.update(
+                _bundle_sidecar_candidates(bundle_root, workspace_root=root)
             )
+
+    if sidecar_candidates:
+        if upload_client is None:
+            for rel_key, sidecar_path in sidecar_candidates.items():
+                render_blobs_base64[rel_key] = base64.b64encode(
+                    sidecar_path.read_bytes()
+                ).decode("ascii")
+        else:
+            with ThreadPoolExecutor(
+                max_workers=min(8, len(sidecar_candidates))
+            ) as executor:
+                futures = {
+                    executor.submit(upload_client.upload_file, sidecar_path, rel_key): (
+                        rel_key,
+                        sidecar_path,
+                    )
+                    for rel_key, sidecar_path in sidecar_candidates.items()
+                }
+                for future in as_completed(futures):
+                    rel_key, sidecar_path = futures[future]
+                    try:
+                        object_store_keys[rel_key] = future.result()
+                    except Exception:
+                        logger.warning(
+                            "renderer_sidecar_object_store_upload_failed",
+                            rel_path=rel_key,
+                            session_id=session_id,
+                            path=str(sidecar_path),
+                        )
+                        render_blobs_base64[rel_key] = base64.b64encode(
+                            sidecar_path.read_bytes()
+                        ).decode("ascii")
 
     existing_manifest = None
 

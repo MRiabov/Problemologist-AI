@@ -78,6 +78,8 @@ CoercedTuple3D = Annotated[
     tuple[float, float, float], BeforeValidator(_coerce_to_tuple)
 ]
 CoercedTuple2D = Annotated[tuple[float, float], BeforeValidator(_coerce_to_tuple)]
+NonNegativeFloat = Annotated[float, Field(ge=0)]
+MinimumRotationToleranceFloat = Annotated[float, Field(ge=0.1)]
 MaterialId = Annotated[str, BeforeValidator(_normalize_material_id_text)]
 OptionalMaterialId = Annotated[str, BeforeValidator(_normalize_material_id_text)] | None
 
@@ -256,6 +258,231 @@ class MovingPart(StrictContractModel):
     type: MovingPartType
     dofs: list[str]
     control: MotorControl | None = None
+
+
+class MotionForecastContact(StrictContractModel):
+    """One expected first-touch surface in the planner motion forecast."""
+
+    order: int = Field(ge=1)
+    surface: str
+    first_touch_window_s: CoercedTuple2D | None = None
+
+    @field_validator("surface")
+    @classmethod
+    def validate_non_empty_surface(cls, value: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError("surface must be a non-empty string")
+        return text
+
+    @model_validator(mode="after")
+    def validate_contact_window(self) -> "MotionForecastContact":
+        if self.first_touch_window_s is not None and (
+            self.first_touch_window_s[0] > self.first_touch_window_s[1]
+        ):
+            raise ValueError("first_touch_window_s must be ordered as [start_s, end_s]")
+        return self
+
+
+class MotionForecastAnchor(StrictContractModel):
+    """One coarse planner anchor in world coordinates."""
+
+    t_s: float = Field(ge=0)
+    reference_point: str
+    pos_mm: CoercedTuple3D
+    rot_deg: CoercedTuple3D | None = None
+    position_tolerance_mm: Annotated[
+        tuple[NonNegativeFloat, NonNegativeFloat, NonNegativeFloat],
+        BeforeValidator(_coerce_to_tuple),
+    ]
+    rotation_tolerance_deg: (
+        Annotated[
+            tuple[
+                MinimumRotationToleranceFloat,
+                MinimumRotationToleranceFloat,
+                MinimumRotationToleranceFloat,
+            ],
+            BeforeValidator(_coerce_to_tuple),
+        ]
+        | None
+    ) = None
+    first_contacts: list[MotionForecastContact] = Field(default_factory=list)
+    build_zone_valid: bool = False
+    goal_zone_contact: bool = False
+    goal_zone_entry: bool = False
+
+    @field_validator("reference_point")
+    @classmethod
+    def validate_reference_point(cls, value: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError("reference_point must be a non-empty string")
+        return text
+
+    @model_validator(mode="after")
+    def validate_anchor_contract(self) -> "MotionForecastAnchor":
+        if (self.rot_deg is None) != (self.rotation_tolerance_deg is None):
+            raise ValueError(
+                "rot_deg and rotation_tolerance_deg must be provided together"
+            )
+
+        if self.first_contacts:
+            orders = [contact.order for contact in self.first_contacts]
+            if len(set(orders)) != len(orders):
+                raise ValueError("first_contacts must not repeat order values")
+            if orders != sorted(orders):
+                raise ValueError("first_contacts must be sorted by order")
+            if orders[0] != 1:
+                raise ValueError("first_contacts must start at order 1")
+
+        if self.goal_zone_contact and self.goal_zone_entry:
+            raise ValueError(
+                "goal_zone_contact and goal_zone_entry are mutually exclusive"
+            )
+
+        return self
+
+
+class MotionForecastTerminalEvent(StrictContractModel):
+    """Equivalent structured terminal proof for a motion forecast."""
+
+    kind: Literal["goal_zone_entry", "goal_zone_contact"]
+    t_s: float = Field(ge=0)
+    reference_point: str
+    pos_mm: CoercedTuple3D
+    contact_surfaces: list[str] = Field(default_factory=list)
+    zone_name: str = "goal_zone"
+
+    @field_validator("reference_point", "zone_name")
+    @classmethod
+    def validate_non_empty_strings(cls, value: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError("must be a non-empty string")
+        return text
+
+    @field_validator("contact_surfaces")
+    @classmethod
+    def validate_contact_surfaces(cls, value: list[str]) -> list[str]:
+        cleaned = [surface.strip() for surface in value if str(surface).strip()]
+        if not cleaned:
+            raise ValueError("contact_surfaces must contain at least one surface")
+        if len(set(cleaned)) != len(cleaned):
+            raise ValueError("contact_surfaces must not repeat surface names")
+        return cleaned
+
+
+class MotionForecast(StrictContractModel):
+    """Sparse planner-authored coarse motion contract for engineer-owned parts."""
+
+    moving_part_names: list[str] = Field(default_factory=list)
+    reference_frame: Literal["world"] = "world"
+    sample_stride_s: float = Field(gt=0)
+    anchors: list[MotionForecastAnchor] = Field(default_factory=list)
+    terminal_event: MotionForecastTerminalEvent | None = None
+
+    @field_validator("moving_part_names")
+    @classmethod
+    def validate_moving_part_names(cls, value: list[str]) -> list[str]:
+        cleaned = [part_name.strip() for part_name in value if str(part_name).strip()]
+        if not cleaned:
+            raise ValueError("motion_forecast must name at least one moving part")
+        if len(set(cleaned)) != len(cleaned):
+            raise ValueError("motion_forecast must not repeat moving part names")
+        return cleaned
+
+    @model_validator(mode="after")
+    def validate_contract(self) -> "MotionForecast":
+        if self.reference_frame != "world":
+            raise ValueError("motion_forecast.reference_frame must be world")
+
+        if len(self.anchors) < 2:
+            raise ValueError("motion_forecast must contain at least two anchors")
+
+        times = [anchor.t_s for anchor in self.anchors]
+        if times != sorted(times):
+            raise ValueError("motion_forecast anchors must be ordered by t_s")
+        if len(set(times)) != len(times):
+            raise ValueError("motion_forecast anchors must not repeat t_s values")
+
+        first_anchor = self.anchors[0]
+        last_anchor = self.anchors[-1]
+        if not first_anchor.build_zone_valid:
+            raise ValueError(
+                "motion_forecast first anchor must explicitly set build_zone_valid=true"
+            )
+
+        for anchor in self.anchors[:-1]:
+            if anchor.goal_zone_contact or anchor.goal_zone_entry:
+                raise ValueError(
+                    "only the terminal motion anchor may assert goal-zone entry/contact"
+                )
+
+        terminal_assertion_count = 0
+        if last_anchor.goal_zone_contact or last_anchor.goal_zone_entry:
+            terminal_assertion_count += 1
+        if self.terminal_event is not None:
+            terminal_assertion_count += 1
+
+        if terminal_assertion_count == 0:
+            raise ValueError(
+                "motion_forecast must prove the terminal goal-zone entry/contact "
+                "in the final anchor or via terminal_event"
+            )
+        if terminal_assertion_count > 1:
+            raise ValueError(
+                "motion_forecast terminal proof must appear in the final anchor "
+                "or terminal_event, not both"
+            )
+
+        return self
+
+
+class PrecisePathPose(StrictContractModel):
+    """Backend-specific initial pose for the engineer-owned precise path."""
+
+    reference_point: str
+    pos_mm: CoercedTuple3D
+    rot_deg: CoercedTuple3D
+
+    @field_validator("reference_point")
+    @classmethod
+    def validate_reference_point(cls, value: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError("reference_point must be a non-empty string")
+        return text
+
+
+class PrecisePathDefinition(StrictContractModel):
+    """Engineer-owned higher-resolution path/contact proof."""
+
+    backend: SimulatorBackendType
+    moving_part_names: list[str] = Field(default_factory=list)
+    initial_pose: PrecisePathPose
+    sample_stride_s: float = Field(gt=0)
+    anchors: list[MotionForecastAnchor] = Field(default_factory=list)
+    terminal_event: MotionForecastTerminalEvent | None = None
+
+    @field_validator("moving_part_names")
+    @classmethod
+    def validate_moving_part_names(cls, value: list[str]) -> list[str]:
+        cleaned = [part_name.strip() for part_name in value if str(part_name).strip()]
+        if not cleaned:
+            raise ValueError(
+                "precise_path_definition must name at least one moving part"
+            )
+        if len(set(cleaned)) != len(cleaned):
+            raise ValueError(
+                "precise_path_definition must not repeat moving part names"
+            )
+        return cleaned
+
+    @model_validator(mode="after")
+    def validate_contract(self) -> "PrecisePathDefinition":
+        if len(self.anchors) < 1:
+            raise ValueError("precise_path_definition must contain at least one anchor")
+        return self
 
 
 class Constraints(StrictContractModel):
@@ -1462,6 +1689,7 @@ class AssemblyDefinition(StrictContractModel):
     electronics: ElectronicsSection | None = None
     environment_drill_operations: list[EnvironmentDrillOperation] = []
     drafting: DraftingSheet | None = None
+    motion_forecast: MotionForecast | None = None
     final_assembly: list[SubassemblyEstimate | PartConfig] = []
     totals: CostTotals
     dfm_suggestions: list[str] = Field(default_factory=list)

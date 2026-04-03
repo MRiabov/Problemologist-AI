@@ -53,6 +53,36 @@ class VisualInspectionPolicy(BaseModel):
     reminder_interval: int = Field(default=2, ge=1)
 
 
+class MotionForecastBudget(BaseModel):
+    sample_stride_s: float = Field(default=0.5, gt=0)
+    position_tolerance_mm: tuple[float, float, float] = Field(default=(1.2, 1.2, 1.2))
+    rotation_tolerance_deg: tuple[float, float, float] = Field(default=(0.1, 0.1, 5.0))
+
+
+class MotionForecastPolicy(BaseModel):
+    benchmark_planner: MotionForecastBudget = Field(
+        default_factory=lambda: MotionForecastBudget(
+            sample_stride_s=2.0,
+            position_tolerance_mm=(6.0, 6.0, 6.0),
+            rotation_tolerance_deg=(0.1, 0.1, 15.0),
+        )
+    )
+    engineer_planner: MotionForecastBudget = Field(
+        default_factory=lambda: MotionForecastBudget(
+            sample_stride_s=0.5,
+            position_tolerance_mm=(1.2, 1.2, 1.2),
+            rotation_tolerance_deg=(0.1, 0.1, 5.0),
+        )
+    )
+    engineer_coder: MotionForecastBudget = Field(
+        default_factory=lambda: MotionForecastBudget(
+            sample_stride_s=0.3,
+            position_tolerance_mm=(0.6, 0.6, 0.6),
+            rotation_tolerance_deg=(0.1, 0.1, 2.0),
+        )
+    )
+
+
 class AgentPolicy(BaseModel):
     filesystem_permissions: FilesystemPermissions = Field(
         default_factory=FilesystemPermissions
@@ -254,6 +284,7 @@ class AgentsConfig(BaseModel):
     llm: LLMPolicyConfig = Field(default_factory=LLMPolicyConfig)
     render: RenderPolicyConfig = Field(default_factory=RenderPolicyConfig)
     execution: AgentExecutionConfig = Field(default_factory=AgentExecutionConfig)
+    motion_forecast: MotionForecastPolicy = Field(default_factory=MotionForecastPolicy)
     defaults: AgentPolicy = Field(default_factory=AgentPolicy)
     agents: dict[str, AgentPolicy] = Field(default_factory=dict)
 
@@ -279,6 +310,36 @@ class AgentsConfig(BaseModel):
 
     def get_drafting_mode(self, agent_role: AgentName | str) -> DraftingMode:
         return self.get_technical_drawing_mode(agent_role)
+
+    def get_motion_forecast_policy(
+        self, planner_role: AgentName | str
+    ) -> MotionForecastBudget:
+        key = (
+            planner_role.value
+            if isinstance(planner_role, AgentName)
+            else str(planner_role)
+        )
+        normalized = key.strip().lower()
+        if normalized in {
+            AgentName.BENCHMARK_PLANNER.value,
+            AgentName.BENCHMARK_PLAN_REVIEWER.value,
+            AgentName.BENCHMARK_CODER.value,
+            AgentName.BENCHMARK_REVIEWER.value,
+        }:
+            return self.motion_forecast.benchmark_planner
+        if normalized in {
+            AgentName.ENGINEER_PLANNER.value,
+            AgentName.ENGINEER_PLAN_REVIEWER.value,
+            AgentName.ELECTRONICS_PLANNER.value,
+            AgentName.ELECTRONICS_REVIEWER.value,
+        }:
+            return self.motion_forecast.engineer_planner
+        if normalized in {
+            AgentName.ENGINEER_CODER.value,
+            AgentName.ENGINEER_EXECUTION_REVIEWER.value,
+        }:
+            return self.motion_forecast.engineer_coder
+        return self.motion_forecast.engineer_planner
 
     def get_reasoning_effort(
         self,

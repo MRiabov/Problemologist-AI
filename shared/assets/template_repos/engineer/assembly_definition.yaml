@@ -174,4 +174,25 @@ totals:
   estimated_weight_g: 11.9232
   estimate_confidence: high
 
+# motion_forecast:
+#   moving_part_names:
+#     - bridge_deck
+#   reference_frame: world
+#   sample_stride_s: 0.5
+#   anchors:
+#     - t_s: 0.0
+#       reference_point: build_zone_start
+#       pos_mm: [0.0, 0.0, 5.0]
+#       rot_deg: [0.0, 0.0, 0.0]
+#       position_tolerance_mm: [1.2, 1.2, 1.2]
+#       rotation_tolerance_deg: [0.1, 0.1, 5.0]
+#       build_zone_valid: true
+#     - t_s: 2.5
+#       reference_point: goal_zone_contact
+#       pos_mm: [12.0, 0.0, 2.0]
+#       rot_deg: [0.0, 0.0, 0.0]
+#       position_tolerance_mm: [1.2, 1.2, 1.2]
+#       rotation_tolerance_deg: [0.1, 0.1, 5.0]
+#       goal_zone_contact: true
+
 dfm_suggestions: []
