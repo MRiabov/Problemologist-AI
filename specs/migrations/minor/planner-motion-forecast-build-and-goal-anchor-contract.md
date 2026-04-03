@@ -269,22 +269,22 @@ The safe implementation order is:
 - [ ] Add typed motion-forecast models to the assembly schema.
 - [ ] Add the `motion_forecast` field to `AssemblyDefinition`.
 - [ ] Add the engineer-owned `precise_path_definition.yaml` artifact as the
-      higher-resolution path contract.
+  higher-resolution path contract.
 - [ ] Update the engineer starter assembly template with a visible forecast
-      section and explicit endpoint assertions.
+  section and explicit endpoint assertions.
 - [ ] Mark the coarse planner forecast as intentionally lower-frequency and
-      looser than the precise path artifact.
+  looser than the precise path artifact.
 
 ### Validation
 
 - [ ] Enforce build-safe first-anchor validation in the planner handoff
-      validator.
+  validator.
 - [ ] Enforce explicit goal-contact validation for the terminal anchor or
-      terminal event.
+  terminal event.
 - [ ] Validate that the engineer-owned precise path refines the coarse planner
-      forecast without diverging too far.
+  forecast without diverging too far.
 - [ ] Propagate the new failure through planner submission and reviewer entry
-      gates.
+  gates.
 
 ### Docs
 
@@ -295,10 +295,10 @@ The safe implementation order is:
 
 - [ ] Add a planner-gate regression for missing build-safe start anchors.
 - [ ] Add a planner-gate regression for missing goal-contact terminal
-      assertions.
+  assertions.
 - [ ] Add a seeded preflight regression for the same missing-endpoint cases.
 - [ ] Add or refresh the live engineering-loop coverage that exercises the new
-      contract end to end.
+  contract end to end.
 
 ## File-Level Change Set
 

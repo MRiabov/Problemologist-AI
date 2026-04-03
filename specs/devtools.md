@@ -132,6 +132,13 @@ The eval tooling mirrors the integration tooling, but it owns a separate lock, a
 - After bootstrap it stops mutating the lock state and keeps only the shared lock file handle open.
 - It exposes explicit sandbox selection through `--yolo` and `--no-yolo`; the script should never invent a hidden bypass mode.
 
+### `dataset/evals/eval_seed_update_autopilot.py`
+
+- `dataset/evals/eval_seed_update_autopilot.py` is the reusable seed-update autopilot for eval rows.
+- It caches one migration investigation, then reuses that context to batch-update selected seeds through resumable Codex sessions.
+- It validates each updated seed with `scripts/validate_eval_seed.py` and keeps its own persistent log/state tree under `logs/evals/`.
+- The `scripts/throwaway/` wrapper remains for compatibility, but the canonical entrypoint lives in `dataset/evals/`.
+
 ### Eval coordination helpers
 
 - `scripts/internal/eval_run_lock.py` is the shared lock/state helper for eval runs.

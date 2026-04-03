@@ -347,10 +347,10 @@ Engineer-owned moving solutions need a planner-authored motion forecast, not jus
 The contract is:
 
 01. The forecast captures the nominal path; the tolerance bands define the envelope around that path.
-02. The canonical location is a dedicated `motion_forecast` section inside `assembly_definition.yaml` for engineering handoffs that include moving engineer-owned parts.
+02. The canonical location is a dedicated `motion_forecast` section inside `assembly_definition.yaml` for engineering handoffs that include moving engineer-owned parts. The first anchor must be build-zone valid, and the terminal anchor or terminal event must explicitly prove goal-zone entry/contact.
 03. The forecast is sparse and ordered. It is not a full per-timestep replay of the physics engine.
 04. The default planner cadence is coarse, typically `0.5s`. The exact cadence and tolerance budgets for planner and coder layers are policy-driven via `config/agents_config.yaml`, not hardcoded in the schema. The benchmark planner may use an even coarser course-setting layer for benchmark-owned moving fixtures when that contract allows it.
-05. The coder may generate a denser implementation/verification trace, typically around `0.3s`, but that trace is derived evidence, not a replacement for the planner-owned contract. When required, the engineer coder's precise path lives in a separate engineer-owned path artifact rather than replacing `motion_forecast`.
+05. The coder may generate a denser implementation/verification trace, typically around `0.3s`, but that trace is derived evidence, not a replacement for the planner-owned contract. When required, the engineer coder's precise path lives in a separate engineer-owned `precise_path_definition.yaml` artifact rather than replacing `motion_forecast`.
 06. Each anchor must state:
     - `t_s`
     - an explicit `reference_point` such as COM, another named physical point, or a justified geometric proxy
@@ -358,13 +358,15 @@ The contract is:
     - optional rotation in degrees
     - the positional tolerance band for that anchor, and rotational tolerance when rotation matters
     - the first-contact surfaces expected to be touched by that reference point, in the order they are first encountered
-07. Contact order is part of the contract. If the payload touches multiple surfaces before success, the first-touch order and an expected time window for each first contact must be recorded.
-08. Tolerances must be grounded in runtime jitter and contact uncertainty. The default positional tolerance on any axis should not exceed `1.2x` the runtime jitter on that axis unless a calculation subsection or risk assessment explicitly justifies a wider band.
-09. A plan that cannot state this motion at reviewable resolution is incomplete. The reviewer should not have to infer the trajectory from a vague mechanism description.
-10. The planner owns the forecast. The coder may refine implementation details inside the approved envelope, but may not silently rewrite the forecast when the plan is already approved.
-11. Simulation may fail fast when the realized motion leaves the tolerated corridor for a configurable number of consecutive checks or when the required contact sequence becomes impossible.
-12. This contract applies to engineer-owned moving parts only. Benchmark-owned moving fixtures continue to use the benchmark motion contract in `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml`.
-13. The benchmark planner uses the coarsest course-setting layer for benchmark-owned moving fixtures, with its cadence and tolerance budget also sourced from config policy or benchmark motion metadata, and downstream engineering treats that layer as read-only context.
+07. The first anchor must state `build_zone_valid: true`; the reviewer then checks that its coordinates actually lie inside the benchmark build zone.
+08. The terminal anchor must carry `goal_zone_contact: true` or `goal_zone_entry: true`, or an equivalent structured `terminal_event`, and the recorded position must lie inside the benchmark goal zone.
+09. Contact order is part of the contract. If the payload touches multiple surfaces before success, the first-touch order and an expected time window for each first contact must be recorded.
+10. Tolerances must be grounded in runtime jitter and contact uncertainty. The default positional tolerance on any axis should not exceed `1.2x` the runtime jitter on that axis unless a calculation subsection or risk assessment explicitly justifies a wider band.
+11. A plan that cannot state this motion at reviewable resolution is incomplete. The reviewer should not have to infer the trajectory from a vague mechanism description.
+12. The planner owns the forecast. The coder may refine implementation details inside the approved envelope, but may not silently rewrite the forecast when the plan is already approved.
+13. Simulation may fail fast when the realized motion leaves the tolerated corridor for a configurable number of consecutive checks or when the required contact sequence becomes impossible.
+14. This contract applies to engineer-owned moving parts only. Benchmark-owned moving fixtures continue to use the benchmark motion contract in `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml`.
+15. The benchmark planner uses the coarsest course-setting layer for benchmark-owned moving fixtures, with its cadence and tolerance budget also sourced from config policy or benchmark motion metadata, and downstream engineering treats that layer as read-only context.
 
 Minimal shape:
 
@@ -375,14 +377,16 @@ motion_forecast:
   planner_sample_stride_s: 0.5 # illustrative; actual stride comes from config/agents_config.yaml
   tolerances:
     position_mm: [1.2, 1.2, 1.2]
-    rotation_deg: [0.0, 0.0, 2.0]
+    rotation_deg: [0.1, 0.1, 2.0]
   anchors:
     - t_s: 0.0
       pos_mm: [10.0, 10.0, 10.0]
       rot_deg: [0.0, 0.0, 0.0]
+      build_zone_valid: true
       first_contacts: []
     - t_s: 0.5
       pos_mm: [10.0, 10.0, 10.5]
+      goal_zone_contact: true
       first_contacts:
         - order: 1
           surface: ramp_top

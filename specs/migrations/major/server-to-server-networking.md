@@ -194,6 +194,9 @@ that matter most for this migration:
 8. Renderer-emitted files are persisted to object storage before they leave
    `worker-renderer`; downstream proxy hops can re-materialize them locally,
    but the renderer boundary itself is not the long-lived byte sink.
+9. `worker_renderer/utils/technical_drawing.py` now uploads PNG, SVG, DXF, and
+   manifest outputs to object storage when available and only falls back to
+   inline base64 payloads when storage is unavailable.
 
 ## Remaining Watchpoints
 
@@ -201,11 +204,6 @@ These are the places most likely to be missed in a later transport cleanup pass:
 
 1. `shared/utils/agent/__init__.py` bundle collection before heavy-worker calls.
 2. `controller/api/tasks.py` benchmark artifact copy between sessions.
-3. `worker_renderer/utils/technical_drawing.py` base64 sidecars for small SVG
-   and DXF companions, which are still acceptable but should not expand back
-   into the bulk-data plane.
-4. Renderer output that exits `worker-renderer` should be S3-backed first and
-   only then proxied back through worker-light materialization.
 
 ## Migration Checklist
 
