@@ -24,6 +24,7 @@ Use a freestanding bridge deck with shallow side fences to move `transfer_cube` 
 3. Mount `left_fence` and `right_fence` along the deck edges with enough clearance for the jittered cube to pass without climbing the rails.
 4. Position `landing_pocket` so its mouth overlaps the `goal_zone` and captures the cube before it can rebound off the right deck.
 5. Keep every part label grounded in `plan.md`, `todo.md`, and `assembly_definition.yaml`, and keep the benchmark fixtures unchanged.
+6. The drafting sheet callouts `1`-`5` track the base frame, bridge deck, left fence, right fence, and landing pocket, respectively.
 
 ## 4. Cost & Weight Budget
 

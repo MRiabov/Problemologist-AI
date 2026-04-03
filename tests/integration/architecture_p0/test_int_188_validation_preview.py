@@ -63,6 +63,9 @@ from tests.integration.agent.helpers import seed_benchmark_assembly_definition
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+REPO_MANUFACTURING_CONFIG = Path(
+    "worker_heavy/workbenches/manufacturing_config.yaml"
+).read_text(encoding="utf-8")
 AGENTS_CONFIG_PATH = Path("config/agents_config.yaml")
 BENCHMARK_RENDER_DIR = "renders/benchmark_renders"
 BENCHMARK_MANIFEST_PATH = f"{BENCHMARK_RENDER_DIR}/render_manifest.json"

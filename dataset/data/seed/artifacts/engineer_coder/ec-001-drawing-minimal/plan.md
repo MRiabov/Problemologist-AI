@@ -25,6 +25,7 @@ Use a freestanding entry funnel and a single powered roller lane to catch the se
 3. Mount `roller_bed` on the base with one driven roller axis that pushes toward positive X while `idler_guide` keeps the ball centered and prevents lift-out.
 4. Mount `goal_tray` so its interior volume overlaps the seeded goal zone and sits slightly below the roller exit to bleed off speed.
 5. Keep the motor and wiring on the left side of the base so downstream electronics work can route power without crossing the moving lane.
+6. The drafting sheet callouts `1`-`6` track the base plate, entry funnel, roller bed, idler guide, goal tray, and the left-side drive motor corridor, respectively.
 
 ## 4. Cost & Weight Budget
 

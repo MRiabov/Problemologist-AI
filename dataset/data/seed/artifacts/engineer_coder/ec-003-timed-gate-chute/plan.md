@@ -33,6 +33,7 @@ Use a compact single `ServoMotor_DS3218`-driven metering wheel ahead of the benc
 3. Mount `metering_wheel_guard` and `drive_motor` on the left side of the gate and keep the wiring corridor outside the keep-out.
 4. Mount `guide_rail` and `post_gate_channel` immediately downstream of the release point, then terminate the path in `goal_cup` whose interior overlaps `goal_zone`.
 5. Preserve the benchmark-owned `entry_ramp`, `gate_housing`, `gate_pivot_arm`, and `exit_tray` geometry as read-only context while checking the release path against the gate opening.
+6. The drafting sheet callouts `1`-`7` track the base plate, settling chute, metering wheel guard, guide rail, post-gate channel, goal cup, and the left-side drive motor corridor, respectively.
 
 ## 4. Cost & Weight Budget
 
