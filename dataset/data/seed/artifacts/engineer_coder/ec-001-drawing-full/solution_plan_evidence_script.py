@@ -29,35 +29,35 @@ def build():
             _make_part(
                 "entry_funnel",
                 (180.0, 140.0, 40.0),
-                (0.0, 0.0, 35.0),
+                (-250.0, 80.0, 35.0),
                 "hdpe",
             ),
             _make_part(
                 "roller_bed",
                 (780.0, 70.0, 28.0),
-                (0.0, 0.0, 85.0),
+                (-50.0, -80.0, 70.0),
                 "hdpe",
             ),
             _make_part(
                 "idler_guide",
                 (780.0, 18.0, 24.0),
-                (0.0, 0.0, 120.0),
+                (160.0, -80.0, 100.0),
                 "hdpe",
             ),
             _make_part(
                 "goal_tray",
                 (150.0, 120.0, 35.0),
-                (0.0, 0.0, 155.0),
+                (300.0, 80.0, 135.0),
                 "hdpe",
             ),
             _make_part(
                 "ServoMotor_DS3218",
                 (42.0, 20.0, 36.0),
-                (400.0, 0.0, 170.0),
+                (-430.0, 80.0, 165.0),
                 "aluminum_6061",
             ),
         ]
     )
     solution.label = "solution_plan_drafting"
-    solution.metadata = CompoundMetadata()
+    solution.metadata = CompoundMetadata(fixed=True)
     return solution
