@@ -303,7 +303,7 @@ def test_materialize_seed_workspace_overrides_integration_test_env(
             "--agent",
             "engineer_coder",
             "--task-id",
-            "ec-001",
+            "ec-001-drawing-full",
             "--output-dir",
             str(workspace_dir),
             "--no-yolo",
@@ -340,7 +340,7 @@ def test_materialize_seed_workspace_requires_explicit_yolo_choice(
             "--agent",
             "engineer_coder",
             "--task-id",
-            "ec-001",
+            "ec-001-drawing-full",
             "--output-dir",
             str(workspace_dir),
         ],
@@ -1485,7 +1485,7 @@ def test_materialize_seed_workspace_launches_codex_with_expected_sandbox_policy(
         "--agent",
         "engineer_coder",
         "--task-id",
-        "ec-001",
+        "ec-001-drawing-full",
         "--output-dir",
         str(workspace_dir),
         "--launch-codex",
@@ -2337,7 +2337,7 @@ def test_validate_eval_seed_removes_preview_bundles_from_all_seed_artifacts():
             "--agent",
             "engineer_coder",
             "--task-id",
-            "ec-001",
+            "ec-001-drawing-full",
             "--fail-fast",
             "--concurrency",
             "1",
@@ -2354,7 +2354,9 @@ def test_validate_eval_seed_removes_preview_bundles_from_all_seed_artifacts():
     )
 
     assert completed.returncode == 0, combined_output
-    assert "PASS engineer_coder ec-001:" in completed.stdout, completed.stdout
+    assert "PASS engineer_coder ec-001-drawing-full:" in completed.stdout, (
+        completed.stdout
+    )
     assert "black/empty" not in combined_output, combined_output
 
     seed_root = ROOT / "dataset" / "data" / "seed" / "role_based"

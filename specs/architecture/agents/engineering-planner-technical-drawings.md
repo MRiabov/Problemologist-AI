@@ -86,6 +86,7 @@ The drafting layer must be explicit about the following items:
 
 - which subassembly or interface the view describes,
 - which faces, edges, axes, or datums define the view,
+- which assumptions or calculation IDs the view depends on,
 - which dimensions are binding,
 - which dimensions are approximate,
 - which notes are only explanatory,
@@ -201,6 +202,7 @@ The planner may use the drafting layer to say "this slope must be steep enough" 
 ## Relationship to plan.md
 
 `plan.md` remains the human-readable explanation.
+The planner should expose source-backed assumptions, detailed calculations, and the distilled operating envelope so the drafting layer can reference the exact basis for any binding numeric claim.
 
 The drafting layer does three things that `plan.md` does not:
 
@@ -215,7 +217,7 @@ Every planner-authored object label and selected COTS `part_id` that appears in 
 
 Recommended cross-reference style:
 
-- `plan.md` references `callout 1`, `callout 2`, or `section A-A`.
+- `plan.md` references `CALC-001`, `ASSUMP-001`, `callout 1`, `callout 2`, or `section A-A`.
 - The drafting section references the same labels.
 - The reviewer checks that the references match.
 

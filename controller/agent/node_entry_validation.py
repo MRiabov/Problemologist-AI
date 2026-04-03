@@ -945,7 +945,8 @@ async def validate_seeded_workspace_handoff_artifacts(
         AgentName.ELECTRONICS_PLANNER,
     }:
         manufacturing_raw = await worker_client.read_file_optional(
-            "manufacturing_config.yaml"
+            "manufacturing_config.yaml",
+            bypass_agent_permissions=True,
         )
         if manufacturing_raw is None:
             errors.append(
@@ -974,7 +975,10 @@ async def validate_seeded_workspace_handoff_artifacts(
                 )
 
     for rel_path in SCHEMA_BACKED_HANDOFF_PATHS:
-        content = await worker_client.read_file_optional(rel_path)
+        content = await worker_client.read_file_optional(
+            rel_path,
+            bypass_agent_permissions=True,
+        )
         if content is not None:
             contents[rel_path] = content
 
@@ -982,7 +986,10 @@ async def validate_seeded_workspace_handoff_artifacts(
     if target_node in _DRAFTING_PROMPT_TARGETS and _technical_drawing_mode_active(
         drafting_mode
     ):
-        prompt_text = await worker_client.read_file_optional("prompt.md")
+        prompt_text = await worker_client.read_file_optional(
+            "prompt.md",
+            bypass_agent_permissions=True,
+        )
         if prompt_text is None:
             errors.append(
                 _seeded_schema_error(
@@ -1160,7 +1167,8 @@ async def validate_seeded_workspace_handoff_artifacts(
     ):
         if manufacturing_config_model is None:
             manufacturing_raw = await worker_client.read_file_optional(
-                "manufacturing_config.yaml"
+                "manufacturing_config.yaml",
+                bypass_agent_permissions=True,
             )
             if manufacturing_raw is not None:
                 try:

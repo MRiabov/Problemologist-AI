@@ -20,8 +20,11 @@ ENGINEERING_PLAN_REQUIRED_SECTIONS = [
     "## 1. Solution Overview",
     "## 2. Parts List",
     "## 3. Assembly Strategy",
-    "## 4. Cost & Weight Budget",
-    "## 5. Risk Assessment",
+    "## 4. Assumption Register",
+    "## 5. Detailed Calculations",
+    "## 6. Critical Constraints / Operating Envelope",
+    "## 7. Cost & Weight Budget",
+    "## 8. Risk Assessment",
 ]
 
 # Strict heading patterns (numbered headings required)
@@ -29,8 +32,11 @@ ENGINEERING_PLAN_SECTION_PATTERNS = [
     r"^##\s*1\.\s*Solution\s+Overview\s*$",
     r"^##\s*2\.\s*Parts\s+List\s*$",
     r"^##\s*3\.\s*Assembly\s+Strategy\s*$",
-    r"^##\s*4\.\s*Cost\s*[&and]+\s*Weight\s+Budget\s*$",
-    r"^##\s*5\.\s*Risk\s+Assessment\s*$",
+    r"^##\s*4\.\s*Assumption\s+Register\s*$",
+    r"^##\s*5\.\s*Detailed\s+Calculations\s*$",
+    r"^##\s*6\.\s*Critical\s+Constraints\s*/\s*Operating\s+Envelope\s*$",
+    r"^##\s*7\.\s*Cost\s*(?:&|and)\s*Weight\s+Budget\s*$",
+    r"^##\s*8\.\s*Risk\s+Assessment\s*$",
 ]
 
 BENCHMARK_PLAN_VARIANTS = [
@@ -182,8 +188,38 @@ def _validate_plan_md_with_spec(
                 "Assembly Strategy must contain a numbered list of steps."
             )
 
-        budget_lines = sections.get("## 4. Cost & Weight Budget", [])
-        if "## 4. Cost & Weight Budget" in sections and not (
+        assumption_lines = sections.get("## 4. Assumption Register", [])
+        if "## 4. Assumption Register" in sections and not (
+            _has_table(assumption_lines)
+            or BULLET_LIST_PATTERN.search("\n".join(assumption_lines))
+        ):
+            violations.append(
+                "Assumption Register must contain a bullet list or table of source-backed inputs."
+            )
+
+        calculation_lines = sections.get("## 5. Detailed Calculations", [])
+        if "## 5. Detailed Calculations" in sections and not (
+            _has_table(calculation_lines)
+            or BULLET_LIST_PATTERN.search("\n".join(calculation_lines))
+            or NUMBERED_LIST_PATTERN.search("\n".join(calculation_lines))
+        ):
+            violations.append(
+                "Detailed Calculations must contain a numbered list, bullet list, or table of derivations."
+            )
+
+        envelope_lines = sections.get(
+            "## 6. Critical Constraints / Operating Envelope", []
+        )
+        if "## 6. Critical Constraints / Operating Envelope" in sections and not (
+            _has_table(envelope_lines)
+            or BULLET_LIST_PATTERN.search("\n".join(envelope_lines))
+        ):
+            violations.append(
+                "Critical Constraints / Operating Envelope must contain a bullet list or table of derived limits."
+            )
+
+        budget_lines = sections.get("## 7. Cost & Weight Budget", [])
+        if "## 7. Cost & Weight Budget" in sections and not (
             _has_table(budget_lines)
             or BULLET_LIST_PATTERN.search("\n".join(budget_lines))
         ):
@@ -191,8 +227,8 @@ def _validate_plan_md_with_spec(
                 "Cost & Weight Budget must contain a bullet list or table of items."
             )
 
-        risk_lines = sections.get("## 5. Risk Assessment", [])
-        if "## 5. Risk Assessment" in sections and not (
+        risk_lines = sections.get("## 8. Risk Assessment", [])
+        if "## 8. Risk Assessment" in sections and not (
             _has_table(risk_lines) or BULLET_LIST_PATTERN.search("\n".join(risk_lines))
         ):
             violations.append(

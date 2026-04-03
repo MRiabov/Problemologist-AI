@@ -87,8 +87,11 @@ def _normalize_plan_markdown(plan_content: str | None) -> str | None:
         "## 1. Solution Overview": "# Solution Overview",
         "## 2. Parts List": "## Parts List",
         "## 3. Assembly Strategy": "## Assembly Strategy",
-        "## 4. Cost & Weight Budget": "## Cost & Weight Budget",
-        "## 5. Risk Assessment": "## Risk Assessment",
+        "## 4. Assumption Register": "## Assumption Register",
+        "## 5. Detailed Calculations": "## Detailed Calculations",
+        "## 6. Critical Constraints / Operating Envelope": "## Critical Constraints / Operating Envelope",
+        "## 7. Cost & Weight Budget": "## Cost & Weight Budget",
+        "## 8. Risk Assessment": "## Risk Assessment",
     }
     for old, new in replacements.items():
         normalized = normalized.replace(old, new)

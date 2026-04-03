@@ -316,8 +316,11 @@ engineer:
       - `## 1. Solution Overview`
       - `## 2. Parts List`
       - `## 3. Assembly Strategy`
-      - `## 4. Cost & Weight Budget`
-      - `## 5. Risk Assessment`
+      - `## 4. Assumption Register`
+      - `## 5. Detailed Calculations`
+      - `## 6. Critical Constraints / Operating Envelope`
+      - `## 7. Cost & Weight Budget`
+      - `## 8. Risk Assessment`
 
       **Strict Formatting Requirements (MANDATORY)**:
       - **Solution Overview**: Brief description of your approach.
@@ -325,6 +328,9 @@ engineer:
       - **Assembly Strategy**: MUST contain a **numbered list** of steps for how parts connect.
          - Specify **at least 2 fasteners** per rigid connection (single-fastener = underconstrained).
          - Use fastener types: FlatHeadHole, CounterBoreHole, or SimpleHole.
+      - **Assumption Register**: MUST contain a **bullet list** or **table** of source-backed non-obvious inputs and the calculations or constraints that depend on them.
+      - **Detailed Calculations**: MUST contain a **numbered list**, **bullet list**, or **table** of derivations with stable calculation IDs.
+      - **Critical Constraints / Operating Envelope**: MUST contain a **bullet list** or **table** of derived numeric limits that the mechanism must respect.
       - **Cost & Weight Budget**: MUST contain a **table** or **bullet list** of items with assembly breakdown per part.
       - **Risk Assessment**: MUST contain a **bullet list** or **table** of failure modes, mitigations, and runtime jitter handling.
          - Consider motor overload scenarios.

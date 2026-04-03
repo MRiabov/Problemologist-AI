@@ -472,6 +472,30 @@ async def validate_reviewer_handover(
         if drafting_manifest_errors:
             return "; ".join(drafting_manifest_errors)
 
+        drafting_manifest = RenderManifest.model_validate_json(drafting_manifest_raw)
+        missing_preview_files: list[str] = []
+        for preview_path in drafting_manifest.preview_evidence_paths:
+            if not await worker_client.exists(preview_path):
+                missing_preview_files.append(preview_path)
+        if missing_preview_files:
+            return (
+                f"{drafting_manifest_path} references missing preview evidence files: "
+                f"{sorted(missing_preview_files)}"
+            )
+
+        missing_sidecars: list[str] = []
+        for artifact_path, metadata in drafting_manifest.artifacts.items():
+            siblings = metadata.siblings
+            if siblings.svg and not await worker_client.exists(siblings.svg):
+                missing_sidecars.append(f"{artifact_path} -> {siblings.svg}")
+            if siblings.dxf and not await worker_client.exists(siblings.dxf):
+                missing_sidecars.append(f"{artifact_path} -> {siblings.dxf}")
+        if missing_sidecars:
+            return (
+                f"{drafting_manifest_path} references missing drafting sidecar files: "
+                f"{missing_sidecars}"
+            )
+
     if require_verification_result is None:
         require_verification_result = expected_stage == "engineering_execution_reviewer"
 
@@ -709,7 +733,10 @@ async def validate_planner_artifacts_cross_contract(
     expected_stage: PlanReviewerStage = AgentName.ENGINEER_PLAN_REVIEWER,
 ) -> str | None:
     """Validate benchmark + assembly planner artifacts without requiring a manifest."""
-    benchmark_raw = await worker_client.read_file_optional("benchmark_definition.yaml")
+    benchmark_raw = await worker_client.read_file_optional(
+        "benchmark_definition.yaml",
+        bypass_agent_permissions=True,
+    )
     if benchmark_raw is None:
         return f"benchmark_definition.yaml missing for {expected_stage} handoff."
 
@@ -718,7 +745,10 @@ async def validate_planner_artifacts_cross_contract(
         if expected_stage == AgentName.BENCHMARK_PLAN_REVIEWER
         else "assembly_definition.yaml"
     )
-    assembly_raw = await worker_client.read_file_optional(assembly_definition_path)
+    assembly_raw = await worker_client.read_file_optional(
+        assembly_definition_path,
+        bypass_agent_permissions=True,
+    )
     if assembly_raw is None:
         return f"{assembly_definition_path} missing for {expected_stage} handoff."
 
@@ -747,7 +777,8 @@ async def validate_planner_artifacts_cross_contract(
 
     try:
         manufacturing_raw = await worker_client.read_file_optional(
-            "manufacturing_config.yaml"
+            "manufacturing_config.yaml",
+            bypass_agent_permissions=True,
         )
         if manufacturing_raw is not None:
             manufacturing_config = load_required_merged_config(
@@ -758,7 +789,10 @@ async def validate_planner_artifacts_cross_contract(
     except Exception as e:
         return f"planner handoff pricing-config parse failure: {e}"
 
-    plan_text = await worker_client.read_file_optional("plan.md")
+    plan_text = await worker_client.read_file_optional(
+        "plan.md",
+        bypass_agent_permissions=True,
+    )
     drafting_artifacts: dict[str, str] = {}
     script_names = (
         (
@@ -772,7 +806,10 @@ async def validate_planner_artifacts_cross_contract(
         )
     )
     for artifact_name in script_names:
-        artifact_text = await worker_client.read_file_optional(artifact_name)
+        artifact_text = await worker_client.read_file_optional(
+            artifact_name,
+            bypass_agent_permissions=True,
+        )
         if artifact_text is not None:
             drafting_artifacts[artifact_name] = artifact_text
 

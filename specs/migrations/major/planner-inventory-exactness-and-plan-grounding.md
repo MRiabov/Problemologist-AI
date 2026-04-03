@@ -12,6 +12,11 @@ scripts must preserve the same labels, repeated quantities, and COTS
 identities as the approved inventory, and downstream coder/reviewer gates must
 enforce the same contract.
 
+Engineering planner handoffs also require a source-backed planning proof
+layer: `plan.md` must carry an Assumption Register, Detailed Calculations, and
+Critical Constraints / Operating Envelope sections so binding numeric claims
+can be audited before handoff.
+
 This migration also treats two validator gaps as bugs: deterministic weight
 exactness and drafting geometry validity must be fixed, not parked as future
 work.
@@ -55,6 +60,9 @@ enforcement is still fragmented.
      the full geometry contract,
    - self-intersection and overlap checks must be treated as bug fixes, not
      future notes.
+7. Engineering planner handoffs still let binding numeric claims live only in
+   prose. That makes slope thresholds, actuator load limits, and power budgets
+   hard to audit before handoff.
 
 ## Current-State Inventory
 
@@ -62,6 +70,7 @@ enforcement is still fragmented.
 | -- | -- | -- |
 | `specs/architecture/agents/handover-contracts.md` | Defines the binding inventory contract and exact-mention rule. | The runtime and tests still need to enforce it consistently. |
 | `specs/architecture/agents/roles.md` | States that benchmark and engineering planners/reviewers/coders must honor inventory exactness. | The role docs are ahead of the implementation and eval coverage. |
+| `shared/assets/template_repos/engineer/plan.md`, `shared/workers/markdown_validator.py`, `controller/api/routes/episodes.py`, `controller/api/tasks.py`, `config/prompts.yaml` | The engineering plan surface carries the eight-section shape, and the validator, prompt text, and replay/normalization paths are the enforcement points for that contract. | The three proof sections stay useful only if the same exact headings and validation rules are enforced at prompt time, submit time, and replay time. |
 | `controller/agent/node_entry_validation.py` | Validates node entry and some handoff constraints. | It needs fail-closed exactness gates for planner handoff packages. |
 | `worker_heavy/utils/file_validation.py` | Validates schema and placeholder hygiene. | It must also participate in exact-mention and inventory-multiset checks where planner artifacts are validated. |
 | `worker_heavy/utils/handover.py` | Collects and packages handoff artifacts. | It must reject mismatched inventory before a coder or reviewer sees it. |
@@ -96,6 +105,10 @@ enforcement is still fragmented.
 7. The drafting-geometry bug is fixed here as a separate requirement so
    future geometry work cannot relegate self-intersection or overlap checks to
    follow-up notes.
+8. Engineering planner `plan.md` includes an Assumption Register, Detailed
+   Calculations, and Critical Constraints / Operating Envelope section, so
+   binding numeric claims are traceable from source-backed assumptions through
+   derivations into reviewable operating limits.
 
 ## Required Work
 
@@ -139,12 +152,15 @@ enforcement is still fragmented.
 - Expect most integration tests that touch planner or coder handoffs to need
   edits; this migration is intentionally broad.
 
-### 5. Align docs and prompts
+### 5. Align docs, prompts, and templates
 
 - Keep the handoff, role, and prompt docs consistent with the exactness
   contract.
-- Ensure `config/prompts.yaml` and `PromptManager` tell planners to
-  self-check exact mentions and inventory multiplicity before handoff.
+- Ensure `config/prompts.yaml`, `PromptManager`, and the plan templates tell
+  planners to self-check exact mentions, inventory multiplicity, assumptions,
+  calculations, and operating-envelope limits before handoff.
+- Update the engineering planner plan template and markdown validator to
+  require the new proof sections for binding numeric claims.
 
 ### 6. Fix the cost/weight exactness bug
 
@@ -172,8 +188,8 @@ enforcement is still fragmented.
   raster/vector rendering behavior.
 - No full GD&T expansion.
 - No change to the COTS catalog or catalog-search behavior.
-- No rewrite of the planner narrative structure in `plan.md` beyond the
-  exact-mention requirement.
+- No broad rewrite of the mechanism narrative in `plan.md`; the migration only
+  adds the exact-mention requirement and the planning proof sections.
 
 ## Sequencing
 
@@ -202,6 +218,12 @@ The safe order is:
 7. Planner-authored drafting artifacts fail if their geometry self-intersects,
    overlaps, or otherwise violates the physical-validity contract, even when
    inventory grounding and `TechnicalDrawing` usage pass.
+8. A planner handoff fails if a binding numeric claim in `plan.md` lacks a
+   source-backed assumption, stable calculation ID, or operating-envelope
+   limit.
+9. An engineering planner handoff fails if `plan.md` is missing or malformed
+   with respect to `Assumption Register`, `Detailed Calculations`, or
+   `Critical Constraints / Operating Envelope`.
 
 ## Migration Checklist
 
@@ -213,6 +235,10 @@ The safe order is:
 - [x] Make planner handoff validation fail closed on missing labels, quantity
   drift, relabeling, and COTS identity drift.
 - [x] Apply the same exactness gate to benchmark and engineering handoffs.
+- [x] Add the engineering planner proof sections to the template and heading
+  validator: `Assumption Register`, `Detailed Calculations`, and `Critical Constraints / Operating Envelope`.
+- [ ] Make binding numeric claims fail closed unless they carry a source-backed
+  assumption, a stable calculation ID, and an operating-envelope limit.
 
 ### Plan review and coder intake
 
@@ -292,6 +318,9 @@ new contract:
 
 - `controller/agent/node_entry_validation.py`
 - `skills/manufacturing-knowledge/scripts/validate_and_price.py`
+- `shared/assets/template_repos/engineer/plan.md`
+- `shared/workers/markdown_validator.py`
+- `controller/api/routes/episodes.py`
 - `worker_heavy/utils/file_validation.py`
 - `worker_heavy/utils/validation.py`
 - `worker_heavy/utils/handover.py`

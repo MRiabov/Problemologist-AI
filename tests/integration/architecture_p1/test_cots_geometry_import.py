@@ -204,10 +204,19 @@ Use a catalog-backed `drive_motor` to actuate the gate.
 ## 3. Assembly Strategy
 1. Mount `drive_motor` at the rear-left side and keep the cable corridor clear.
 
-## 4. Cost & Weight Budget
+## 4. Assumption Register
+- Assumption: The planner relies on source-backed inputs that must be traceable.
+
+## 5. Detailed Calculations
+- CALC-001: The plan includes stable derivations rather than freeform guesses.
+
+## 6. Critical Constraints / Operating Envelope
+- Constraint: The mechanism must remain inside the derived operating limits.
+
+## 7. Cost & Weight Budget
 - Keep the solution inside the seeded cost and weight bounds.
 
-## 5. Risk Assessment
+## 8. Risk Assessment
 - Avoid routing the motor cable through the sweep path.
 """,
         )

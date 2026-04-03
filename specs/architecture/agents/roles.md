@@ -297,8 +297,8 @@ Notably, if the plan is higher than the max_unit_cost, it can't proceed and need
 1. **Write required planner artifacts**
 
 - Create `plan.md` using the strict engineering structure:
-  `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Cost & Weight Budget`, `## 5. Risk Assessment`.
-- In `plan.md`, include manufacturing method/material choices, assembly strategy (including rigid-connection fastener strategy), and risk mitigations.
+  `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Assumption Register`, `## 5. Detailed Calculations`, `## 6. Critical Constraints / Operating Envelope`, `## 7. Cost & Weight Budget`, `## 8. Risk Assessment`.
+- In `plan.md`, include manufacturing method/material choices, assumption sources, detailed derivations, operating limits, assembly strategy (including rigid-connection fastener strategy), and risk mitigations.
 - Create `todo.md` as an implementation checklist for the Engineering Coder (initially `- [ ]` items).
 - Create `assembly_definition.yaml` with per-part costing fields (method-specific) and a `final_assembly` structure for reuse/quantity accounting.
 - Write `solution_plan_evidence_script.py` as the build123d sketch/evidence companion for the drafted solution geometry.
@@ -307,7 +307,7 @@ Notably, if the plan is higher than the max_unit_cost, it can't proceed and need
 
 At this point, the planner can handoff the documents to the Engineering Coder. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `assembly_definition.yaml` and compute assembly totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
 
-The Engineering Planner also self-validates that `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` preserve the same labels, repeated quantities, and COTS identities as `assembly_definition.yaml`, and that `solution_plan_evidence_script.py` passes the 3D self-intersection and overlap gate before `submit_plan()`.
+The Engineering Planner also self-validates that `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` preserve the same labels, repeated quantities, and COTS identities as `assembly_definition.yaml`, and that `solution_plan_evidence_script.py` passes the 3D self-intersection and overlap gate before `submit_plan()`. Binding numeric claims should have a trace from `Assumption Register` through `Detailed Calculations` into `Critical Constraints / Operating Envelope`.
 The Engineering Planner also ensures every planner-declared inventory label and selected COTS `part_id` appears at least once in `plan.md` as an exact identifier mention; backticks are preferred for the first mention.
 
 ### Unified implementation ownership
@@ -344,10 +344,10 @@ The engineering loop has two reviewer stages with different responsibilities.
 
 1. Reject plans that propose unsupported components/mechanisms outside the current allowed system/tooling/contracts.
 2. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`, including label/quantity/COTS-identity exactness in `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py`, a structural build123d `TechnicalDrawing` import-and-call check, plus exact identifier mention coverage in `plan.md`.
-3. Validate feasibility (physics realism, build-zone fit, and planner budgets under benchmark caps).
+3. Validate feasibility (physics realism, build-zone fit, planner budgets under benchmark caps, and the presence of assumptions, calculations, and operating-envelope limits for any binding numeric claims).
 4. Validate non-ambiguity and completeness of planner handoff artifacts.
 5. Re-run pricing/weight validation (`skills/manufacturing-knowledge/scripts/validate_and_price.py` or equivalent tool-wrapped validator) against the planner handoff and reject mismatches/failures.
-6. Reject plans with excessive DOFs; each non-empty `final_assembly.parts[*].dofs` entry must be necessary for the mechanism and justified in planner artifacts.
+6. Reject plans with excessive DOFs; each non-empty `final_assembly.parts[*].dofs` entry must be necessary for the mechanism and justified in planner artifacts, typically in `Assembly Strategy`, `Detailed Calculations`, `Critical Constraints / Operating Envelope`, or `Risk Assessment`.
 7. Deterministic DOF suspicion rule: any part with `len(dofs) > 3` is treated as suspicious over-actuation and is rejected unless explicit mechanism-level justification is present and reviewer accepts that evidence.
 8. Future work (non-blocking for now): recommend cost/weight optimizations and flag unrealistic or overdesigned targets.
 9. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.

@@ -15,11 +15,23 @@ INT-033 engineering full-loop deterministic plan.
 2. Keep `environment_fixture` fixed and leave `solution_plan_evidence` as the
    drafted planner artifact.
 
-## 4. Cost & Weight Budget
+## 4. Assumption Register
+
+- Assumption: The planner relies on source-backed inputs that must be traceable.
+
+## 5. Detailed Calculations
+
+- CALC-001: The plan includes stable derivations rather than freeform guesses.
+
+## 6. Critical Constraints / Operating Envelope
+
+- Constraint: The mechanism must remain inside the derived operating limits.
+
+## 7. Cost & Weight Budget
 
 - Estimated unit cost: $10
 - Estimated weight: 100g
 
-## 5. Risk Assessment
+## 8. Risk Assessment
 
 - Low complexity.

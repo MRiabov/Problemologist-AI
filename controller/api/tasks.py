@@ -1226,6 +1226,19 @@ async def execute_agent_task(
                             f"Agent completed task: {task}\n\n"
                             "## Parts List\n"
                             f"- Result summary: {final_output[:500]}...\n"
+                            "\n## 3. Assembly Strategy\n"
+                            "1. Review the completed task output and preserve the validated handoff shape.\n"
+                            "\n## 4. Assumption Register\n"
+                            "- Assumption: The fallback plan reflects a completed task summary only.\n"
+                            "\n## 5. Detailed Calculations\n"
+                            "- CALC-001: No engineering derivation is available in this fallback artifact.\n"
+                            "\n## 6. Critical Constraints / Operating Envelope\n"
+                            "- Constraint: Keep the generated summary inside the current task scope.\n"
+                            "\n## 7. Cost & Weight Budget\n"
+                            "- Cost: Not applicable in fallback output.\n"
+                            "- Weight: Not applicable in fallback output.\n"
+                            "\n## 8. Risk Assessment\n"
+                            "- Risk: Fallback plans are only placeholders and should be replaced by a real planner handoff.\n"
                         )
                     await db.commit()
 
@@ -1554,13 +1567,26 @@ async def continue_agent_task(
                         episode.metadata_vars = metadata.model_dump(mode="json")
                     if episode.todo_list is None:
                         episode.todo_list = {"completed": True}
-                    if not episode.plan:
-                        episode.plan = (
-                            "# Solution Overview\n"
-                            "Continuation completed successfully.\n\n"
-                            "## Parts List\n"
-                            f"- Result summary: {final_output[:500]}...\n"
-                        )
+                if not episode.plan:
+                    episode.plan = (
+                        "# Solution Overview\n"
+                        "Continuation completed successfully.\n\n"
+                        "## Parts List\n"
+                        f"- Result summary: {final_output[:500]}...\n"
+                        "\n## 3. Assembly Strategy\n"
+                        "1. Preserve the completed solution summary for downstream review.\n"
+                        "\n## 4. Assumption Register\n"
+                        "- Assumption: This is a continuation fallback artifact.\n"
+                        "\n## 5. Detailed Calculations\n"
+                        "- CALC-001: No additional derivation is recorded in this fallback artifact.\n"
+                        "\n## 6. Critical Constraints / Operating Envelope\n"
+                        "- Constraint: Keep the fallback summary within the current episode.\n"
+                        "\n## 7. Cost & Weight Budget\n"
+                        "- Cost: Not applicable in fallback output.\n"
+                        "- Weight: Not applicable in fallback output.\n"
+                        "\n## 8. Risk Assessment\n"
+                        "- Risk: Fallback plans are only placeholders and should be replaced by a real planner handoff.\n"
+                    )
 
                 await db.commit()
 

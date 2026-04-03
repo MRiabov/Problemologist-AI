@@ -340,11 +340,20 @@ For each part:
 - Mounting points to environment (if any drilling/attachment is allowed)
 <!-- - Order of assembly --> 
 <!-- Order of assembly is partially unnecessary because we kind of work in CAD. However, it's a good thing to think of. -->
-## 4. Cost & Weight Budget
+## 4. Assumption Register
+- Non-obvious inputs and their sources, such as friction coefficient, motor stall torque, gearbox efficiency, cable drop, or safety factor.
+- Each assumption should state what calculation or constraint depends on it.
+## 5. Detailed Calculations
+- Stable calculation IDs such as `CALC-001`, `CALC-002`, etc.
+- Each calculation should include a problem statement, assumptions, derivation, worst-case check, result, design impact, and cross-reference.
+## 6. Critical Constraints / Operating Envelope
+- Derived numeric limits that the mechanism must satisfy, such as minimum slope, maximum torque, minimum current, or clearance bounds.
+- The operating envelope is the distilled output of the detailed calculations.
+## 7. Cost & Weight Budget
 - `max_unit_cost`: $X (from benchmark_definition.yaml, planner's allocation)
 - `max_weight`: Y kg
 - Assembly breakdown per part
-## 5. Risk Assessment
+## 8. Risk Assessment
 - Potential failure modes (e.g., "ball bounces off ramp edge")
 - Mitigations for each risk
 - Runtime randomization considerations (position jitter handling)
@@ -354,6 +363,8 @@ For each part:
 - Reference skills to consult -->
 <!-- Note: the planner explicitly doesn't specify the CAD approach. It doesn't need to think about plans, it's about the geometry. -->
 ```
+
+The Assumption Register captures the source-backed inputs that make the plan auditable. The Detailed Calculations section proves the binding numeric claims. The Critical Constraints / Operating Envelope section distills those proofs into reviewable pass/fail limits that the budget and drawing intent must respect.
 
 ### `benchmark_definition.yaml`
 
@@ -495,7 +506,7 @@ Minimum motion metadata fields inside `final_assembly.parts` entries:
 - For motorized parts: `control.mode`, plus required control params (e.g. `speed`, `frequency`) per mode
 - DOF minimization contract:
   - `dofs: []` is the default for non-moving parts.
-  - Non-empty `dofs` must be explicitly justified in `plan.md` (`## 3. Assembly Strategy` or `## 5. Risk Assessment`) with objective-linked rationale.
+  - Non-empty `dofs` must be explicitly justified in `plan.md` (`## 3. Assembly Strategy`, `## 5. Detailed Calculations`, `## 6. Critical Constraints / Operating Envelope`, or `## 8. Risk Assessment`) with objective-linked rationale.
   - Deterministic suspicion threshold: `len(dofs) > 3` is suspicious over-actuation and is rejected unless reviewer receives explicit mechanism-level justification and accepts it.
   - Unjustified or excessive DOF assignments are plan-review rejection criteria.
 
