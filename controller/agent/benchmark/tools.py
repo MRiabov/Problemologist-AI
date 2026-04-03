@@ -9,6 +9,7 @@ import yaml
 
 from controller.agent.tools import (
     _invoke_cots_search_subagent,
+    _validate_drafting_preview_artifacts,
     filter_tools_for_agent,
     get_common_tools,
     run_validate_and_price_script,
@@ -266,6 +267,21 @@ def get_benchmark_planner_tools(
                 node_type=AgentName.BENCHMARK_PLANNER,
             )
             return result.model_dump(mode="json")
+
+        if _benchmark_planner_drafting_required():
+            drafting_errors = await _validate_drafting_preview_artifacts(
+                fs,
+                AgentName.BENCHMARK_PLANNER,
+                artifacts,
+            )
+            if drafting_errors:
+                result = PlannerSubmissionResult(
+                    ok=False,
+                    status="rejected",
+                    errors=drafting_errors,
+                    node_type=AgentName.BENCHMARK_PLANNER,
+                )
+                return result.model_dump(mode="json")
 
         manufacturing_config_text = await fs.client.read_file_optional(
             "manufacturing_config.yaml", bypass_agent_permissions=True

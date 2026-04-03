@@ -9,16 +9,11 @@ from build123d import Compound, Part
 
 
 def _preferred_temp_dir() -> str | None:
-    """Use /dev/shm only when it exists and is writable."""
-    shm_path = Path("/dev/shm")
-    if shm_path.exists() and os.access(shm_path, os.W_OK):
-        try:
-            fd, probe_path = tempfile.mkstemp(dir=shm_path)
-            os.close(fd)
-            Path(probe_path).unlink(missing_ok=True)
-            return str(shm_path)
-        except OSError:
-            return None
+    """Use the process temp root instead of preferring /dev/shm."""
+
+    temp_root = Path(tempfile.gettempdir())
+    if temp_root.exists() and os.access(temp_root, os.W_OK):
+        return str(temp_root)
     return None
 
 

@@ -218,5 +218,16 @@ def configure_headless_runtime(
     env: MutableMapping[str, str] | None = None,
 ) -> HeadlessOpenGLConfig:
     config = load_headless_opengl_config(env)
-    config.apply(env)
+    # Split the profile setup so physics and preview rendering do not trample
+    # each other's backend-specific state in mixed EGL/OSMesa processes.
+    config.apply_physics(env)
+    config.apply_rendering(env)
+    if (
+        config.physics_gl_backend is HeadlessGLBackend.EGL
+        and config.rendering is HeadlessGLBackend.OSMESA
+    ):
+        target = os.environ if env is None else env
+        # Keep the EGL physics path from inheriting a global software override
+        # just because the render side is OSMesa.
+        target.pop("LIBGL_ALWAYS_SOFTWARE", None)
     return config

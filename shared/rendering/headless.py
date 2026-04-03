@@ -10,6 +10,9 @@ from shared.runtime.headless import (
     load_headless_opengl_config,
 )
 from shared.runtime.headless import (
+    configure_headless_physics as _configure_headless_physics,
+)
+from shared.runtime.headless import (
     configure_headless_rendering as _configure_headless_rendering,
 )
 from shared.runtime.headless import (
@@ -17,6 +20,14 @@ from shared.runtime.headless import (
 )
 
 logger = structlog.get_logger(__name__)
+
+
+def configure_headless_physics() -> Any:
+    """Configure only the physics headless backend."""
+
+    config = _configure_headless_physics()
+    _headless_vtk_render_window_class.cache_clear()
+    return config
 
 
 def configure_headless_rendering() -> Any:

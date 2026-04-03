@@ -7,10 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from shared.logging import configure_logging, log_marker_middleware
-from shared.rendering import configure_headless_runtime
+from shared.rendering import configure_headless_physics
 
 configure_logging("worker-heavy")
-headless_config = configure_headless_runtime()
+headless_config = configure_headless_physics()
 from worker_heavy.api.routes import (
     heavy_busy_payload,
     heavy_router,

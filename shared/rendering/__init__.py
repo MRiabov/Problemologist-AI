@@ -10,6 +10,7 @@ from worker_renderer.utils.rendering import (
 )
 
 from .headless import (
+    configure_headless_physics,
     configure_headless_rendering,
     configure_headless_runtime,
     configure_headless_vtk_egl,
@@ -21,6 +22,7 @@ __all__ = [
     "build_render_manifest",
     "bundle_workspace_base64",
     "append_render_bundle_index",
+    "configure_headless_physics",
     "configure_headless_rendering",
     "configure_headless_runtime",
     "materialize_preview_response",

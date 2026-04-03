@@ -577,6 +577,7 @@ def submit_for_review(
             manifest_content=drafting_manifest_content,
             technical_drawing_script_content=drafting_script_content,
             artifact_name=str(drafting_manifest_path.relative_to(cwd)),
+            workspace_root=cwd,
         )
         if drafting_manifest_errors:
             raise ValueError("; ".join(drafting_manifest_errors))

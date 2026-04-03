@@ -21,7 +21,7 @@ from shared.script_contracts import (
     drafting_script_paths_for_agent,
     technical_drawing_script_path_for_agent,
 )
-from shared.workers.schema import PlanReviewManifest
+from shared.workers.schema import PlanReviewManifest, RenderManifest
 
 
 def _derived_episode_id(session_id: str) -> str:
@@ -59,6 +59,58 @@ def _engineer_planner_drafting_required() -> bool:
     except Exception:
         return False
     return drafting_mode in (DraftingMode.MINIMAL, DraftingMode.FULL)
+
+
+async def _validate_drafting_preview_artifacts(
+    fs: RemoteFilesystemMiddleware,
+    planner_role: AgentName,
+    artifacts: dict[str, str],
+) -> list[str]:
+    from worker_heavy.utils.file_validation import validate_drafting_preview_manifest
+
+    drafting_script_path = str(technical_drawing_script_path_for_agent(planner_role))
+    drafting_manifest_path = str(drafting_render_manifest_path_for_agent(planner_role))
+
+    drafting_script_content = artifacts.get(drafting_script_path)
+    if drafting_script_content is None:
+        return [f"Missing required file: {drafting_script_path}"]
+
+    drafting_manifest_content = artifacts.get(drafting_manifest_path)
+    if drafting_manifest_content is None:
+        return [f"Missing required file: {drafting_manifest_path}"]
+
+    manifest_errors = validate_drafting_preview_manifest(
+        manifest_content=drafting_manifest_content,
+        technical_drawing_script_content=drafting_script_content,
+        artifact_name=drafting_manifest_path,
+    )
+    if manifest_errors:
+        return manifest_errors
+
+    manifest = RenderManifest.model_validate_json(drafting_manifest_content)
+
+    missing_preview_files: list[str] = []
+    for preview_path in manifest.preview_evidence_paths:
+        if not await fs.client.exists(preview_path):
+            missing_preview_files.append(preview_path)
+    if missing_preview_files:
+        return [
+            f"{drafting_manifest_path} references missing preview evidence files: {sorted(missing_preview_files)}"
+        ]
+
+    missing_sidecars: list[str] = []
+    for artifact_path, metadata in manifest.artifacts.items():
+        siblings = metadata.siblings
+        if siblings.svg and not await fs.client.exists(siblings.svg):
+            missing_sidecars.append(f"{artifact_path} -> {siblings.svg}")
+        if siblings.dxf and not await fs.client.exists(siblings.dxf):
+            missing_sidecars.append(f"{artifact_path} -> {siblings.dxf}")
+    if missing_sidecars:
+        return [
+            f"{drafting_manifest_path} references missing drafting sidecar files: {missing_sidecars}"
+        ]
+
+    return []
 
 
 async def run_validate_and_price_script(
@@ -478,6 +530,21 @@ def get_engineer_planner_tools(
                 node_type=planner_node_type,
             )
             return result.model_dump(mode="json")
+
+        if _engineer_planner_drafting_required():
+            drafting_errors = await _validate_drafting_preview_artifacts(
+                fs,
+                AgentName.ENGINEER_PLANNER,
+                artifacts,
+            )
+            if drafting_errors:
+                result = PlannerSubmissionResult(
+                    ok=False,
+                    status="rejected",
+                    errors=drafting_errors,
+                    node_type=planner_node_type,
+                )
+                return result.model_dump(mode="json")
 
         custom_config_text = await fs.client.read_file_optional(
             "manufacturing_config.yaml", bypass_agent_permissions=True

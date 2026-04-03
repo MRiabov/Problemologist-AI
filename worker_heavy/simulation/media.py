@@ -60,6 +60,10 @@ class MediaRecorder:
 
     def update(self, step_idx: int, backend: RendererBackend):
         """Capture a frame if at the right interval."""
+        # TODO: switch this to a simulation-time cadence, not wall-clock time.
+        # Target behavior: emit one PNG roughly every 0.5s of simulated time,
+        # upload sampled frames incrementally to S3, and notify listeners over
+        # the control plane instead of waiting for final MP4 persistence.
         if (
             self.video_path is None
             or self._capture_disabled

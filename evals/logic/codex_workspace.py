@@ -1088,10 +1088,16 @@ def build_codex_env(
     env.pop("DISPLAY", None)
     env.pop("XAUTHORITY", None)
     env.pop("WAYLAND_DISPLAY", None)
-    env.setdefault("PROBLEMOLOGIST_PHYSICS_GL_BACKEND", "egl")
-    env.setdefault("PROBLEMOLOGIST_RENDER_GL_BACKEND", "osmesa")
+    env["PROBLEMOLOGIST_PHYSICS_GL_BACKEND"] = "egl"
+    env["PROBLEMOLOGIST_RENDER_GL_BACKEND"] = "osmesa"
     headless_config = load_headless_opengl_config(env)
-    headless_config.apply(env)
+    headless_config.apply_physics(env)
+    env["PROBLEMOLOGIST_RENDER_GL_BACKEND"] = "osmesa"
+    env["PYOPENGL_PLATFORM"] = "osmesa"
+    env["VTK_DEFAULT_OPENGL_WINDOW"] = "vtkOSOpenGLRenderWindow"
+    env["PYVISTA_OFF_SCREEN"] = "true"
+    env["PYGLET_HEADLESS"] = "1"
+    env.pop("LIBGL_ALWAYS_SOFTWARE", None)
     env["HOME"] = str(codex_home_root)
     env["CODEX_HOME"] = str(codex_home_root / ".codex")
     env["XDG_CACHE_HOME"] = str(codex_home_root / ".cache")

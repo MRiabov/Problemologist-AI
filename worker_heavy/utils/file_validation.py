@@ -812,6 +812,7 @@ def validate_drafting_preview_manifest(
     manifest_content: str,
     technical_drawing_script_content: str,
     artifact_name: str,
+    workspace_root: Path | None = None,
 ) -> list[str]:
     try:
         manifest = RenderManifest.model_validate_json(manifest_content)
@@ -843,6 +844,17 @@ def validate_drafting_preview_manifest(
     if not manifest.artifacts:
         errors.append(f"{artifact_name}: drafting preview manifest artifacts are empty")
     else:
+        artifact_png_paths = {
+            path for path in manifest.artifacts.keys() if path.endswith(".png")
+        }
+        preview_png_paths = {
+            path for path in manifest.preview_evidence_paths if path.endswith(".png")
+        }
+        if artifact_png_paths != preview_png_paths:
+            errors.append(
+                f"{artifact_name}: drafting preview manifest preview evidence paths "
+                "must match the PNG artifact paths"
+            )
         for path, metadata in manifest.artifacts.items():
             if not path.endswith(".png"):
                 errors.append(
@@ -860,6 +872,41 @@ def validate_drafting_preview_manifest(
                 errors.append(
                     f"{artifact_name}: drafting preview manifest artifact '{path}' is "
                     "missing a DXF sidecar reference"
+                )
+        if workspace_root is not None:
+            resolved_root = workspace_root.resolve()
+
+            def _resolve_manifest_path(raw_path: str) -> Path:
+                candidate = Path(raw_path)
+                return candidate if candidate.is_absolute() else resolved_root / candidate
+
+            missing_evidence = sorted(
+                path
+                for path in preview_png_paths
+                if not _resolve_manifest_path(path).exists()
+            )
+            if missing_evidence:
+                errors.append(
+                    f"{artifact_name}: drafting preview manifest references missing "
+                    f"preview evidence files: {missing_evidence}"
+                )
+
+            missing_sidecars: list[str] = []
+            for path, metadata in manifest.artifacts.items():
+                if not path.endswith(".png"):
+                    continue
+                if metadata.siblings.svg:
+                    svg_path = _resolve_manifest_path(metadata.siblings.svg)
+                    if not svg_path.exists():
+                        missing_sidecars.append(f"{path} -> {metadata.siblings.svg}")
+                if metadata.siblings.dxf:
+                    dxf_path = _resolve_manifest_path(metadata.siblings.dxf)
+                    if not dxf_path.exists():
+                        missing_sidecars.append(f"{path} -> {metadata.siblings.dxf}")
+            if missing_sidecars:
+                errors.append(
+                    f"{artifact_name}: drafting preview manifest references missing "
+                    f"sidecar files: {missing_sidecars}"
                 )
     return errors
 

@@ -7,10 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from shared.logging import configure_logging, log_marker_middleware
-from shared.rendering import configure_headless_runtime
+from shared.rendering import configure_headless_rendering
 
 configure_logging("worker-renderer")
-headless_config = configure_headless_runtime()
+headless_config = configure_headless_rendering()
 logger = structlog.get_logger(__name__)
 logger.info(
     "renderer_bootstrap_headless_env",

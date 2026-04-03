@@ -16,7 +16,9 @@ import structlog
 import yaml
 from build123d import Compound
 
+from shared.agents.config import DraftingMode, load_agents_config
 from shared.enums import (
+    AgentName,
     BenchmarkRefusalReason,
     ElectronicComponentType,
     FailureReason,
@@ -31,6 +33,12 @@ from shared.models.schemas import (
     FluidDefinition,
     FluidProperties,
     FluidVolume,
+)
+from shared.script_contracts import (
+    BENCHMARK_SCRIPT_PATH,
+    SOLUTION_SCRIPT_PATH,
+    drafting_render_manifest_path_for_agent,
+    technical_drawing_script_path_for_agent,
 )
 from shared.models.simulation import (
     SimulationFailure,
@@ -92,6 +100,78 @@ def _find_workspace_assembly_definition(
 
 def _preview_agent_role() -> str | None:
     return os.getenv("AGENT_NAME") or None
+
+
+def _drafting_preview_role(script_path: str | Path | None) -> AgentName | None:
+    agent_role = _preview_agent_role()
+    if agent_role:
+        try:
+            return AgentName(agent_role)
+        except Exception:
+            pass
+
+    if script_path is None:
+        return None
+
+    script_name = Path(script_path).name
+    if script_name == BENCHMARK_SCRIPT_PATH:
+        return AgentName.BENCHMARK_CODER
+    if script_name == SOLUTION_SCRIPT_PATH:
+        return AgentName.ENGINEER_CODER
+    return None
+
+
+def _validate_drafting_preview_gate(
+    *,
+    working_root: Path,
+    script_path: str | Path | None,
+    session_id: str | None,
+) -> str | None:
+    planner_role = _drafting_preview_role(script_path)
+    if planner_role is None:
+        return None
+
+    drafting_mode = load_agents_config().get_technical_drawing_mode(planner_role)
+    if drafting_mode not in (DraftingMode.MINIMAL, DraftingMode.FULL):
+        return None
+
+    drafting_script_path = working_root / technical_drawing_script_path_for_agent(
+        planner_role
+    )
+    drafting_manifest_path = working_root / drafting_render_manifest_path_for_agent(
+        planner_role
+    )
+    if not drafting_script_path.exists():
+        return (
+            f"{drafting_script_path.name} is missing; call preview_drawing() "
+            f"before validate()"
+        )
+    if not drafting_manifest_path.exists():
+        return (
+            f"{drafting_manifest_path.name} is missing; call preview_drawing() "
+            f"before validate()"
+        )
+
+    from worker_heavy.utils.file_validation import validate_drafting_preview_manifest
+
+    manifest_errors = validate_drafting_preview_manifest(
+        manifest_content=drafting_manifest_path.read_text(encoding="utf-8"),
+        technical_drawing_script_content=drafting_script_path.read_text(
+            encoding="utf-8"
+        ),
+        artifact_name=str(drafting_manifest_path.relative_to(working_root)),
+        workspace_root=working_root,
+    )
+    if manifest_errors:
+        return "; ".join(manifest_errors)
+
+    logger.info(
+        "drafting_preview_gate_passed",
+        session_id=session_id,
+        agent_role=planner_role.value,
+        manifest_path=str(drafting_manifest_path.relative_to(working_root)),
+    )
+    return None
 
 
 def _load_valid_benchmark_definition(
@@ -2077,6 +2157,14 @@ def validate(
                     error=str(e),
                     session_id=session_id,
                 )
+
+    drafting_gate_error = _validate_drafting_preview_gate(
+        working_root=working_root,
+        script_path=script_path,
+        session_id=session_id,
+    )
+    if drafting_gate_error:
+        return False, drafting_gate_error
 
     try:
         renders_dir = (
