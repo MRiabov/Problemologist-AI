@@ -6,26 +6,64 @@ units:
   currency: "USD"
 
 constraints:
-  # Copy benchmark caps from benchmark_definition.yaml, then set tighter planner targets.
-  benchmark_max_unit_cost_usd:
-  benchmark_max_weight_g:
-  planner_target_max_unit_cost_usd:
-  planner_target_max_weight_g:
+  benchmark_max_unit_cost_usd: 27.0
+  benchmark_max_weight_g: 30.0
+  planner_target_max_unit_cost_usd: 18.0
+  planner_target_max_weight_g: 20.0
 
 manufactured_parts:
-  - part_name: solution_plan_evidence
-    part_id: solution_plan_evidence
-    manufacturing_method: 3DP
+  - part_name: bridge_deck
+    part_id: bridge_deck
+    manufacturing_method: CNC
     material_id: aluminum_6061
     quantity: 1
-    part_volume_mm3: 1000.0
+    part_volume_mm3: 2048.0
     stock_bbox_mm:
-      x: 10.0
-      y: 10.0
-      z: 10.0
-    stock_volume_mm3: 1000.0
+      x: 64.0
+      y: 8.0
+      z: 4.0
+    stock_volume_mm3: 2048.0
     removed_volume_mm3: 0.0
-    estimated_unit_cost_usd: 10.0
+    estimated_unit_cost_usd: 7.0
+  - part_name: left_support
+    part_id: left_support
+    manufacturing_method: CNC
+    material_id: aluminum_6061
+    quantity: 1
+    part_volume_mm3: 1152.0
+    stock_bbox_mm:
+      x: 8.0
+      y: 12.0
+      z: 12.0
+    stock_volume_mm3: 1152.0
+    removed_volume_mm3: 0.0
+    estimated_unit_cost_usd: 3.0
+  - part_name: right_support
+    part_id: right_support
+    manufacturing_method: CNC
+    material_id: aluminum_6061
+    quantity: 1
+    part_volume_mm3: 1152.0
+    stock_bbox_mm:
+      x: 8.0
+      y: 12.0
+      z: 12.0
+    stock_volume_mm3: 1152.0
+    removed_volume_mm3: 0.0
+    estimated_unit_cost_usd: 3.0
+  - part_name: stop_lip
+    part_id: stop_lip
+    manufacturing_method: CNC
+    material_id: aluminum_6061
+    quantity: 1
+    part_volume_mm3: 64.0
+    stock_bbox_mm:
+      x: 4.0
+      y: 8.0
+      z: 2.0
+    stock_volume_mm3: 64.0
+    removed_volume_mm3: 0.0
+    estimated_unit_cost_usd: 1.0
 
 cots_parts:
   # Add one item per COTS part.
@@ -65,80 +103,75 @@ environment_drill_operations:
   #   notes: Fastener clearance hole into permitted fixture
 
 final_assembly:
-  # Add PartConfig or SubassemblyEstimate items.
-  # Example PartConfig shape:
-  # - name: hoist_frame
-  #   config:
-  #     dofs: []
-  # Example SubassemblyEstimate shape:
-  # - subassembly_id: lift_module
-  #   parts:
-  #     - name: spool
-  #       config:
-  #         dofs: ["rotation_z"]
-  #   joints:
-  #     - joint_id: spool_axle
-  #       parts: ["spool", "frame"]
-  #       type: revolute
-  # Do NOT use a list of bare strings here.
-  # Use only canonical manufacturing enum values elsewhere in this file: CNC, 3DP, IM.
+  - name: bridge_deck
+    config:
+      dofs: []
+  - name: left_support
+    config:
+      dofs: []
+  - name: right_support
+    config:
+      dofs: []
+  - name: stop_lip
+    config:
+      dofs: []
 
 drafting:
   sheet_id: sheet-1
   title: Seeded engineer drafting
   views:
     - view_id: front
-      target: solution_plan_evidence
+      target: bridge_deck
       projection: front
       scale: 1.0
       datums: [A, B]
       dimensions:
         - dimension_id: width
           kind: linear
-          target: solution_plan_evidence
-          value: 10.0
+          target: bridge_deck
+          value: 64.0
           binding: true
       callouts:
         - callout_id: 1
-          label: solution_plan_evidence
-          target: solution_plan_evidence
+          label: bridge_deck
+          target: bridge_deck
     - view_id: top
-      target: solution_plan_evidence
+      target: left_support
       projection: top
       scale: 1.0
       datums: [A, C]
       dimensions:
         - dimension_id: depth
           kind: linear
-          target: solution_plan_evidence
-          value: 10.0
+          target: left_support
+          value: 12.0
           binding: true
       callouts:
         - callout_id: 2
-          label: solution_plan_evidence
-          target: solution_plan_evidence
+          label: left_support
+          target: left_support
     - view_id: side
-      target: solution_plan_evidence
+      target: stop_lip
       projection: side
       scale: 1.0
       datums: [B, C]
       dimensions:
         - dimension_id: height
           kind: linear
-          target: solution_plan_evidence
-          value: 10.0
+          target: stop_lip
+          value: 2.0
           binding: true
       callouts:
         - callout_id: 3
-          label: solution_plan_evidence
-          target: solution_plan_evidence
+          label: stop_lip
+          target: stop_lip
   notes: []
 
 totals:
   # `estimated_unit_cost_usd` must include manufactured parts, COTS parts,
   # and any benchmark drilling cost from environment_drill_operations.
-  estimated_unit_cost_usd:
-  estimated_weight_g:
-  estimate_confidence:
+  estimated_unit_cost_usd: 14.0
+  estimated_weight_g: 11.9232
+  estimate_confidence: high
 
 dfm_suggestions: []
