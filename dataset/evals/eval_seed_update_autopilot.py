@@ -34,6 +34,7 @@ DEFAULT_REASONING_EFFORT = "xhigh"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from evals.logic.cli_args import parse_cli_int_set, parse_cli_list_values  # noqa: E402
 from evals.logic.models import EvalDatasetItem  # noqa: E402
 from evals.logic.specs import AGENT_SPECS  # noqa: E402
 from shared.enums import AgentName  # noqa: E402
@@ -59,53 +60,8 @@ def safe_slug(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("_") or "item"
 
 
-def _parse_agent_filters(raw_agents: list[str]) -> list[str]:
-    parsed: list[str] = []
-    for raw in raw_agents:
-        token = raw.strip().strip("[]")
-        if not token:
-            continue
-        parts = re.split(r"\s*(?:,|\bor\b|\|)\s*", token, flags=re.IGNORECASE)
-        parsed.extend(part.strip().strip("[]") for part in parts if part.strip())
-    return parsed
-
-
-def _parse_level_filters(raw_levels: list[str]) -> set[int]:
-    parsed: set[int] = set()
-    for raw in raw_levels:
-        token = raw.strip().strip("[]")
-        if not token:
-            continue
-        parts = re.split(r"\s*(?:,|\bor\b|\|)\s*", token, flags=re.IGNORECASE)
-        for part in parts:
-            value = part.strip().strip("[]")
-            if not value:
-                continue
-            try:
-                level = int(value)
-            except ValueError as exc:
-                raise SystemExit(f"Invalid complexity level '{value}'.") from exc
-            if level < 0 or level > 5:
-                raise SystemExit(
-                    f"Invalid complexity level '{level}'. Expected an integer between 0 and 5."
-                )
-            parsed.add(level)
-    return parsed
-
-
-def _parse_task_id_filters(raw_task_ids: list[str]) -> list[str]:
-    parsed: list[str] = []
-    for raw in raw_task_ids:
-        token = raw.strip().strip("[]")
-        if not token:
-            continue
-        parts = re.split(r"\s*(?:,|\bor\b|\|)\s*", token, flags=re.IGNORECASE)
-        parsed.extend(part.strip().strip("[]") for part in parts if part.strip())
-    return parsed
-
-
 def _resolve_agents(agent_args: list[str]) -> list[AgentName]:
-    parsed = _parse_agent_filters(agent_args)
+    parsed = parse_cli_list_values(agent_args)
     if not parsed:
         raise SystemExit("No valid --agent values were parsed.")
 
@@ -724,10 +680,10 @@ def _apply(args: argparse.Namespace) -> int:
 
     agents = _resolve_agents(args.agent)
     raw_task_id_tokens = [token for group in (args.task_id or []) for token in group]
-    task_ids = set(_parse_task_id_filters(raw_task_id_tokens))
+    task_ids = set(parse_cli_list_values(raw_task_id_tokens))
     if args.task_id and not task_ids:
         raise SystemExit("No valid --task-id values were parsed.")
-    levels = _parse_level_filters(args.level or [])
+    levels = parse_cli_int_set(args.level or [])
     if args.level and not levels:
         raise SystemExit("No valid --level values were parsed.")
 

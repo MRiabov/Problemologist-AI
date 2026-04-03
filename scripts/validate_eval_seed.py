@@ -3,7 +3,6 @@ import asyncio
 import atexit
 import json
 import os
-import re
 import subprocess
 import sys
 import time
@@ -14,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from evals.logic.cli_args import parse_cli_int_set, parse_cli_list_values  # noqa: E402
 from evals.logic.stack_profiles import apply_stack_profile_env  # noqa: E402
 from scripts.internal.eval_run_lock import (  # noqa: E402
     EvalRunSelection,
@@ -248,44 +248,6 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _parse_agent_filters(raw_agents: list[str]) -> list[str]:
-    parsed: list[str] = []
-    for raw in raw_agents:
-        token = raw.strip()
-        if not token:
-            continue
-        if token.startswith("[") and token.endswith("]"):
-            token = token[1:-1]
-        parts = re.split(r"\s*(?:,|\bor\b|\|)\s*", token, flags=re.IGNORECASE)
-        parsed.extend(part.strip() for part in parts if part.strip())
-    return parsed
-
-
-def _parse_level_filters(raw_levels: list[str]) -> set[int]:
-    parsed: set[int] = set()
-    for raw in raw_levels:
-        token = raw.strip()
-        if not token:
-            continue
-        if token.startswith("[") and token.endswith("]"):
-            token = token[1:-1]
-        parts = re.split(r"\s*(?:,|\bor\b|\|)\s*", token, flags=re.IGNORECASE)
-        for part in parts:
-            value = part.strip()
-            if not value:
-                continue
-            try:
-                level = int(value)
-            except ValueError as exc:
-                raise SystemExit(f"Invalid complexity level '{value}'.") from exc
-            if level < 0 or level > 5:
-                raise SystemExit(
-                    f"Invalid complexity level '{level}'. Expected an integer between 0 and 5."
-                )
-            parsed.add(level)
-    return parsed
-
-
 def _filter_dataset_rows_by_technical_drawing_mode(
     rows: list[dict[str, object]],
     *,
@@ -304,7 +266,7 @@ def _filter_dataset_rows_by_technical_drawing_mode(
 
 
 def _resolve_agents(agent_args: list[str]) -> list[AgentName]:
-    parsed = _parse_agent_filters(agent_args)
+    parsed = parse_cli_list_values(agent_args)
     if not parsed:
         raise SystemExit("No valid --agent values were parsed.")
 
@@ -467,7 +429,9 @@ async def _async_main(args: argparse.Namespace) -> int:
 
     technical_drawing_mode = DraftingMode(args.technical_drawing_mode)
     agents = _resolve_agents(args.agent)
-    levels = _parse_level_filters(args.level or [])
+    levels = parse_cli_int_set(
+        args.level or [], minimum=0, maximum=5, label="complexity level"
+    )
     if args.level and not levels:
         raise SystemExit("No valid --level values were parsed.")
 

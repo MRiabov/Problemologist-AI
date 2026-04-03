@@ -1,5 +1,7 @@
 import asyncio
 import mimetypes
+from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
@@ -78,9 +80,50 @@ class S3Client:
             )
             raise
 
+    def upload_files(
+        self,
+        files: Sequence[tuple[str | Path, str]],
+        *,
+        max_concurrency: int | None = None,
+    ) -> tuple[dict[str, str], dict[str, Exception]]:
+        """Upload multiple files in parallel and report per-object outcomes."""
+        if not files:
+            return {}, {}
+
+        worker_count = max(1, min(max_concurrency or 8, len(files)))
+        uploaded: dict[str, str] = {}
+        failed: dict[str, Exception] = {}
+
+        with ThreadPoolExecutor(max_workers=worker_count) as executor:
+            futures = {
+                executor.submit(self.upload_file, local_path, object_key): object_key
+                for local_path, object_key in files
+            }
+            for future in as_completed(futures):
+                object_key = futures[future]
+                try:
+                    uploaded[object_key] = future.result()
+                except Exception as exc:
+                    failed[object_key] = exc
+
+        return uploaded, failed
+
     async def aupload_file(self, local_path: str | Path, object_key: str) -> str:
         """Async version of upload_file."""
         return await asyncio.to_thread(self.upload_file, local_path, object_key)
+
+    async def aupload_files(
+        self,
+        files: Sequence[tuple[str | Path, str]],
+        *,
+        max_concurrency: int | None = None,
+    ) -> tuple[dict[str, str], dict[str, Exception]]:
+        """Async version of upload_files."""
+        return await asyncio.to_thread(
+            self.upload_files,
+            files,
+            max_concurrency=max_concurrency,
+        )
 
     def download_file(self, object_key: str, local_path: str | Path):
         """

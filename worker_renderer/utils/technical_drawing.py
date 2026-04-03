@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -357,30 +356,29 @@ def render_technical_drawing_preview(
     artifact_upload_jobs.append((manifest_rel, manifest_path))
 
     if preview_client is not None and artifact_upload_jobs:
-        with ThreadPoolExecutor(
-            max_workers=min(8, len(artifact_upload_jobs))
-        ) as executor:
-            futures = {
-                executor.submit(preview_client.upload_file, artifact_path, rel_path): (
-                    rel_path,
-                    artifact_path,
-                )
-                for rel_path, artifact_path in artifact_upload_jobs
-            }
-            for future in as_completed(futures):
-                rel_path, artifact_path = futures[future]
-                try:
-                    object_store_keys[rel_path] = future.result()
-                except Exception:
-                    logger.warning(
-                        "technical_drawing_preview_object_store_upload_failed",
-                        session_id=session_id,
-                        agent_role=agent_role,
-                        image_path=str(artifact_path),
-                    )
-                    render_blobs_base64[rel_path] = base64.b64encode(
-                        artifact_path.read_bytes()
-                    ).decode("ascii")
+        upload_inputs = [
+            (artifact_path, rel_path)
+            for rel_path, artifact_path in artifact_upload_jobs
+        ]
+        uploaded_keys, failed_uploads = preview_client.upload_files(
+            upload_inputs,
+            max_concurrency=min(8, len(artifact_upload_jobs)),
+        )
+        object_store_keys.update(uploaded_keys)
+
+        for rel_path, artifact_path in artifact_upload_jobs:
+            if rel_path not in failed_uploads:
+                continue
+            logger.warning(
+                "technical_drawing_preview_object_store_upload_failed",
+                session_id=session_id,
+                agent_role=agent_role,
+                image_path=str(artifact_path),
+                error=str(failed_uploads[rel_path]),
+            )
+            render_blobs_base64[rel_path] = base64.b64encode(
+                artifact_path.read_bytes()
+            ).decode("ascii")
     else:
         for rel_path, artifact_path in artifact_upload_jobs:
             render_blobs_base64[rel_path] = base64.b64encode(
