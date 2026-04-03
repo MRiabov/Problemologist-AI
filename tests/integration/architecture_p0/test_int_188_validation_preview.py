@@ -10,6 +10,7 @@ import pytest
 import yaml
 from PIL import Image
 
+from controller.agent.tools import get_engineer_planner_tools
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from shared.agents import get_image_render_resolution
@@ -53,6 +54,10 @@ from shared.workers.schema import (
     WriteFileRequest,
 )
 from shared.workers.workbench_models import ManufacturingMethod
+from shared.script_contracts import (
+    drafting_render_manifest_path_for_agent,
+    drafting_script_paths_for_agent,
+)
 from tests.integration.agent.helpers import seed_benchmark_assembly_definition
 
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
@@ -657,6 +662,186 @@ def build():
                 wire_render_names
             )
     finally:
+        AGENTS_CONFIG_PATH.write_text(original_config, encoding="utf-8")
+
+
+@pytest.mark.integration_p0
+@pytest.mark.xdist_group(name="physics_sims")
+@pytest.mark.asyncio
+async def test_int_188_engineer_planner_submit_plan_rejects_empty_drafting_manifest():
+    """INT-188: planner submit_plan must fail closed when drafting preview evidence is missing."""
+    original_config = _set_engineer_planner_technical_drawing_mode(DraftingMode.MINIMAL)
+    session_id = f"INT-188-{uuid.uuid4().hex[:8]}"
+    episode_id = str(uuid.uuid4())
+    worker_client = WorkerClient(
+        base_url=WORKER_LIGHT_URL,
+        session_id=session_id,
+        heavy_url=WORKER_HEAVY_URL,
+        controller_url=CONTROLLER_URL,
+        agent_role=AgentName.ENGINEER_PLANNER,
+        light_transport="http",
+    )
+    fs = RemoteFilesystemMiddleware(
+        worker_client,
+        agent_role=AgentName.ENGINEER_PLANNER,
+        episode_id=episode_id,
+    )
+    try:
+        plan_text = (
+            "## Solution Overview\n"
+            "A valid solution overview.\n\n"
+            "## Parts List\n"
+            "| Part | Qty |\n"
+            "|------|-----|\n"
+            "| Box  | 1   |\n\n"
+            "## Assembly Strategy\n"
+            "1. Step one.\n\n"
+            "## Assumption Register\n"
+            "- Assumption: The planner relies on source-backed inputs that must be traceable.\n\n"
+            "## Detailed Calculations\n"
+            "- CALC-001: The plan includes stable derivations rather than freeform guesses.\n\n"
+            "## Critical Constraints / Operating Envelope\n"
+            "- Constraint: The mechanism must remain inside the derived operating limits.\n\n"
+            "## Cost & Weight Budget\n"
+            "- Cost: $10\n"
+            "- Weight: 100g\n\n"
+            "## Risk Assessment\n"
+            "- Risk: Low\n"
+        )
+        todo_text = "- [x] Step 1\n- [-] Step 2\n"
+
+        benchmark_definition = BenchmarkDefinition(
+            objectives=ObjectivesSection(
+                goal_zone=BoundingBox(min=(10.0, 10.0, 10.0), max=(20.0, 20.0, 20.0)),
+                forbid_zones=[],
+                build_zone=BoundingBox(
+                    min=(-50.0, -50.0, 0.0), max=(50.0, 50.0, 90.0)
+                ),
+            ),
+            benchmark_parts=[
+                {
+                    "part_id": "environment_fixture",
+                    "label": "environment_fixture",
+                    "metadata": {
+                        "fixed": True,
+                        "allows_engineer_interaction": True,
+                        "material_id": "aluminum_6061",
+                    },
+                }
+            ],
+            simulation_bounds=BoundingBox(
+                min=(-100.0, -100.0, 0.0), max=(100.0, 100.0, 100.0)
+            ),
+            moved_object=MovedObject(
+                label="ball",
+                shape="sphere",
+                material_id="aluminum_6061",
+                start_position=(0.0, 0.0, 50.0),
+                runtime_jitter=(0.0, 0.0, 0.0),
+            ),
+            constraints=Constraints(max_unit_cost=50.0, max_weight_g=1000.0),
+        )
+        assembly_definition = AssemblyDefinition(
+            version="1.0",
+            constraints=AssemblyConstraints(
+                benchmark_max_unit_cost_usd=50.0,
+                benchmark_max_weight_g=1000.0,
+                planner_target_max_unit_cost_usd=45.0,
+                planner_target_max_weight_g=900.0,
+            ),
+            manufactured_parts=[
+                ManufacturedPartEstimate(
+                    part_name="environment_fixture",
+                    part_id="environment_fixture",
+                    manufacturing_method=ManufacturingMethod.THREE_DP,
+                    material_id="aluminum_6061",
+                    quantity=1,
+                    part_volume_mm3=1000.0,
+                    stock_bbox_mm={"x": 10.0, "y": 10.0, "z": 10.0},
+                    stock_volume_mm3=1000.0,
+                    removed_volume_mm3=0.0,
+                    estimated_unit_cost_usd=10.0,
+                )
+            ],
+            cots_parts=[],
+            final_assembly=[
+                PartConfig(name="environment_fixture", config=AssemblyPartConfig())
+            ],
+            totals=CostTotals(
+                estimated_unit_cost_usd=30.0,
+                estimated_weight_g=500.0,
+                estimate_confidence="high",
+            ),
+        )
+
+        drafting_script_path, drafting_technical_drawing_path = (
+            drafting_script_paths_for_agent(AgentName.ENGINEER_PLANNER)
+        )
+        drafting_manifest_path = drafting_render_manifest_path_for_agent(
+            AgentName.ENGINEER_PLANNER
+        )
+
+        await worker_client.write_file(
+            "plan.md", plan_text, overwrite=True, bypass_agent_permissions=True
+        )
+        await worker_client.write_file(
+            "todo.md", todo_text, overwrite=True, bypass_agent_permissions=True
+        )
+        await worker_client.write_file(
+            "benchmark_definition.yaml",
+            yaml.safe_dump(benchmark_definition.model_dump(mode="json")),
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        await worker_client.write_file(
+            "assembly_definition.yaml",
+            yaml.safe_dump(assembly_definition.model_dump(mode="json")),
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        await worker_client.write_file(
+            "manufacturing_config.yaml",
+            REPO_MANUFACTURING_CONFIG,
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        await worker_client.write_file(
+            str(drafting_script_path),
+            "print('preview evidence placeholder')\n",
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        await worker_client.write_file(
+            str(drafting_technical_drawing_path),
+            "from build123d import TechnicalDrawing\n\n"
+            "def build():\n"
+            "    drawing = TechnicalDrawing()\n"
+            "    return drawing\n",
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        await worker_client.write_file(
+            str(drafting_manifest_path),
+            "{}",
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+
+        tools = get_engineer_planner_tools(fs, session_id)
+        submit_plan = next(tool for tool in tools if tool.__name__ == "submit_plan")
+
+        result = await submit_plan()
+        assert result["ok"] is False, result
+        assert result["status"] == "rejected", result
+        assert result["errors"], result
+        assert any(
+            "source_script_sha256" in error
+            or "preview_evidence_paths" in error
+            or "artifacts are empty" in error
+            for error in result["errors"]
+        ), result["errors"]
+    finally:
+        await worker_client.aclose()
         AGENTS_CONFIG_PATH.write_text(original_config, encoding="utf-8")
 
 
