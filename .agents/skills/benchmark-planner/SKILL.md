@@ -27,6 +27,7 @@ Use the shared preview helpers when evidence or objective overlays are part of t
 
 - Base every size, offset, and clearance on declared geometry, COTS dimensions, or an explicit formula.
 - Do not guess a number. If the handoff is missing a needed value, treat the draft as incomplete instead of inventing one.
+- Treat weak geometry or physics derivations as a hard failure, not a minor gap. In practice, handoffs that cannot rigorously justify the motion or placement math have repeatedly failed downstream.
 - When a fixture moves, derive its pose from the declared axis or joint frame instead of a world-coordinate guess.
 - Prefer selector-driven placement over free-form XYZ positioning. Use face/axis selectors and explicit mates/joints to constrain parts to each other and to the environment; if an absolute 3-coordinate anchor is unavoidable, keep it to one or two top-level placements at most and treat it as fragile.
 - Treat the planner handoff as YAML-backed: `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml` are the machine-readable contract, while `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` are the inspectable source of the approved geometry.
@@ -90,6 +91,7 @@ Read these before drafting or revising the handoff:
 - Runtime AABB escapes the build zone.
 - Labels collide with reserved names or with each other.
 - The inventory is only semantically similar, not exact, across `plan.md`, the YAML, and the planner scripts.
+- The geometry or physics derivation is hand-wavy instead of formula-backed.
 - A moving benchmark fixture is implied but not declared clearly.
 - The evidence script drifts from the YAML geometry.
 - The handoff assumes a downstream file that does not exist yet.

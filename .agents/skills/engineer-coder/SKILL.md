@@ -15,6 +15,7 @@ This skill is the operating manual for the engineering implementation agent. Kee
 4. Keep the authored solution import-safe, reviewable, and easy to revise.
 5. Fail closed when the handoff is inconsistent or infeasible.
 6. Treat `plan.md` as a binding engineering contract with exact-grounded inventory and proof sections.
+7. Treat weak geometry or physics derivations as a hard failure, not a soft warning; if the handoff cannot rigorously justify the motion or placement math, assume the downstream implementation will fail.
 
 ## Core Capabilities
 
@@ -76,6 +77,7 @@ Prefer selector-driven placement over free-form XYZ positioning. Use face/axis s
 
 For engineering handoffs, treat `plan.md` as the source of truth for mechanism narrative, exact inventory mentions, assumptions, calculations, and operating limits. The tightened template includes an Assumption Register, Detailed Calculations, and Critical Constraints / Operating Envelope sections; if the handoff expects those proof sections and they are missing or ungrounded, surface the defect rather than inferring missing numbers.
 When the planner template is in use, read `plan.md` as a sectioned contract with named parts: `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Assumption Register`, `## 5. Detailed Calculations`, `## 6. Critical Constraints / Operating Envelope`, `## 7. Cost & Weight Budget`, and `## 8. Risk Assessment`. The `Detailed Calculations` section is where the binding math lives, and `Risk Assessment` is where known failure modes and mitigations should be documented.
+If the geometry or physics derivation is hand-wavy instead of formula-backed, stop and treat that as a plan defect. In practice, handoffs that cannot derive the payload trajectory, contact timing, or clearance math rigorously are not reliable enough to implement.
 
 Then load specialist knowledge only as needed:
 
@@ -176,6 +178,7 @@ Refuse only when the handoff is genuinely infeasible or self-contradictory.
 - Write `plan_refusal.md` with concrete evidence.
 - If the planner handoff is not exact-grounded or the drafting scripts drift from the inventory, surface the defect instead of compensating in `solution_script.py`.
 - If `plan.md` is missing required proof sections or calculation anchors for the engineering plan, write `plan_refusal.md` with the concrete gap rather than filling in the missing assumptions yourself.
+- If the plan's geometry or physics math is not rigorously derived, treat that as a handoff defect and refuse to compensate inside `solution_script.py`.
 - Keep the refusal specific to the blocked plan.
 - Do not silently pivot to an unrelated solution.
 

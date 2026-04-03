@@ -17,6 +17,8 @@ Signals:
 - Out-of-bounds parts
 - A path that looks correct in sketch space but not in final placement
 - Missing support continuity between adjacent surfaces
+- Geometry or physics math is not rigorous enough to support the intended path
+- The payload trajectory is only described qualitatively, not derived
 
 Likely causes:
 
@@ -24,10 +26,13 @@ Likely causes:
 - Wrong rotation
 - Gaps between handoff surfaces
 - The final envelope was not checked after placement
+- The planner handoff did not provide a formula-backed trajectory or clearance derivation
+- The motion estimate was inferred from prose instead of calculated from the contract
 
 First fix:
 
 - Inspect the final placed geometry and fix the narrowest placement error.
+- If the path math is hand-wavy, stop and surface the handoff defect instead of compensating in `solution_script.py`.
 
 ## Contract and schema
 

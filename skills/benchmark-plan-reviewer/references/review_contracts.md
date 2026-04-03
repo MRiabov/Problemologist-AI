@@ -17,6 +17,7 @@
 - `todo.md`
 - `benchmark_definition.yaml`
 - `benchmark_assembly_definition.yaml`
+- `precise_path_definition.yaml` when the planner bundle provides a refined path contract
 - `benchmark_plan_evidence_script.py`
 - `benchmark_plan_technical_drawing_script.py`
 - `renders/**` when planner-side previews already exist
@@ -37,6 +38,18 @@
 - Require any moving benchmark fixture to have a fully explicit motion contract that the reviewer can reconstruct from the handoff and evidence.
 - Require enough motion-visible facts for downstream engineering intake, including the declared motion type, axis or path reference when applicable, and operating limits or envelope.
 - Reject motion that is impossible, unstable, or not grounded in the declared benchmark artifacts.
+
+## Precise path checklist
+
+- If `precise_path_definition.yaml` exists, read it as binding path-contract context.
+- Compare `assembly_definition.yaml.motion_forecast` to `precise_path_definition.yaml`; the precise path must refine the same moving-part set, not invent a different trajectory.
+- Verify anchor coordinates, `sample_stride_s`, first-contact windows, terminal events, and tolerances against the declared geometry, DOFs, and control.
+- Estimate whether the implied speeds and transition timings are physically plausible for the mechanism described in the plan.
+- Treat a missing or hand-wavy payload trajectory estimate as a strong reject. If the planner has not grounded the payload motion, downstream machinery timing and sizing are usually not grounded either.
+- Treat non-rigorous path math in `plan.md` as a strong reject. If the detailed calculation section does not derive the trajectory scientifically, the trajectory estimate itself is not credible.
+- Reject hidden DOFs, unsupported acceleration, impossible contact timing, or any path that cannot be satisfied without changing the plan.
+- Require `plan.md`'s detailed calculation section to expose the full derivation behind every path claim, including intermediate math for distances, timing, velocity, clearance, and tolerance checks.
+- Reject path claims that are numerically stated but not actually derived in `plan.md`.
 
 ## Comments checklist
 

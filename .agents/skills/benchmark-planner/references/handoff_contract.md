@@ -63,6 +63,7 @@ Before submission, verify all of the following:
 - The evidence and technical-drawing scripts preserve the same labels, repeated quantities, and COTS identities as the YAML inventory.
 - Every length, offset, clearance, and travel limit is formula-backed from declared source geometry, COTS specs, or manufacturing constants. If a value is missing, the handoff is incomplete.
 - The planner evidence and technical-drawing scripts are the inspectable source of the planned solution geometry; do not leave geometry implied only in prose.
+- Geometry or physics that cannot be derived rigorously should be treated as a hard failure. In practice, weak derivations have repeatedly led to downstream failure, so the handoff should be fixed before submission.
 - Any moving fixture position is defined by its joint frame or axis, not by an arbitrary world coordinate.
 - Every top-level authored label is unique and not `environment` or `zone_*`.
 - `moved_object.material_id` is a known material from `manufacturing_config.yaml`.

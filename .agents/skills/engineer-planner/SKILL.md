@@ -27,6 +27,7 @@ Use the shared preview helpers whenever the plan needs visual evidence:
 
 - Base every size, offset, and clearance on explicit source geometry, COTS dimensions, or formulas.
 - Do not guess a number. If the handoff is missing a needed value, correct the source instead of inventing one.
+- Treat weak geometry or physics derivations as a hard failure, not a minor gap. In practice, handoffs that cannot rigorously justify the motion or placement math have repeatedly failed downstream.
 - When a fixture moves, derive its pose from the declared axis or joint chain instead of a hand-placed coordinate.
 - Prefer selector-driven placement over free-form XYZ positioning. Use face/axis selectors, explicit mates, and joint chains to constrain parts to each other and to the environment; treat any absolute 3-coordinate anchor as an exception that needs clear justification.
 - Treat the planner handoff as YAML-backed: `assembly_definition.yaml` is the machine-readable contract, while `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` are the inspectable source of the planned solution geometry.
@@ -46,6 +47,7 @@ Use the shared preview helpers whenever the plan needs visual evidence:
 - `benchmark_assembly_definition.yaml` except as read-only intake context.
 - The coder's implementation files or review artifacts.
 - Fallback geometry, invented materials, or silent budget mutations.
+- Geometry or physics derivation that is hand-wavy instead of formula-backed.
 
 ## Required Read Set
 
