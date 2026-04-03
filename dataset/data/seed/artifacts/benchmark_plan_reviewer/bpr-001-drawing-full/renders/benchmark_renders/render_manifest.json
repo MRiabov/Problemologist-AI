@@ -1,0 +1,36 @@
+{
+  "version": "1.0",
+  "bundle_id": "seed-bpr-001-drawing-full-benchmark-review-preview",
+  "created_at": "2026-04-02T00:00:00Z",
+  "episode_id": "seed-bpr-001-drawing-full",
+  "worker_session_id": "seed-bpr-001-drawing-full",
+  "revision": "b16395653e38f74d0ca7708a1e5007da11c425b2",
+  "scene_hash": "2ba9fc6efa24e4c7aea36fef14a1ef0c96e01e8411a5909e470172630373183c",
+  "bundle_path": "renders/benchmark_renders",
+  "environment_version": "1.0",
+  "drafting": true,
+  "source_script_sha256": "b7aca1f6770b55bad51f8429542568e6a9c7ad5f26ec435901ffe329035b7da1",
+  "preview_evidence_paths": [
+    "renders/benchmark_renders/bpr-001-drawing-full_sheet.png"
+  ],
+  "artifacts": {
+    "renders/benchmark_renders/bpr-001-drawing-full_sheet.png": {
+      "modality": "rgb",
+      "group_key": "bpr-001-drawing-full_sheet",
+      "view_index": 0,
+      "orbit_pitch": 45.0,
+      "orbit_yaw": 45.0,
+      "siblings": {
+        "rgb": "renders/benchmark_renders/bpr-001-drawing-full_sheet.png",
+        "depth": null,
+        "segmentation": null,
+        "svg": "renders/benchmark_renders/bpr-001-drawing-full_sheet.svg",
+        "dxf": "renders/benchmark_renders/bpr-001-drawing-full_sheet.dxf"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    }
+  }
+}

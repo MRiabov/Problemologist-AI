@@ -107,7 +107,7 @@ defaults:
       - '**'
 agents:
   engineer_planner:
-    technical_drawing_mode: "minimal"
+    technical_drawing_mode: minimal
     reasoning_effort: xhigh
     filesystem_permissions:
       read:
@@ -144,12 +144,12 @@ agents:
         - solution_plan_evidence_script.py
         - solution_plan_technical_drawing_script.py
       deny:
-        - skills/**
-        - utils/**
-        - reviews/**
-        - benchmark_script.py
-        - solution_script.py
-        - .manifests/**
+      - skills/**
+      - utils/**
+      - reviews/**
+      - benchmark_script.py
+      - solution_script.py
+      - .manifests/**
     tools:
     - list_files
     - read_file
@@ -377,7 +377,7 @@ agents:
       min_images: 1
       reminder_interval: 2
   benchmark_planner:
-    technical_drawing_mode: "minimal"
+    technical_drawing_mode: minimal
     reasoning_effort: xhigh
     filesystem_permissions:
       read:
@@ -411,11 +411,11 @@ agents:
         - benchmark_plan_technical_drawing_script.py
         - renders/**
       deny:
-        - skills/**
-        - utils/**
-        - reviews/**
-        - solution_script.py
-        - .manifests/**
+      - skills/**
+      - utils/**
+      - reviews/**
+      - solution_script.py
+      - .manifests/**
     tools:
     - list_files
     - read_file
