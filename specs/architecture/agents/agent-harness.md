@@ -173,7 +173,7 @@ Rules:
 4. Reviewer outputs are stage-scoped YAML pairs and the decision YAML is the routing source of truth.
 5. Token compression is configured by `config/agents_config.yaml` and keeps canonical context telemetry available for compaction.
 6. Feedback from simulation, cost checks, and manufacturability checks is recorded in markdown for downstream debugging and skill learning.
-7. Codex self-improvement runs also persist a local `logs/skill_loop/events.jsonl` sidecar so self-reflection text and follow-up skill-update output remain available for later diagnostics.
+7. Codex self-improvement runs persist a local `logs/skill_loop/events.jsonl` sidecar so self-reflection text and follow-up skill-update output remain available for later diagnostics, and the runner promotes those structured records into DB traces when an episode-backed path exists.
 
 ## Runner behavior
 
@@ -183,7 +183,7 @@ The runner behavior for Codex mode is:
 2. Launch `codex exec` in that workspace with the prompt text.
 3. Verify the workspace locally after Codex exits.
 4. Optionally run local judge/reviewer passes against the same workspace artifacts when the run requests judge/reviewer mode and the local stage contracts are satisfied.
-5. Persist session metadata including workspace path, launch return code, verification result, judge/reviewer outcomes when run, and failure reason.
+5. Persist session metadata including workspace path, launch return code, verification result, judge/reviewer outcomes when run, and failure reason, then promote queryable observability events into the controller DB when an episode-backed path is available.
 6. Fail closed if the local Codex CLI is missing or the workspace verification fails.
 7. Controller-backed eval runs apply the `eval` stack profile so the eval bootstrap does not tear down or probe the integration stack, the profile skips the frontend dev server because evals do not need it, and the render path still uses the containerized `worker-renderer` service rather than a host-launched Xvfb fallback.
 8. Long-running controller-backed eval runs emit the audible reminder `eval setup running` every five minutes until the run exits.
@@ -193,8 +193,15 @@ The controller-backed preflight and health checks remain part of the paid-provid
 
 ## Observability
 
-Codex mode still emits deterministic session metadata.
-That metadata is the debugging record for the run.
+Codex mode emits two observability layers:
+
+1. Raw run artifacts:
+   - the CLI session stream under `CODEX_HOME/sessions/rollout-*.jsonl`
+   - the run-local `logs/skill_loop/events.jsonl` sidecar
+   - any derived transcript artifacts rendered from those sources
+2. Queryable DB traces:
+   - structured records promoted into the controller database as `TraceType.EVENT`
+   - the DB is the source of truth for later filtering, counting, and cross-run joins
 
 The recorded fields include:
 
@@ -209,6 +216,14 @@ The recorded fields include:
 09. `verification_errors`
 10. `verification_details`
 11. `failure_reason`
+
+The promotion contract is:
+
+1. Every promoted event must carry `episode_id`, `user_session_id` when available, and a backend/source marker that distinguishes controller-backed runs from Codex/CLI-backed runs.
+2. The backend/source marker may live in existing JSON metadata for the first pass; a dedicated column is only required if query performance or indexing later justify a migration.
+3. Validation and failure families are emitted as individual event rows, not collapsed into a single summary blob, so queries can count validation failures directly.
+4. The primary Codex-side structured event families for this path are `submission_validation`, `node_entry_validation_failed`, `logic_failure`, `lint_failure_code`, `lint_failure_docs`, `simulation_instability`, `review_decision`, `excessive_dof_detected`, `skill_self_reflection`, and `skill_update`.
+5. The raw `.codex` session stream remains the replay/debug source; the DB trace stream is the queryable index.
 
 ## Validation contract
 

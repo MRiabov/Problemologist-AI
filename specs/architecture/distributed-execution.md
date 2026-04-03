@@ -35,6 +35,7 @@ In the future we may well refactor to run on distributed nodes, perhaps even IPv
 - `worker-light` (FastAPI single-flight for validation-capable light ops): session filesystem, git, linting, runtime execution, geometric validation, static asset serving.
 - `worker-heavy` (FastAPI single-flight executor): simulation, manufacturability analysis, review handover, backend-native simulation render coordination.
 - `worker-renderer` (FastAPI single-flight executor): headless rendering for static preview, selection snapshots, depth/segmentation previews, and preview-manifest persistence. Unlike `worker-light` and `worker-heavy`, it stays in the containerized renderer deployment in development, integration, eval, and production because the graphics stack must not depend on the host display session. EGL remains the desired default, but the current native EGL render probes segfault for reasons that are not yet isolated, so the current renderer image falls back to an OSMesa-backed VTK window class.
+- Any file leaving `worker-renderer` should be object-store-backed before it crosses the service boundary; worker-light or controller code may proxy it into a workspace later, but the renderer should not be the final byte sink.
 - Shared dependencies: `temporal`, `postgres`, `minio`.
 
 The split is intentional: keep fast, high-throughput operations on light infra while isolating heavy physics/render workloads onto dedicated nodes.
@@ -295,7 +296,7 @@ Mount paths must be defined explicitly for split workers (light/heavy/shared) an
 
 Skills sync is startup-configurable; in integration tests we can use local deterministic skills paths.
 
-For videos and large files, we will also use a `CompositeBackend`. It will route the `/render/` folder to the s3; we will need internal plumbing to make this happen (presumably, any python function that will render, will upload to s3).
+For videos and other renderer-produced files, we will use a `CompositeBackend`-style handoff. The `/render/` folder is routed to S3 so renderer output can be materialized through object keys rather than relayed as controller bytes; the proxy hop can update the local workspace after the S3 write.
 
 ### Videos
 

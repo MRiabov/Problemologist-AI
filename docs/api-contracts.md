@@ -7,7 +7,7 @@
 | Convention | Details |
 | -- | -- |
 | Session header | Most worker and controller-to-worker calls use `X-Session-ID` |
-| Worker filesystem bypass | Requires both a payload flag and `X-System-FS-Bypass: 1` |
+| Worker filesystem bypass | Internal/system-only escape hatch; requires both a payload flag and `X-System-FS-Bypass: 1` |
 | Backup protection | `/api/ops/backup` requires `X-Backup-Secret` |
 | Controller compatibility | Controller routes are available both under `/api/...` and legacy unprefixed paths for backward compatibility |
 
@@ -61,19 +61,44 @@
 
 ## Worker-Light API
 
+The `/fs` namespace is a shared workspace surface with three distinct
+subfamilies:
+
+- workspace CRUD and agent tooling
+- low-level probes and raw-byte inspection
+- explicit snapshot transport
+
+Use the narrowest subfamily that matches the caller's intent. Integration tests
+should not use raw probe calls as generic scaffolding when a batch upload or a
+direct fixture seed would be clearer.
+
+### Service Health
+
 | Method | Path | Purpose |
 | -- | -- | -- |
 | GET | `/health` | Health check |
+
+### File Workspace Surface
+
+| Method | Path | Purpose |
+| -- | -- | -- |
 | POST | `/fs/ls` | List files in the session filesystem |
-| POST | `/fs/exists` | Check whether a path exists |
 | POST | `/fs/read` | Read a text file |
 | POST | `/fs/write` | Write a text file |
 | POST | `/fs/edit` | Apply replacements to a file |
 | POST | `/fs/upload_file` | Upload a binary file |
-| POST | `/fs/read_blob` | Read raw bytes from a path |
 | POST | `/fs/grep` | Search for text in files |
-| POST | `/fs/bundle` | Bundle the session workspace into a tarball |
 | POST | `/fs/delete` | Delete a file or directory |
+| POST | `/fs/upload_files` | Upload multiple files in one request |
+| POST | `/fs/read_files` | Read multiple files in one request |
+| POST | `/fs/exists` | Check whether a path exists |
+| POST | `/fs/read_blob` | Read raw bytes from a path |
+| POST | `/fs/bundle` | Bundle the session workspace into a tarball |
+
+### Git And Execution
+
+| Method | Path | Purpose |
+| -- | -- | -- |
 | POST | `/git/init` | Initialize a git repository in the session workspace |
 | POST | `/git/commit` | Commit workspace changes |
 | GET | `/git/status` | Report git status |

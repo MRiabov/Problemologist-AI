@@ -346,7 +346,7 @@ The engineering loop has two reviewer stages with different responsibilities.
 
 01. Reject plans that propose unsupported components/mechanisms outside the current allowed system/tooling/contracts.
 02. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`, including label/quantity/COTS-identity exactness in `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py`, a structural build123d `TechnicalDrawing` import-and-call check, plus exact identifier mention coverage in `plan.md`.
-03. Validate feasibility (physics realism, build-zone fit, planner budgets under benchmark caps, and the presence of assumptions, calculations, and operating-envelope limits for any binding numeric claims).
+03. Validate feasibility (physics realism, build-zone fit, planner budgets under benchmark caps, and the presence of a source-backed motion forecast, assumptions, calculations, and operating-envelope limits for any binding numeric claims).
 04. Reject plans that rely on free-form XYZ placement as the primary positioning method; require selector-driven placement, explicit mates/joints, or clearly bounded absolute anchors.
 05. Validate non-ambiguity and completeness of planner handoff artifacts.
 06. Re-run pricing/weight validation (`skills/manufacturing-knowledge/scripts/validate_and_price.py` or equivalent tool-wrapped validator) against the planner handoff and reject mismatches/failures.

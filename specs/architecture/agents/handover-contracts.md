@@ -289,7 +289,7 @@ Engineer sends the planner handoff files to the coder agent who has to implement
 1. A `plan.md` file. The plan.md is a structured document (much like the benchmark generator plan) outlining:
 2. A stripped down `benchmark_definition.yaml` file, except the max price and weight are set by the planner now and remain under the benchmark/customer caps.
 3. A `todo.md` TODO-list.
-4. A `assembly_definition.yaml` file with per-part pricing inputs, `final_assembly` structure, and assembly totals produced by `validate_costing_and_price.py`.
+4. A `assembly_definition.yaml` file with per-part pricing inputs, `final_assembly` structure, assembly totals produced by `validate_costing_and_price.py`, and a planner-authored `motion_forecast` section whenever the approved solution includes moving engineer-owned parts.
 5. A `solution_plan_evidence_script.py` file that captures the build123d planning evidence for the proposed solution geometry.
 6. A `solution_plan_technical_drawing_script.py` file that captures the planner-authored technical drawing companion for that same solution geometry.
 
@@ -298,6 +298,7 @@ Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
 - Source of truth contract: `ENGINEER_PLANNER_HANDOFF_ARTIFACTS` in node-entry validation.
 - Required artifacts: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`
 - Those planner-authored scripts must preserve the same labels, repeated quantities, and COTS identities as the approved inventory, and the planner must self-validate that exactness before `submit_plan()`.
+- If the approved solution includes moving engineer-owned parts, `assembly_definition.yaml` must also carry a reviewable `motion_forecast` section with ordered world-frame anchors, tolerance bands, and first-contact order.
 - Reviewer-stage manifest: `.manifests/engineering_plan_review_manifest.json` (planner handoff materialization for the plan-review stage)
 - Entry guard behavior:
   - Reject when the manifest is missing, stale for the latest planner revision, or schema-invalid.
@@ -308,7 +309,7 @@ Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
 - Plan reviewer responsibilities:
   - Reject unsupported/invented system components or mechanisms.
   - Reject inconsistent, infeasible, ambiguous, or incomplete plans, including planner drafting scripts that drift from the approved label/quantity/COTS-identity inventory.
-  - Reject missing, contradictory, or unsupported benchmark motion metadata; motion must be explicit and reconstructable from the handoff artifacts, not minimized for convenience.
+  - Reject missing, contradictory, or unsupported motion forecasts; motion must be explicit and reconstructable from the handoff artifacts, not minimized for convenience.
   - Re-run `skills/manufacturing-knowledge/scripts/validate_and_price.py` (or equivalent wrapped validator tool) and reject on pricing/weight/schema mismatch.
   - Keep cost/weight target scrutiny as a mandatory realism check.
   - Optional future work: propose weight/cost optimization opportunities.

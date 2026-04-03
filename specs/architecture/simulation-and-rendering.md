@@ -175,6 +175,8 @@ The rule is:
 8. The render bundle path itself identifies whether the evidence belongs to benchmark input, engineer inspection, or final validation.
 9. If a backend cannot satisfy the selected render path, the failure should surface as a validation/runtime contract error rather than being hidden behind an unrelated global fallback.
 
+Any renderer-emitted file that crosses the `worker-renderer` boundary should already be backed by S3, with worker-light or controller code using the object key to re-materialize it locally if needed.
+
 This keeps MuJoCo and Genesis distinct while still allowing each backend to use its own canonical default view when the runtime resolver allows that.
 
 Agent-facing inspection of persisted simulation video is config-driven. When `config/agents_config.yaml` sets `render.split_video_renders_to_images=true`, `inspect_media(...)` may decode an `.mp4` artifact into representative image frames and attach those frames to the model instead of exposing the raw video bytes as a dead end. The sampling stride is controlled by `render.video_frame_attachment_stride`, so a 60-frame video with stride 6 yields 10 attached frames, while a 6-frame video yields 1 attached frame. `render.video_frame_jpeg_quality_percent` controls the JPEG encoding quality as a percent value. The stored MP4 remains the canonical simulation artifact; the split only affects multimodal review.
@@ -327,6 +329,56 @@ The rule is:
 <!-- Future work: if benchmark input arrives as STEP, infer candidate constraint/motion metadata from the source geometry before materializing the explicit benchmark motion contract. -->
 
 This exception is benchmark-only. It does not relax engineering realism requirements.
+
+### Planner motion forecast contract
+
+Engineer-owned moving solutions need a planner-authored motion forecast, not just a prose description of the mechanism.
+
+The contract is:
+
+01. The forecast captures the nominal path; the tolerance bands define the envelope around that path.
+02. The canonical location is a dedicated `motion_forecast` section inside `assembly_definition.yaml` for engineering handoffs that include moving engineer-owned parts.
+03. The forecast is sparse and ordered. It is not a full per-timestep replay of the physics engine.
+04. The default planner cadence is coarse, typically `0.5s`. The planner may add event-driven anchors around impacts, mode switches, settle events, or other contact transitions when those points matter for review.
+05. The coder may generate a denser implementation/verification trace, typically around `0.3s`, but that trace is derived evidence, not a replacement for the planner-owned contract.
+06. Each anchor must state:
+    - `t_s`
+    - an explicit `reference_point` such as COM, another named physical point, or a justified geometric proxy
+    - absolute world coordinates in millimeters
+    - optional rotation in degrees
+    - the positional tolerance band for that anchor, and rotational tolerance when rotation matters
+    - the first-contact surfaces expected to be touched by that reference point, in the order they are first encountered
+07. Contact order is part of the contract. If the payload touches multiple surfaces before success, the first-touch order and an expected time window for each first contact must be recorded.
+08. Tolerances must be grounded in runtime jitter and contact uncertainty. The default positional tolerance on any axis should not exceed `1.2x` the runtime jitter on that axis unless a calculation subsection or risk assessment explicitly justifies a wider band.
+09. A plan that cannot state this motion at reviewable resolution is incomplete. The reviewer should not have to infer the trajectory from a vague mechanism description.
+10. The planner owns the forecast. The coder may refine implementation details inside the approved envelope, but may not silently rewrite the forecast when the plan is already approved.
+11. Simulation may fail fast when the realized motion leaves the tolerated corridor for a configurable number of consecutive checks or when the required contact sequence becomes impossible.
+12. This contract applies to engineer-owned moving parts only. Benchmark-owned moving fixtures continue to use the benchmark motion contract in `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml`.
+
+Minimal shape:
+
+```yaml
+motion_forecast:
+  reference_frame: world
+  reference_point: com
+  planner_sample_stride_s: 0.5
+  tolerances:
+    position_mm: [1.2, 1.2, 1.2]
+    rotation_deg: [0.0, 0.0, 2.0]
+  anchors:
+    - t_s: 0.0
+      pos_mm: [10.0, 10.0, 10.0]
+      rot_deg: [0.0, 0.0, 0.0]
+      first_contacts: []
+    - t_s: 0.5
+      pos_mm: [10.0, 10.0, 10.5]
+      first_contacts:
+        - order: 1
+          surface: ramp_top
+          first_touch_window_s: [0.45, 0.55]
+```
+
+The reviewer evaluates the forecast against the plan, the assembly contract, the objective zones, and the runtime jitter envelope. The forecast is invalid if it leaves the contact order implicit, uses a non-world frame without justification, or claims a tolerance wider than the declared uncertainty without an explicit derivation.
 
 ##### Engineering DOF minimality rule
 

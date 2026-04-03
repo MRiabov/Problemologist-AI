@@ -53,7 +53,10 @@ Apply the transport policy by route family, not by isolated call site.
 
 | Route family | Target owner | Transport shape | Notes |
 | -- | -- | -- | -- |
-| `worker_light/api/routes.py`: `/fs/*`, `/git/*`, `/runtime/execute`, `/lint`, `/topology/inspect` | `worker-light` | JSON for control, multipart or binary for file bytes, batch endpoints for multiple files | This is the light workspace and execution boundary. |
+| `worker_light/api/routes.py`: `/fs/ls`, `/fs/read`, `/fs/write`, `/fs/edit`, `/fs/upload_file`, `/fs/upload_files`, `/fs/upload_files_object_store`, `/fs/delete`, `/fs/grep` | `worker-light` | JSON for control, multipart or binary for file bytes, batch endpoints for multiple files, object-store pull for staged files | Workspace CRUD and agent tooling. |
+| `worker_light/api/routes.py`: `/fs/exists`, `/fs/read_blob`, `/fs/read_files` | `worker-light` | JSON control and raw bytes | Low-level probes and inspection helpers. Use them sparingly in tests and orchestration. |
+| `worker_light/api/routes.py`: `/fs/bundle` | `worker-light` | snapshot bundle / compatibility path | Explicit workspace snapshot transport only. Do not treat as the default file API. |
+| `worker_light/api/routes.py`: `/git/*`, `/runtime/execute`, `/lint`, `/topology/inspect` | `worker-light` | JSON for control, multipart or binary for file bytes where needed | Remaining light-worker control and execution paths. |
 | `worker_light/api/routes.py`: `/benchmark/validate` | `worker-light` | JSON control plus workspace-local outputs | Fast geometry gate. Do not attach preview render artifacts by default. |
 | `worker_light/api/routes.py`: `/benchmark/preview`, `/render/*` | `worker-light` + `worker-renderer` | staged bundle, binary bytes, or object-store pointer | Light worker may orchestrate the renderer, but it should not relay large bytes through the controller. |
 | `worker_heavy/api/routes.py`: `/benchmark/simulate`, `/benchmark/submit`, `/benchmark/analyze`, `/benchmark/build` | `worker-heavy` | bundle only when snapshot semantics are required; otherwise binary or pointer-based transfer | Heavy compute and handoff paths. |
@@ -61,6 +64,10 @@ Apply the transport policy by route family, not by isolated call site.
 | `worker_heavy/api/routes.py`: `/benchmark/validate`, `/benchmark/preview` | legacy compatibility only | JSON/bundle fallback | Keep only until controller and agent-facing paths are fully on the light-worker route family. |
 | `controller/api/routes/script_tools.py`: `/validate`, `/simulate`, `/verify`, `/preview`, `/submit` | controller orchestration | no bulk byte relay; envelopes and coordination only | The controller selects routes and collates results; it should not reserialize payload bytes unless unavoidable. |
 | `worker_heavy/activities/heavy_tasks.py` and `shared/rendering/renderer_client.py` | internal worker-plane helpers | same as the owning route family | Helpers inherit the same transport contract as the route they serve. |
+
+Integration tests should prefer batch uploads or fixture seeding over repeated
+`exists`/`read`/`read_blob` loops unless the transport contract itself is the
+subject of the test.
 
 ## Proposed Target State
 
@@ -163,7 +170,59 @@ Apply the transport policy by route family, not by isolated call site.
 6. Existing compatibility paths continue to work until the migration cutover
    is complete.
 
+## Implementation Status
+
+The transport cleanup is partially implemented and validated on the hot paths
+that matter most for this migration:
+
+1. `worker-light` now supports batch upload/download helpers and the websocket
+   RPC transport for normal workspace CRUD.
+2. `controller/clients/worker.py` now uses multipart file uploads and batch
+   file reads instead of per-file binary relay loops on the normal path.
+3. Handover synchronization now prefers object-store-backed uploads when the
+   destination can pull artifacts directly.
+4. Controller script-tool preview and simulation paths now batch artifact reads
+   instead of re-fetching one file at a time.
+5. Compatibility bundle/snapshot paths remain in place for explicit snapshot
+   semantics and legacy handoff surfaces.
+6. Legacy agent-side helpers in `shared/utils/agent/__init__.py` still collect
+   a workspace bundle before calling heavy-worker compatibility endpoints when
+   the newer orchestration path is unavailable.
+7. `controller/api/tasks.py` still performs controller-mediated benchmark bundle
+   copying for approved handoffs, because that path is a session-to-session
+   transfer rather than a direct worker-owned write.
+8. Renderer-emitted files are persisted to object storage before they leave
+   `worker-renderer`; downstream proxy hops can re-materialize them locally,
+   but the renderer boundary itself is not the long-lived byte sink.
+
+## Remaining Watchpoints
+
+These are the places most likely to be missed in a later transport cleanup pass:
+
+1. `shared/utils/agent/__init__.py` bundle collection before heavy-worker calls.
+2. `controller/api/tasks.py` benchmark artifact copy between sessions.
+3. `worker_renderer/utils/technical_drawing.py` base64 sidecars for small SVG
+   and DXF companions, which are still acceptable but should not expand back
+   into the bulk-data plane.
+4. Renderer output that exits `worker-renderer` should be S3-backed first and
+   only then proxied back through worker-light materialization.
+
 ## Migration Checklist
+
+### Filesystem surface split
+
+- [ ] Keep `/fs/ls`, `/fs/read`, `/fs/write`, `/fs/edit`, `/fs/upload_file`,
+  `/fs/upload_files`, `/fs/delete`, and `/fs/grep` as the normal workspace
+  CRUD surface.
+- [ ] Keep `/fs/exists`, `/fs/read_blob`, and `/fs/read_files` as low-level
+  probe helpers, not generic scaffolding for ordinary integration setup.
+- [ ] Keep `/fs/bundle` as explicit snapshot/compatibility transport only.
+- [ ] Prefer `/fs/upload_files` for multi-file setup instead of repeated single
+  writes when the test is not validating per-file transport behavior.
+- [ ] Prefer fixture seeding or batch helpers over repeated `exists` or
+  `read_blob` loops unless the probe transport itself is under test.
+- [ ] Keep privileged filesystem bypass requests internal-only and avoid using
+  them in agent-facing flows unless the bypass policy is itself under test.
 
 ### Documented transport rules
 
@@ -175,9 +234,9 @@ Apply the transport policy by route family, not by isolated call site.
 
 ### Hot paths to simplify
 
-- [ ] Replace sequential artifact relay loops with batched retrieval or
+- [x] Replace sequential artifact relay loops with batched retrieval or
   manifest-driven reads.
-- [ ] Replace base64-in-JSON byte transport with binary or multipart transport
+- [x] Replace base64-in-JSON byte transport with binary or multipart transport
   where the boundary allows it.
 - [ ] Remove controller-side relay behavior that only exists to pass bytes
   through to another worker.
