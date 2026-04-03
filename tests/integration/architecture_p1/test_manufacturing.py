@@ -316,6 +316,46 @@ def build():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+async def test_worker_analyze_fixed_catalog_cots_still_validates():
+    """Fixed COTS parts must not bypass catalog validation or pricing."""
+    script = """
+from build123d import Box, Location
+from shared.models.schemas import PartMetadata
+from shared.workers.workbench_models import ManufacturingMethod
+
+def build():
+    part = Box(2, 2, 2)
+    part = part.move(Location((0, 0, 1)))
+    part.label = "fixed_cots_probe"
+    part.metadata = PartMetadata(cots_id="M3_BOLT", fixed=True)
+    return part
+"""
+
+    async with AsyncClient(base_url=WORKER_HEAVY_URL, timeout=300.0) as client:
+        request = AnalyzeRequest(
+            script_path="script.py",
+            script_content=script,
+            method=ManufacturingMethod.CNC,
+            quantity=1,
+        )
+        resp = await client.post(
+            "/benchmark/analyze",
+            json=request.model_dump(mode="json"),
+            headers={"X-Session-ID": f"INT-033-{uuid.uuid4().hex[:8]}"},
+        )
+        assert resp.status_code == 200, resp.text
+        result = WorkbenchResult.model_validate(resp.json())
+
+    assert result.is_manufacturable is True
+    assert result.unit_cost == pytest.approx(0.5)
+    assert result.weight_g == pytest.approx(1.2)
+    assert result.metadata.cost_breakdown is not None
+    assert result.metadata.cost_breakdown.process == "cots"
+    assert result.metadata.additional_info["cots_part_id"] == "M3_BOLT"
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
 async def test_worker_analyze_rejects_unknown_cots_part():
     """Unresolved COTS part IDs must fail closed with an explicit error."""
     script = """

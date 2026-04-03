@@ -37,6 +37,10 @@ from shared.models.schemas import (
     PhysicsConfig,
 )
 from shared.models.simulation import SimulationResult
+from shared.script_contracts import (
+    drafting_render_manifest_path_for_agent,
+    drafting_script_paths_for_agent,
+)
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
     BenchmarkToolRequest,
@@ -54,10 +58,6 @@ from shared.workers.schema import (
     WriteFileRequest,
 )
 from shared.workers.workbench_models import ManufacturingMethod
-from shared.script_contracts import (
-    drafting_render_manifest_path_for_agent,
-    drafting_script_paths_for_agent,
-)
 from tests.integration.agent.helpers import seed_benchmark_assembly_definition
 
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
@@ -703,7 +703,24 @@ async def test_int_188_engineer_planner_submit_plan_rejects_empty_drafting_manif
             "## Assumption Register\n"
             "- Assumption: The planner relies on source-backed inputs that must be traceable.\n\n"
             "## Detailed Calculations\n"
-            "- CALC-001: The plan includes stable derivations rather than freeform guesses.\n\n"
+            "| ID | Problem / Decision | Result | Impact |\n"
+            "| -- | -- | -- | -- |\n"
+            "| CALC-001 | Example calculation supporting the plan | \`N/A\` | Replace this placeholder with the actual derived limit. |\n"
+            "\n### CALC-001: Example calculation supporting the plan\n"
+            "\n#### Problem Statement\n"
+            "\nThe plan needs a traceable calculation instead of a freeform claim.\n"
+            "\n#### Assumptions\n"
+            "\n- \`ASSUMP-001\`: The input values are taken from the benchmark or assembly definition.\n"
+            "\n#### Derivation\n"
+            "\n- Compute the binding quantity from the declared inputs.\n"
+            "\n#### Worst-Case Check\n"
+            "\n- The derived limit must hold under the worst-case allowed inputs.\n"
+            "\n#### Result\n"
+            "\n- The design remains valid only if the derived limit is respected.\n"
+            "\n#### Design Impact\n"
+            "\n- Update the design or inputs if the calculation changes.\n"
+            "\n#### Cross-References\n"
+            "\n- \`plan.md#3-assembly-strategy\`\n\n"
             "## Critical Constraints / Operating Envelope\n"
             "- Constraint: The mechanism must remain inside the derived operating limits.\n\n"
             "## Cost & Weight Budget\n"
@@ -718,9 +735,7 @@ async def test_int_188_engineer_planner_submit_plan_rejects_empty_drafting_manif
             objectives=ObjectivesSection(
                 goal_zone=BoundingBox(min=(10.0, 10.0, 10.0), max=(20.0, 20.0, 20.0)),
                 forbid_zones=[],
-                build_zone=BoundingBox(
-                    min=(-50.0, -50.0, 0.0), max=(50.0, 50.0, 90.0)
-                ),
+                build_zone=BoundingBox(min=(-50.0, -50.0, 0.0), max=(50.0, 50.0, 90.0)),
             ),
             benchmark_parts=[
                 {

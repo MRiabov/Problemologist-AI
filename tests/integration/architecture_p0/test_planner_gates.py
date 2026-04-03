@@ -104,7 +104,40 @@ A valid solution overview.
 - Assumption: The planner relies on source-backed inputs that must be traceable.
 
 ## 5. Detailed Calculations
-- CALC-001: The plan includes stable derivations rather than freeform guesses.
+| ID | Problem / Decision | Result | Impact |
+| -- | -- | -- | -- |
+| CALC-001 | Minimum slope needed to move cube under worst-case friction | `21.7deg` | Ramp angle must be updated or assumptions must change. |
+
+### CALC-001: Minimum slope needed to move cube
+
+#### Problem Statement
+
+The cube must slide reliably under the declared surface/friction assumptions.
+
+#### Assumptions
+
+- `ASSUMP-001`: The surface friction coefficient is taken from the benchmark definition.
+
+#### Derivation
+
+- The minimum slope is computed from the worst-case static friction threshold.
+
+#### Worst-Case Check
+
+- The threshold remains satisfied only when the slope is at least `21.7deg`.
+
+#### Result
+
+- The cube slides.
+
+#### Design Impact
+
+- The ramp angle must be updated or the assumptions must change.
+
+#### Cross-References
+
+- `plan.md#3-assembly-strategy`
+- `assembly_definition.yaml.drafting.views[front]`
 
 ## 6. Critical Constraints / Operating Envelope
 - Constraint: The mechanism must remain inside the derived operating limits.
@@ -888,7 +921,39 @@ Just some text here, no list or table.
 - Assumption: The planner relies on source-backed inputs that must be traceable.
 
 ## 5. Detailed Calculations
-- CALC-001: The plan includes stable derivations rather than freeform guesses.
+| ID | Problem / Decision | Result | Impact |
+| -- | -- | -- | -- |
+| CALC-001 | Example calculation supporting the plan | `N/A` | Replace this placeholder with the actual derived limit. |
+
+### CALC-001: Example calculation supporting the plan
+
+#### Problem Statement
+
+The plan needs a traceable calculation instead of a freeform claim.
+
+#### Assumptions
+
+- `ASSUMP-001`: The input values are taken from the benchmark or assembly definition.
+
+#### Derivation
+
+- Compute the binding quantity from the declared inputs.
+
+#### Worst-Case Check
+
+- The derived limit must hold under the worst-case allowed inputs.
+
+#### Result
+
+- The design remains valid only if the derived limit is respected.
+
+#### Design Impact
+
+- Update the design or inputs if the calculation changes.
+
+#### Cross-References
+
+- `plan.md#3-assembly-strategy`
 
 ## 6. Critical Constraints / Operating Envelope
 - Constraint: The mechanism must remain inside the derived operating limits.
@@ -908,6 +973,176 @@ Just some text here, no list or table.
         )
         data = BenchmarkToolResponse.model_validate(resp.json())
         assert "Parts List must contain a bullet list or table" in data.message
+
+        # 3. Detailed Calculations uses the wrong table schema
+        invalid_plan = """## 1. Solution Overview
+Overview.
+## 2. Parts List
+| Part | Qty |
+|------|-----|
+| Box  | 1   |
+## 3. Assembly Strategy
+1. Step
+## 4. Assumption Register
+- Assumption: The planner relies on source-backed inputs that must be traceable.
+
+## 5. Detailed Calculations
+| Check | Calculation | Result |
+| -- | -- | -- |
+| Capture envelope | `entry_funnel` top opening exceeds the narrow throat by 90 mm. | Pass |
+
+### CALC-001: Capture envelope margin
+#### Problem Statement
+The capture opening must exceed the throat.
+#### Assumptions
+- `ASSUMP-001`: The throat width is fixed.
+#### Derivation
+- Capture margin is measured from the openings.
+#### Worst-Case Check
+- Minimum clearance remains positive.
+#### Result
+- Pass
+#### Design Impact
+- Ramp geometry must remain wider than the throat.
+#### Cross-References
+- `plan.md#3-assembly-strategy`
+
+## 6. Critical Constraints / Operating Envelope
+- Constraint: The mechanism must remain inside the derived operating limits.
+
+## 7. Cost & Weight Budget
+- Cost: 0
+## 8. Risk Assessment
+- Risk: None
+"""
+        await setup_workspace(
+            client, base_headers, {**base_files, "plan.md": invalid_plan}
+        )
+        resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert "Detailed Calculations must use the exact summary table" in data.message
+
+        # 4. Detailed Calculations uses the wrong subsection heading form
+        invalid_plan = """## 1. Solution Overview
+Overview.
+## 2. Parts List
+| Part | Qty |
+|------|-----|
+| Box  | 1   |
+## 3. Assembly Strategy
+1. Step
+## 4. Assumption Register
+- Assumption: The planner relies on source-backed inputs that must be traceable.
+
+## 5. Detailed Calculations
+| ID | Problem / Decision | Result | Impact |
+| -- | -- | -- | -- |
+| CALC-001 | Capture envelope margin | Pass | Ramp geometry must remain wider than the throat. |
+
+### CALC-001 Capture envelope margin
+#### Problem Statement
+The capture opening must exceed the throat.
+#### Assumptions
+- `ASSUMP-001`: The throat width is fixed.
+#### Derivation
+- Capture margin is measured from the openings.
+#### Worst-Case Check
+- Minimum clearance remains positive.
+#### Result
+- Pass
+#### Design Impact
+- Ramp geometry must remain wider than the throat.
+#### Cross-References
+- `plan.md#3-assembly-strategy`
+
+## 6. Critical Constraints / Operating Envelope
+- Constraint: The mechanism must remain inside the derived operating limits.
+
+## 7. Cost & Weight Budget
+- Cost: 0
+## 8. Risk Assessment
+- Risk: None
+"""
+        await setup_workspace(
+            client, base_headers, {**base_files, "plan.md": invalid_plan}
+        )
+        resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert (
+            "Detailed Calculations subsection headings must use the exact"
+            in data.message
+        )
+
+        # 5. Detailed Calculations strict schema still accepts the intended shape
+        valid_strict_plan = """## 1. Solution Overview
+Overview.
+## 2. Parts List
+| Part | Qty |
+|------|-----|
+| Box  | 1   |
+## 3. Assembly Strategy
+1. Step
+## 4. Assumption Register
+- Assumption: The planner relies on source-backed inputs that must be traceable.
+
+## 5. Detailed Calculations
+| ID | Problem / Decision | Result | Impact |
+| -- | -- | -- | -- |
+| CALC-001 | Minimum slope needed to move cube under worst-case friction | `21.7deg` | Ramp angle must be updated or assumptions must change. |
+
+### CALC-001: Minimum slope needed to move cube
+#### Problem Statement
+The cube must slide reliably under the declared surface/friction assumptions.
+#### Assumptions
+- `ASSUMP-001`: The surface friction coefficient is taken from the benchmark definition.
+#### Derivation
+- The minimum slope is computed from the worst-case static friction threshold.
+#### Worst-Case Check
+- The threshold remains satisfied only when the slope is at least `21.7deg`.
+#### Result
+- The cube slides.
+#### Design Impact
+- The ramp angle must be updated or the assumptions must change.
+#### Cross-References
+- `plan.md#3-assembly-strategy`
+- `assembly_definition.yaml.drafting.views[front]`
+
+## 6. Critical Constraints / Operating Envelope
+- Constraint: The mechanism must remain inside the derived operating limits.
+
+## 7. Cost & Weight Budget
+- Cost: 0
+## 8. Risk Assessment
+- Risk: None
+"""
+        matching_script = minimal_script.replace("test_part", "environment_fixture")
+        await setup_workspace(
+            client,
+            base_headers,
+            {
+                **base_files,
+                "plan.md": valid_strict_plan,
+                "solution.py": matching_script,
+            },
+        )
+        validate_req = BenchmarkToolRequest(
+            script_path="solution.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        )
+        validate_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=validate_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        data = BenchmarkToolResponse.model_validate(validate_resp.json())
+        assert data.success is True
 
 
 @pytest.mark.integration_p0

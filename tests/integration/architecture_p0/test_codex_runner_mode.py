@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
@@ -2438,6 +2439,51 @@ def test_validate_eval_seed_errors_only_suppresses_pass_output():
     assert completed.returncode == 0, completed.stderr
     assert "PASS benchmark_planner bp-001-forbid-zone:" not in completed.stdout
     assert "Validated 1 row(s): all passed." not in completed.stdout
+
+
+@pytest.mark.integration_p0
+def test_validate_eval_seed_skip_env_up_does_not_require_eval_lock(tmp_path: Path):
+    lock_path = tmp_path / "problemologist-eval.lock"
+    state_path = tmp_path / "problemologist-eval.run.json"
+
+    with lock_path.open("a+", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "scripts/validate_eval_seed.py",
+                "--skip-env-up",
+                "--agent",
+                "benchmark_planner",
+                "--task-id",
+                "bp-001-drawing-full",
+                "--technical-drawing-mode",
+                "full",
+                "--fail-fast",
+                "--concurrency",
+                "1",
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=300,
+            env={
+                **os.environ,
+                "EVAL_RUN_LOCK_PATH": str(lock_path),
+                "EVAL_RUN_STATE_PATH": str(state_path),
+            },
+        )
+
+    combined_output = "\n".join(
+        part for part in (completed.stdout, completed.stderr) if part
+    )
+
+    assert completed.returncode == 0, combined_output
+    assert "PASS benchmark_planner bp-001-drawing-full:" in completed.stdout, (
+        completed.stdout
+    )
+    assert not state_path.exists(), state_path
 
 
 @pytest.mark.integration_p0
