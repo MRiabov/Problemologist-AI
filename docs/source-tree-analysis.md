@@ -32,7 +32,8 @@ The repository is organized around a controller-led runtime with split worker se
 | -- | -- | -- |
 | `controller/` | Agent orchestration, HTTP APIs, persistence, and observability | `api/main.py`, `agent/graph.py`, `agent/nodes/`, `clients/worker.py`, `middleware/remote_fs.py`, `persistence/models.py` |
 | `worker_light/` | Session filesystem and lightweight execution services | `app.py`, `api/routes.py`, `runtime/executor.py`, `utils/`, `agent_files/` |
-| `worker_heavy/` | Validation, simulation, preview, and workbench analysis | `app.py`, `api/routes.py`, `simulation/`, `workbenches/`, `runtime/simulation_runner.py`, `utils/` |
+| `worker_heavy/` | Validation, simulation, workbench analysis, and simulation render coordination | `app.py`, `api/routes.py`, `simulation/`, `workbenches/`, `runtime/simulation_runner.py`, `utils/` |
+| `worker_renderer/` | Dedicated headless preview rendering and render-manifest persistence | `app.py`, `api/routes.py`, `utils/` |
 | `shared/` | Shared schemas, enums, observability, workers, and simulation types | `models/`, `observability/`, `simulation/`, `workers/`, `agents/config.py` |
 | `frontend/` | Operator dashboard and generated API client | `src/App.tsx`, `src/pages/`, `src/components/`, `src/api/generated/`, `openapi.json` |
 | `config/` | Runtime configuration and policy files | `agents_config.yaml`, `prompts.yaml`, `manufacturing_config.yaml`, `reward_config.yaml`, `lint_config.yaml` |
@@ -53,6 +54,7 @@ The repository is organized around a controller-led runtime with split worker se
 | `worker_heavy/app.py` | Worker-heavy FastAPI app on port 8002 in containers and 18002 in local dev |
 | `controller/temporal_worker.py` | Controller Temporal worker for durable orchestration |
 | `worker_heavy/temporal_worker.py` | Heavy-worker Temporal worker for simulation and validation workflows |
+| `worker_renderer/app.py` | Dedicated headless renderer app for preview and media generation |
 | `frontend/src/main.tsx` | Vite entry point for the dashboard |
 | `scripts/env_up.sh` | Local infrastructure and application bootstrap |
 | `scripts/run_integration_tests.sh` | Canonical integration test runner |

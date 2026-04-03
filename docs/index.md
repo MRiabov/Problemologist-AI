@@ -1,6 +1,6 @@
 # Problemologist-AI Documentation Index
 
-**Type:** Multi-part repository with 4 primary backend runtime parts and 1 secondary UI surface
+**Type:** Multi-part repository with 5 primary backend runtime parts and 1 secondary UI surface
 **Primary Languages:** Python, then TypeScript for the secondary UI
 **Architecture:** Backend-first controller-led split-worker platform with strict shared contracts and a secondary React dashboard
 **Last Updated:** 2026-03-20
@@ -17,7 +17,8 @@ This documentation set is intentionally self-contained. It describes the live ba
 | -- | -- | -- | -- |
 | Controller | [`controller/`](../controller) | Orchestrates episodes, agent graphs, persistence, observability, and worker routing | [`controller/api/main.py`](../controller/api/main.py) |
 | Worker Light | [`worker_light/`](../worker_light) | Session filesystem, git, shell execution, linting, asset serving, and lightweight inspection | [`worker_light/app.py`](../worker_light/app.py) |
-| Worker Heavy | [`worker_heavy/`](../worker_heavy) | Validation, simulation, preview rendering, workbench analysis, and heavy handoff gating | [`worker_heavy/app.py`](../worker_heavy/app.py) |
+| Worker Heavy | [`worker_heavy/`](../worker_heavy) | Validation, simulation, workbench analysis, heavy handoff gating, and simulation render coordination | [`worker_heavy/app.py`](../worker_heavy/app.py) |
+| Worker Renderer | [`worker_renderer/`](../worker_renderer) | Headless preview rendering, selection snapshots, depth/segmentation previews, and render-manifest persistence | [`worker_renderer/app.py`](../worker_renderer/app.py) |
 | Shared Layer | [`shared/`](../shared) | Pydantic schemas, enums, simulation models, observability models, and worker contracts | [`shared/models/schemas.py`](../shared/models/schemas.py) |
 
 ## Secondary Surface
@@ -94,4 +95,4 @@ cd frontend && npm run dev
 | Planner, reviewer, or handoff changes | [Backend Reference](./backend-reference.md) and [System Architecture](./architecture.md) |
 | Local workflow, deploy, or test changes | [Development Guide](./development-guide.md) and [Deployment Guide](./deployment-guide.md) |
 | UI or dashboard work | [Component Inventory](./component-inventory.md) |
-| Manufacturability, simulation, or observability changes | [Backend Reference](./backend-reference.md), [System Architecture](./architecture.md), and `worker_heavy/` |
+| Manufacturability, simulation, preview rendering, or observability changes | [Backend Reference](./backend-reference.md), [System Architecture](./architecture.md), `worker_heavy/`, and `worker_renderer/` |

@@ -40,7 +40,8 @@ The project is brownfield and already has a working integration-test harness. Th
 | -- | -- | -- |
 | Controller | `controller/` | Owns agent graphs, HTTP APIs, persistence, review gating, and worker routing |
 | Worker Light | `worker_light/` | Owns the session filesystem, git, shell execution, linting, assets, and lightweight inspection |
-| Worker Heavy | `worker_heavy/` | Owns validation, simulation, preview rendering, manufacturability analysis, and heavy handoff paths |
+| Worker Heavy | `worker_heavy/` | Owns validation, simulation, manufacturability analysis, heavy handoff paths, and simulation render coordination |
+| Worker Renderer | `worker_renderer/` | Owns headless preview rendering, selection snapshots, depth/segmentation previews, and render-manifest persistence |
 | Shared | `shared/` | Owns the strict models, enums, observability schemas, simulation contracts, and filesystem policy helpers |
 | Frontend | `frontend/` | Secondary operator dashboard for trace inspection, simulation viewers, and feedback flow |
 
@@ -79,7 +80,8 @@ The project is brownfield and already has a working integration-test harness. Th
 | -- | -- |
 | `controller/` | API entry points, agent nodes, workflows, persistence, and observability |
 | `worker_light/` | Filesystem, runtime, git, assets, topology, and lightweight API routes |
-| `worker_heavy/` | Simulation runners, workbenches, preview/render helpers, and heavy API routes |
+| `worker_heavy/` | Simulation runners, workbenches, simulation render helpers, and heavy API routes |
+| `worker_renderer/` | Dedicated headless preview renderer, preview post-processing, and render-manifest routes |
 | `shared/` | Shared contracts, enums, schemas, workers, observability, and simulation models |
 | `frontend/` | Dashboard routes, state providers, visual components, and generated API client |
 | `config/` | Agent policy, prompts, manufacturing config, lint config, and reward config |

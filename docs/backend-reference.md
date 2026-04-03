@@ -26,7 +26,8 @@ The main operational priority is backend dataset generation. The frontend is an 
 | -- | -- | -- |
 | Controller | Owns HTTP APIs, agent graphs, persistence, review gating, observability, and worker routing | Never executes generated code directly |
 | Worker Light | Owns session filesystem access, git, shell execution, linting, asset serving, and lightweight inspection | Session-scoped workspace, read/write policy enforced by config |
-| Worker Heavy | Owns validation, simulation, preview rendering, workbench analysis, and heavy handoff gating | Single-flight admission, `503 WORKER_BUSY` while active |
+| Worker Heavy | Owns validation, simulation, workbench analysis, heavy handoff gating, and simulation render coordination | Single-flight admission, `503 WORKER_BUSY` while active |
+| Worker Renderer | Owns headless preview rendering, selection snapshots, depth/segmentation previews, and render-manifest persistence | Dedicated single-flight renderer service |
 | Controller Temporal Worker | Owns durable orchestration for long-running workflows | Dispatches heavy activities through Temporal |
 | Worker Heavy Temporal Worker | Owns heavy activity polling and completion tracking | Separate process boundary from the API server |
 | Shared Layer | Owns Pydantic schemas, enums, simulation models, observability models, and worker contracts | Strict schemas reject unknown fields |

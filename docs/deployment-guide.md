@@ -88,7 +88,8 @@ This stack is intentionally smaller than the full compose file because the appli
 | -- | -- | -- | -- |
 | Controller | `18000` | `8000` | Main FastAPI API |
 | Worker Light | `18001` | `8001` | Filesystem, git, runtime, and linting |
-| Worker Heavy | `18002` | `8002` | Validation, simulation, preview, and workbench analysis |
+| Worker Heavy | `18002` | `8002` | Validation, simulation, workbench analysis, and simulation render coordination |
+| Worker Renderer | `18003` | `8003` | Headless preview rendering and render-manifest persistence |
 | PostgreSQL | `15432` | `5432` | Persistent workflow state |
 | MinIO S3 API | `19000` | `9000` | Asset storage |
 | MinIO Console | `19001` | `9001` | Object-store UI |
@@ -109,6 +110,7 @@ This stack is intentionally smaller than the full compose file because the appli
 | `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Object-store credentials |
 | `WORKER_URL` | Worker-light base URL used by the controller |
 | `WORKER_HEAVY_URL` | Worker-heavy base URL used by the controller |
+| `WORKER_RENDERER_URL` | Worker-renderer base URL used by preview and media render helpers |
 | `WORKER_TYPE` | Switches a worker process into light, heavy, or unified mode |
 | `VITE_API_URL` | Frontend API base URL |
 

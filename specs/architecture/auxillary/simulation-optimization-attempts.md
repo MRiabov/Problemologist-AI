@@ -46,7 +46,7 @@ This snapshot records the heavy-worker simulation architecture that was live whe
 
 - `controller` handles orchestration and user-facing API work.
 - `worker-light` handles filesystem and light execution work.
-- `worker-heavy` handles simulation, validation, preview, rendering, and related heavy operations.
+- `worker-heavy` handles simulation, validation, and related heavy operations, while `worker-renderer` handles preview rendering and preview post-processing.
 - `controller-temporal-worker` / Temporal handles durable workflow and activity execution.
 
 This matches the split-worker contract in `specs/architecture/distributed-execution.md`.

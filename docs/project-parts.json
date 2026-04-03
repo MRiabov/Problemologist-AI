@@ -57,20 +57,40 @@
       "auxiliary_entry_points": [
         "worker_heavy/temporal_worker.py"
       ],
-      "purpose": "Runs validation, simulation, preview rendering, workbench analysis, and heavy handoff gating.",
+      "purpose": "Runs validation, simulation, workbench analysis, heavy handoff gating, and simulation render coordination.",
       "tech_stack": [
         "FastAPI",
         "Genesis",
         "MuJoCo",
         "build123d",
         "Temporal",
-        "Preview rendering",
         "Manufacturing workbenches"
       ],
       "integration_points": [
         "controller",
         "shared",
-        "worker_light"
+        "worker_light",
+        "worker_renderer"
+      ]
+    },
+    {
+      "part_id": "worker_renderer",
+      "name": "Worker Renderer",
+      "location": "worker_renderer/",
+      "entry_point": "worker_renderer/app.py",
+      "purpose": "Runs headless preview rendering, selection snapshots, depth and segmentation previews, and render-manifest persistence.",
+      "tech_stack": [
+        "FastAPI",
+        "VTK",
+        "OpenGL",
+        "OSMesa",
+        "Headless rendering",
+        "Render manifests"
+      ],
+      "integration_points": [
+        "controller",
+        "shared",
+        "worker_heavy"
       ]
     },
     {

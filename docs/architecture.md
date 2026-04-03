@@ -29,7 +29,8 @@ flowchart TD
 | -- | -- | -- |
 | Controller | Owns HTTP APIs, agent graphs, orchestration, persistence, and policy enforcement | `controller/api/main.py`, `controller/agent/graph.py`, `controller/middleware/remote_fs.py`, `controller/clients/worker.py` |
 | Worker Light | Owns workspace filesystem access, shell execution, git, linting, asset serving, and lightweight inspection | `worker_light/app.py`, `worker_light/api/routes.py` |
-| Worker Heavy | Owns geometry validation, physics simulation, preview rendering, manufacturing analysis, and submission gating | `worker_heavy/app.py`, `worker_heavy/api/routes.py` |
+| Worker Heavy | Owns geometry validation, physics simulation, manufacturability analysis, submission gating, and simulation render coordination | `worker_heavy/app.py`, `worker_heavy/api/routes.py` |
+| Worker Renderer | Owns headless preview rendering, selection snapshots, depth/segmentation previews, and render-manifest persistence | `worker_renderer/app.py`, `worker_renderer/api/routes.py` |
 | Temporal Workers | Own durable long-running tasks and heavy activity dispatch | `controller/temporal_worker.py`, `worker_heavy/temporal_worker.py` |
 | Frontend | Secondary operator UI for episodes, traces, assets, simulation output, and feedback | `frontend/src/App.tsx`, `frontend/src/pages/EngineerWorkspace.tsx`, `frontend/src/pages/BenchmarkGeneration.tsx` |
 

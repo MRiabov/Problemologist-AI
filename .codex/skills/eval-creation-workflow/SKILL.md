@@ -13,6 +13,10 @@ Seeded artifacts must already satisfy any deterministic checks that will run bef
 
 For the detailed seed-hygiene checklist, contract expectations, and command snippets, see:
 
+- [references/index.md](references/index.md)
+- [references/role_input_index.md](references/role_input_index.md)
+- [references/common_seed_failure_patterns.md](references/common_seed_failure_patterns.md)
+- [references/file-contract-template.md](references/file-contract-template.md)
 - [references/seed-hygiene.md](references/seed-hygiene.md)
 - [references/validation-commands.md](references/validation-commands.md)
 - [references/benchmark_definition_yaml_acceptance_criteria.md](references/benchmark_definition_yaml_acceptance_criteria.md)
@@ -100,6 +104,35 @@ Use these as the default minimums unless the target role contract requires more.
   Follow the exact handoff contract in `specs/architecture/agents/handover-contracts.md`. Do not guess file names.
 
 If the role consumes reviewer decisions, also seed the stage-specific review file under `reviews/`.
+
+## File-Specific Reference Library
+
+When this workflow creates or modifies any eval artifact, load the matching acceptance-criteria reference before you finalize the seed.
+Use `references/index.md` first if you need the file map.
+
+- `references/benchmark_definition_yaml_acceptance_criteria.md`
+- `references/benchmark_assembly_definition_yaml_acceptance_criteria.md`
+- `references/assembly_definition_yaml_acceptance_criteria.md`
+- `references/plan_md_acceptance_criteria.md`
+- `references/todo_md_acceptance_criteria.md`
+- `references/journal_md_acceptance_criteria.md`
+- `references/benchmark_plan_evidence_script_py_acceptance_criteria.md`
+- `references/benchmark_plan_technical_drawing_script_py_acceptance_criteria.md`
+- `references/solution_plan_evidence_script_py_acceptance_criteria.md`
+- `references/solution_plan_technical_drawing_script_py_acceptance_criteria.md`
+- `references/benchmark_script_py_acceptance_criteria.md`
+- `references/solution_script_py_acceptance_criteria.md`
+- `references/validation_results_json_acceptance_criteria.md`
+- `references/simulation_result_json_acceptance_criteria.md`
+- `references/plan_refusal_md_acceptance_criteria.md`
+- `references/workbench_report_md_acceptance_criteria.md`
+- `references/scene_json_acceptance_criteria.md`
+- `references/renders_acceptance_criteria.md`
+- `references/benchmark_plan_review_yaml_acceptance_criteria.md`
+- `references/benchmark_execution_review_yaml_acceptance_criteria.md`
+- `references/engineering_plan_review_yaml_acceptance_criteria.md`
+- `references/engineering_execution_review_yaml_acceptance_criteria.md`
+- `references/electronics_review_yaml_acceptance_criteria.md`
 
 ## Workflow
 
