@@ -148,6 +148,7 @@ First response:
 - Prefer the first physically credible geometry over an elaborate speculative one.
 - Solve the nominal objective and runtime jitter together.
 - Reduce sensitivity before increasing complexity.
+- If the approved handoff already pins down the exact geometry, labels, or inventory, copy that contract forward verbatim into `solution_script.py` and spend effort on the build123d translation, not on re-deciding the mechanism.
 - If the first simulation shows the object moving away from the goal, treat it as a directionality bug, not a robustness bug.
 - If a review or simulation failure recurs, promote the winning pattern into this file so the next run starts from a better prior.
 - Keep new patterns here concise enough to reuse, but specific enough to be actionable.

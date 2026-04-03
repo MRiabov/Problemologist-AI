@@ -10,14 +10,17 @@ description: Engineering planning role for turning benchmark handoff context int
 1. Turn the approved benchmark handoff into an implementation-ready engineering plan.
 2. Keep the planner-owned artifacts internally consistent before coding starts.
 3. Choose the smallest physically credible solution that can survive runtime variation, cost limits, and build constraints.
-4. Preserve benchmark-owned fixtures and geometry as read-only context.
-5. Fail closed on contradictory, under-specified, or infeasible handoffs.
+4. When multiple valid solutions exist, prefer the more stable, cheaper, simpler, and more manufacturable one.
+5. Preserve benchmark-owned fixtures and geometry as read-only context.
+6. Fail closed on contradictory, under-specified, or infeasible handoffs.
 
 ## Geometry Contract
 
 - Base every size, offset, and clearance on explicit source geometry, COTS dimensions, or formulas.
 - Do not guess a number. If the handoff is missing a needed value, correct the source instead of inventing one.
 - When a fixture moves, derive its pose from the declared axis or joint chain instead of a hand-placed coordinate.
+- Prefer selector-driven placement over free-form XYZ positioning. Use face/axis selectors, explicit mates, and joint chains to constrain parts to each other and to the environment; treat any absolute 3-coordinate anchor as an exception that needs clear justification.
+- Treat the planner handoff as YAML-backed: `assembly_definition.yaml` is the machine-readable contract, while `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` are the inspectable source of the planned solution geometry.
 
 ## What This Skill Owns
 
@@ -92,7 +95,9 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 - Keep part labels unique and stable.
 - Every planner-declared inventory label and selected COTS `part_id` must appear in `plan.md` at least once as an exact identifier mention; backticks are preferred for the first mention, but the exact string match is the validation rule.
 - Keep `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` aligned with the same preserved geometry, repeated quantities, and COTS identities when drafting mode is enabled.
+- Treat `solution_plan_technical_drawing_script.py` as display-only: it should not re-author a duplicate shape tree or a second copy of the mechanism geometry, only the orthographic drawing/view scaffolding for the same approved contract.
 - Bind dimensions, datums, and notes to the preserved mechanism only.
+- Use `preview(...)` for live scene inspection and `preview_drawing()` for drafting packages; do not substitute one for the other.
 - Avoid over-specifying implementation details that belong in `solution_script.py`.
 - If the plan depends on exact catalog identity, keep provenance explicit rather than substituting anonymous solids.
 - If a placement depends on a real interface, derive it from the joint frame or mating datum instead of a world-space guess.
@@ -105,6 +110,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 - When render images already exist, inspect at least one relevant image before finishing planner work.
 - If draft drawings are available, inspect the rendered result before submitting.
 - Keep the plan-review gate in mind: the coder should be able to implement the handoff without re-planning.
+- For eval-seed-specific validation habits, see [Eval Seed Hygiene](references/eval-seed-hygiene.md).
 
 ## Refusal Boundary
 

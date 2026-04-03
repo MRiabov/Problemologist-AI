@@ -19,6 +19,8 @@ Turn a benchmark brief into a complete handoff that the benchmark coder can impl
 - Base every size, offset, and clearance on declared geometry, COTS dimensions, or an explicit formula.
 - Do not guess a number. If the handoff is missing a needed value, treat the draft as incomplete instead of inventing one.
 - When a fixture moves, derive its pose from the declared axis or joint frame instead of a world-coordinate guess.
+- Prefer selector-driven placement over free-form XYZ positioning. Use face/axis selectors and explicit mates/joints to constrain parts to each other and to the environment; if an absolute 3-coordinate anchor is unavoidable, keep it to one or two top-level placements at most and treat it as fragile.
+- Treat the planner handoff as YAML-backed: `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml` are the machine-readable contract, while `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` are the inspectable source of the approved geometry.
 
 ## Read First
 
@@ -64,7 +66,9 @@ Read these before drafting or revising the handoff:
 - Keep `plan.md` narrative-first and specific enough that the benchmark coder can implement without re-deciding the benchmark shape.
 - Keep `todo.md` actionable and ordered for the benchmark coder.
 - Keep `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` aligned with the same geometry, labels, repeated quantities, and COTS identities as the approved inventory, and ensure every planner-declared inventory label and selected COTS `part_id` appears in `plan.md` at least once as an exact identifier mention.
+- Treat `benchmark_plan_technical_drawing_script.py` as display-only: it should not re-author a duplicate shape tree or a second copy of the benchmark geometry, only the orthographic drawing/view scaffolding for the same approved contract.
 - Keep every dimension formula-backed; if the handoff is missing a needed length, thickness, clearance, or placement datum, fix the source rather than guessing.
+- Use `preview(...)` for live scene previews and `preview_drawing()` for drafting packages; they are not interchangeable.
 - When drawings are part of the handoff, inspect the drafted package with `preview_drawing()` before `submit_plan()`.
 - Make the benchmark-owned motion contract explicit if any fixture moves. In this repo, keep each moving fixture to one explicit DOF axis and spell out the controller facts and limits.
 - Keep the moved object inside `build_zone` under static variation plus runtime jitter.

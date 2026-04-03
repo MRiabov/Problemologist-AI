@@ -61,4 +61,5 @@ Drafting cues:
 - Start from the simplest plausible geometry and only add complexity after a concrete failure explains why.
 - If the first simulation goes the wrong way, treat it as a directionality or contract bug before widening the geometry.
 - Prefer robust margins over exact geometric coincidence.
+- If the approved benchmark plan already pins down the exact geometry, labels, or inventory, copy that contract forward verbatim into `benchmark_script.py` and spend effort on the build123d translation, not on re-deciding the benchmark.
 - Keep benchmark-owned objects legible for downstream engineer intake.

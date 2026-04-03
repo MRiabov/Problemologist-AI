@@ -154,25 +154,27 @@ The benchmark loop has two reviewer stages with different responsibilities.
 
 01. Reject plans that mention benchmark objects, moving parts, joints, or objective markers that are not declared consistently across `plan.md`, `benchmark_definition.yaml`, and benchmark-owned `benchmark_assembly_definition.yaml`.
 02. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml`, including label/quantity/COTS-identity exactness in `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py`, a structural build123d `TechnicalDrawing` import-and-call check, plus exact identifier mention coverage in `plan.md`.
-03. Validate feasibility of the planned benchmark geometry before implementation starts, including objective clearance, randomization sanity, and that the moved object/runtime jitter contract stays inside benchmark bounds.
-04. Validate non-ambiguity and completeness of planner handoff artifacts.
-05. Reject unsupported benchmark-side mechanisms or metadata outside current benchmark contracts/tooling.
-06. Reject benchmark-side motion that is underspecified for engineering intake. If a benchmark fixture moves, the planner handoff must declare reviewer-visible motion facts such as actuator type, axis/path, motion range or target state, and whether the engineer may rely on that motion. Benchmark fixtures are validation context, not manufactured solution parts, so the reviewer checks reviewability and solvability rather than engineer manufacturability.
-07. Benchmark fixtures may be fixed, partially constrained, motorized, or fully free when the benchmark contract explicitly declares that behavior; the reviewer validates the declared motion against evidence rather than minimizing DOFs.
-08. Reject impossible, contradictory, or unstable benchmark-side motion. Benchmark fixtures may be less physically constrained than engineering solutions, but they still must not rely on teleporting geometry, free-floating actuators, or unreviewable joint setups.
-09. Reject planner handoff when `moved_object.material_id` is missing, empty, or not a known material from `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact even if the planner only intends a minimal benchmark-side fixture declaration.
-10. This stage is review-only. `Benchmark Plan Reviewer` inspects planner artifacts and evidence but does not rewrite planner-owned files, and when render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
+03. Reject plans that rely on free-form XYZ placement as the primary positioning mechanism; require selector-driven placement, explicit mates/joints, or clearly bounded absolute anchors.
+04. Validate feasibility of the planned benchmark geometry before implementation starts, including objective clearance, randomization sanity, and that the moved object/runtime jitter contract stays inside benchmark bounds.
+05. Validate non-ambiguity and completeness of planner handoff artifacts.
+06. Reject unsupported benchmark-side mechanisms or metadata outside current benchmark contracts/tooling.
+07. Reject benchmark-side motion that is underspecified for engineering intake. If a benchmark fixture moves, the planner handoff must declare reviewer-visible motion facts such as actuator type, axis/path, motion range or target state, and whether the engineer may rely on that motion. Benchmark fixtures are validation context, not manufactured solution parts, so the reviewer checks reviewability and solvability rather than engineer manufacturability.
+08. Benchmark fixtures may be fixed, partially constrained, motorized, or fully free when the benchmark contract explicitly declares that behavior; the reviewer validates the declared motion against evidence rather than minimizing DOFs.
+09. Reject impossible, contradictory, or unstable benchmark-side motion. Benchmark fixtures may be less physically constrained than engineering solutions, but they still must not rely on teleporting geometry, free-floating actuators, or unreviewable joint setups.
+10. Reject planner handoff when `moved_object.material_id` is missing, empty, or not a known material from `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact even if the planner only intends a minimal benchmark-side fixture declaration.
+11. This stage is review-only. `Benchmark Plan Reviewer` inspects planner artifacts and evidence but does not rewrite planner-owned files, and when render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
 
 `Benchmark Reviewer` responsibilities:
 
 1. Verify the implemented benchmark follows the approved plan or has justified, reviewable deviations, including the approved benchmark inventory labels, repeated quantities, and COTS identities.
 2. Verify the implemented environment is geometrically valid and simulation-valid for the latest revision.
 3. Verify the benchmark remains solvable, properly randomized, and consistent with the declared motion contract and observed simulation behavior after implementation.
-4. For benchmarks with powered fixtures or moving benchmark-owned parts, require dynamic simulation evidence for the latest revision rather than relying on preview images alone.
-5. Execute only after successful validation/simulation handoff artifacts are present for the latest revision, including `.manifests/benchmark_review_manifest.json`.
-6. When simulation video exists for the current revision, inspect that video through `inspect_media(...)` before approval. Static renders remain mandatory context, but they do not replace dynamic evidence for moving benchmarks.
-7. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
-8. Reviewer completion uses `write_file` for the stage-owned review artifacts and then `bash scripts/submit_review.sh` as the explicit local submission gate.
+4. Reject implementations that rely on free-form XYZ placement instead of selector-driven placement, explicit mates/joints, or the few absolute anchors already fixed by the approved plan.
+5. For benchmarks with powered fixtures or moving benchmark-owned parts, require dynamic simulation evidence for the latest revision rather than relying on preview images alone.
+6. Execute only after successful validation/simulation handoff artifacts are present for the latest revision, including `.manifests/benchmark_review_manifest.json`.
+7. When simulation video exists for the current revision, inspect that video through `inspect_media(...)` before approval. Static renders remain mandatory context, but they do not replace dynamic evidence for moving benchmarks.
+8. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
+9. Reviewer completion uses `write_file` for the stage-owned review artifacts and then `bash scripts/submit_review.sh` as the explicit local submission gate.
 
 Benchmark-side reviewer manifest naming:
 
@@ -342,24 +344,26 @@ The engineering loop has two reviewer stages with different responsibilities.
 
 `Engineering Plan Reviewer` responsibilities:
 
-1. Reject plans that propose unsupported components/mechanisms outside the current allowed system/tooling/contracts.
-2. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`, including label/quantity/COTS-identity exactness in `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py`, a structural build123d `TechnicalDrawing` import-and-call check, plus exact identifier mention coverage in `plan.md`.
-3. Validate feasibility (physics realism, build-zone fit, planner budgets under benchmark caps, and the presence of assumptions, calculations, and operating-envelope limits for any binding numeric claims).
-4. Validate non-ambiguity and completeness of planner handoff artifacts.
-5. Re-run pricing/weight validation (`skills/manufacturing-knowledge/scripts/validate_and_price.py` or equivalent tool-wrapped validator) against the planner handoff and reject mismatches/failures.
-6. Reject plans with excessive DOFs; each non-empty `final_assembly.parts[*].dofs` entry must be necessary for the mechanism and justified in planner artifacts, typically in `Assembly Strategy`, `Detailed Calculations`, `Critical Constraints / Operating Envelope`, or `Risk Assessment`.
-7. Deterministic DOF suspicion rule: any part with `len(dofs) > 3` is treated as suspicious over-actuation and is rejected unless explicit mechanism-level justification is present and reviewer accepts that evidence.
-8. Future work (non-blocking for now): recommend cost/weight optimizations and flag unrealistic or overdesigned targets.
-9. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
+01. Reject plans that propose unsupported components/mechanisms outside the current allowed system/tooling/contracts.
+02. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`, including label/quantity/COTS-identity exactness in `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py`, a structural build123d `TechnicalDrawing` import-and-call check, plus exact identifier mention coverage in `plan.md`.
+03. Validate feasibility (physics realism, build-zone fit, planner budgets under benchmark caps, and the presence of assumptions, calculations, and operating-envelope limits for any binding numeric claims).
+04. Reject plans that rely on free-form XYZ placement as the primary positioning method; require selector-driven placement, explicit mates/joints, or clearly bounded absolute anchors.
+05. Validate non-ambiguity and completeness of planner handoff artifacts.
+06. Re-run pricing/weight validation (`skills/manufacturing-knowledge/scripts/validate_and_price.py` or equivalent tool-wrapped validator) against the planner handoff and reject mismatches/failures.
+07. Reject plans with excessive DOFs; each non-empty `final_assembly.parts[*].dofs` entry must be necessary for the mechanism and justified in planner artifacts, typically in `Assembly Strategy`, `Detailed Calculations`, `Critical Constraints / Operating Envelope`, or `Risk Assessment`.
+08. Deterministic DOF suspicion rule: any part with `len(dofs) > 3` is treated as suspicious over-actuation and is rejected unless explicit mechanism-level justification is present and reviewer accepts that evidence.
+09. Future work (non-blocking for now): recommend cost/weight optimizations and flag unrealistic or overdesigned targets.
+10. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
 
 `Engineering Execution Reviewer` responsibilities:
 
 1. Verify implementation follows the approved plan at the inventory level, including labels, repeated quantities, COTS parts/identities, and any drafting package required by the approved plan. Justified, reviewable deviations are allowed only when they do not change the approved inventory contract.
 2. Verify robustness and non-flakiness of the successful solution, using simulation evidence across runtime randomization.
 3. Execute only after successful validation/simulation handoff artifacts are present (`validation_results.json`, `simulation_result.json`, and the coder-written `.manifests/engineering_execution_handoff_manifest.json` for the latest revision). This stage is post-success auditing, not initial simulation pass/fail gating.
-4. Flag execution-time evidence of over-actuated designs (unnecessary moving parts/axes) as a robustness risk, even when single-run success exists.
-5. Optional code-quality review is secondary and non-blocking unless it reveals concrete safety/correctness risk.
-6. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
+4. Reject execution-time evidence of free-form XYZ placement that was not grounded in the approved datum/joint chain, even when the layout happens to pass on one run.
+5. Flag execution-time evidence of over-actuated designs (unnecessary moving parts/axes) as a robustness risk, even when single-run success exists.
+6. Optional code-quality review is secondary and non-blocking unless it reveals concrete safety/correctness risk.
+7. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
 
 Engineer-side visual-inspection policy:
 

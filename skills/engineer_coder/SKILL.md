@@ -52,7 +52,16 @@ Start with the handoff package:
 - `benchmark_script.py` if present
 - `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` when drafting mode is active
 
+## Plan Grounding
+
+When the approved handoff already pins down labels, repeated quantities, COTS identities, or interface geometry in `plan.md` or the planner-authored evidence/drawing scripts, copy that exact contract forward into `solution_script.py` instead of re-deriving it. Translating the plan into build123d is the job; renaming, normalizing, or reinterpreting the contract is not.
+Treat the planner YAML handoff as the machine-readable source of truth and the two planner scripts as the inspectable source of the approved solution geometry.
+Because the approved planner handoff has already passed collision and geometry review, treat its layout as collision-validated and preserve the exact dimensions, placements, offsets, and clearances whenever the requested solution remains physically and economically feasible.
+That collision review does not mean the plan was already manufacturability-validated or simulated; those checks still happen downstream on the implemented revision.
+Prefer selector-driven placement over free-form XYZ positioning. Use face/axis selectors, explicit mates, and fastener-based constraints to place parts relative to each other and the environment; treat any absolute coordinate anchor as an exception that should be minimal and traceable.
+
 For engineering handoffs, treat `plan.md` as the source of truth for mechanism narrative, exact inventory mentions, assumptions, calculations, and operating limits. The tightened template includes an Assumption Register, Detailed Calculations, and Critical Constraints / Operating Envelope sections; if the handoff expects those proof sections and they are missing or ungrounded, surface the defect rather than inferring missing numbers.
+When the planner template is in use, read `plan.md` as a sectioned contract with named parts: `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Assumption Register`, `## 5. Detailed Calculations`, `## 6. Critical Constraints / Operating Envelope`, `## 7. Cost & Weight Budget`, and `## 8. Risk Assessment`. The `Detailed Calculations` section is where the binding math lives, and `Risk Assessment` is where known failure modes and mitigations should be documented.
 
 Then load specialist knowledge only as needed:
 
@@ -103,7 +112,8 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 09. Keep COTS components intact when provenance or exact part identity matters.
 10. Keep electronics separate from mechanical guessing; only load electronics logic when the handoff explicitly demands it.
 11. Treat cost, weight, and manufacturability as design constraints, not afterthoughts.
-12. When the approved handoff uses the engineering planner template, keep every declared inventory label and selected COTS `part_id` grounded by an exact identifier mention in `plan.md`, and preserve planner-authored assumptions, calculations, and operating-envelope limits without renaming them.
+12. When multiple viable implementations satisfy the handoff, prefer the more stable, cheaper, simpler, and more manufacturable one.
+13. When the approved handoff uses the engineering planner template, keep every declared inventory label and selected COTS `part_id` grounded by an exact identifier mention in `plan.md`, and preserve planner-authored assumptions, calculations, operating-envelope limits, and collision-validated layout geometry without renaming, resizing, or re-spacing them.
 
 ## Retry Discipline
 
@@ -126,6 +136,7 @@ This role should behave like a high-confidence solver, not a wandering explorer.
 - Validation success is necessary but not sufficient.
 - Simulation success is necessary but not sufficient.
 - A passing validator does not excuse skipping the simulation video or frame evidence. Use the first dynamic result to confirm direction, capture, and stability.
+- If `preview(...)` evidence exists for the current revision, inspect the corresponding render bundle before finishing.
 - If render images exist for the current revision, inspect them with `inspect_media(...)` before finishing.
 - If the solution has moving behavior and simulation video exists, inspect the dynamic evidence before approval.
 - Treat `validation_results.json`, `simulation_result.json`, and render manifests as evidence inputs, not as substitutes for reasoning.

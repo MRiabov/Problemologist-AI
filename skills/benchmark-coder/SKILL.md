@@ -20,6 +20,7 @@ This skill operationalizes the `benchmark_coder` prompt in `config/prompts.yaml`
 - Base every size, offset, and clearance on approved geometry, COTS dimensions, or explicit formulas.
 - Do not guess a number. If the handoff or workspace context is missing a needed value, treat it as a defect and stop.
 - For moving benchmark fixtures, derive pose and travel from the declared axis or joint frame, not from an arbitrary world coordinate.
+- Prefer selector-driven placement over free-form XYZ positioning. Use face/axis selectors and explicit mates/joints when materializing the approved benchmark geometry; if the plan truly requires absolute 3-coordinate anchors, preserve only the few already approved and treat them as prone to mispositioning.
 
 ## What This Skill Owns
 
@@ -51,6 +52,14 @@ Start with the benchmark handoff package:
 - `scene.json`
 - `renders/**`
 - `reviews/**`
+
+## Plan Grounding
+
+When `plan.md` or the planner-authored evidence/drawing scripts already encode the approved labels, repeated quantities, COTS identities, or geometry, copy that exact contract forward into `benchmark_script.py` instead of re-deriving it. The benchmark coder translates the approved plan into build123d; it does not reinterpret the contract.
+Treat the planner YAML handoff as the machine-readable source of truth and the two planner scripts as the inspectable source of the approved benchmark solution.
+Because the approved planner handoff has already passed collision and geometry review, treat its layout as collision-validated and preserve the exact dimensions, offsets, and clearances whenever the plan is feasible to implement as written.
+That collision review does not imply manufacturability validation or simulation coverage; the coder still has to validate and simulate the implemented revision before handoff.
+When the benchmark planner uses its structured template, read `plan.md` as a sectioned contract, not prose: the useful sections include `Learning objective`, `Environment geometry (with static randomization)`, `Input objective (moved object)`, `Objective locations`, `Simulation bounds`, `Constraints handed to engineering`, `Success criteria`, and `Planner artifacts`.
 
 Load sibling skill guidance only when it changes the implementation outcome:
 
@@ -92,6 +101,7 @@ Do not invent fallback behavior to paper over contradictions. If the approved pl
 - Never invent benchmark-side motion, fallback labels, hidden constraints, or undeclared fixture behavior.
 - Keep benchmark-owned fixtures and objective overlays read-only and reconstruct them faithfully.
 - Keep planner-authored evidence and technical-drawing scripts grounded in the approved inventory. The labels, repeated quantities, and COTS identities in those scripts and in `plan.md` must match the approved handoff exactly; missing, extra, or relabeled items are contract failures, not implementation freedom.
+- Do not "clean up" or resize a collision-validated planner layout to make it look simpler; preserve the approved dimensions and placement relationships unless the plan is genuinely infeasible and must be refused.
 - Preserve explicit motion contracts for any moving benchmark fixture: identity, motion kind, axis or path, bounds, trigger, and engineer interaction flag if relevant.
 - Keep authored labels unique and stable.
 - Use the simplest geometry that still satisfies the reviewed plan and the runtime jitter.
@@ -111,6 +121,7 @@ Do not invent fallback behavior to paper over contradictions. If the approved pl
 - Validation success is necessary but not sufficient.
 - Simulation success is necessary but not sufficient.
 - If render images or simulation media exist, inspect them before handoff, especially when motion is present.
+- If `preview(...)` evidence exists for the current revision, inspect the render bundle before changing geometry.
 - Treat screenshots and video as evidence, not as text summaries.
 - Keep review readiness tied to the current revision, not a stale earlier run.
 

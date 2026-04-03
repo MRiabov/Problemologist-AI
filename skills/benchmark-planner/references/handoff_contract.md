@@ -15,6 +15,8 @@ Required planner-owned files:
 
 `benchmark_script.py` is downstream benchmark-coder context and should not be expected before plan approval.
 
+The planner handoff is YAML-backed. Populate the YAML files so downstream roles can treat them as the machine-readable source of truth, and keep both planner scripts aligned with those YAML fields.
+
 ## Source Hierarchy
 
 Prefer the strictest current contract in this order:
@@ -60,6 +62,7 @@ Before submission, verify all of the following:
 - Every planner-declared inventory label and selected COTS `part_id` appears in `plan.md` at least once as an exact identifier mention.
 - The evidence and technical-drawing scripts preserve the same labels, repeated quantities, and COTS identities as the YAML inventory.
 - Every length, offset, clearance, and travel limit is formula-backed from declared source geometry, COTS specs, or manufacturing constants. If a value is missing, the handoff is incomplete.
+- The planner evidence and technical-drawing scripts are the inspectable source of the planned solution geometry; do not leave geometry implied only in prose.
 - Any moving fixture position is defined by its joint frame or axis, not by an arbitrary world coordinate.
 - Every top-level authored label is unique and not `environment` or `zone_*`.
 - `moved_object.material_id` is a known material from `manufacturing_config.yaml`.
