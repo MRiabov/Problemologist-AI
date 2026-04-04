@@ -39,6 +39,8 @@ class CodexSkillLoopTurn(BaseModel):
     timed_out: bool = False
     prompt_path: str | None = None
     output_path: str | None = None
+    journal_path: str | None = None
+    context_snapshot_path: str | None = None
     simulation_success: bool | None = None
     verification_success: bool | None = None
     failure_reason: str | None = None
@@ -67,19 +69,22 @@ def _load_codex_skill_loop_prompt(prompt_key: str) -> str:
     if prompt_key == "self_analysis":
         return (
             "Continue the same Codex session on a failed or stalled run.\n"
-            "Analyze the workspace using `journal.md`, `prompt.md`, the session\n"
-            "trace, `validation_results.json`, and `simulation_result.json` if it\n"
-            "exists. Write a concise postmortem into `journal.md` with the failure\n"
-            "mode, the key blocked attempt, and the reusable skills or procedures\n"
-            "worth adding. Do not edit canonical `skills/` yet."
+            "Analyze the workspace using `journal.md`, `logs/skill_loop/journal.md`,\n"
+            "`logs/skill_loop/context_snapshot.md`, `prompt.md`, the session trace,\n"
+            "`validation_results.json`, and `simulation_result.json` if it exists.\n"
+            "Write a concise postmortem into `journal.md` with the failure mode,\n"
+            "the key blocked attempt, and the reusable skills or procedures worth\n"
+            "adding. Do not edit canonical `skills/` yet."
         )
     if prompt_key == "skill_update":
         return (
             "Continue the same Codex session.\n"
-            "Using the postmortem and workspace artifacts, draft narrow skill\n"
-            "updates into `suggested_skills/` as reviewable markdown files. Keep\n"
-            "the edits incremental and avoid overwriting canonical `skills/`.\n"
-            "If no skill update is warranted, record that in `journal.md` and stop."
+            "Using the postmortem, `logs/skill_loop/journal.md`,\n"
+            "`logs/skill_loop/context_snapshot.md`, and the workspace artifacts,\n"
+            "draft narrow skill updates into `suggested_skills/` as reviewable\n"
+            "markdown files. Keep the edits incremental and avoid overwriting\n"
+            "canonical `skills/`. If no skill update is warranted, record that in\n"
+            "`journal.md` and stop."
         )
     raise KeyError(f"Unknown Codex skill loop prompt: {prompt_key}")
 
@@ -181,6 +186,8 @@ def _codex_skill_loop_prompt_context(
             "",
             "Workspace files to inspect:",
             "- journal.md",
+            "- logs/skill_loop/journal.md",
+            "- logs/skill_loop/context_snapshot.md",
             "- prompt.md",
             "- validation_results.json",
             "- simulation_result.json",
@@ -228,6 +235,14 @@ def _codex_skill_loop_events_path(workspace_dir: Path) -> Path:
     return workspace_dir / "logs" / "skill_loop" / "events.jsonl"
 
 
+def _codex_skill_loop_journal_snapshot_path(workspace_dir: Path) -> Path:
+    return workspace_dir / "logs" / "skill_loop" / "journal.md"
+
+
+def _codex_skill_loop_context_snapshot_path(workspace_dir: Path) -> Path:
+    return workspace_dir / "logs" / "skill_loop" / "context_snapshot.md"
+
+
 def _read_optional_text(path: Path | None) -> str:
     if path is None or not path.exists():
         return ""
@@ -246,6 +261,92 @@ def _record_codex_skill_loop_event(
         _codex_skill_loop_events_path(workspace_dir),
         event.model_dump(mode="json"),
     )
+
+
+def _verify_codex_skill_loop_workspace_files(workspace_dir: Path) -> None:
+    required_files = [
+        workspace_dir / "journal.md",
+        workspace_dir / "prompt.md",
+    ]
+    missing = [
+        path.relative_to(workspace_dir).as_posix()
+        for path in required_files
+        if not path.exists()
+    ]
+    if missing:
+        raise FileNotFoundError(
+            "codex skill loop workspace is missing required files: "
+            + ", ".join(missing)
+        )
+
+
+def _write_codex_skill_loop_state_snapshot(
+    *,
+    workspace_dir: Path,
+    stage: str,
+    codex_session_id: str,
+    trigger_reason: str,
+    verification_result: WorkspaceVerificationResult | None,
+    simulation_result: SimulationResult | None,
+    primary_session_id: str | None,
+) -> tuple[Path, Path]:
+    loop_root = workspace_dir / "logs" / "skill_loop"
+    loop_root.mkdir(parents=True, exist_ok=True)
+
+    journal_source_path = workspace_dir / "journal.md"
+    journal_snapshot_path = _codex_skill_loop_journal_snapshot_path(workspace_dir)
+    journal_text = _read_optional_text(journal_source_path)
+    if journal_text.strip():
+        journal_snapshot_path.write_text(journal_text, encoding="utf-8")
+    else:
+        journal_snapshot_path.write_text(
+            "# Journal Snapshot\n\nNo journal content was available.\n",
+            encoding="utf-8",
+        )
+
+    context_snapshot_path = _codex_skill_loop_context_snapshot_path(workspace_dir)
+    verification_success = (
+        verification_result.success if verification_result is not None else False
+    )
+    simulation_success = (
+        simulation_result.success if simulation_result is not None else None
+    )
+    simulation_summary = (
+        simulation_result.summary if simulation_result is not None else None
+    )
+    context_lines = [
+        "# Codex Skill Loop Context Snapshot",
+        "",
+        f"- Stage: {stage}",
+        f"- Primary session ID: {primary_session_id or codex_session_id}",
+        f"- Codex session ID: {codex_session_id}",
+        f"- Trigger reason: {trigger_reason}",
+        f"- Verification success: {verification_success}",
+        f"- Simulation success: {simulation_success}",
+    ]
+    if simulation_summary:
+        context_lines.append(f"- Simulation summary: {simulation_summary}")
+    context_lines.extend(
+        [
+            "",
+            "## Workspace Files",
+            "- journal.md",
+            "- logs/skill_loop/journal.md",
+            "- logs/skill_loop/self_analysis.md",
+            "- logs/skill_loop/skill_update.md",
+            "- logs/skill_loop/context_snapshot.md",
+            "- prompt.md",
+            "- validation_results.json",
+            "- simulation_result.json",
+            "- suggested_skills/",
+            "",
+            "## Journal Snapshot",
+            journal_snapshot_path.read_text(encoding="utf-8").rstrip(),
+            "",
+        ]
+    )
+    context_snapshot_path.write_text("\n".join(context_lines), encoding="utf-8")
+    return journal_snapshot_path, context_snapshot_path
 
 
 def _codex_skill_loop_capture_root(
@@ -284,6 +385,8 @@ def _skill_self_reflection_event(
     trigger_reason: str,
     prompt_path: Path,
     output_path: Path | None,
+    journal_path: str | None,
+    context_snapshot_path: str | None,
     reflection_text: str,
     simulation_success: bool | None,
     verification_success: bool | None,
@@ -299,6 +402,8 @@ def _skill_self_reflection_event(
         trigger_reason=trigger_reason,
         prompt_path=prompt_path.as_posix(),
         output_path=output_path.as_posix() if output_path is not None else None,
+        journal_path=journal_path,
+        context_snapshot_path=context_snapshot_path,
         reflection_text=reflection_text,
         simulation_success=simulation_success,
         verification_success=verification_success,
@@ -313,6 +418,8 @@ def _skill_update_event(
     trigger_reason: str,
     prompt_path: Path,
     output_path: Path | None,
+    journal_path: str | None,
+    context_snapshot_path: str | None,
     skill_update_text: str,
     updated_skill_paths: list[str],
     simulation_success: bool | None,
@@ -329,6 +436,8 @@ def _skill_update_event(
         trigger_reason=trigger_reason,
         prompt_path=prompt_path.as_posix(),
         output_path=output_path.as_posix() if output_path is not None else None,
+        journal_path=journal_path,
+        context_snapshot_path=context_snapshot_path,
         skill_update_text=skill_update_text,
         updated_skill_paths=updated_skill_paths,
         simulation_success=simulation_success,
@@ -431,6 +540,7 @@ async def _run_codex_skill_loop(
     loop_root.mkdir(parents=True, exist_ok=True)
     events_path = _codex_skill_loop_events_path(workspace_dir)
     summary.events_path = events_path.as_posix()
+    _verify_codex_skill_loop_workspace_files(workspace_dir)
 
     self_analysis_prompt_text = _build_codex_skill_loop_prompt(
         stage="self_analysis",
@@ -510,6 +620,17 @@ async def _run_codex_skill_loop(
         if codex_trace_artifacts is not None and codex_trace_artifacts.session_id:
             codex_session_id = codex_trace_artifacts.session_id
 
+    journal_snapshot_path, context_snapshot_path = (
+        _write_codex_skill_loop_state_snapshot(
+            workspace_dir=workspace_dir,
+            stage="self_analysis",
+            codex_session_id=codex_session_id,
+            trigger_reason=trigger_reason,
+            verification_result=verification_result,
+            simulation_result=simulation_result,
+            primary_session_id=primary_session_id,
+        )
+    )
     self_reflection_text = _read_optional_text(
         self_analysis_result.output_last_message_path
         if self_analysis_result is not None
@@ -528,6 +649,8 @@ async def _run_codex_skill_loop(
                 if self_analysis_result is not None
                 else self_analysis_output_path
             ),
+            journal_path=journal_snapshot_path.as_posix(),
+            context_snapshot_path=context_snapshot_path.as_posix(),
             reflection_text=self_reflection_text,
             simulation_success=summary.simulation_success,
             verification_success=bool(
@@ -559,6 +682,8 @@ async def _run_codex_skill_loop(
             and self_analysis_result.output_last_message_path is not None
             else self_analysis_output_path.as_posix()
         ),
+        journal_path=journal_snapshot_path.as_posix(),
+        context_snapshot_path=context_snapshot_path.as_posix(),
         simulation_success=summary.simulation_success,
         verification_success=bool(
             verification_result.success if verification_result is not None else False
@@ -582,6 +707,7 @@ async def _run_codex_skill_loop(
         )
         return summary, codex_trace_artifacts
 
+    _verify_codex_skill_loop_workspace_files(workspace_dir)
     skill_update_prompt_text = _build_codex_skill_loop_prompt(
         stage="skill_update",
         item=item,
@@ -660,6 +786,17 @@ async def _run_codex_skill_loop(
         if codex_trace_artifacts is not None and codex_trace_artifacts.session_id:
             codex_session_id = codex_trace_artifacts.session_id
 
+    journal_snapshot_path, context_snapshot_path = (
+        _write_codex_skill_loop_state_snapshot(
+            workspace_dir=workspace_dir,
+            stage="skill_update",
+            codex_session_id=codex_session_id,
+            trigger_reason=trigger_reason,
+            verification_result=verification_result,
+            simulation_result=simulation_result,
+            primary_session_id=primary_session_id,
+        )
+    )
     skill_update_text = _read_optional_text(
         skill_update_result.output_last_message_path
         if skill_update_result is not None
@@ -685,6 +822,8 @@ async def _run_codex_skill_loop(
                 if skill_update_result is not None
                 else skill_update_output_path
             ),
+            journal_path=journal_snapshot_path.as_posix(),
+            context_snapshot_path=context_snapshot_path.as_posix(),
             skill_update_text=skill_update_text,
             updated_skill_paths=updated_skill_paths,
             simulation_success=summary.simulation_success,
@@ -713,6 +852,8 @@ async def _run_codex_skill_loop(
             and skill_update_result.output_last_message_path is not None
             else skill_update_output_path.as_posix()
         ),
+        journal_path=journal_snapshot_path.as_posix(),
+        context_snapshot_path=context_snapshot_path.as_posix(),
         simulation_success=summary.simulation_success,
         verification_success=bool(
             verification_result.success if verification_result is not None else False

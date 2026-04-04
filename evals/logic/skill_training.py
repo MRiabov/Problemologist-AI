@@ -51,6 +51,8 @@ class SkillTrainingSessionMetadata(BaseModel):
     verification_details: dict[str, Any] = Field(default_factory=dict)
     codex_session_trace: dict[str, Any] | None = None
     codex_skill_loop: dict[str, Any] | None = None
+    skill_loop_journal_path: str | None = None
+    skill_loop_context_snapshot_path: str | None = None
 
 
 class SkillTrainingSession(BaseModel):
@@ -66,6 +68,8 @@ class SkillTrainingSession(BaseModel):
     verification_result: WorkspaceVerificationResult
     simulation_result: SimulationResult | None = None
     item: EvalDatasetItem
+    skill_loop_journal_path: Path | None = None
+    skill_loop_context_snapshot_path: Path | None = None
 
 
 def _parse_args() -> argparse.Namespace:
@@ -216,6 +220,22 @@ def _resolve_launch_return_code(
     return None
 
 
+def _resolve_optional_snapshot_path(
+    *,
+    metadata_path: Path,
+    raw_path: str | None,
+    field_name: str,
+) -> Path | None:
+    if raw_path is None or not raw_path.strip():
+        return None
+    path = Path(raw_path).expanduser().resolve()
+    if not path.exists():
+        raise FileNotFoundError(
+            f"{field_name} referenced by {metadata_path} does not exist: {path}"
+        )
+    return path
+
+
 async def load_skill_training_session(
     *,
     args: argparse.Namespace,
@@ -274,6 +294,16 @@ async def load_skill_training_session(
         expected_decision=None,
     )
     simulation_result = _load_workspace_simulation_result(workspace_dir)
+    skill_loop_journal_path = _resolve_optional_snapshot_path(
+        metadata_path=session_metadata_path,
+        raw_path=metadata.skill_loop_journal_path,
+        field_name="skill_loop_journal_path",
+    )
+    skill_loop_context_snapshot_path = _resolve_optional_snapshot_path(
+        metadata_path=session_metadata_path,
+        raw_path=metadata.skill_loop_context_snapshot_path,
+        field_name="skill_loop_context_snapshot_path",
+    )
 
     return SkillTrainingSession(
         session_metadata_path=session_metadata_path,
@@ -291,6 +321,8 @@ async def load_skill_training_session(
             id=task_id,
             task=metadata.task or f"Retained Codex session {session_id}",
         ),
+        skill_loop_journal_path=skill_loop_journal_path,
+        skill_loop_context_snapshot_path=skill_loop_context_snapshot_path,
     )
 
 

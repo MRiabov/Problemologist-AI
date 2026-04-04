@@ -765,6 +765,27 @@ async def _run_codex_eval(
                 verification_result.details if verification_result is not None else {}
             ),
             "codex_skill_loop": codex_skill_loop_summary.model_dump(mode="json"),
+            "skill_loop_journal_path": (
+                codex_skill_loop_summary.skill_update_turn.journal_path
+                if codex_skill_loop_summary.skill_update_turn is not None
+                and codex_skill_loop_summary.skill_update_turn.journal_path is not None
+                else (
+                    codex_skill_loop_summary.self_analysis_turn.journal_path
+                    if codex_skill_loop_summary.self_analysis_turn is not None
+                    else None
+                )
+            ),
+            "skill_loop_context_snapshot_path": (
+                codex_skill_loop_summary.skill_update_turn.context_snapshot_path
+                if codex_skill_loop_summary.skill_update_turn is not None
+                and codex_skill_loop_summary.skill_update_turn.context_snapshot_path
+                is not None
+                else (
+                    codex_skill_loop_summary.self_analysis_turn.context_snapshot_path
+                    if codex_skill_loop_summary.self_analysis_turn is not None
+                    else None
+                )
+            ),
             "hard_checks_passed": hard_checks_passed,
             "judge_reviewer_results": codex_reviewer_results,
             "codex_session_trace": (
