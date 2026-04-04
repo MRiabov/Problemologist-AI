@@ -4,7 +4,7 @@
   "created_at": "2026-04-03T09:36:44.676168+00:00",
   "episode_id": "f6485b35-51eb-5025-a022-30ee9fa936b2",
   "worker_session_id": "seed-ec-003-drawing-full-benchmark",
-  "revision": "dc43b4b8d00863ddd4ca2832ee626dd7f329772c",
+  "revision": "08ffe7debf8e47175f7680cc932b43c079293f74",
   "scene_hash": "33dbb5cbb0fc9f7038eb000518ba1724fb636b724cf3bce7bc2e81b2d8e3f7f3",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",

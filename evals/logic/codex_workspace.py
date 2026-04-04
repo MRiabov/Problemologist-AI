@@ -24,7 +24,11 @@ from evals.logic.review_checks import (
     review_artifacts_complete_for_prefix,
     review_filename_candidates,
 )
-from evals.logic.stack_profiles import apply_stack_profile_env
+from evals.logic.cli_provider import (
+    REASONING_EFFORT_UNSET,
+    CliProvider,
+    get_default_cli_provider,
+)
 from evals.logic.workspace import resolve_seed_artifact_dir
 from shared.agent_templates import (
     load_codex_template_files,
@@ -34,7 +38,7 @@ from shared.agent_templates import (
 )
 from shared.agents.config import DraftingMode, load_agents_config
 from shared.enums import AgentName
-from shared.git_utils import init_workspace_repo, repo_revision
+from shared.git_utils import init_workspace_repo
 from shared.models.schemas import (
     AssemblyConstraints,
     AssemblyDefinition,
@@ -50,7 +54,6 @@ from shared.models.schemas import (
     ReviewComments,
     ReviewFrontmatter,
 )
-from shared.runtime.headless import load_headless_opengl_config
 from shared.workers.filesystem.backend import FileInfo
 from worker_heavy.utils.file_validation import (
     validate_node_output,
@@ -92,7 +95,6 @@ _SKIP_COPY_DIR_NAMES = {
     ".git",
     "__pycache__",
 }
-_REASONING_EFFORT_UNSET = object()
 _ENGINEER_DRAFTING_TARGETS = {
     AgentName.ENGINEER_PLANNER,
     AgentName.ENGINEER_PLAN_REVIEWER,
@@ -143,6 +145,10 @@ class CodexExecRunResult(BaseModel):
     timeout_seconds: float | None = None
     session_id: str | None = None
     output_last_message_path: Path | None = None
+
+
+def get_cli_provider() -> CliProvider:
+    return get_default_cli_provider()
 
 
 @dataclass(slots=True)
@@ -719,57 +725,16 @@ def prepare_codex_home(
     agent_name: AgentName | None = None,
     reasoning_effort: Literal["low", "medium", "high", "xhigh"]
     | None
-    | object = _REASONING_EFFORT_UNSET,
+    | object = REASONING_EFFORT_UNSET,
 ) -> Path:
     """Seed an isolated Codex home with the active auth bundle."""
-
-    source_auth_path = source_auth_path or (Path.home() / ".codex" / "auth.json")
-    if not source_auth_path.exists():
-        raise FileNotFoundError(f"Codex auth file not found: {source_auth_path}")
-
-    codex_home_dir = codex_home_root / ".codex"
-    codex_home_dir.mkdir(parents=True, exist_ok=True)
-    # Give each isolated run its own writable cache/config roots so library
-    # cache initialization does not spill across parallel sessions.
-    (codex_home_root / ".cache").mkdir(parents=True, exist_ok=True)
-    (codex_home_root / ".config").mkdir(parents=True, exist_ok=True)
-    (codex_home_root / ".tmp").mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source_auth_path, codex_home_dir / "auth.json")
-    workspace_path = workspace_dir.expanduser().resolve()
-    config = (
-        load_agents_config()
-        if agent_name is not None or reasoning_effort is not _REASONING_EFFORT_UNSET
-        else None
+    return get_cli_provider().prepare_home(
+        codex_home_root=codex_home_root,
+        workspace_dir=workspace_dir,
+        source_auth_path=source_auth_path,
+        agent_name=agent_name,
+        reasoning_effort=reasoning_effort,
     )
-    if config is not None and not config.llm.reasoning_effort_enabled:
-        resolved_reasoning_effort = None
-    elif reasoning_effort is _REASONING_EFFORT_UNSET:
-        resolved_reasoning_effort = (
-            config.get_reasoning_effort(agent_name)
-            if config is not None and agent_name is not None
-            else "high"
-        )
-    else:
-        resolved_reasoning_effort = reasoning_effort
-    config_path = codex_home_dir / "config.toml"
-    config_lines = [
-        'model = "gpt-5.4-mini"',
-        'approvals_reviewer = "user"',
-        "",
-        "[features]",
-        "use_legacy_landlock = true",
-        "",
-        f'[projects."{workspace_path.as_posix()}"]',
-        'trust_level = "trusted"',
-        "respect_gitignore = false",
-        "",
-    ]
-    if resolved_reasoning_effort is not None:
-        config_lines.insert(
-            1, f'model_reasoning_effort = "{resolved_reasoning_effort}"'
-        )
-    config_path.write_text("\n".join(config_lines), encoding="utf-8")
-    return codex_home_dir
 
 
 def _load_manufacturing_config(workspace_dir: Path):
@@ -869,35 +834,25 @@ def _run_codex_exec_command(
     output_last_message_path: Path | None = None,
     reasoning_effort: Literal["low", "medium", "high", "xhigh"]
     | None
-    | object = _REASONING_EFFORT_UNSET,
+    | object = REASONING_EFFORT_UNSET,
 ) -> CodexExecRunResult:
+    provider = get_cli_provider()
     codex_home_root = resolve_codex_home_root(
         task_id=task_id,
         session_id=session_id,
         runtime_root=runtime_root,
     )
-    prepare_codex_home(
+    provider.prepare_home(
         codex_home_root=codex_home_root,
         workspace_dir=workspace_dir,
         agent_name=agent_name,
         reasoning_effort=reasoning_effort,
     )
-
-    cmd = ["codex", "exec"]
-    cmd.extend(["-C", str(workspace_dir)])
-    if resume_session_id is not None:
-        cmd.extend(["resume", resume_session_id])
-    cmd.extend(_codex_execution_flags(yolo=yolo))
-    if output_last_message_path is not None:
-        output_last_message_path.parent.mkdir(parents=True, exist_ok=True)
-        cmd.extend(["--output-last-message", str(output_last_message_path)])
-    cmd.extend(
-        [
-            "-c",
-            "shell_environment_policy.inherit=all",
-            "--skip-git-repo-check",
-            "-",
-        ]
+    cmd = provider.build_exec_command(
+        workspace_dir=workspace_dir,
+        yolo=yolo,
+        resume_session_id=resume_session_id,
+        output_last_message_path=output_last_message_path,
     )
     print("launching: " + " ".join(cmd))
 
@@ -912,7 +867,7 @@ def _run_codex_exec_command(
             cmd,
             input=prompt_text,
             text=True,
-            env=build_codex_env(
+            env=provider.build_env(
                 task_id=task_id,
                 workspace_dir=workspace_dir,
                 codex_home_root=codex_home_root,
@@ -1083,71 +1038,13 @@ def build_codex_env(
     agent_name: AgentName | None = None,
 ) -> dict[str, str]:
     """Prepare a generic Codex subprocess environment for a local workspace run."""
-
-    env = dict(os.environ)
-    # Apply the eval stack profile explicitly so the Codex workspace can reach
-    # the same localhost services as the runner process, including the
-    # dedicated renderer worker used by validation previews.
-    apply_stack_profile_env("eval", env=env, root=ROOT)
-    # Codex runs are headless by contract. Strip ambient display state so the
-    # submission helpers and validation paths cannot depend on host X11/Wayland.
-    env.pop("DISPLAY", None)
-    env.pop("XAUTHORITY", None)
-    env.pop("WAYLAND_DISPLAY", None)
-    env["PROBLEMOLOGIST_PHYSICS_GL_BACKEND"] = "egl"
-    env["PROBLEMOLOGIST_RENDER_GL_BACKEND"] = "osmesa"
-    headless_config = load_headless_opengl_config(env)
-    headless_config.apply_physics(env)
-    env["PROBLEMOLOGIST_RENDER_GL_BACKEND"] = "osmesa"
-    env["PYOPENGL_PLATFORM"] = "osmesa"
-    env["VTK_DEFAULT_OPENGL_WINDOW"] = "vtkOSOpenGLRenderWindow"
-    env["PYVISTA_OFF_SCREEN"] = "true"
-    env["PYGLET_HEADLESS"] = "1"
-    env.pop("LIBGL_ALWAYS_SOFTWARE", None)
-    env["HOME"] = str(codex_home_root)
-    env["CODEX_HOME"] = str(codex_home_root / ".codex")
-    env["XDG_CACHE_HOME"] = str(codex_home_root / ".cache")
-    env["XDG_CONFIG_HOME"] = str(codex_home_root / ".config")
-    env.setdefault("TMPDIR", str(codex_home_root / ".tmp"))
-    env.setdefault("TEMP", str(codex_home_root / ".tmp"))
-    env.setdefault("TMP", str(codex_home_root / ".tmp"))
-    workspace_path = workspace_dir.expanduser().resolve()
-
-    venv_bin = ROOT / ".venv" / "bin"
-    if venv_bin.exists():
-        current_path = env.get("PATH", "")
-        env["PATH"] = (
-            f"{venv_bin}{os.pathsep}{current_path}" if current_path else str(venv_bin)
-        )
-        env.setdefault("VIRTUAL_ENV", str(ROOT / ".venv"))
-        env["PYTHON_BIN"] = str(venv_bin / "python")
-    else:
-        env.setdefault("PYTHON_BIN", sys.executable)
-
-    env.setdefault("CONTROLLER_URL", "http://localhost:18000")
-    env.setdefault("WORKER_LIGHT_URL", "http://localhost:18001")
-    env.setdefault("SESSION_ID", session_id or f"local-codex-{task_id}-{os.getpid()}")
-    env.setdefault("IS_HEAVY_WORKER", "1")
-    env.setdefault("PROBLEMOLOGIST_SCRIPT_IMPORT_MODE", "0")
-    env.setdefault("COTS_DB_PATH", str(ROOT / "parts.db"))
-    env.setdefault("PROBLEMOLOGIST_REPO_ROOT", str(ROOT))
-    current_revision = repo_revision(ROOT)
-    if current_revision:
-        env.setdefault("REPO_REVISION", current_revision)
-    existing_pythonpath = env.get("PYTHONPATH", "")
-    pythonpath_entries = [str(workspace_path), str(ROOT)]
-    if existing_pythonpath:
-        pythonpath_entries.append(existing_pythonpath)
-    env["PYTHONPATH"] = os.pathsep.join(entry for entry in pythonpath_entries if entry)
-    if agent_name is not None:
-        env.setdefault("AGENT_NAME", agent_name.value)
-    return env
-
-
-def _codex_execution_flags(*, yolo: bool) -> list[str]:
-    if yolo:
-        return ["--dangerously-bypass-approvals-and-sandbox"]
-    return ["--full-auto"]
+    return get_cli_provider().build_env(
+        task_id=task_id,
+        workspace_dir=workspace_dir,
+        codex_home_root=codex_home_root,
+        session_id=session_id,
+        agent_name=agent_name,
+    )
 
 
 def launch_codex_exec(
@@ -1162,7 +1059,7 @@ def launch_codex_exec(
     timeout_seconds: float | None = None,
     reasoning_effort: Literal["low", "medium", "high", "xhigh"]
     | None
-    | object = _REASONING_EFFORT_UNSET,
+    | object = REASONING_EFFORT_UNSET,
 ) -> int:
     """Launch `codex exec` in a workspace and stream output to the terminal."""
     result = _run_codex_exec_command(
@@ -1195,7 +1092,7 @@ def resume_codex_exec(
     output_last_message_path: Path | None = None,
     reasoning_effort: Literal["low", "medium", "high", "xhigh"]
     | None
-    | object = _REASONING_EFFORT_UNSET,
+    | object = REASONING_EFFORT_UNSET,
 ) -> CodexExecRunResult:
     """Resume an existing `codex exec` session with a follow-up prompt."""
 
@@ -1227,30 +1124,26 @@ def open_codex_ui(
     """Open the interactive Codex UI with a workspace prompt."""
     if not (workspace_dir / ".git").exists():
         init_workspace_repo(workspace_dir)
+    provider = get_cli_provider()
     codex_home_root = resolve_codex_home_root(
         task_id=task_id,
         session_id=session_id,
         runtime_root=runtime_root,
     )
-    prepare_codex_home(
+    provider.prepare_home(
         codex_home_root=codex_home_root,
         workspace_dir=workspace_dir,
         agent_name=agent_name,
     )
-    cmd = [
-        "codex",
-        *_codex_execution_flags(yolo=yolo),
-        "-c",
-        "shell_environment_policy.inherit=all",
-        "--cd",
-        str(workspace_dir),
-        "--no-alt-screen",
-        prompt_text,
-    ]
+    cmd = provider.build_ui_command(
+        workspace_dir=workspace_dir,
+        prompt_text=prompt_text,
+        yolo=yolo,
+    )
     print("launching: " + " ".join(cmd))
     completed = subprocess.run(
         cmd,
-        env=build_codex_env(
+        env=provider.build_env(
             task_id=task_id,
             workspace_dir=workspace_dir,
             codex_home_root=codex_home_root,

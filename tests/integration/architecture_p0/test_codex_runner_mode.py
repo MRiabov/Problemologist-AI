@@ -131,7 +131,7 @@ class RecordingCliProvider:
             import sys
 
             log_path = pathlib.Path(os.environ["CLI_PROVIDER_ARGS_LOG"])
-            log_path.write_text("\\n".join(sys.argv[1:]), encoding="utf-8")
+            log_path.write_text("\\n".join(sys.argv[2:]), encoding="utf-8")
             """
         )
         return [sys.executable, "-c", code, *actual_command]
@@ -157,7 +157,7 @@ class RecordingCliProvider:
             import sys
 
             log_path = pathlib.Path(os.environ["CLI_PROVIDER_ARGS_LOG"])
-            log_path.write_text("\\n".join(sys.argv[1:]), encoding="utf-8")
+            log_path.write_text("\\n".join(sys.argv[2:]), encoding="utf-8")
             """
         )
         return [sys.executable, "-c", code, *actual_command]
@@ -479,7 +479,9 @@ def test_run_evals_codex_exec_help_exposes_workspace_write_sandbox(
 
 
 @pytest.mark.integration_p0
-def test_resume_codex_exec_uses_codex_exec_resume_command(tmp_path: Path, monkeypatch):
+def test_resume_codex_exec_uses_cli_provider_resume_command(
+    tmp_path: Path, monkeypatch
+):
     workspace_dir = tmp_path / "workspace"
     workspace_dir.mkdir()
 
@@ -498,26 +500,13 @@ def test_resume_codex_exec_uses_codex_exec_resume_command(tmp_path: Path, monkey
         encoding="utf-8",
     )
 
-    fake_bin = tmp_path / "bin"
-    fake_bin.mkdir()
-    codex_args_log = tmp_path / "codex-resume-args.log"
-    codex_script = fake_bin / "codex"
-    codex_script.write_text(
-        '#!/bin/sh\nprintf \'%s\\n\' "$@" > "$CODEX_ARGS_LOG"\nexit 0\n',
-        encoding="utf-8",
-    )
-    codex_script.chmod(0o755)
-
-    codex_home_root = tmp_path / "codex-home"
-    prepare_codex_home(
-        codex_home_root=codex_home_root,
-        workspace_dir=workspace_dir,
-        source_auth_path=auth_path,
+    provider = RecordingCliProvider(tmp_path / "codex-resume-args.log")
+    monkeypatch.setattr(
+        "evals.logic.codex_workspace.get_cli_provider",
+        lambda: provider,
     )
 
     monkeypatch.setenv("HOME", str(fake_home))
-    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}")
-    monkeypatch.setenv("CODEX_ARGS_LOG", str(codex_args_log))
 
     result = resume_codex_exec(
         workspace_dir=workspace_dir,
@@ -530,7 +519,9 @@ def test_resume_codex_exec_uses_codex_exec_resume_command(tmp_path: Path, monkey
     )
 
     assert result.return_code == 0
-    logged_args = codex_args_log.read_text(encoding="utf-8").splitlines()
+    logged_args = (tmp_path / "codex-resume-args.log").read_text(
+        encoding="utf-8"
+    ).splitlines()
     assert logged_args[0] == "exec"
     assert logged_args[1] == "-C"
     assert logged_args[2] == str(workspace_dir)
@@ -1616,8 +1607,9 @@ result = build()
         (("--yolo",), "--dangerously-bypass-approvals-and-sandbox", "--full-auto"),
     ],
 )
-def test_materialize_seed_workspace_launches_codex_with_expected_sandbox_policy(
+def test_launch_codex_exec_uses_expected_sandbox_policy(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
     extra_flags: tuple[str, ...],
     expected_fragment: str,
     unexpected_fragment: str,
@@ -1637,49 +1629,28 @@ def test_materialize_seed_workspace_launches_codex_with_expected_sandbox_policy(
         encoding="utf-8",
     )
 
-    fake_bin = tmp_path / "bin"
-    fake_bin.mkdir()
-    codex_args_log = tmp_path / "codex-args.log"
-    codex_script = fake_bin / "codex"
-    codex_script.write_text(
-        '#!/bin/sh\nprintf \'%s\\n\' "$@" > "$CODEX_ARGS_LOG"\nexit 0\n',
-        encoding="utf-8",
-    )
-    codex_script.chmod(0o755)
-
     workspace_dir = tmp_path / "workspace"
-    command = [
-        sys.executable,
-        "dataset/evals/materialize_seed_workspace.py",
-        "--agent",
-        "engineer_coder",
-        "--task-id",
-        "ec-001-drawing-full",
-        "--output-dir",
-        str(workspace_dir),
-        "--launch-codex",
-        *extra_flags,
-    ]
-    env = os.environ.copy()
-    env.update(
-        {
-            "HOME": str(fake_home),
-            "PATH": f"{fake_bin}{os.pathsep}{env.get('PATH', '')}",
-            "CODEX_ARGS_LOG": str(codex_args_log),
-        }
+    workspace_dir.mkdir()
+
+    provider = RecordingCliProvider(tmp_path / "codex-args.log")
+    monkeypatch.setattr(
+        "evals.logic.codex_workspace.get_cli_provider",
+        lambda: provider,
+    )
+    monkeypatch.setenv("HOME", str(fake_home))
+
+    result = launch_codex_exec(
+        workspace_dir,
+        "run the seeded workspace",
+        task_id="ec-001-drawing-full",
+        agent_name=AgentName.ENGINEER_CODER,
+        session_id="home-session-1",
+        runtime_root=tmp_path / "codex-runtime",
+        yolo="--yolo" in extra_flags,
     )
 
-    completed = subprocess.run(
-        command,
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        env=env,
-        check=False,
-    )
-
-    assert completed.returncode == 0, completed.stderr
-    logged_args = codex_args_log.read_text(encoding="utf-8")
+    assert result == 0
+    logged_args = (tmp_path / "codex-args.log").read_text(encoding="utf-8")
     assert expected_fragment in logged_args
     assert unexpected_fragment not in logged_args
     assert workspace_dir.exists()
