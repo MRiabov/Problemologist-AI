@@ -207,6 +207,7 @@ We define (a growing list of) (aggregate) metrics:
 17. Visual-policy compliance rate by role: % of runs where roles configured with `visual_inspection.required=true` satisfied their current `min_images` requirement when render images were available.
 18. Skill publication latency: elapsed time from a `skill_update` event or overlay completion to successful promotion into canonical `skills/`.
 19. Skill promotion conflict rate: % of promotion attempts that required conflict resolution or human escalation.
+20. Skill overlay provenance: whether the retained session metadata captures the overlay root, approved base commit, and promotion outcome for later replay.
 
 <!-- 1. Infrastructure/framework stability:
     - % of sessions completed successfully to their expected end and not failing under timeouts, container crashes, etc.LLM-suggested. -->

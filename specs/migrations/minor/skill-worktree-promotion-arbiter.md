@@ -68,6 +68,12 @@ This separates learning from publication and keeps the training loop from becomi
 - Record the overlay base commit, session overlay path, promotion outcome, and any conflict or escalation reason.
 - Preserve enough metadata to attribute a published `SKILL.md` version back to the originating session and its approved base snapshot.
 
+### 5. Retire legacy helper surfaces
+
+- Treat the existing skill-learning node and git helper surfaces as migration bridges, not as permanent architecture.
+- If the arbiter needs logic already present in `controller/agent/nodes/skills.py`, `controller/utils/git.py`, or `worker_light/utils/git.py`, factor that logic into shared helpers and reuse it rather than reimplementing it.
+- After the arbiter owns publication and conflict handling, remove or narrow the legacy skill-learning and git-sync paths so they no longer imply a separate required subagent for publication.
+
 ## Non-Goals
 
 - Do not make the training loop itself manage canonical branch publication.
@@ -75,6 +81,7 @@ This separates learning from publication and keeps the training loop from becomi
 - Do not introduce a dedicated long-lived skill-learner stage.
 - Do not auto-merge every draft into canonical `skills/`.
 - Do not require the arbiter to be the same runtime component as the learning loop.
+- Do not keep legacy skill-learning or git-sync helper paths around after the arbiter has taken over their responsibility.
 
 ## Sequencing
 
@@ -116,6 +123,12 @@ The safe order is:
 - [ ] Update the prompt and architecture docs to describe the overlay-first contract.
 - [ ] Add integration coverage for concurrent training runs and promotion conflict handling.
 
+### Legacy cleanup
+
+- [ ] Reuse shared git/skill helper logic in the arbiter where it already exists instead of copying it.
+- [ ] Remove or narrow the old skill-learning node and git helper surfaces once the arbiter path is authoritative.
+- [ ] Update any runtime config or prompt references that still imply the legacy helper surfaces are required for publication.
+
 ## File-Level Change Set
 
 The implementation should touch the smallest set of files that actually enforce the new contract:
@@ -123,8 +136,10 @@ The implementation should touch the smallest set of files that actually enforce 
 - `evals/logic/skill_training.py`
 - `controller/agent/nodes/skills.py`
 - `controller/utils/git.py`
+- `worker_light/utils/git.py`
 - `scripts/update_skills_lock.py`
 - `config/prompts.yaml`
+- `config/agents_config.yaml`
 - `specs/architecture/agents/agent-skill.md`
 - `specs/architecture/agents/agent-harness.md`
 - `specs/architecture/agents/artifacts-and-filesystem.md`

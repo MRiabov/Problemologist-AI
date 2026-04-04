@@ -1,3 +1,4 @@
+import contextlib
 from pathlib import Path
 
 import structlog
@@ -42,6 +43,35 @@ def commit_all(path: Path, message: str) -> str | None:
     except Exception as e:
         logger.warning("git_commit_failed", error=str(e), session_id="system")
         return None
+
+
+def repo_head_state(path: Path) -> dict[str, str | None]:
+    """Return the current branch and HEAD commit for a git repository."""
+    try:
+        repo = Repo(path)
+        branch = "HEAD"
+        if not repo.head.is_detached:
+            branch = repo.active_branch.name
+        head_commit = None
+        with contextlib.suppress(Exception):
+            head_commit = repo.head.commit.hexsha
+        return {
+            "branch": branch,
+            "head_commit": head_commit,
+        }
+    except Exception as e:
+        logger.warning("repo_head_state_failed", error=str(e), session_id="system")
+        return {"branch": None, "head_commit": None}
+
+
+def repo_is_clean(path: Path) -> bool:
+    """Return whether the repository has no staged, unstaged, or untracked changes."""
+    try:
+        repo = Repo(path)
+        return not repo.is_dirty(untracked_files=True) and not has_merge_conflicts(path)
+    except Exception as e:
+        logger.warning("repo_is_clean_failed", error=str(e), session_id="system")
+        return False
 
 
 def has_merge_conflicts(path: Path) -> bool:
@@ -150,6 +180,38 @@ def abort_merge(path: Path) -> bool:
     except Exception as e:
         logger.warning("abort_merge_failed", error=str(e), session_id="system")
         return False
+
+
+def copy_tree(
+    source_root: Path,
+    destination_root: Path,
+    *,
+    exclude_rel_paths: set[str] | None = None,
+) -> list[str]:
+    """Copy a tree into another tree while preserving relative paths."""
+    source_root = source_root.expanduser().resolve()
+    destination_root = destination_root.expanduser().resolve()
+    exclude_rel_paths = {
+        Path(path).as_posix().lstrip("/") for path in (exclude_rel_paths or set())
+    }
+
+    copied: list[str] = []
+    for src_path in sorted(p for p in source_root.rglob("*") if p.is_file()):
+        rel_path = src_path.relative_to(source_root).as_posix()
+        if any(
+            rel_path == excluded or rel_path.startswith(f"{excluded}/")
+            for excluded in exclude_rel_paths
+        ):
+            continue
+        if any(part == ".git" for part in src_path.parts):
+            continue
+        if src_path.suffix in {".pyc", ".pyo"}:
+            continue
+        dst_path = destination_root / rel_path
+        dst_path.parent.mkdir(parents=True, exist_ok=True)
+        dst_path.write_bytes(src_path.read_bytes())
+        copied.append(rel_path)
+    return copied
 
 
 def complete_merge(

@@ -4,10 +4,11 @@ import argparse
 import asyncio
 import json
 import os
+import subprocess
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from evals.logic.codex_session_trace import (
     CodexSessionTraceArtifact,
@@ -36,9 +37,12 @@ from shared.logging import configure_logging, get_logger
 from shared.models.simulation import SimulationResult
 
 ROOT = Path(__file__).resolve().parents[2]
+SKILL_OVERLAY_ENV = "PROBLEMOLOGIST_SKILL_OVERLAY_ROOT"
 
 
 class SkillTrainingSessionMetadata(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     agent_name: str | None = None
     task_id: str | None = None
     task: str | None = None
@@ -55,6 +59,11 @@ class SkillTrainingSessionMetadata(BaseModel):
     codex_skill_loop: dict[str, Any] | None = None
     skill_loop_journal_path: str | None = None
     skill_loop_context_snapshot_path: str | None = None
+    suggested_skills_dir: str | None = None
+    suggested_skills_base_commit: str | None = None
+    suggested_skills_branch: str | None = None
+    skills_repo_head_commit: str | None = None
+    skills_repo_branch: str | None = None
 
 
 class SkillTrainingSession(BaseModel):
@@ -72,6 +81,11 @@ class SkillTrainingSession(BaseModel):
     item: EvalDatasetItem
     skill_loop_journal_path: Path | None = None
     skill_loop_context_snapshot_path: Path | None = None
+    suggested_skills_dir: Path | None = None
+    suggested_skills_base_commit: str | None = None
+    suggested_skills_branch: str | None = None
+    skills_repo_head_commit: str | None = None
+    skills_repo_branch: str | None = None
 
 
 def _parse_args() -> argparse.Namespace:
@@ -123,7 +137,9 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--agent",
         default=None,
-        help="Override the agent name from session metadata, for example engineer_coder.",
+        help=(
+            "Override the agent name from session metadata, for example engineer_coder."
+        ),
     )
     parser.add_argument(
         "--codex-runtime-root",
@@ -238,6 +254,54 @@ def _resolve_optional_snapshot_path(
     return path
 
 
+def _git_output(repo_root: Path, *args: str) -> str | None:
+    completed = subprocess.run(
+        ["git", "-C", str(repo_root), *args],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        return None
+    return completed.stdout.strip() or None
+
+
+def _read_skill_repo_state(repo_root: Path) -> tuple[str | None, str | None]:
+    if not (repo_root / ".git").exists():
+        return None, None
+    return (
+        _git_output(repo_root, "rev-parse", "HEAD"),
+        _git_output(repo_root, "rev-parse", "--abbrev-ref", "HEAD"),
+    )
+
+
+def _seed_skill_overlay_state(
+    workspace_dir: Path,
+) -> tuple[Path, str | None, str | None]:
+    overlay_dir = workspace_dir / "suggested_skills"
+    overlay_dir.mkdir(parents=True, exist_ok=True)
+    os.environ[SKILL_OVERLAY_ENV] = overlay_dir.as_posix()
+    base_commit, branch = _read_skill_repo_state(workspace_dir / "skills")
+    return overlay_dir, base_commit, branch
+
+
+def _update_session_metadata(
+    *,
+    path: Path,
+    metadata: SkillTrainingSessionMetadata,
+    overlay_dir: Path,
+    base_commit: str | None,
+    branch: str | None,
+) -> None:
+    payload = metadata.model_dump(mode="json")
+    payload["suggested_skills_dir"] = overlay_dir.as_posix()
+    payload["suggested_skills_base_commit"] = base_commit
+    payload["suggested_skills_branch"] = branch
+    payload["skills_repo_head_commit"] = base_commit
+    payload["skills_repo_branch"] = branch
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+
 async def load_skill_training_session(
     *,
     args: argparse.Namespace,
@@ -253,7 +317,8 @@ async def load_skill_training_session(
     else:
         if args.eval_log_key is None:
             raise ValueError(
-                "Pass --session-metadata-path or both --session-log-root and --eval-log-key."
+                "Pass --session-metadata-path or both --session-log-root and "
+                "--eval-log-key."
             )
         session_log_root = args.session_log_root.expanduser().resolve()
         eval_log_key = args.eval_log_key
@@ -287,6 +352,16 @@ async def load_skill_training_session(
         args.codex_runtime_root.expanduser().resolve()
         if args.codex_runtime_root is not None
         else session_log_root.parent.resolve()
+    )
+    suggested_skills_dir, suggested_skills_base_commit, skills_repo_branch = (
+        _seed_skill_overlay_state(workspace_dir)
+    )
+    _update_session_metadata(
+        path=session_metadata_path,
+        metadata=metadata,
+        overlay_dir=suggested_skills_dir,
+        base_commit=suggested_skills_base_commit,
+        branch=skills_repo_branch,
     )
 
     verification_result = await verify_workspace_for_agent(
@@ -325,6 +400,11 @@ async def load_skill_training_session(
         ),
         skill_loop_journal_path=skill_loop_journal_path,
         skill_loop_context_snapshot_path=skill_loop_context_snapshot_path,
+        suggested_skills_dir=suggested_skills_dir,
+        suggested_skills_base_commit=suggested_skills_base_commit,
+        suggested_skills_branch=skills_repo_branch,
+        skills_repo_head_commit=suggested_skills_base_commit,
+        skills_repo_branch=skills_repo_branch,
     )
 
 
@@ -388,7 +468,9 @@ async def run_skill_training_session(
         verification_result=session.verification_result,
         log=log,
         deps={
-            "capture_latest_codex_session_artifacts": capture_latest_codex_session_artifacts,
+            "capture_latest_codex_session_artifacts": (
+                capture_latest_codex_session_artifacts
+            ),
             "resume_cli_exec": resume_cli_exec,
             "resolve_cli_home_root": resolve_cli_home_root,
             "eval_log_key": session.eval_log_key,

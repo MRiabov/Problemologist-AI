@@ -33,6 +33,7 @@ The runtime reads the mounted or materialized skill tree when constructing an ag
 
 Skill-training and replay loops resolve the active session overlay first when `suggested_skills/` is present, then fall back to the approved canonical tree.
 New training runs start from the approved canonical snapshot or locked commit, not from another run's mutable overlay.
+Runtime surfaces may advertise the active overlay explicitly through `PROBLEMOLOGIST_SKILL_OVERLAY_ROOT` so prompt assembly and catalog helpers can prefer the session-local worktree without guessing.
 
 Skill sync is startup-configurable, and integration tests may use deterministic local skill paths.
 
@@ -62,6 +63,7 @@ New training runs start from the approved canonical skill snapshot, not from ano
 
 The loop stays asynchronous relative to the main eval or task run, and it uses durable workspace artifacts such as `journal.md`, review YAML, validation/simulation results, render bundles, and `events.jsonl` to preserve the minimum state needed for later turns.
 Codex skill-loop runs also retain a workspace-local, reviewable snapshot under `logs/skill_loop/` so the follow-up turns can reuse the journal state without reconstructing the transcript by hand.
+Retained skill-training bundles also persist the active overlay root and the approved canonical `skills/` base commit in session metadata so a later promotion arbiter can attribute the publication step back to the originating session and seed snapshot.
 
 The retained artifacts are also downstream training data. A dedicated `train_skills.py`-style CLI may reopen those artifacts later to produce skill deltas without requiring a separate journalling or skill graph stage.
 

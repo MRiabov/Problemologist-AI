@@ -61,6 +61,10 @@ The developer instrumentation layer is split into a small set of canonical entry
 
 The integration runner is a real-stack boundary contract, not a synthetic test harness.
 
+### Severity classification
+
+- Devtool integration tests should be classified as `p1` or `p2` by default; `p0` is reserved for exceptional cases only.
+
 ### Public entrypoint
 
 - `scripts/run_integration_tests.sh` is the only supported public entrypoint for integration verification.
@@ -75,6 +79,7 @@ The integration runner is a real-stack boundary contract, not a synthetic test h
 - It records the requested run in `/tmp/problemologist-integration.run.json` so a blocked caller can decide whether to queue or reuse the active logs.
 - It writes run logs under `logs/integration_tests/runs/run_*` and updates `logs/integration_tests/current/` to point at the active run.
 - It keeps xdist enabled by default and only opts out when the caller explicitly requests a different pytest distribution mode.
+- Its startup and teardown chatter is quiet by default; set `INTEGRATION_RUNNER_VERBOSE=1` when you want detailed orchestration progress in the terminal.
 - It can split the default suite into deterministic marker buckets so P0/P1 coverage is reached before the broader slices.
 - It performs backend-error early stop when enabled and only falls through to full-duration runs when the errors are allowlisted or the gate is disabled.
 - It drives the frontend build only when the selected pytest scope actually needs it.
