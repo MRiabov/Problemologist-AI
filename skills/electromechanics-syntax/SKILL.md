@@ -56,6 +56,13 @@ For explicit circuit, power, or wire-routing work, still load
 ## Example
 
 ```yaml
+cots_parts:
+  - part_id: ServoMotor_DS3218
+    manufacturer: Generic
+    unit_cost_usd: 18.0
+    quantity: 1
+    source: catalog
+
 final_assembly:
   - name: drive_motor
     config:

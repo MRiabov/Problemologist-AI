@@ -26,6 +26,9 @@ The canonical integration entrypoint is:
 That script starts the compose stack, runs migrations, starts backend services,
 and then runs pytest with the repo's integration filters. It only builds and
 serves the frontend when the browser slice is selected.
+Its bootstrap/teardown progress is quiet by default; set
+`INTEGRATION_RUNNER_VERBOSE=1` if you want the detailed orchestration logs
+back during local debugging.
 
 By default, a full run is split into ordered marker buckets so release-blocking
 coverage lands first, and the runner keeps pytest-xdist enabled for every
