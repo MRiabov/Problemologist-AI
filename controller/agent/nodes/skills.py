@@ -1,4 +1,3 @@
-import os
 import uuid
 from pathlib import Path
 
@@ -11,10 +10,10 @@ from controller.agent.config import settings
 from controller.agent.state import AgentState
 from controller.agent.tools import filter_tools_for_agent, get_engineer_tools
 from controller.observability.tracing import record_worker_events, sync_asset
-from controller.utils.git import GitManager
 from shared.enums import AgentName
 from shared.observability.schemas import SkillEditEvent
 from shared.type_checking import type_check
+from worker_light.utils.git import commit_all, init_workspace_repo
 
 from .base import BaseNode, SharedNodeContext
 
@@ -42,20 +41,10 @@ class SkillsNode(BaseNode):
         super().__init__(context)
         self.suggested_skills_dir = Path(suggested_skills_dir)
         self.suggested_skills_dir.mkdir(parents=True, exist_ok=True)
-        self.git = GitManager(
-            repo_path=self.suggested_skills_dir,
-            repo_url=os.getenv("GIT_REPO_URL"),
-            pat=os.getenv("GIT_PAT"),
-            session_id=self.ctx.session_id,
-        )
-        self.git.ensure_repo()
-
-    async def _sync_git(self, commit_message: str):
-        """Sync changes with git via GitManager."""
-        await self.git.sync_changes(commit_message, lm=self.ctx.dspy_lm)
+        init_workspace_repo(self.suggested_skills_dir)
 
     async def __call__(
-        self, state: AgentState, config: RunnableConfig | None = None
+        self, state: AgentState, _config: RunnableConfig | None = None
     ) -> AgentState:
         """Execute the sidecar node logic using DSPy ReAct."""
 
@@ -97,7 +86,11 @@ class SkillsNode(BaseNode):
                             )
                         ],
                     )
-                    return f"Error: Update blocked. You deleted {deletions} lines, but the limit is 15 lines of deletion to prevent skill loss."
+                    return (
+                        "Error: Update blocked. You deleted "
+                        f"{deletions} lines, but the limit is 15 lines of deletion "
+                        "to prevent skill loss."
+                    )
 
             try:
                 with file_path.open("w") as f:
@@ -112,10 +105,16 @@ class SkillsNode(BaseNode):
                 except Exception as e:
                     logger.warning(f"Failed to sync skill asset: {e}")
 
-                # Sync to Git
-                await self._sync_git(f"Add skill: {clean_title}")
+                commit_all(
+                    self.suggested_skills_dir,
+                    f"Checkpoint suggested skill: {clean_title}",
+                )
 
-                return f"Skill '{clean_title}' saved and synced successfully."
+                return (
+                    "Skill '"
+                    f"{clean_title}"
+                    "' saved and checkpointed locally successfully."
+                )
             except Exception as e:
                 return f"Error saving skill: {e}"
 

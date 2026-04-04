@@ -2201,8 +2201,8 @@ class BaseNode:
         return metadata, None
 
     def _get_skills_context(self) -> str:
-        # Use the checked-in repo skill tree only. Hidden overlay skill stores
-        # such as `.agents/skills/` are intentionally excluded here.
+        # Use the active skill tree first. If a session overlay is present, it
+        # takes precedence over the canonical checked-in tree.
         from shared.skills import iter_skill_catalog_entries
 
         skills = [name for name, _ in iter_skill_catalog_entries()]

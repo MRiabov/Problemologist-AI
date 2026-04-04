@@ -41,6 +41,24 @@ INTEGRATION_WORKFLOW_HINT = (
     "Integration runs should follow the integration-tests-workflow."
 )
 
+
+def _integration_runner_verbose() -> bool:
+    raw = os.environ.get("INTEGRATION_RUNNER_VERBOSE", "").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _runner_status(
+    message: str,
+    *,
+    always: bool = False,
+    file: TextIO = sys.stdout,
+    end: str = "\n",
+    flush: bool = False,
+) -> None:
+    if always or _integration_runner_verbose():
+        print(message, file=file, end=end, flush=flush)
+
+
 INTEGRATION_RUN_LOCK_PATH = Path("/tmp/problemologist-integration.lock")
 INTEGRATION_RUN_STATE_PATH = Path("/tmp/problemologist-integration.run.json")
 LONG_INTEGRATION_RUN_THRESHOLD_S = 7 * 60
@@ -891,7 +909,7 @@ def _ensure_worker_renderer_image(*, compose_project_name: str) -> None:
     if probe.returncode == 0:
         return
 
-    print("Building Worker Renderer image...")
+    _runner_status("Building Worker Renderer image...")
     _run(
         [
             "docker",
@@ -951,7 +969,7 @@ def _start_worker_renderer_container(
     with log_file.open("ab") as handle:
         handle.write(f"Worker Renderer container id: {container_id}\n".encode())
 
-    print(f"Worker Renderer container started (ID: {container_id})")
+    _runner_status(f"Worker Renderer container started (ID: {container_id})")
     return container_id
 
 
@@ -1002,7 +1020,7 @@ def _load_env_file(path: Path) -> None:
     if not path.exists():
         return
 
-    print("Loading environment from .env...")
+    _runner_status("Loading environment from .env...")
     for raw_line in path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
@@ -1332,7 +1350,7 @@ def _run_ordered_integration_pytest_slices(
             "tests/integration",
             "tests/e2e",
         ]
-        print(f"Running integration slice {slice_name}: -m {marker_expr}")
+        _runner_status(f"Running integration slice {slice_name}: -m {marker_expr}")
         exit_code = run_pytest_subprocess(
             pytest_args=slice_pytest_args,
             reverse=reverse,
@@ -1340,7 +1358,9 @@ def _run_ordered_integration_pytest_slices(
             early_stop_error_logs=early_stop_error_logs,
         )
         if exit_code == 5:
-            print(f"Integration slice {slice_name} collected no tests; skipping.")
+            _runner_status(
+                f"Integration slice {slice_name} collected no tests; skipping."
+            )
             continue
         slice_reports.append(slice_junit)
         if exit_code != 0:
@@ -1463,7 +1483,9 @@ def _prepare_parts_db(repo_root: Path) -> None:
     if not needs_population:
         return
 
-    print("parts.db missing motor catalog entries. Populating COTS database...")
+    _runner_status(
+        "parts.db missing motor catalog entries. Populating COTS database..."
+    )
     env = os.environ.copy()
     env["PYTHONPATH"] = "."
     _run(["uv", "run", "python", "-m", "shared.cots.indexer"], env=env)
@@ -1512,7 +1534,7 @@ def _integration_infra_reachable_without_docker() -> bool:
 
 
 def _bring_up_infra_and_migrate(integration_db_name: str) -> None:
-    print("Spinning up infrastructure (Postgres, Temporal, Minio)...")
+    _runner_status("starting containers...")
     compose_cmd = [
         "docker",
         "compose",
@@ -1522,18 +1544,24 @@ def _bring_up_infra_and_migrate(integration_db_name: str) -> None:
         "-d",
         "--remove-orphans",
     ]
-    compose_result = _run(compose_cmd, check=False)
+    compose_result = _run(
+        compose_cmd,
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
     if compose_result.returncode != 0:
-        print(
+        _runner_status(
             "docker compose up failed; checking whether integration infra is already reachable..."
         )
         if not _integration_infra_reachable_without_docker():
             raise subprocess.CalledProcessError(compose_result.returncode, compose_cmd)
-        print(
+        _runner_status(
             "Reusing already-running integration infra without docker compose access."
         )
 
-    print("Waiting for infra to be ready...")
+    _runner_status("containers up")
+    _runner_status("Waiting for infra to be ready...")
     infra_checks = [
         HealthCheck(name="postgres", kind="tcp", target="127.0.0.1:15432"),
         HealthCheck(
@@ -1552,22 +1580,22 @@ def _bring_up_infra_and_migrate(integration_db_name: str) -> None:
         )
     )
 
-    print("Infrastructure is up. Verifying Temporal gRPC stability...")
+    _runner_status("Infrastructure is up. Verifying Temporal gRPC stability...")
     _wait_for_temporal_stable_tcp()
 
-    print("Purging local S3 buckets before the run...")
+    _runner_status("Purging local S3 buckets before the run...")
     _run(["uv", "run", "python", "scripts/cleanup_local_s3.py"])
 
-    print(f"Ensuring integration database exists ({integration_db_name})...")
+    _runner_status(f"Ensuring integration database exists ({integration_db_name})...")
     _ensure_postgres_database(integration_db_name)
 
-    print("Running migrations...")
+    _runner_status("Running migrations...")
     _run(["uv", "run", "alembic", "upgrade", "head"])
 
 
 def _prepare_frontend_dist(repo_root: Path, frontend_state_file: Path | None) -> None:
     if _should_rebuild_frontend(frontend_state_file):
-        print(
+        _runner_status(
             "Building frontend (detected non-test frontend changes since last integration build or missing dist)..."
         )
         env = os.environ.copy()
@@ -1591,7 +1619,7 @@ def _prepare_frontend_dist(repo_root: Path, frontend_state_file: Path | None) ->
                 encoding="utf-8",
             )
     else:
-        print(
+        _runner_status(
             "Skipping frontend build (no non-test frontend changes since last integration build)."
         )
 
@@ -1634,7 +1662,7 @@ def _start_process(
         pid_file.parent.mkdir(parents=True, exist_ok=True)
         pid_file.write_text(f"{process.pid}\n", encoding="utf-8")
 
-    print(f"{name} started (PID: {process.pid})")
+    _runner_status(f"{name} started (PID: {process.pid})")
     return StartedProcess(name=name, process=process)
 
 
@@ -1732,7 +1760,9 @@ def _final_force_cleanup(target_pids: list[int]) -> None:
         {pid for pid in target_pids if isinstance(pid, int) and pid > 0}
     )
     if not unique_pids:
-        print("No force-kill PID targets provided; skipping detached SIGKILL fallback.")
+        _runner_status(
+            "No force-kill PID targets provided; skipping detached SIGKILL fallback."
+        )
         return
 
     for pid in unique_pids:
@@ -1763,7 +1793,7 @@ def _kill_port_occupants(ports: list[int]) -> None:
                     pids.add(int(line))
 
     if pids:
-        print(
+        _runner_status(
             "Freeing occupied integration ports "
             f"{', '.join(str(port) for port in unique_ports)} "
             f"(PIDs: {', '.join(str(pid) for pid in sorted(pids))})"
@@ -1888,7 +1918,7 @@ def _run_cleanup_command(args: argparse.Namespace) -> int:
             if str(pid).strip().isdigit() and int(pid) > 0
         }
     )
-    print("Cleaning up processes...")
+    _runner_status("Cleaning up processes...")
     _preemptive_cleanup()
     force_kill_grace_s = max(
         0.0,
@@ -1899,7 +1929,9 @@ def _run_cleanup_command(args: argparse.Namespace) -> int:
         delay_seconds=force_kill_grace_s,
         target_pids=target_pids,
     )
-    print(f"Scheduled detached force-kill fallback (grace={force_kill_grace_s:.1f}s).")
+    _runner_status(
+        f"Scheduled detached force-kill fallback (grace={force_kill_grace_s:.1f}s)."
+    )
     compose_project_name = os.environ.get("COMPOSE_PROJECT_NAME", "").strip()
     if compose_project_name:
         _stop_worker_renderer_container(compose_project_name=compose_project_name)
@@ -1908,10 +1940,12 @@ def _run_cleanup_command(args: argparse.Namespace) -> int:
 
     compose_cmd = ["docker", "compose", "-f", "docker-compose.test.yaml"]
     if args.down:
-        print("Bringing down infrastructure containers (--down flag provided)...")
+        _runner_status(
+            "Bringing down infrastructure containers (--down flag provided)..."
+        )
         _run([*compose_cmd, "down", "-v", "--remove-orphans"], check=False)
     else:
-        print("Stopping infrastructure containers...")
+        _runner_status("Stopping infrastructure containers...")
         _run([*compose_cmd, "stop"], check=False)
     return 0
 
@@ -2106,7 +2140,7 @@ def _run_integration_command(
         lease, current_int_ids=list(lease.state.requested_int_ids)
     )
 
-    print(f"Integration Tests Started at: {time.ctime()}")
+    _runner_status(f"Integration Tests Started at: {time.ctime()}", always=True)
 
     os.environ["IS_INTEGRATION_TEST"] = "true"
     os.environ.setdefault("LOG_LEVEL", "INFO")
@@ -2137,10 +2171,10 @@ def _run_integration_command(
 
     sessions_dir = tempfile.mkdtemp(prefix="pb-sessions-")
     os.environ["WORKER_SESSIONS_DIR"] = sessions_dir
-    print(f"Shared sessions directory: {sessions_dir}")
+    _runner_status(f"Shared sessions directory: {sessions_dir}")
 
     if args.no_smoke:
-        print("High-fidelity simulation ENABLED (smoke test mode DISABLED)")
+        _runner_status("High-fidelity simulation ENABLED (smoke test mode DISABLED)")
         os.environ["SMOKE_TEST_MODE"] = "false"
 
     _load_env_file(repo_root / ".env")
@@ -2170,10 +2204,10 @@ def _run_integration_command(
 
     if args.full_sim:
         os.environ["SIMULATION_DEFAULT_BACKEND"] = "GENESIS"
-        print("Full-fidelity simulation backend selected: Genesis")
+        _runner_status("Full-fidelity simulation backend selected: Genesis")
     else:
         os.environ["SIMULATION_DEFAULT_BACKEND"] = "MUJOCO"
-        print("Fast simulation backend selected: MuJoCo")
+        _runner_status("Fast simulation backend selected: MuJoCo")
 
     # Keep integration-test infra deterministic even when .env defines DB URLs.
     os.environ["POSTGRES_URL"] = integration_db_url
@@ -2191,7 +2225,7 @@ def _run_integration_command(
     _kill_port_occupants([15173, 18000, 18001, 18002, 18003, 15432, 17233, 19000])
 
     _run(["bash", "scripts/ensure_docker_vfs.sh"])
-    print(
+    _runner_status(
         "Preparing prerequisites in parallel (infra, ngspice, parts DB"
         + (", frontend build" if run_playwright else "")
         + ")..."
@@ -2209,7 +2243,7 @@ def _run_integration_command(
         for future in concurrent.futures.as_completed(prep_futures):
             future.result()
 
-    print(
+    _runner_status(
         "Starting Application Servers (Controller, Worker, Renderer Container, Temporal Worker)..."
     )
 
@@ -2377,13 +2411,13 @@ def _run_integration_command(
                     pid_file=frontend_pid_path,
                 )
             )
-            print("Frontend server available on http://localhost:15173")
+            _runner_status("Frontend server available on http://localhost:15173")
 
         cleanup_target_pids = [started.process.pid for started in processes]
 
         _link_current_logs(run_playwright)
 
-        print("Waiting for servers to be healthy...")
+        _runner_status("Waiting for servers to be healthy...")
         server_checks = [
             HealthCheck(
                 name="controller",
@@ -2495,17 +2529,17 @@ def _run_integration_command(
         _run(["uv", "run", "python", "scripts/persist_test_results.py"], check=False)
 
         if pytest_exit == 0:
-            print("Integration tests PASSED!")
+            _runner_status("Integration tests PASSED!", always=True)
         else:
-            print("Integration tests FAILED!")
+            _runner_status("Integration tests FAILED!", always=True)
 
-        print(f"Integration Tests Finished at: {time.ctime()}")
+        _runner_status(f"Integration Tests Finished at: {time.ctime()}", always=True)
         return pytest_exit
     finally:
         try:
             _stop_processes(processes)
             if async_cleanup_enabled:
-                print("Scheduling async teardown in background...")
+                _runner_status("Scheduling async teardown in background...")
                 _spawn_async_cleanup(
                     repo_root=repo_root,
                     sessions_dir=sessions_dir,

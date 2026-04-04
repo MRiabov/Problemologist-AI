@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -60,6 +60,8 @@ class ObservabilityEventType(StrEnum):
     SKILL_SELF_REFLECTION = "skill_self_reflection"
     # 20. Codex skill loop skill-update turn
     SKILL_UPDATE = "skill_update"
+    # 21. Codex skill loop skill-promotion turn
+    SKILL_PROMOTION = "skill_promotion"
     # 19. Tool-specific events for easier navigation/aggregation
     TOOL_LS_FILES = "ls_files_tool"
     TOOL_GREP = "grep_tool"
@@ -290,6 +292,21 @@ class SkillUpdateEvent(BaseEvent):
     simulation_success: bool | None = None
     verification_success: bool | None = None
     reasoning_effort: str = "xhigh"
+
+
+class SkillPromotionEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.SKILL_PROMOTION
+    codex_session_id: str | None = None
+    active_overlay_path: str
+    approved_base_commit: str | None = None
+    target_repo: str = "skills"
+    target_branch: str | None = None
+    merge_strategy: str | None = None
+    outcome: Literal["published", "conflict", "escalated", "rejected"]
+    promotion_commit: str | None = None
+    promotion_record_path: str | None = None
+    conflicting_skill_paths: list[str] = Field(default_factory=list)
+    reason: str | None = None
 
 
 class LsFilesToolEvent(BaseEvent):

@@ -15,7 +15,11 @@ class GitResolver(dspy.Signature):
 
 
 class GitManager:
-    """Manages git operations for agent nodes."""
+    """Legacy git helper for non-promotion flows.
+
+    Skill publication now happens through the dedicated promotion arbiter; this
+    helper remains only as a compatibility bridge for older callers.
+    """
 
     def __init__(
         self,
