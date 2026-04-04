@@ -1,5 +1,5 @@
 {
-  "component_label": "benchmark_environment",
+  "component_label": "projectile_ball_preview",
   "entities": [
     {
       "label": "projectile_ball",
@@ -9,9 +9,9 @@
       "object_type": "part",
       "object_id": 0,
       "pos": [
-        -180.0,
+        -62.0,
         0.0,
-        110.0
+        92.0
       ],
       "euler": [
         -0.0,
@@ -47,9 +47,9 @@
       "object_type": "zone",
       "object_id": 1,
       "pos": [
-        470.0,
+        153.0,
         0.0,
-        62.5
+        92.0
       ],
       "euler": [
         0.0,
@@ -58,9 +58,9 @@
       ],
       "mesh_paths": [],
       "box_size": [
-        50.0,
-        60.0,
-        47.5
+        27.0,
+        26.0,
+        28.0
       ],
       "material_id": null,
       "body_name": null,
@@ -80,16 +80,16 @@
       "include_in_segmentation": false
     },
     {
-      "label": "zone_forbid_0_central_blocker",
-      "semantic_label": "zone_forbid_0_central_blocker",
-      "instance_id": "zone_forbid_0_central_blocker",
-      "instance_name": "zone_forbid_0_central_blocker",
+      "label": "zone_forbid_0_floor_gap_keepout",
+      "semantic_label": "zone_forbid_0_floor_gap_keepout",
+      "instance_id": "zone_forbid_0_floor_gap_keepout",
+      "instance_name": "zone_forbid_0_floor_gap_keepout",
       "object_type": "zone",
       "object_id": 2,
       "pos": [
-        190.0,
+        51.0,
         0.0,
-        75.0
+        21.0
       ],
       "euler": [
         0.0,
@@ -98,9 +98,9 @@
       ],
       "mesh_paths": [],
       "box_size": [
-        70.0,
-        130.0,
-        75.0
+        37.0,
+        42.0,
+        21.0
       ],
       "material_id": null,
       "body_name": null,
@@ -120,16 +120,16 @@
       "include_in_segmentation": false
     },
     {
-      "label": "zone_build",
-      "semantic_label": "zone_build",
-      "instance_id": "zone_build",
-      "instance_name": "zone_build",
+      "label": "zone_forbid_1_upper_support_keepout",
+      "semantic_label": "zone_forbid_1_upper_support_keepout",
+      "instance_id": "zone_forbid_1_upper_support_keepout",
+      "instance_name": "zone_forbid_1_upper_support_keepout",
       "object_type": "zone",
       "object_id": 3,
       "pos": [
-        160.0,
+        90.0,
         0.0,
-        120.0
+        92.0
       ],
       "euler": [
         0.0,
@@ -138,9 +138,49 @@
       ],
       "mesh_paths": [],
       "box_size": [
-        400.0,
-        180.0,
-        120.0
+        30.0,
+        28.0,
+        40.0
+      ],
+      "material_id": null,
+      "body_name": null,
+      "geom_name": null,
+      "zone_type": "forbid",
+      "color_rgba": [
+        0.83,
+        0.2,
+        0.2,
+        0.2
+      ],
+      "segmentation_color_rgb": [
+        235,
+        59,
+        213
+      ],
+      "include_in_segmentation": false
+    },
+    {
+      "label": "zone_build",
+      "semantic_label": "zone_build",
+      "instance_id": "zone_build",
+      "instance_name": "zone_build",
+      "object_type": "zone",
+      "object_id": 4,
+      "pos": [
+        65.0,
+        0.0,
+        90.0
+      ],
+      "euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mesh_paths": [],
+      "box_size": [
+        155.0,
+        90.0,
+        90.0
       ],
       "material_id": null,
       "body_name": null,
@@ -153,27 +193,27 @@
         0.14
       ],
       "segmentation_color_rgb": [
-        235,
         59,
-        213
+        235,
+        205
       ],
       "include_in_segmentation": false
     }
   ],
   "bounds_min": [
-    -240.0,
-    -180.0,
+    -90.0,
+    -90.0,
     0.0
   ],
   "bounds_max": [
-    560.0,
-    180.0,
-    240.0
+    220.0,
+    90.0,
+    180.0
   ],
   "center": [
-    160.0,
+    65.0,
     0.0,
-    120.0
+    90.0
   ],
-  "diagonal": 909.5053600721658
+  "diagonal": 401.1234224026316
 }

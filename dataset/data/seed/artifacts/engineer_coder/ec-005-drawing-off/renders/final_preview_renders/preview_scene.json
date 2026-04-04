@@ -1,5 +1,5 @@
 {
-  "component_label": "benchmark_environment",
+  "component_label": "projectile_ball_preview",
   "entities": [
     {
       "label": "projectile_ball",

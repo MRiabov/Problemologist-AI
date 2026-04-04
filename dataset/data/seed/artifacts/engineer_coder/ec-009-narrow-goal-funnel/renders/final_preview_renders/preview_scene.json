@@ -1,5 +1,5 @@
 {
-  "component_label": "benchmark_environment",
+  "component_label": "projectile_ball_preview",
   "entities": [
     {
       "label": "projectile_ball",
@@ -9,9 +9,9 @@
       "object_type": "part",
       "object_id": 0,
       "pos": [
-        -180.0,
+        -80.0,
         0.0,
-        110.0
+        145.0
       ],
       "euler": [
         -0.0,
@@ -47,9 +47,9 @@
       "object_type": "zone",
       "object_id": 1,
       "pos": [
-        470.0,
+        515.0,
         0.0,
-        62.5
+        35.0
       ],
       "euler": [
         0.0,
@@ -58,9 +58,9 @@
       ],
       "mesh_paths": [],
       "box_size": [
-        50.0,
-        60.0,
-        47.5
+        15.0,
+        12.0,
+        25.0
       ],
       "material_id": null,
       "body_name": null,
@@ -80,56 +80,16 @@
       "include_in_segmentation": false
     },
     {
-      "label": "zone_forbid_0_central_blocker",
-      "semantic_label": "zone_forbid_0_central_blocker",
-      "instance_id": "zone_forbid_0_central_blocker",
-      "instance_name": "zone_forbid_0_central_blocker",
-      "object_type": "zone",
-      "object_id": 2,
-      "pos": [
-        190.0,
-        0.0,
-        75.0
-      ],
-      "euler": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "mesh_paths": [],
-      "box_size": [
-        70.0,
-        130.0,
-        75.0
-      ],
-      "material_id": null,
-      "body_name": null,
-      "geom_name": null,
-      "zone_type": "forbid",
-      "color_rgba": [
-        0.83,
-        0.2,
-        0.2,
-        0.2
-      ],
-      "segmentation_color_rgb": [
-        161,
-        235,
-        59
-      ],
-      "include_in_segmentation": false
-    },
-    {
       "label": "zone_build",
       "semantic_label": "zone_build",
       "instance_id": "zone_build",
       "instance_name": "zone_build",
       "object_type": "zone",
-      "object_id": 3,
+      "object_id": 2,
       "pos": [
-        160.0,
+        210.0,
         0.0,
-        120.0
+        110.0
       ],
       "euler": [
         0.0,
@@ -138,9 +98,9 @@
       ],
       "mesh_paths": [],
       "box_size": [
-        400.0,
-        180.0,
-        120.0
+        350.0,
+        160.0,
+        110.0
       ],
       "material_id": null,
       "body_name": null,
@@ -153,27 +113,27 @@
         0.14
       ],
       "segmentation_color_rgb": [
+        161,
         235,
-        59,
-        213
+        59
       ],
       "include_in_segmentation": false
     }
   ],
   "bounds_min": [
-    -240.0,
-    -180.0,
+    -140.0,
+    -160.0,
     0.0
   ],
   "bounds_max": [
     560.0,
-    180.0,
-    240.0
+    160.0,
+    220.0
   ],
   "center": [
-    160.0,
+    210.0,
     0.0,
-    120.0
+    110.0
   ],
-  "diagonal": 909.5053600721658
+  "diagonal": 800.49984384758
 }
