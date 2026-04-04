@@ -89,9 +89,9 @@ def _finalize_promotion_result(
     result: SkillPromotionResult,
     session_id: str | None,
 ) -> SkillPromotionResult:
-    result.promotion_record_path = (
-        _record_promotion_result(workspace_dir, result).as_posix()
-    )
+    result.promotion_record_path = _record_promotion_result(
+        workspace_dir, result
+    ).as_posix()
     try:
         asyncio.run(_record_promotion_event(session_id=session_id, result=result))
     except RuntimeError:
