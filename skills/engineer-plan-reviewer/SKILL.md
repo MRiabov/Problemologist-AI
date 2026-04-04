@@ -1,6 +1,6 @@
 ---
 name: engineer-plan-reviewer
-description: Engineer-side review workflow for validating plan and execution handoffs, review manifests, render and simulation evidence, exact inventory grounding, motion-contract plausibility, plan refusals, and stage-scoped review YAML outputs. Use when reviewing engineering `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_script.py`, validation or simulation artifacts, review manifests, or refusal evidence for the Engineering Plan Reviewer or Engineering Execution Reviewer roles; or when applying the engineer review checklist for plan, execution, and refusal gates.
+description: Engineer-side review workflow for validating plan and execution handoffs, review manifests, render and simulation evidence, exact inventory grounding, formula-backed motion and payload trajectory derivations, motion-contract plausibility, plan refusals, and stage-scoped review YAML outputs. Use when reviewing engineering `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_script.py`, validation or simulation artifacts, review manifests, or refusal evidence for the Engineering Plan Reviewer or Engineering Execution Reviewer roles; or when applying the engineer review checklist for plan, execution, and refusal gates.
 ---
 
 # Engineer Plan Reviewer
@@ -16,6 +16,12 @@ When plan or execution evidence needs visual checking, use the shared preview he
 - `objectives_geometry()` when a preview scene needs benchmark objective overlays reconstructed
 - Prefer `utils.preview` for new code paths; `utils.visualize` is compatibility-only
 
+## Motion Review
+
+- Use `references/motion-trajectory-review.md` for any motion or payload trajectory claim.
+- Require motion to be described and justified with formulas; reject prose-only trajectories.
+- Review the trajectory against the approved anchors, contact order, tolerance bands, and terminal proof rather than inferring it from mechanism prose.
+
 ## Review Checklist
 
 - [ ] Confirm the latest revision and matching stage manifest.
@@ -23,6 +29,7 @@ When plan or execution evidence needs visual checking, use the shared preview he
 - [ ] Inspect render or simulation media with `inspect_media(...)` whenever they exist.
 - [ ] Write only the stage-scoped review decision and comments YAML pair.
 - [ ] Route invalid refusals back to coding unless the refusal proves infeasibility.
+- [ ] For any motion or payload trajectory claim, verify the claim is described and formula-justified; see `references/motion-trajectory-review.md`.
 
 ### Plan Review Checklist
 
@@ -55,5 +62,6 @@ When plan or execution evidence needs visual checking, use the shared preview he
 ## References
 
 - `references/review_contracts.md`
+- `references/motion-trajectory-review.md`
 - `specs/architecture/agents/roles.md`
 - `specs/architecture/agents/handover-contracts.md`

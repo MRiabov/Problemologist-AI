@@ -1,6 +1,6 @@
 ---
 name: engineer-planner
-description: Engineering planning role for turning benchmark handoff context into implementation-ready plan artifacts. Use when drafting or revising `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, or `solution_plan_technical_drawing_script.py`; when interpreting `benchmark_assembly_definition.yaml` and `benchmark_script.py` as read-only context; when validating cost, weight, motion contracts, build-zone feasibility, or exact-grounded inventory mentions; when using `preview_drawing()` or media inspection to check planner drafts; or when deciding whether a proposed engineering approach is infeasible and needs replanning.
+description: Engineering planning role for turning benchmark handoff context into implementation-ready plan artifacts. Use when drafting or revising `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, or `solution_plan_technical_drawing_script.py`; when interpreting `benchmark_assembly_definition.yaml` and `benchmark_script.py` as read-only context; when validating cost, weight, motion contracts, detailed payload trajectory calculations, build-zone feasibility, or exact-grounded inventory mentions; when using `preview_drawing()` or media inspection to check planner drafts; or when deciding whether a proposed engineering approach is infeasible and needs replanning.
 ---
 
 # Engineer Planner
@@ -61,6 +61,7 @@ Start with the current handoff package:
 - `benchmark_script.py` if present
 - `renders/**` when preview evidence exists
 - `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` when drafting mode is active
+- `references/motion-trajectory-contract.md` when a detailed trajectory derivation is needed
 
 Load specialist skill support only when it materially changes the plan:
 
@@ -95,7 +96,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 08. Use `validate_costing_and_price()` before submission and fix the source of any pricing or weight mismatch.
 09. Inspect relevant renders or draft drawings with `preview_drawing()` and media inspection when visual evidence exists.
 10. Call `submit_plan()` only when the handoff is coherent, physically plausible, and ready for implementation.
-11. When motion proof is required, make `assembly_definition.yaml.motion_forecast` the coarse contract and `precise_path_definition.yaml` the denser refinement; keep the same moving parts, preserve the same build-safe first anchor and terminal goal proof, and keep any math in `plan.md` synchronized with the actual waypoint sequence rather than with prose estimates.
+11. When motion proof is required, make `assembly_definition.yaml.motion_forecast` the coarse contract and `payload_trajectory_definition.yaml` the denser refinement; load `references/motion-trajectory-contract.md` for the calculation checklist; keep the same moving parts, preserve the same build-safe first anchor and terminal goal proof, and keep any math in `plan.md` synchronized with the actual waypoint sequence rather than with prose estimates.
 
 ## Plan Rules
 
@@ -114,7 +115,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 - If the plan depends on exact catalog identity, keep provenance explicit rather than substituting anonymous solids.
 - If a placement depends on a real interface, derive it from the joint frame or mating datum instead of a world-space guess.
 - If the plan truly needs more than three DOFs, document that exception explicitly with a standalone `DOF_JUSTIFICATION` marker instead of burying the rationale.
-- If the motion forecast changes, update the matching plan calculations and contact windows in the same revision so the coarse and precise path files cannot drift apart.
+- If the motion forecast changes, update the matching plan calculations and contact windows in the same revision so the coarse and precise path files cannot drift apart. For the detailed calculation structure, use `references/motion-trajectory-contract.md` instead of duplicating the checklist here.
 
 ## Drafting And Review
 

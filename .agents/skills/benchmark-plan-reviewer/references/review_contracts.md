@@ -17,7 +17,7 @@
 - `todo.md`
 - `benchmark_definition.yaml`
 - `benchmark_assembly_definition.yaml`
-- `precise_path_definition.yaml` when the planner bundle provides a refined path contract
+- `payload_trajectory_definition.yaml` when the planner bundle provides a refined path contract
 - `benchmark_plan_evidence_script.py`
 - `benchmark_plan_technical_drawing_script.py`
 - `renders/**` when planner-side previews already exist
@@ -41,8 +41,8 @@
 
 ## Precise path checklist
 
-- If `precise_path_definition.yaml` exists, read it as binding path-contract context.
-- Compare `assembly_definition.yaml.motion_forecast` to `precise_path_definition.yaml`; the precise path must refine the same moving-part set, not invent a different trajectory.
+- If `payload_trajectory_definition.yaml` exists, read it as binding path-contract context.
+- Compare `assembly_definition.yaml.motion_forecast` to `payload_trajectory_definition.yaml`; the precise path must refine the same moving-part set, not invent a different trajectory.
 - Verify anchor coordinates, `sample_stride_s`, first-contact windows, terminal events, and tolerances against the declared geometry, DOFs, and control.
 - Estimate whether the implied speeds and transition timings are physically plausible for the mechanism described in the plan.
 - Treat a missing or hand-wavy payload trajectory estimate as a strong reject. If the planner has not grounded the payload motion, downstream machinery timing and sizing are usually not grounded either.

@@ -87,7 +87,7 @@ Use `references/index.md` for the file map, then use this document when you need
 ### `engineer_coder`
 
 - Dataset row: `id`, `task`, `seed_artifact_dir`, `expected_criteria`
-- Hard entry bundle: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `solution_script.py`, `precise_path_definition.yaml`
+- Hard entry bundle: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `solution_script.py`, `payload_trajectory_definition.yaml`
 - Conditional drafting bundle: `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` when engineer drafting mode is active
 - `todo.md` for this role is one representative example of the general rule that seeded downstream rows should only list current-stage work items and should not keep prior planner/reviewer TODO history or completed bookkeeping items.
 - Current corpus extras: `.manifests/engineering_plan_review_manifest.json`, `reviews/engineering-plan-review-round-1.md` or analogous review notes, `journal.md`, seed-specific run hints such as `ec001_run_hints.md`

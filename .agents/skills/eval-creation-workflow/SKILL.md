@@ -36,7 +36,7 @@ For the detailed seed-hygiene checklist, contract expectations, and command snip
 - [references/benchmark_definition_yaml_acceptance_criteria.md](references/benchmark_definition_yaml_acceptance_criteria.md)
 - [references/benchmark_assembly_definition_yaml_acceptance_criteria.md](references/benchmark_assembly_definition_yaml_acceptance_criteria.md)
 - [references/assembly_definition_yaml_acceptance_criteria.md](references/assembly_definition_yaml_acceptance_criteria.md)
-- [references/precise_path_definition_yaml_acceptance_criteria.md](references/precise_path_definition_yaml_acceptance_criteria.md)
+- [references/payload_trajectory_definition_yaml_acceptance_criteria.md](references/payload_trajectory_definition_yaml_acceptance_criteria.md)
 - [references/artifact_inventory.md](references/artifact_inventory.md)
 - [references/reviewer_manifest_acceptance_criteria.md](references/reviewer_manifest_acceptance_criteria.md)
 
@@ -122,7 +122,7 @@ Use these as the default minimums unless the target role contract requires more.
 - Engineering and electronics roles:
   Follow the exact handoff contract in `specs/architecture/agents/handover-contracts.md`. Do not guess file names.
 
-For engineering eval seeds with motion proof, keep `assembly_definition.yaml.motion_forecast` and `precise_path_definition.yaml` aligned on the same moving parts, build-safe start, contact order, and terminal goal proof. If `plan.md` includes timing or speed math, derive it from the exact waypoint sequence in the precise path and state whether the result is an average-segment envelope or a measured runtime trace.
+For engineering eval seeds with motion proof, keep `assembly_definition.yaml.motion_forecast` and `payload_trajectory_definition.yaml` aligned on the same moving parts, build-safe start, contact order, and terminal goal proof. If `plan.md` includes timing or speed math, derive it from the exact waypoint sequence in the precise path and state whether the result is an average-segment envelope or a measured runtime trace.
 
 If the role consumes reviewer decisions, also seed the stage-specific review file under `reviews/`.
 

@@ -1,6 +1,6 @@
 ---
 name: benchmark-plan-reviewer
-description: Review benchmark planner handoffs before coding starts, with explicit attention to whether `precise_path_definition.yaml` is physically satisfiable from the full plan. Use when validating `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `precise_path_definition.yaml` when present, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, render evidence, or the benchmark plan-review manifest; when applying the benchmark-plan review checklist for cross-artifact consistency, path feasibility, motion visibility, geometry feasibility, timing, and speed plausibility; or when writing the stage-scoped benchmark-plan review YAML pair under `reviews/`.
+description: Review benchmark planner handoffs before coding starts, with explicit attention to whether `payload_trajectory_definition.yaml` is physically satisfiable from the full plan. Use when validating `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `payload_trajectory_definition.yaml` when present, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, render evidence, or the benchmark plan-review manifest; when applying the benchmark-plan review checklist for cross-artifact consistency, path feasibility, motion visibility, geometry feasibility, timing, and speed plausibility; or when writing the stage-scoped benchmark-plan review YAML pair under `reviews/`.
 ---
 
 # Benchmark Plan Reviewer
@@ -16,10 +16,10 @@ When planner drafts or evidence need visual checking, use the shared preview hel
 
 ## Precise Path Review
 
-Treat `precise_path_definition.yaml` as binding path-contract evidence when it is present.
+Treat `payload_trajectory_definition.yaml` as binding path-contract evidence when it is present.
 
 - Check whether the full plan can satisfy the precise path, not just whether the parts fit.
-- Compare `assembly_definition.yaml.motion_forecast` to `precise_path_definition.yaml`; the precise path must refine the same moving-part set.
+- Compare `assembly_definition.yaml.motion_forecast` to `payload_trajectory_definition.yaml`; the precise path must refine the same moving-part set.
 - Verify anchor positions, `sample_stride_s`, first-contact windows, terminal events, and stated tolerances against the declared geometry and DOFs.
 - Estimate whether the implied motion speed and transition timing are physically plausible for the declared mechanism.
 - Treat a missing or hand-wavy payload trajectory estimate as a strong reject. If the planner has not grounded the payload motion, downstream machinery timing and sizing are usually not grounded either.
@@ -32,8 +32,8 @@ Treat `precise_path_definition.yaml` as binding path-contract evidence when it i
 
 - [ ] Confirm the latest planner revision and matching `.manifests/benchmark_plan_review_manifest.json`.
 - [ ] Read `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py` as read-only context.
-- [ ] If present, read `precise_path_definition.yaml` and verify the plan can physically satisfy its anchors, windows, and timing.
-- [ ] Compare `assembly_definition.yaml.motion_forecast` to `precise_path_definition.yaml`; reject a precise path that invents a different moving-part set or impossible speed profile.
+- [ ] If present, read `payload_trajectory_definition.yaml` and verify the plan can physically satisfy its anchors, windows, and timing.
+- [ ] Compare `assembly_definition.yaml.motion_forecast` to `payload_trajectory_definition.yaml`; reject a precise path that invents a different moving-part set or impossible speed profile.
 - [ ] Strong reject plans that cannot state the payload trajectory clearly or that fail to derive it rigorously in `plan.md`; a missing trajectory estimate usually means downstream machinery is not grounded either.
 - [ ] Confirm `plan.md`'s detailed calculation section fully explains the numbers used to justify the precise path, including intermediate derivations for distances, timing, speeds, and clearances.
 - [ ] If render or drawing evidence exists, inspect it with `inspect_media(...)`. If drafting evidence must be materialized first, call `preview_drawing()` and inspect the persisted output.

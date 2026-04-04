@@ -33,7 +33,7 @@ This is an inventory, not an acceptance-criteria doc. For any row marked "needs 
 | Refusal proof | `plan_refusal.md` | `plan_refusal_md_acceptance_criteria.md` | covered |
 | Execution summary | `workbench_report.md` | `workbench_report_md_acceptance_criteria.md` | covered |
 | Serialized scene snapshot | `scene.json` | `scene_json_acceptance_criteria.md` | covered |
-| Precise motion/path contract | `precise_path_definition.yaml` | `precise_path_definition_yaml_acceptance_criteria.md` | covered |
+| Precise motion/path contract | `payload_trajectory_definition.yaml` | `payload_trajectory_definition_yaml_acceptance_criteria.md` | covered |
 
 ## Reviewer and Routing Files
 

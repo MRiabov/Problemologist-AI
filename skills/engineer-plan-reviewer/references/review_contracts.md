@@ -9,6 +9,7 @@
 - Let the decision YAML drive routing; keep comments YAML explanatory.
 - Keep validation strict. Unknown fields, stale files, or cross-revision artifacts invalidate the review.
 - Treat `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` as the inspectable source of the approved plan.
+- Use `references/motion-trajectory-review.md` for any motion or payload trajectory claim.
 
 ## Plan review gate
 
@@ -25,6 +26,8 @@
 - Reject when the plan exceeds benchmark caps, depends on invented materials, or leaves the operating envelope implicit.
 - Reject when the technical-drawing script lacks a real `TechnicalDrawing` construction path.
 - Reject excessive or unjustified engineering DOFs.
+- Reject prose-only motion or payload trajectory claims.
+- Reject motion forecasts that are not backed by formulas, anchor order, contact order, or tolerance derivations.
 - Inspect renders if available before approval.
 
 ## Execution review gate
@@ -44,6 +47,7 @@
 - Reject when runtime jitter is not exercised or the solution is flaky across seeds.
 - Reject when render images or simulation video exist and were not inspected before approval.
 - Flag unnecessary DOFs as a robustness risk even when a single run succeeds.
+- Reject implementation evidence that leaves motion or payload trajectory ambiguous, prose-only, or unsupported by the approved contract.
 
 ## Refusal review
 

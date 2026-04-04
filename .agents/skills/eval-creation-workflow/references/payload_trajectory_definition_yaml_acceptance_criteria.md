@@ -1,10 +1,10 @@
-# precise_path_definition.yaml Acceptance Criteria
+# payload_trajectory_definition.yaml Acceptance Criteria
 
-Use this reference when creating or reviewing `precise_path_definition.yaml` for engineer-coder motion/path proof.
+Use this reference when creating or reviewing `payload_trajectory_definition.yaml` for engineer-coder motion/path proof.
 
 ## Role of the File
 
-`precise_path_definition.yaml` is the engineer-owned higher-resolution path and contact proof.
+`payload_trajectory_definition.yaml` is the engineer-owned higher-resolution path and contact proof.
 It refines the coarse motion forecast rather than replacing it, and it should support backend-specific contact evidence and preview overlays. The file also anchors the precise trace to the solution backend and initial pose.
 
 ## What We Are Looking For
@@ -36,7 +36,7 @@ It refines the coarse motion forecast rather than replacing it, and it should su
 - If `terminal_event` is used, its `zone_name` must be `goal_zone`, its `contact_surfaces` must be populated, and its position must lie within the goal zone.
 - The file must remain consistent with `benchmark_definition.yaml` and any coarse motion forecast or benchmark motion evidence in the workspace.
 - The file must not loosen or contradict the approved build-safe start or goal-contact finish semantics.
-- If `plan.md` includes timing, speed, or contact-window math, that math must use the same waypoint sequence and terminal proof as `precise_path_definition.yaml`; the plan may describe an average-segment envelope, but it may not silently claim a different motion trace.
+- If `plan.md` includes timing, speed, or contact-window math, that math must use the same waypoint sequence and terminal proof as `payload_trajectory_definition.yaml`; the plan may describe an average-segment envelope, but it may not silently claim a different motion trace.
 
 ## Cross-References and Cross-Validation
 
