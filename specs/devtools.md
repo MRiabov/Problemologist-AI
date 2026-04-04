@@ -63,7 +63,7 @@ The integration runner is a real-stack boundary contract, not a synthetic test h
 
 ### Severity classification
 
-- Devtool integration tests should be classified as `p1` or `p2` by default; `p0` is reserved for exceptional cases only.
+- Devtool integration tests should be classified as `p1` or `p2` priority by default; `p0` priority is reserved for exceptional cases only.
 
 ### Public entrypoint
 

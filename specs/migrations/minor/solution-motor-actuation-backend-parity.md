@@ -225,41 +225,41 @@ The safe order is:
 
 ### Contract
 
-- [ ] Lock the solution motor contract in `AssemblyDefinition` and the moving
+- [x] Lock the solution motor contract in `AssemblyDefinition` and the moving
   part mapping.
 - [ ] Keep the MuJoCo reference behavior stable while the parity work lands.
-- [ ] Define the Genesis motor materialization strategy from the same shared
+- [x] Define the Genesis motor materialization strategy from the same shared
   contract.
-- [ ] Add the visible motor example to the new `electromechanics-syntax` skill
+- [x] Add the visible motor example to the new `electromechanics-syntax` skill
   if authors need a concrete reference.
 
 ### Runtime
 
-- [ ] Materialize solution motors as real controllable DOFs in Genesis.
-- [ ] Normalize `apply_control()`, `get_actuator_state()`, and
+- [x] Materialize solution motors as real controllable DOFs in Genesis.
+- [x] Normalize `apply_control()`, `get_actuator_state()`, and
   `get_all_actuator_names()` across backends.
 - [ ] Keep power gating and overload monitoring backend-agnostic.
-- [ ] Fail closed on unresolved or unsupported motor mappings.
-- [ ] Keep the validation and file-validation path fail-closed on missing or
+- [x] Fail closed on unresolved or unsupported motor mappings.
+- [x] Keep the validation and file-validation path fail-closed on missing or
   incompatible motor mappings before simulation starts.
 
 ### Validation
 
 - [ ] Preserve the shared validation path that turns moving parts into
   controller inputs.
-- [ ] Add a validation failure for missing or invalid motor mappings before
+- [x] Add a validation failure for missing or invalid motor mappings before
   simulation starts.
 - [ ] Make the validation failure surface the same motor identity and control
   mode context that the simulation path uses.
 
 ### Tests
 
-- [ ] Add or refresh integration tests for a motorized solution on MuJoCo.
-- [ ] Add or refresh integration tests for the same solution contract on
+- [x] Add or refresh integration tests for a motorized solution on MuJoCo.
+- [x] Add or refresh integration tests for the same solution contract on
   Genesis.
-- [ ] Add negative integration coverage for unresolved motor mappings.
-- [ ] Add regression coverage for unpowered and overloaded motors.
-- [ ] Refresh `specs/integration-test-list.md` so the solution-motor parity row
+- [x] Add negative integration coverage for unresolved motor mappings.
+- [x] Add regression coverage for unpowered and overloaded motors.
+- [x] Refresh `specs/integration-test-list.md` so the solution-motor parity row
   is explicit and tied to the actual integration coverage.
 
 ### Docs
