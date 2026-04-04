@@ -2,7 +2,7 @@
 
 ## 1. Solution Overview
 
-Use a compact single-`ServoMotor_DS3218` shelf-lift stage that keeps the drive train left of `shelf_support_clearance` while carrying the `projectile_ball` into the `goal_zone` through the `upper_tray`. The benchmark gives the broad left-to-right objective trajectory, the planner narrows it with a coarse `motion_forecast` on `shelf_lift`, and the engineer-coder tightens the same path in `precise_path_definition.yaml`. The drafting package is anchored around the exact `starter_assembly` label, and the engineer-owned geometry stays inside the `build_zone`, uses a single rotate axis, and preserves the reviewed planning contract for `lift_base`, `left_frame`, `right_frame`, `belt_bed`, `upper_tray`, `shelf_lift`, and `drive_motor`.
+Use a compact single-`ServoMotor_DS3218` shelf-lift stage that keeps the drive train left of `shelf_support_clearance` while carrying the `projectile_ball` into the `goal_zone` through the `upper_tray`. The benchmark gives the broad left-to-right objective trajectory, the planner narrows it with a coarse `motion_forecast` on `shelf_lift`, and the engineer-coder tightens the same path in `payload_trajectory_definition.yaml`. The drafting package is anchored around the exact `starter_assembly` label, and the engineer-owned geometry stays inside the `build_zone`, uses a single rotate axis, and preserves the reviewed planning contract for `lift_base`, `left_frame`, `right_frame`, `belt_bed`, `upper_tray`, `shelf_lift`, and `drive_motor`.
 
 - `lift_base` anchors the stage and keeps the lift foot print stable on the floor.
 - `left_frame` and `right_frame` form the side rails that carry the inclined belt path.
@@ -11,7 +11,7 @@ Use a compact single-`ServoMotor_DS3218` shelf-lift stage that keeps the drive t
 - `drive_motor` is the only COTS actuator in the plan and stays left of the shelf-support keepout.
 - The final assembly `shelf_lift` uses a single `rotate_z` drive.
 - `assembly_definition.yaml.motion_forecast` keeps the coarse build-safe start and goal-contact finish reviewable.
-- `precise_path_definition.yaml` narrows that same motion with a denser engineer-coder path and the same endpoint proof.
+- `payload_trajectory_definition.yaml` narrows that same motion with a denser engineer-coder path and the same endpoint proof.
 - The benchmark-owned `environment_fixture` remains read-only context and does not change the engineer-owned motion contract.
 
 ## 2. Parts List
@@ -35,7 +35,7 @@ Use a compact single-`ServoMotor_DS3218` shelf-lift stage that keeps the drive t
 3. Place `belt_bed` between the frames and keep the `drive_motor` on the left side with its wiring corridor staying outside the forbidden shelf-support volume.
 4. Fit `upper_tray` at the top exit so it overlaps the `goal_zone` and gives the ball a short, reliable handoff.
 5. Preserve the reviewed `environment_fixture` as read-only benchmark context while keeping the engineer-owned stage to a single rotate-axis drive.
-6. Keep the coarse `motion_forecast` in `assembly_definition.yaml` aligned with the same `shelf_lift` trajectory that the engineer-coder will narrow in `precise_path_definition.yaml`.
+6. Keep the coarse `motion_forecast` in `assembly_definition.yaml` aligned with the same `shelf_lift` trajectory that the engineer-coder will narrow in `payload_trajectory_definition.yaml`.
 
 ## 4. Assumption Register
 
@@ -45,7 +45,7 @@ Use a compact single-`ServoMotor_DS3218` shelf-lift stage that keeps the drive t
 | ASSUMP-002 | Aluminum 6061 has density `2.7 g/cm^3` and HDPE has density `0.95 g/cm^3`. | `worker_heavy/workbenches/manufacturing_config.yaml` | CALC-004 |
 | ASSUMP-003 | The drafted `upper_tray` placement at x = `370 mm` is the intended capture location and the goal zone bounds in `benchmark_definition.yaml` are authoritative. | `solution_plan_evidence_script.py`, `benchmark_definition.yaml` | CALC-003 |
 | ASSUMP-004 | The engineer solution uses one `rotate_z` drive on the lift stage, and the benchmark-owned `environment_fixture` stays fixed and read-only. | `assembly_definition.yaml`, `benchmark_definition.yaml` | CALC-001, CALC-002 |
-| ASSUMP-005 | The `shelf_lift` motion forecast starts build-zone valid in `assembly_definition.yaml`, keeps the same upper-tray contact window around 1.5 s, and then narrows to the same endpoint proof in `precise_path_definition.yaml`. | `assembly_definition.yaml`, `precise_path_definition.yaml` | CALC-001, CALC-003, CALC-005 |
+| ASSUMP-005 | The `shelf_lift` motion forecast starts build-zone valid in `assembly_definition.yaml`, keeps the same upper-tray contact window around 1.5 s, and then narrows to the same endpoint proof in `payload_trajectory_definition.yaml`. | `assembly_definition.yaml`, `payload_trajectory_definition.yaml` | CALC-001, CALC-003, CALC-005 |
 
 ## 5. Detailed Calculations
 
@@ -222,7 +222,7 @@ The precise path should be fast enough to remain realistic, but the plan must be
 
 #### Assumptions
 
-- `precise_path_definition.yaml` is the engineer-owned waypoint envelope for the `shelf_lift` motion.
+- `payload_trajectory_definition.yaml` is the engineer-owned waypoint envelope for the `shelf_lift` motion.
 - The DS3218 catalog entry implies a nominal shaft speed of `60 deg / 0.16 s = 375 deg/s`.
 - Segment averages are computed from straight-line distance between successive anchors divided by elapsed time.
 
@@ -253,7 +253,7 @@ The precise path should be fast enough to remain realistic, but the plan must be
 
 #### Cross-References
 
-- `precise_path_definition.yaml`
+- `payload_trajectory_definition.yaml`
 - `assembly_definition.yaml`
 - `shared/cots/parts/motors.py`
 
@@ -270,7 +270,7 @@ The precise path should be fast enough to remain realistic, but the plan must be
 - Shelf-support keepout: do not enter `shelf_support_clearance` with the motor, belt bed, or wiring.
 - Motion contract: the benchmark-owned environment fixture stays fixed; the engineer-owned stage uses one rotate-axis drive.
 - Goal zone: `upper_tray` must overlap the goal zone and absorb the released ball.
-- Motion contract: `assembly_definition.yaml.motion_forecast` starts with a build-zone-valid `shelf_lift` pose and `precise_path_definition.yaml` tightens the same motion without changing the terminal goal-zone proof.
+- Motion contract: `assembly_definition.yaml.motion_forecast` starts with a build-zone-valid `shelf_lift` pose and `payload_trajectory_definition.yaml` tightens the same motion without changing the terminal goal-zone proof.
 - Budget envelope: preserve the planned cost and weight margin with one small servo-grade motor.
 
 ## 7. Cost & Weight Budget

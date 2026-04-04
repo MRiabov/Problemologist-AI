@@ -9,5 +9,5 @@
 ## Entry 2: Motion Contract Refresh
 
 - Intent: Align the seed with the planner motion-forecast contract update.
-- Context: `assembly_definition.yaml` now needs the coarse `motion_forecast`, and `precise_path_definition.yaml` is the coder-side refinement for the same `transfer_lane` moving-part set.
+- Context: `assembly_definition.yaml` now needs the coarse `motion_forecast`, and `payload_trajectory_definition.yaml` is the coder-side refinement for the same `transfer_lane` moving-part set.
 - Next Step: Keep the coarse and precise path artifacts consistent before touching the geometry implementation.

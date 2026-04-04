@@ -47,7 +47,7 @@ powered axis remains the `ServoMotor_DS3218` drive.
    reviewable start-to-finish trajectory for `transfer_lane`: it begins in a
    build-safe parked pose and ends with goal-zone entry.
 8. Narrow that same `transfer_lane` motion again in
-   `precise_path_definition.yaml`, keeping the moving-part set unchanged while
+   `payload_trajectory_definition.yaml`, keeping the moving-part set unchanged while
    tightening the cadence and explicit goal-contact proof.
 9. If the current 2° downhill lane geometry is kept, the ball’s ideal rolling
    exit speed is `v = sqrt((10/7) * g * sin(2°) * 0.780 m) ≈ 0.618 m/s`, with

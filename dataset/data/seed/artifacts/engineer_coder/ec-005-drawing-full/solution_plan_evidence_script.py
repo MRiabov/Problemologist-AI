@@ -28,9 +28,9 @@ def build():
             length=760.0,
             width=150.0,
             height=10.0,
-            x=150.0,
-            y=105.0,
-            z=0.0,
+            x=160.0,
+            y=0.0,
+            z=230.0,
             material_id="aluminum_6061",
         ),
         _build_part(
@@ -38,9 +38,9 @@ def build():
             length=170.0,
             width=140.0,
             height=35.0,
-            x=40.0,
-            y=110.0,
-            z=20.0,
+            x=-150.0,
+            y=0.0,
+            z=0.0,
             material_id="hdpe",
         ),
         _build_part(
@@ -49,7 +49,7 @@ def build():
             width=18.0,
             height=28.0,
             x=280.0,
-            y=145.0,
+            y=165.0,
             z=60.0,
             material_id="hdpe",
         ),
@@ -59,7 +59,7 @@ def build():
             width=18.0,
             height=28.0,
             x=260.0,
-            y=160.0,
+            y=170.0,
             z=100.0,
             material_id="hdpe",
         ),
@@ -69,7 +69,7 @@ def build():
             width=20.0,
             height=60.0,
             x=105.0,
-            y=150.0,
+            y=170.0,
             z=140.0,
             material_id="hdpe",
         ),
@@ -78,12 +78,20 @@ def build():
             length=160.0,
             width=120.0,
             height=35.0,
-            x=80.0,
-            y=120.0,
-            z=190.0,
+            x=330.0,
+            y=0.0,
+            z=0.0,
             material_id="hdpe",
         ),
     ]
+
+    # Stagger the preview layout so the drafted solids remain legible without
+    # changing the authored inventory.
+    children[1] = children[1].moved(Location((0.0, 0.0, 10.0)))
+    children[2] = children[2].moved(Location((0.0, 0.0, 10.0)))
+    children[3] = children[3].moved(Location((0.0, -20.0, 10.0)))
+    children[4] = children[4].moved(Location((0.0, 0.0, 10.0)))
+    children[5] = children[5].moved(Location((0.0, 110.0, 160.0)))
 
     assembly = Compound(label="routed_transfer", children=children)
     assembly.metadata = CompoundMetadata()

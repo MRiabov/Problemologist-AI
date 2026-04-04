@@ -26,12 +26,12 @@
   },
   {
     "id": "ec-001-drawing-full",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the motorized sideways-transfer mechanism in `solution_script.py`. Keep planner-owned files semantically consistent, preserve the single-motor and wiring-corridor assumptions from the reviewed package, and update `todo.md` and `journal.md` as you work unless you need to refuse the plan with evidence. Start by reading `ec001_run_hints.md` in the workspace for the last useful `ec-001` run notes before you make geometry changes. Treat the coarse `motion_forecast` in `assembly_definition.yaml` as the starting trajectory, then narrow the same `transfer_lane` motion in `precise_path_definition.yaml`. Split variant for `ec-001`. Technical drawing mode: full.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the motorized sideways-transfer mechanism in `solution_script.py`. Keep planner-owned files semantically consistent, preserve the single-motor and wiring-corridor assumptions from the reviewed package, and update `todo.md` and `journal.md` as you work unless you need to refuse the plan with evidence. Start by reading `ec001_run_hints.md` in the workspace for the last useful `ec-001` run notes before you make geometry changes. Treat the coarse `motion_forecast` in `assembly_definition.yaml` as the starting trajectory, then narrow the same `transfer_lane` motion in `payload_trajectory_definition.yaml`. Split variant for `ec-001`. Technical drawing mode: full.",
     "complexity_level": 0,
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-001-drawing-full",
     "technical_drawing_mode": "full",
     "split_source_task_id": "ec-001",
-    "expected_criteria": "Engineer coder starts from a reviewed planner package, implements a manufacturable single-motor sideways-transfer solution in `solution_script.py`, and preserves planner consistency while using the coarse `motion_forecast` plus the new `precise_path_definition.yaml` refinement to guide execution. Split variant for `ec-001`. Technical drawing mode: full."
+    "expected_criteria": "Engineer coder starts from a reviewed planner package, implements a manufacturable single-motor sideways-transfer solution in `solution_script.py`, and preserves planner consistency while using the coarse `motion_forecast` plus the new `payload_trajectory_definition.yaml` refinement to guide execution. Split variant for `ec-001`. Technical drawing mode: full."
   },
   {
     "id": "ec-002",
@@ -61,12 +61,12 @@
   },
   {
     "id": "ec-002-drawing-full",
-    "task": "Use the seeded, planner-reviewed engineering handoff package in the workspace to implement the deployable gap-bridge solution in `solution_script.py`. Respect the read-only benchmark fixtures (`left_start_deck`, `right_goal_deck`, `bridge_reference_table`, `gap_floor_guard`), keep the reviewed planner files coherent, and only diverge from the plan when the workspace evidence justifies it. Start from the benchmark definition's high-level transfer objective, then follow the coarse `motion_forecast` in `assembly_definition.yaml`, and finally narrow the same `bridge_deck` deployment in `precise_path_definition.yaml`. Split variant for `ec-002`. Technical drawing mode: full.",
+    "task": "Use the seeded, planner-reviewed engineering handoff package in the workspace to implement the deployable gap-bridge solution in `solution_script.py`. Respect the read-only benchmark fixtures (`left_start_deck`, `right_goal_deck`, `bridge_reference_table`, `gap_floor_guard`), keep the reviewed planner files coherent, and only diverge from the plan when the workspace evidence justifies it. Start from the benchmark definition's high-level transfer objective, then follow the coarse `motion_forecast` in `assembly_definition.yaml`, and finally narrow the same `bridge_deck` deployment in `payload_trajectory_definition.yaml`. Split variant for `ec-002`. Technical drawing mode: full.",
     "complexity_level": 0,
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-002-drawing-full",
     "technical_drawing_mode": "full",
     "split_source_task_id": "ec-002",
-    "expected_criteria": "Engineer coder begins with planner-reviewed artifacts, implements the deployable bridge package in `solution_script.py`, and updates execution artifacts without breaking the planner contract. Split variant for `ec-002`. Technical drawing mode: full. The seed carries the benchmark trajectory context, the coarse `assembly_definition.yaml.motion_forecast`, and the refined `precise_path_definition.yaml` deployment path in that order."
+    "expected_criteria": "Engineer coder begins with planner-reviewed artifacts, implements the deployable bridge package in `solution_script.py`, and updates execution artifacts without breaking the planner contract. Split variant for `ec-002`. Technical drawing mode: full. The seed carries the benchmark trajectory context, the coarse `assembly_definition.yaml.motion_forecast`, and the refined `payload_trajectory_definition.yaml` deployment path in that order."
   },
   {
     "id": "ec-003",
@@ -95,12 +95,12 @@
   },
   {
     "id": "ec-003-drawing-full",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the timed-gate metering solution in `solution_script.py`. Keep the planner-owned artifacts aligned with the reviewed plan, start from the benchmark definition's high-level gate objective context, then carry the coarse `motion_forecast` from `assembly_definition.yaml` as the planner-level trajectory, and finally narrow the same moving-part path in `precise_path_definition.yaml` without changing the single-motor and wiring-corridor assumptions around the gate keep-out. Update `todo.md` and `journal.md` as execution progresses. Split variant for `ec-003`. Technical drawing mode: full.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the timed-gate metering solution in `solution_script.py`. Keep the planner-owned artifacts aligned with the reviewed plan, start from the benchmark definition's high-level gate objective context, then carry the coarse `motion_forecast` from `assembly_definition.yaml` as the planner-level trajectory, and finally narrow the same moving-part path in `payload_trajectory_definition.yaml` without changing the single-motor and wiring-corridor assumptions around the gate keep-out. Update `todo.md` and `journal.md` as execution progresses. Split variant for `ec-003`. Technical drawing mode: full.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-003-drawing-full",
     "technical_drawing_mode": "full",
     "split_source_task_id": "ec-003",
-    "expected_criteria": "Engineer coder starts from a reviewed timed-gate handoff package, implements a gate-compatible single-motor metering assembly in `solution_script.py`, and preserves the seeded planning contract while using the benchmark definition context, the coarse `motion_forecast` in `assembly_definition.yaml`, and the new `precise_path_definition.yaml` path contract in that order. Split variant for `ec-003`. Technical drawing mode: full."
+    "expected_criteria": "Engineer coder starts from a reviewed timed-gate handoff package, implements a gate-compatible single-motor metering assembly in `solution_script.py`, and preserves the seeded planning contract while using the benchmark definition context, the coarse `motion_forecast` in `assembly_definition.yaml`, and the new `payload_trajectory_definition.yaml` path contract in that order. Split variant for `ec-003`. Technical drawing mode: full."
   },
   {
     "id": "ec-004",
@@ -129,12 +129,12 @@
   },
   {
     "id": "ec-004-drawing-full",
-    "task": "Use the seeded engineering planner handoff package in the workspace to implement the raised-shelf lift solution in `solution_script.py`. Preserve the reviewed planner files, keep the motorized lift geometry inside the build zone, and update `todo.md`, `journal.md`, `assembly_definition.yaml.motion_forecast`, and `precise_path_definition.yaml` while maintaining the seeded cost, weight, and single-DOF assumptions. Split variant for `ec-004`. Technical drawing mode: full.",
+    "task": "Use the seeded engineering planner handoff package in the workspace to implement the raised-shelf lift solution in `solution_script.py`. Preserve the reviewed planner files, keep the motorized lift geometry inside the build zone, and update `todo.md`, `journal.md`, `assembly_definition.yaml.motion_forecast`, and `payload_trajectory_definition.yaml` while maintaining the seeded cost, weight, and single-DOF assumptions. Split variant for `ec-004`. Technical drawing mode: full.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-004-drawing-full",
     "technical_drawing_mode": "full",
     "split_source_task_id": "ec-004",
-    "expected_criteria": "Engineer coder starts from a reviewed raised-shelf handoff package, carries the coarse `motion_forecast` in `assembly_definition.yaml` into a narrower `precise_path_definition.yaml`, implements a single-motor shelf-lift solution in `solution_script.py`, and preserves the seeded planning contract while progressing execution. Split variant for `ec-004`. Technical drawing mode: full."
+    "expected_criteria": "Engineer coder starts from a reviewed raised-shelf handoff package, carries the coarse `motion_forecast` in `assembly_definition.yaml` into a narrower `payload_trajectory_definition.yaml`, implements a single-motor shelf-lift solution in `solution_script.py`, and preserves the seeded planning contract while progressing execution. Split variant for `ec-004`. Technical drawing mode: full."
   },
   {
     "id": "ec-005",

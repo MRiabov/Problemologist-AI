@@ -4,6 +4,8 @@
 
 Use a passive offset rail path that routes `projectile_ball` around the seeded `central_blocker` and into the far goal zone. The mechanism widens the capture area near spawn, steers the ball around the blocker on the positive-Y side, and settles it into a downstream `goal_tray`. The `routed_transfer` subassembly is a single passive routing path with no powered axes.
 
+The read-only benchmark `environment_fixture` remains untouched and serves only as spatial context for the passive route.
+
 ## 2. Parts List
 
 | Part | Dimensions (mm) | Material | Purpose |
@@ -15,29 +17,31 @@ Use a passive offset rail path that routes `projectile_ball` around the seeded `
 | blocker_skirt | 210 x 20 x 60 | hdpe | Clearance wall keeping the ball from clipping the blocker corner |
 | goal_tray | 160 x 120 x 35 | hdpe | Terminal tray overlapping the goal zone |
 
-**Estimated Total Weight**: 445.7 g
+**Estimated Total Weight**: 445.70 g
 **Estimated Total Cost**: $48.50
 
 ## 3. Assembly Strategy
 
-1. Place `route_base` inside the seeded build zone with its long axis centered slightly above the blocker band so the passive path can stay on the positive-Y side of `central_blocker`.
+1. Place `route_base` inside the seeded build zone and keep its long axis centered slightly above the blocker band so the passive path can stay on the positive-Y side of `central_blocker`.
 2. Mount `entry_catcher` near the spawn side, then mount `outer_rail` and `inner_rail` so the path bends around the blocker on the positive-Y side without crossing the forbid zone.
 3. Mount `blocker_skirt` beside the routed turn and terminate the path inside `goal_tray` so the ball settles inside the goal zone with a passive capture lip.
 
 ## 4. Assumption Register
 
 - `ASSUMP-001`: `projectile_ball` radius is held within the declared 28-30 mm static randomization band.
-- `ASSUMP-002`: The passive rail path can retain the ball with side-wall capture alone; no motion or actuation is required.
-- `ASSUMP-003`: The positive-Y route remains clear of `central_blocker` because the rails and tray are staged above the blocker band in the review geometry.
+- `ASSUMP-002`: The drafting scripts are exploded review layouts only; they preserve the same inventory and dimensions but are not literal stack coordinates.
+- `ASSUMP-003`: The passive rail path is static and reviewable without any engineer-owned motion DOFs.
 - `ASSUMP-004`: The manufacturing estimate in `assembly_definition.yaml` is the authoritative budget contract for coder entry.
 
 ## 5. Detailed Calculations
 
 | ID | Problem / Decision | Result | Impact |
 | -- | -- | -- | -- |
-| CALC-001 | Capture envelope versus spawn jitter | `entry_catcher` mouth and `route_base` width cover the full runtime jitter band with margin | Keeps the projectile from escaping during seeded spawn variation |
-| CALC-002 | Positive-Y blocker clearance | Rail centers stay on the positive-Y side of `central_blocker` with z-separated review geometry | Preserves the routed turn without entering the forbid zone |
-| CALC-003 | Mass and budget closure | Total estimated weight is 445.7 g and total cost is $48.50 | Keeps the solution below the benchmark customer caps |
+| CALC-001 | Capture envelope versus spawn jitter | Required half-width is `30 mm + 10 mm = 40 mm`; `entry_catcher` provides `70 mm` half-width and `route_base` provides `75 mm` half-width | Keeps the projectile inside the passive inlet during runtime jitter |
+| CALC-002 | Blocker keepout feasibility | The route must stay outside the `central_blocker` AABB `[120, 260] x [-130, 130] x [0, 150]` while preserving the positive-Y pass | Prevents the passive corridor from clipping the forbid volume |
+| CALC-003 | Route base mass | `356.40 g` | Dominant weight contribution, still well under cap |
+| CALC-004 | Remaining part masses | `22.80 + 17.10 + 16.15 + 13.30 + 19.95 = 89.30 g` | Confirms the smaller HDPE parts stay lightweight |
+| CALC-005 | Mass and budget closure | Total estimated weight is `445.70 g` and total cost is `$48.50` | Keeps the solution below the benchmark customer caps |
 
 ### CALC-001: Capture Envelope Versus Spawn Jitter
 
@@ -71,7 +75,7 @@ The ball can settle into the rail path before it reaches the blocker clearance s
 - `entry_catcher` in `assembly_definition.yaml`
 - `projectile_ball` in `benchmark_definition.yaml`
 
-### CALC-002: Positive-Y Blocker Clearance
+### CALC-002: Blocker Keepout Feasibility
 
 #### Problem Statement
 
@@ -84,7 +88,7 @@ The passive transfer must pass around `central_blocker` without entering the for
 
 #### Derivation
 
-The staged rail centers sit above the blocker band and keep the turn corridor on the positive-Y side while preserving a simple passive path.
+The staged rail centers sit outside the blocker AABB and keep the turn corridor on the positive-Y side while preserving a simple passive path.
 
 #### Worst-Case Check
 
@@ -103,32 +107,102 @@ This makes the passive transfer readable in review and feasible for the downstre
 - `outer_rail`, `inner_rail`, and `blocker_skirt` in `assembly_definition.yaml`
 - `central_blocker` in `benchmark_definition.yaml`
 
-### CALC-003: Mass and Budget Closure
+### CALC-003: Route Base Mass
 
 #### Problem Statement
 
-The engineer-owned assembly must stay under the benchmark customer caps.
+Determine the mass contribution of `route_base`.
 
 #### Assumptions
 
-- The deterministic total mass and cost from `assembly_definition.yaml` are authoritative.
-- No COTS components are used in this seed.
+- `route_base` volume is fixed at 132000 mm3.
+- `aluminum_6061` density is 2.7 g/cm3.
 
 #### Derivation
 
-The part-table total weight sums to 445.7 g and the cost table sums to $48.50.
+- 132000 mm3 = 132.00 cm3.
+- 132.00 cm3 x 2.7 g/cm3 = 356.40 g.
 
 #### Worst-Case Check
 
-Both totals are comfortably below the benchmark caps of 1250 g and $64.00.
+- This is the largest single-part mass in the assembly, so it is the dominant term in the total weight sum.
 
 #### Result
 
-The plan remains inside budget and leaves substantial margin for implementation variation.
+- `route_base` mass = 356.40 g.
 
 #### Design Impact
 
-The coder can preserve the passive routing strategy without needing to redesign for cost or weight.
+- The base plate dominates the weight budget but still leaves a large planner margin.
+
+#### Cross-References
+
+- `ASSUMP-004`, `CALC-005`, `route_base`
+
+### CALC-004: Remaining Part Masses
+
+#### Problem Statement
+
+Determine the mass contribution of the remaining HDPE parts.
+
+#### Assumptions
+
+- `entry_catcher`, `outer_rail`, `inner_rail`, `blocker_skirt`, and `goal_tray` use HDPE density.
+- The part volumes in `assembly_definition.yaml` are deterministic.
+
+#### Derivation
+
+- `entry_catcher`: 24.00 cm3 x 0.95 g/cm3 = 22.80 g.
+- `outer_rail`: 18.00 cm3 x 0.95 g/cm3 = 17.10 g.
+- `inner_rail`: 17.00 cm3 x 0.95 g/cm3 = 16.15 g.
+- `blocker_skirt`: 14.00 cm3 x 0.95 g/cm3 = 13.30 g.
+- `goal_tray`: 21.00 cm3 x 0.95 g/cm3 = 19.95 g.
+- Sum = 89.30 g.
+
+#### Worst-Case Check
+
+- The remaining parts are all minor contributors and do not threaten the mass cap.
+
+#### Result
+
+- Remaining part mass total = 89.30 g.
+
+#### Design Impact
+
+- The capture and guide features stay lightweight enough for a static solution.
+
+#### Cross-References
+
+- `ASSUMP-004`, `CALC-005`, the HDPE parts in `assembly_definition.yaml`
+
+### CALC-005: Mass and Budget Closure
+
+#### Problem Statement
+
+Verify that the declared mass and cost totals match the part-by-part sums.
+
+#### Assumptions
+
+- The part masses in `CALC-003` and `CALC-004` are exact and deterministic.
+- The part costs in `assembly_definition.yaml` are authoritative for planner entry.
+
+#### Derivation
+
+- 356.40 + 89.30 = 445.70 g.
+- 16.00 + 5.50 + 6.25 + 6.00 + 5.00 + 9.75 = 48.50 USD.
+
+#### Worst-Case Check
+
+- 445.70 g is below the 1250 g planner target and benchmark cap.
+- $48.50 is below the $64.00 planner target and benchmark cap.
+
+#### Result
+
+- The plan remains inside budget and leaves substantial margin for implementation variation.
+
+#### Design Impact
+
+- The coder can preserve the passive routing strategy without needing to redesign for cost or weight.
 
 #### Cross-References
 
@@ -142,27 +216,27 @@ The coder can preserve the passive routing strategy without needing to redesign 
 - `outer_rail` and `inner_rail` stay on the positive-Y side of `central_blocker`.
 - `blocker_skirt` protects the corner turn without introducing a powered axis.
 - `goal_tray` captures the ball at the end of the passive route and remains inside the build zone.
-- Total estimated weight remains at 445.7 g, well below the 1250 g cap.
+- Total estimated weight remains at 445.70 g, well below the 1250 g cap.
 - Total estimated cost remains at $48.50, well below the $64.00 cap.
 
 ## 7. Cost & Weight Budget
 
 | Item | Weight (g) | Cost ($) |
 | -- | -- | -- |
-| route_base | 359.0 | 16.0 |
-| entry_catcher | 21.5 | 5.5 |
-| outer_rail | 17.0 | 6.25 |
-| inner_rail | 16.5 | 6.0 |
-| blocker_skirt | 14.0 | 5.0 |
-| goal_tray | 17.7 | 9.75 |
-| **TOTAL** | **445.7** | **48.5** |
+| route_base | 356.40 | 16.0 |
+| entry_catcher | 22.80 | 5.5 |
+| outer_rail | 17.10 | 6.25 |
+| inner_rail | 16.15 | 6.0 |
+| blocker_skirt | 13.30 | 5.0 |
+| goal_tray | 19.95 | 9.75 |
+| **TOTAL** | **445.70** | **48.50** |
 
-**Budget Margin**: 804.3 g and $15.50 remaining versus the benchmark caps.
+**Budget Margin**: 804.30 g and $15.50 remaining versus the benchmark caps.
 
 ## 8. Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 | -- | -- | -- | -- |
+| Preview geometry drifts away from the final corridor | Medium | High | Keep the drafted shapes as the authoritative inventory and rebuild the same passive family in the implementation script |
 | Ball clips the blocker corner under jitter | Medium | High | Use a dedicated blocker skirt and keep the routed bend outside the forbid volume |
-| Ball exits the outer rail on the long bend | Medium | Medium | Increase rail height through the turn and keep the bend radius shallow |
 | Goal tray receives the ball too fast | Low | Medium | Drop the tray slightly below the rail exit to absorb speed |

@@ -9,6 +9,7 @@ contents an agent would start from.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import atexit
 import json
 import os
@@ -22,7 +23,14 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from evals.logic.cli_provider import available_cli_providers  # noqa: E402
+from evals.logic.codex_workspace import (  # noqa: E402
+    LocalWorkspaceClient,
+)
+from evals.logic.specs import AGENT_SPECS  # noqa: E402
 from evals.logic.stack_profiles import apply_stack_profile_env  # noqa: E402
+from evals.logic.workspace import (  # noqa: E402
+    preflight_seeded_entry_contract,
+)
 from scripts.internal.eval_run_lock import (  # noqa: E402
     EvalRunSelection,
     acquire_eval_run_lock,
@@ -46,11 +54,36 @@ from shared.agents.config import (  # noqa: E402
     DraftingMode,
 )
 from shared.enums import AgentName  # noqa: E402
+from shared.logging import get_logger  # noqa: E402
 
 DATASET_ROOTS = (
     ROOT / "dataset" / "evals" / "datasets",
     ROOT / "dataset" / "data" / "seed" / "role_based",
 )
+logger = get_logger(__name__)
+
+
+async def _validate_materialized_workspace(
+    *,
+    agent: AgentName,
+    item: EvalDatasetItem,
+    workspace_dir: Path,
+) -> None:
+    session_id = f"seed-materializer-{agent.value}-{item.id}"
+    workspace_client = LocalWorkspaceClient(
+        root=workspace_dir,
+        session_id=session_id,
+    )
+    await preflight_seeded_entry_contract(
+        item=item,
+        session_id=session_id,
+        agent_name=agent,
+        spec=AGENT_SPECS[agent],
+        root=ROOT,
+        worker_light_url=os.getenv("WORKER_LIGHT_URL", "http://localhost:18001"),
+        logger=logger,
+        workspace_client=workspace_client,
+    )
 
 
 def _parse_args() -> argparse.Namespace:
@@ -265,6 +298,19 @@ def main() -> None:
         agent_name=agent,
         workspace_dir=workspace_dir,
     )
+
+    try:
+        asyncio.run(
+            _validate_materialized_workspace(
+                agent=agent,
+                item=row,
+                workspace_dir=materialized.workspace_dir,
+            )
+        )
+    except Exception as exc:
+        raise SystemExit(
+            f"Seeded entry contract invalid for {agent.value} {row.id}: {exc}"
+        ) from exc
 
     print(f"workspace: {materialized.workspace_dir}")
     print(f"prompt: {materialized.prompt_path}")

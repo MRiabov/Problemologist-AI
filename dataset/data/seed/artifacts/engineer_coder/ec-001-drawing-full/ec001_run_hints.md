@@ -39,7 +39,7 @@ Quick reference from the most useful prior `ec-001` runs.
 - Use `utils.metadata`, not `shared.models.schemas`, in the authored workspace script.
 - Keep the assembly import-safe: expose `result = build()` or `build() -> Compound`.
 - Preserve the left-side motor/wiring corridor and keep the goal tray overlapping the goal zone start at `x=430 mm`.
-- Treat `assembly_definition.yaml` as the coarse `motion_forecast` for `transfer_lane`, then narrow the same moving-part set in `precise_path_definition.yaml` without renaming or adding motion-bearing parts.
+- Treat `assembly_definition.yaml` as the coarse `motion_forecast` for `transfer_lane`, then narrow the same moving-part set in `payload_trajectory_definition.yaml` without renaming or adding motion-bearing parts.
 - For catalog-backed motor geometry, use `ServoMotor.from_catalog_id("ServoMotor_DS3218")` so the seed path matches the class-aware factory contract.
 - Prefer the simplest static compound that satisfies the planner handoff before adding extra mechanism details.
 - Do not stop at local validation/simulation; the run is incomplete until `bash scripts/submit_for_review.sh` writes `.manifests/engineering_execution_handoff_manifest.json`.

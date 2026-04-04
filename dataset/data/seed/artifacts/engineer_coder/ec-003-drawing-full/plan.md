@@ -9,9 +9,9 @@ Use a compact single `ServoMotor_DS3218`-driven metering wheel ahead of the benc
 - `exit_tray` receives the released ball after the gate opens.
 - `goal_zone` must be reached without touching `gate_swing_keepout`.
 - The engineer-owned stage is named `timed_metering_stage`.
-- The `timed_metering_stage` is the translating carriage: the benchmark definition provides the high-level gate objective context, `assembly_definition.yaml.motion_forecast` gives the planner-level coarse start-to-goal path, and `precise_path_definition.yaml` refines it.
+- The `timed_metering_stage` is the translating carriage: the benchmark definition provides the high-level gate objective context, `assembly_definition.yaml.motion_forecast` gives the planner-level coarse start-to-goal path, and `payload_trajectory_definition.yaml` refines it.
 - The only COTS motor in the plan is `ServoMotor_DS3218`.
-- Treat the benchmark definition context and the coarse `motion_forecast` in `assembly_definition.yaml` as the planner-visible trajectory, then narrow the same `timed_metering_stage` path in `precise_path_definition.yaml`.
+- Treat the benchmark definition context and the coarse `motion_forecast` in `assembly_definition.yaml` as the planner-visible trajectory, then narrow the same `timed_metering_stage` path in `payload_trajectory_definition.yaml`.
 - The numeric checks below use the exact catalog dimensions and material densities that back the assembly totals.
 
 ## 2. Parts List
@@ -36,7 +36,7 @@ Use a compact single `ServoMotor_DS3218`-driven metering wheel ahead of the benc
 3. Mount `metering_wheel_guard` and `drive_motor` on the left side of the gate and keep the wiring corridor outside the keep-out.
 4. Mount `guide_rail` and `post_gate_channel` downstream of the release point, then terminate the path in `goal_cup` whose interior overlaps `goal_zone`.
 5. Preserve the benchmark-owned `entry_ramp`, `gate_housing`, `gate_pivot_arm`, and `exit_tray` geometry as read-only context while checking the release path against the gate opening.
-6. Treat the benchmark definition as the high-level gate objective context, then treat `assembly_definition.yaml.motion_forecast` as the coarse build-safe start and goal-zone finish for the moving stage, and refine that same path in `precise_path_definition.yaml` without changing the moving-part set.
+6. Treat the benchmark definition as the high-level gate objective context, then treat `assembly_definition.yaml.motion_forecast` as the coarse build-safe start and goal-zone finish for the moving stage, and refine that same path in `payload_trajectory_definition.yaml` without changing the moving-part set.
 7. The drafting sheet callouts `1`-`7` track the base plate, settling chute, metering wheel guard, guide rail, post-gate channel, goal cup, and the left-side drive motor corridor, respectively.
 
 ## 4. Assumption Register
@@ -47,8 +47,8 @@ Use a compact single `ServoMotor_DS3218`-driven metering wheel ahead of the benc
 | ASSUMP-002 | Aluminum 6061 has density `2.7 g/cm^3` and HDPE has density `0.95 g/cm^3`. | `worker_heavy/workbenches/manufacturing_config.yaml` | CALC-004 |
 | ASSUMP-003 | The drafted `goal_cup` placement is the intended capture location at `(335, 30, 65)`, and the goal zone bounds in `benchmark_definition.yaml` are authoritative. | `solution_plan_evidence_script.py`, `benchmark_definition.yaml` | CALC-003 |
 | ASSUMP-004 | The benchmark-owned gate motion remains a single `rotate_z` axis on the pivot arm, and the engineer solution may rely on the open window but not on any added benchmark DOFs. | `benchmark_assembly_definition.yaml`, `benchmark_definition.yaml` | CALC-001, CALC-002 |
-| ASSUMP-005 | The benchmark definition provides the high-level gate objective context, the coarse `motion_forecast` in `assembly_definition.yaml` is the planner-visible trajectory contract, and `precise_path_definition.yaml` narrows it without changing the moving part names. | `benchmark_definition.yaml`, `assembly_definition.yaml`, `precise_path_definition.yaml` | CALC-001, CALC-002 |
-| ASSUMP-006 | The backend-specific precise path still begins in the build zone and ends with explicit goal-zone contact. | `precise_path_definition.yaml`, `benchmark_definition.yaml` | CALC-001, CALC-003 |
+| ASSUMP-005 | The benchmark definition provides the high-level gate objective context, the coarse `motion_forecast` in `assembly_definition.yaml` is the planner-visible trajectory contract, and `payload_trajectory_definition.yaml` narrows it without changing the moving part names. | `benchmark_definition.yaml`, `assembly_definition.yaml`, `payload_trajectory_definition.yaml` | CALC-001, CALC-002 |
+| ASSUMP-006 | The backend-specific precise path still begins in the build zone and ends with explicit goal-zone contact. | `payload_trajectory_definition.yaml`, `benchmark_definition.yaml` | CALC-001, CALC-003 |
 
 ## 5. Detailed Calculations
 

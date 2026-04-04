@@ -1,7 +1,7 @@
 # TODO
 
 - [x] Planner handoff approved
-- [ ] Rebuild `solution_plan_evidence_script.py` with exact inventory labels
-- [ ] Rebuild `solution_plan_technical_drawing_script.py` with orthographic views and `TechnicalDrawing`
-- [ ] Refresh benchmark drafting assets and render manifests
-- [ ] Validate the seeded entry in minimal drafting mode
+- [x] Keep the read-only `environment_fixture` mention grounded in `plan.md`
+- [x] Rebuild `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` so the passive route stays non-overlapping
+- [ ] Refresh the engineer preview bundle from the drafting scripts once the renderer backend is available
+- [ ] Revalidate the seeded entry in full drafting mode

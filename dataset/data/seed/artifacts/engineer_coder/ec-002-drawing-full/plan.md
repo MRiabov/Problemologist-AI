@@ -2,7 +2,7 @@
 
 ## 1. Solution Overview
 
-Use a freestanding bridge deck with shallow side fences to move `transfer_cube` from the seeded `left_start_deck` across the `floor_gap` and into the `right_goal_deck` capture zone. The deployable path uses a 300 mm `bridge_deck` that clears the 160 mm void with 70 mm nominal overlap on each side once deployed, and a 130 x 110 x 30 `landing_pocket` that docks to the deck exit while still overlapping the `goal_zone` to catch the cube before rebound. The benchmark-owned `bridge_reference_table` and `gap_floor_guard` stay read-only context; the solution uses them only as spatial references while keeping the bridge unpowered and within the planner budgets. The benchmark definition sets the high-level transfer objective, `assembly_definition.yaml.motion_forecast` captures the coarse `bridge_deck` deployment, and `precise_path_definition.yaml` narrows the same motion.
+Use a freestanding bridge deck with shallow side fences to move `transfer_cube` from the seeded `left_start_deck` across the `floor_gap` and into the `right_goal_deck` capture zone. The deployable path uses a 300 mm `bridge_deck` that clears the 160 mm void with 70 mm nominal overlap on each side once deployed, and a 130 x 110 x 30 `landing_pocket` that docks to the deck exit while still overlapping the `goal_zone` to catch the cube before rebound. The benchmark-owned `bridge_reference_table` and `gap_floor_guard` stay read-only context; the solution uses them only as spatial references while keeping the bridge unpowered and within the planner budgets. The benchmark definition sets the high-level transfer objective, `assembly_definition.yaml.motion_forecast` captures the coarse `bridge_deck` deployment, and `payload_trajectory_definition.yaml` narrows the same motion.
 
 ## 2. Parts List
 
@@ -23,7 +23,7 @@ Use a freestanding bridge deck with shallow side fences to move `transfer_cube` 
 2. Park `bridge_deck` on the base frame in the build-safe start pose, then slide it along the x-axis into the deployed span until its tip reaches the goal-side capture area.
 3. Mount `left_fence` and `right_fence` along the deck edges to keep the 16 x 16 x 10 mm runtime jitter envelope centered on the 95 mm deck without letting the cube climb the rails.
 4. Position `landing_pocket` so its 130 x 110 x 30 mm body docks to the deck exit and still overlaps the `goal_zone` with 80 mm of x-overlap and 15 mm of y-side clearance while damping rebound.
-5. Keep `bridge_reference_table` and `gap_floor_guard` as read-only spatial references only, and keep every part label grounded in `plan.md`, `todo.md`, `solution_script.py`, `assembly_definition.yaml`, `assembly_definition.yaml.motion_forecast`, and `precise_path_definition.yaml`.
+5. Keep `bridge_reference_table` and `gap_floor_guard` as read-only spatial references only, and keep every part label grounded in `plan.md`, `todo.md`, `solution_script.py`, `assembly_definition.yaml`, `assembly_definition.yaml.motion_forecast`, and `payload_trajectory_definition.yaml`.
 6. The drafting sheet callouts `1`-`5` track the base frame, bridge deck, left fence, right fence, and landing pocket, respectively.
 
 ## 4. Assumption Register
@@ -31,7 +31,7 @@ Use a freestanding bridge deck with shallow side fences to move `transfer_cube` 
 | ID | Assumption | Source | Used By |
 | -- | -- | -- | -- |
 | ASSUMP-001 | The `floor_gap` keep-out stays fixed at 160 mm in x and 300 mm in y, and the support frame can be centered without touching it. | `benchmark_definition.yaml` | CALC-001, CALC-002 |
-| ASSUMP-002 | The bridge deck uses one unpowered x-translation deployment DOF; no powered components or benchmark-side moving fixtures are added. | `assembly_definition.yaml` and `precise_path_definition.yaml` | CALC-002, CALC-004 |
+| ASSUMP-002 | The bridge deck uses one unpowered x-translation deployment DOF; no powered components or benchmark-side moving fixtures are added. | `assembly_definition.yaml` and `payload_trajectory_definition.yaml` | CALC-002, CALC-004 |
 | ASSUMP-003 | Runtime jitter on `transfer_cube` is limited to `±8 mm` in x and y and `±5 mm` in z. | `benchmark_definition.yaml` | CALC-003 |
 | ASSUMP-004 | `landing_pocket` is allowed to overlap the `goal_zone` as the capture feature while docking to the deck exit. | `benchmark_definition.yaml` | CALC-004 |
 | ASSUMP-005 | `bridge_reference_table` and `gap_floor_guard` remain read-only references and are not touched by the implementation. | `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml` | CALC-001, CALC-004 |
