@@ -21,7 +21,7 @@ from controller.agent.prompt_manager import PromptManager
 from controller.api.routes.script_tools import ScriptToolRequest
 from controller.prompts import load_prompts
 from evals.logic import runner
-from evals.logic.cli_provider import CodexCliProvider
+from evals.logic.cli_provider import CliInvocation, CodexCliProvider, QwenCliProvider
 from evals.logic.codex_session_trace import (
     CodexSessionTraceArtifact,
     diff_workspace_snapshots,
@@ -32,6 +32,7 @@ from evals.logic.codex_workspace import (
     launch_cli_exec,
     materialize_seed_workspace,
     prepare_cli_home,
+    resolve_cli_home_root,
     resume_cli_exec,
     verify_planner_workspace,
 )
@@ -95,6 +96,9 @@ def _assert_skills_tree_materialized(workspace_dir: Path) -> None:
 class RecordingCliProvider:
     provider_name = "codex"
     binary_name = sys.executable
+    home_dir_name = ".codex"
+    runtime_root_name = "codex-runtime"
+    session_prefix = "local-codex"
 
     def __init__(self, args_log_path: Path):
         self._delegate = CodexCliProvider()
@@ -111,16 +115,18 @@ class RecordingCliProvider:
         env["CLI_PROVIDER_ARGS_LOG"] = str(self._args_log_path)
         return env
 
-    def build_exec_command(
+    def build_exec_invocation(
         self,
         *,
         workspace_dir: Path,
+        prompt_text: str,
         yolo: bool,
         resume_session_id: str | None = None,
         output_last_message_path: Path | None = None,
-    ) -> list[str]:
-        actual_command = self._delegate.build_exec_command(
+    ) -> CliInvocation:
+        actual_invocation = self._delegate.build_exec_invocation(
             workspace_dir=workspace_dir,
+            prompt_text=prompt_text,
             yolo=yolo,
             resume_session_id=resume_session_id,
             output_last_message_path=output_last_message_path,
@@ -137,16 +143,40 @@ class RecordingCliProvider:
             log_path.write_text("\\n".join(sys.argv[2:]), encoding="utf-8")
             """
         )
-        return [sys.executable, "-c", code, *actual_command]
+        return CliInvocation(
+            argv=[sys.executable, "-c", code, *actual_invocation.argv],
+            prompt_text=actual_invocation.prompt_text,
+            prompt_transport=actual_invocation.prompt_transport,
+            cwd=actual_invocation.cwd,
+            env_overrides=actual_invocation.env_overrides,
+            resume_session_id=actual_invocation.resume_session_id,
+            output_last_message_path=actual_invocation.output_last_message_path,
+        )
 
-    def build_ui_command(
+    def build_exec_command(
+        self,
+        *,
+        workspace_dir: Path,
+        yolo: bool,
+        resume_session_id: str | None = None,
+        output_last_message_path: Path | None = None,
+    ) -> list[str]:
+        return self.build_exec_invocation(
+            workspace_dir=workspace_dir,
+            prompt_text="",
+            yolo=yolo,
+            resume_session_id=resume_session_id,
+            output_last_message_path=output_last_message_path,
+        ).argv
+
+    def build_ui_invocation(
         self,
         *,
         workspace_dir: Path,
         prompt_text: str,
         yolo: bool,
-    ) -> list[str]:
-        actual_command = self._delegate.build_ui_command(
+    ) -> CliInvocation:
+        actual_invocation = self._delegate.build_ui_invocation(
             workspace_dir=workspace_dir,
             prompt_text=prompt_text,
             yolo=yolo,
@@ -163,7 +193,28 @@ class RecordingCliProvider:
             log_path.write_text("\\n".join(sys.argv[2:]), encoding="utf-8")
             """
         )
-        return [sys.executable, "-c", code, *actual_command]
+        return CliInvocation(
+            argv=[sys.executable, "-c", code, *actual_invocation.argv],
+            prompt_text=actual_invocation.prompt_text,
+            prompt_transport=actual_invocation.prompt_transport,
+            cwd=actual_invocation.cwd,
+            env_overrides=actual_invocation.env_overrides,
+            resume_session_id=actual_invocation.resume_session_id,
+            output_last_message_path=actual_invocation.output_last_message_path,
+        )
+
+    def build_ui_command(
+        self,
+        *,
+        workspace_dir: Path,
+        prompt_text: str,
+        yolo: bool,
+    ) -> list[str]:
+        return self.build_ui_invocation(
+            workspace_dir=workspace_dir,
+            prompt_text=prompt_text,
+            yolo=yolo,
+        ).argv
 
     def build_help_command(self) -> list[str]:
         return [
@@ -171,6 +222,12 @@ class RecordingCliProvider:
             "-c",
             "print('workspace-write --sandbox')",
         ]
+
+    def build_help_invocation(self) -> CliInvocation:
+        return CliInvocation(
+            argv=self.build_help_command(),
+            prompt_transport="none",
+        )
 
 
 def _agents_config_with_technical_drawing_modes(
@@ -332,6 +389,7 @@ def test_run_evals_help_exposes_codex_backend():
     assert completed.returncode == 0, completed.stderr
     normalized_stdout = " ".join(completed.stdout.split())
     assert "--runner-backend" in normalized_stdout
+    assert "--provider" in normalized_stdout
     assert "--call-paid-api" in normalized_stdout
     assert "--level" in normalized_stdout
     assert re.search(
@@ -340,6 +398,7 @@ def test_run_evals_help_exposes_codex_backend():
     assert re.search(r"default:\s*1\s*smoke-\s*test\s*item", completed.stdout)
     assert re.search(r"default:\s*1\s*for\s*smoke-\s*test\s*runs", completed.stdout)
     assert "codex" in normalized_stdout
+    assert "qwen" in normalized_stdout
     assert "--codex-skill-loop" in normalized_stdout
 
 
@@ -461,6 +520,346 @@ def test_materialize_seed_workspace_requires_explicit_yolo_choice(
     assert completed.returncode == 2, combined_output
     assert "one of the arguments --yolo --no-yolo is required" in combined_output
     assert not workspace_dir.exists(), combined_output
+
+
+@pytest.mark.integration_p0
+@pytest.mark.parametrize(
+    ("flag_name", "attr_name"),
+    [
+        pytest.param("--launch-cli-exec", "launch_cli_exec", id="launch"),
+        pytest.param("--open-cli-ui", "open_cli_ui", id="open"),
+    ],
+)
+def test_materialize_seed_workspace_uses_generic_cli_flag_names(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    flag_name: str,
+    attr_name: str,
+):
+    from dataset.evals.materialize_seed_workspace import _parse_args
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "materialize_seed_workspace.py",
+            "--agent",
+            "engineer_coder",
+            "--task-id",
+            "ec-001-drawing-full",
+            "--output-dir",
+            str(tmp_path / "workspace"),
+            "--provider",
+            "qwen",
+            "--no-yolo",
+            flag_name,
+        ],
+    )
+    args = _parse_args()
+
+    assert args.provider == "qwen"
+    assert getattr(args, attr_name) is True
+
+
+@pytest.mark.integration_p0
+def test_cli_provider_registry_supports_qwen(tmp_path: Path):
+    from evals.logic.cli_provider import available_cli_providers, get_cli_provider
+
+    source_auth_path = tmp_path / "source-home" / ".qwen" / "auth.json"
+    source_auth_path.parent.mkdir(parents=True, exist_ok=True)
+    source_auth_path.write_text(
+        json.dumps(
+            {
+                "OPENAI_API_KEY": None,
+                "tokens": {"account_id": "acct-1", "access_token": "token-1"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    provider = get_cli_provider("qwen")
+    qwen_home_root = resolve_cli_home_root(
+        task_id="task-1",
+        runtime_root=tmp_path,
+        provider_name="qwen",
+    )
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+    codex_home_dir = provider.prepare_home(
+        codex_home_root=qwen_home_root,
+        workspace_dir=workspace_dir,
+        source_auth_path=source_auth_path,
+    )
+    env = provider.build_env(
+        task_id="task-1",
+        workspace_dir=workspace_dir,
+        codex_home_root=qwen_home_root,
+        session_id="session-1",
+    )
+    exec_invocation = provider.build_exec_invocation(
+        workspace_dir=workspace_dir,
+        prompt_text="inspect this workspace",
+        yolo=False,
+        resume_session_id="resume-1",
+    )
+    ui_invocation = provider.build_ui_invocation(
+        workspace_dir=workspace_dir,
+        prompt_text="open ui prompt",
+        yolo=True,
+    )
+
+    assert available_cli_providers() == ["codex", "qwen"]
+    assert isinstance(provider, QwenCliProvider)
+    assert provider.provider_name == "qwen"
+    assert provider.binary_name == "qwen"
+    assert provider.home_dir_name == ".qwen"
+    assert provider.runtime_root_name == "qwen-runtime"
+    assert provider.session_prefix == "local-qwen"
+    assert env["CODEX_HOME"].endswith("/.qwen")
+    assert env["QWEN_HOME"] == env["CODEX_HOME"]
+    assert (codex_home_dir / "auth.json").exists()
+    assert qwen_home_root.parent.parent.name == "qwen-runtime"
+    assert qwen_home_root.parent.name == "homes"
+    assert qwen_home_root.name.startswith("local-qwen-task-1-")
+    assert provider.build_help_command() == ["qwen", "--help"]
+    assert provider.build_exec_command(
+        workspace_dir=workspace_dir,
+        yolo=False,
+        resume_session_id="resume-1",
+    ) == ["qwen", "--chat-recording", "--sandbox", "--resume", "resume-1"]
+    assert exec_invocation.prompt_transport == "positional"
+    assert exec_invocation.argv[-1] == "inspect this workspace"
+    assert "--resume" in exec_invocation.argv
+    assert "--chat-recording" in exec_invocation.argv
+    assert "--sandbox" in exec_invocation.argv
+    assert ui_invocation.prompt_transport == "prompt_flag"
+    assert ui_invocation.argv[1:3] == ["--chat-recording", "--yolo"]
+    assert "--prompt-interactive" in ui_invocation.argv
+
+
+@pytest.mark.integration_p0
+def test_cli_provider_invocation_supports_prompt_flag_transport(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class PromptFlagProvider:
+        provider_name = "qwen"
+        binary_name = "qwen"
+        home_dir_name = ".qwen"
+        runtime_root_name = "qwen-runtime"
+        session_prefix = "local-qwen"
+
+        def prepare_home(self, **kwargs):
+            codex_home_root = kwargs["codex_home_root"]
+            codex_home_root.mkdir(parents=True, exist_ok=True)
+            (codex_home_root / self.home_dir_name).mkdir(parents=True, exist_ok=True)
+            return codex_home_root / self.home_dir_name
+
+        def translate_reasoning_effort(self, reasoning_effort):
+            return reasoning_effort
+
+        def build_env(self, **kwargs):
+            env = dict(os.environ)
+            env["CODEX_HOME"] = str(kwargs["codex_home_root"] / self.home_dir_name)
+            env["QWEN_HOME"] = env["CODEX_HOME"]
+            env["SESSION_ID"] = kwargs.get("session_id") or "session-1"
+            return env
+
+        def build_exec_invocation(
+            self,
+            *,
+            workspace_dir: Path,
+            prompt_text: str,
+            yolo: bool,
+            resume_session_id: str | None = None,
+            output_last_message_path: Path | None = None,
+        ) -> CliInvocation:
+            return CliInvocation(
+                argv=[
+                    "qwen",
+                    "--prompt",
+                    prompt_text,
+                    "--workspace",
+                    str(workspace_dir),
+                ],
+                prompt_text=prompt_text,
+                prompt_transport="prompt_flag",
+                cwd=workspace_dir,
+                resume_session_id=resume_session_id,
+                output_last_message_path=output_last_message_path,
+            )
+
+        def build_ui_invocation(
+            self,
+            *,
+            workspace_dir: Path,
+            prompt_text: str,
+            yolo: bool,
+        ) -> CliInvocation:
+            return CliInvocation(
+                argv=[
+                    "qwen",
+                    "--prompt",
+                    prompt_text,
+                    "--workspace",
+                    str(workspace_dir),
+                ],
+                prompt_text=prompt_text,
+                prompt_transport="prompt_flag",
+                cwd=workspace_dir,
+            )
+
+        def build_help_command(self) -> list[str]:
+            return ["qwen", "--help"]
+
+        def build_help_invocation(self) -> CliInvocation:
+            return CliInvocation(
+                argv=self.build_help_command(),
+                prompt_transport="none",
+            )
+
+    captured: dict[str, object] = {}
+
+    def fake_run(*args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr("evals.logic.codex_workspace.subprocess.run", fake_run)
+    monkeypatch.setattr(
+        "evals.logic.codex_workspace.get_cli_provider",
+        lambda provider_name=None: PromptFlagProvider(),
+    )
+
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+    result = launch_cli_exec(
+        workspace_dir,
+        "prompt transport smoke",
+        task_id="task-1",
+        agent_name=AgentName.ENGINEER_CODER,
+        session_id="session-1",
+        runtime_root=tmp_path / "qwen-runtime",
+        yolo=False,
+    )
+
+    assert result == 0
+    assert captured["kwargs"]["input"] is None
+    assert captured["kwargs"]["cwd"] == str(workspace_dir)
+    argv = captured["args"][0]
+    assert argv[0] == "qwen"
+    assert "--prompt" in argv
+    assert "prompt transport smoke" in argv
+    assert captured["kwargs"]["env"]["QWEN_HOME"].endswith("/.qwen")
+
+
+@pytest.mark.integration_p0
+def test_skill_training_preserves_legacy_provider_metadata(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import asyncio
+
+    from evals.logic import skill_training
+    from shared.models.simulation import SimulationResult
+
+    session_log_root = tmp_path / "sessions"
+    eval_log_key = "ec-legacy"
+    session_dir = session_log_root / eval_log_key
+    session_dir.mkdir(parents=True, exist_ok=True)
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+    metadata_path = session_dir / "session_metadata.json"
+    metadata_path.write_text(
+        json.dumps(
+            {
+                "agent_name": "engineer_coder",
+                "task_id": "ec-legacy",
+                "task": "legacy retained bundle",
+                "session_id": "session-legacy",
+                "workspace_dir": str(workspace_dir),
+                "launch_return_code": 0,
+                "success": True,
+                "verification_name": "local-verification",
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("PROBLEMOLOGIST_CLI_PROVIDER", "qwen")
+
+    provider_calls: list[str | None] = []
+
+    def fake_get_cli_provider(provider_name=None):
+        provider_calls.append(provider_name)
+        return SimpleNamespace(
+            provider_name=provider_name,
+            home_dir_name=".codex",
+        )
+
+    from evals.logic.codex_workspace import WorkspaceVerificationResult
+
+    async def fake_verify_workspace_for_agent(**kwargs):
+        return WorkspaceVerificationResult(
+            success=True,
+            verification_name="local-verification",
+        )
+
+    def fake_seed_skill_overlay_state(workspace_dir: Path):
+        overlay_dir = workspace_dir / "suggested_skills"
+        overlay_dir.mkdir(parents=True, exist_ok=True)
+        return overlay_dir, None, None, None
+
+    monkeypatch.setattr(skill_training, "get_cli_provider", fake_get_cli_provider)
+    monkeypatch.setattr(
+        skill_training,
+        "verify_workspace_for_agent",
+        fake_verify_workspace_for_agent,
+    )
+    monkeypatch.setattr(
+        skill_training,
+        "_load_workspace_simulation_result",
+        lambda workspace_dir: SimulationResult(success=True, summary="ok"),
+    )
+    monkeypatch.setattr(
+        skill_training,
+        "_seed_skill_overlay_state",
+        fake_seed_skill_overlay_state,
+    )
+
+    args = SimpleNamespace(
+        session_metadata_path=metadata_path,
+        session_log_root=None,
+        eval_log_key=None,
+        workspace_dir=None,
+        session_id=None,
+        task_id=None,
+        agent=None,
+        codex_runtime_root=None,
+    )
+    session = asyncio.run(skill_training.load_skill_training_session(args=args))
+
+    assert session.provider_name == "codex"
+    assert session.item.complexity_level == 0
+    assert provider_calls == ["codex"]
+
+    reloaded_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert "provider_name" not in reloaded_metadata
+    assert reloaded_metadata["suggested_skills_dir"].endswith("suggested_skills")
+
+    dummy_log = SimpleNamespace(
+        info=lambda *args, **kwargs: None, warning=lambda *args, **kwargs: None
+    )
+    summary, trace = asyncio.run(
+        skill_training.run_skill_training_session(session=session, log=dummy_log)
+    )
+
+    assert provider_calls == ["codex", "codex"]
+    assert summary.enabled is True
+    assert trace is None
 
 
 @pytest.mark.integration_p0

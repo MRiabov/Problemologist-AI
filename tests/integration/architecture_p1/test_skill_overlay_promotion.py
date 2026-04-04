@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 from git import Repo
 
-from evals.logic.skill_training import _seed_skill_overlay_state
 from evals.logic.skill_promotion import promote_skill_overlay
+from evals.logic.skill_training import _seed_skill_overlay_state
 from shared.skills import iter_skill_catalog_entries, resolve_skill_file
 from worker_light.utils.git import commit_all, init_workspace_repo
 
@@ -205,8 +205,11 @@ def test_int_222_skill_overlay_training_seeds_from_canonical_snapshot(tmp_path):
     assert branch is not None
     assert (overlay_root / ".git").exists()
     assert (
-        overlay_root / "shared-skill" / "SKILL.md"
-    ).read_text(encoding="utf-8").strip().endswith("canonical description")
+        (overlay_root / "shared-skill" / "SKILL.md")
+        .read_text(encoding="utf-8")
+        .strip()
+        .endswith("canonical description")
+    )
     assert (overlay_root / "canonical-only" / "SKILL.md").exists()
 
 
