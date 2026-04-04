@@ -3,7 +3,7 @@
 ## Scope summary
 
 - Primary focus: controller and split-worker deployment architecture.
-- Defines `worker-light`, `worker-heavy`, and `worker-renderer` responsibilities, worker APIs, and routing contract.
+- Defines `worker-light`, `worker-heavy`, `worker-renderer`, `controller-temporal-worker`, and `worker-heavy-temporal` responsibilities, worker APIs, and routing contract.
 - Covers persistence/storage expectations, concurrency model, WebSocket control-plane transport, and Temporal orchestration boundary.
 - Use this file when changing infra topology or controller-to-worker integration behavior.
 
@@ -13,14 +13,15 @@ Terminology is strict:
 
 - The controller is not a worker. It owns orchestration, tool routing, and public API behavior.
 - `worker-light`, `worker-heavy`, and `worker-renderer` are worker services.
-- The Temporal worker is a separate background service that executes durable workflows and activities on behalf of the controller. The compose service may still be named `controller-temporal-worker`, but that name is an implementation label, not the controller role.
+- The Temporal workers are separate background services that execute durable workflows and activities on behalf of the controller and heavy-worker plane. The current stack has two of them: `controller-temporal-worker` and `worker-heavy-temporal`. Both compose service names are implementation labels, not controller roles.
 
 There is a controller node which runs the LLM and tool calls, and a split worker plane:
 
 1. `worker-light` for filesystem + execution tooling,
 2. `worker-heavy` for simulation + heavy-task coordination,
 3. `worker-renderer` for preview rendering and preview post-processing,
-4. Temporal worker service (`controller-temporal-worker` in compose) for durable orchestration.
+4. `controller-temporal-worker` for controller-owned durable orchestration,
+5. `worker-heavy-temporal` for heavy-task queue consumption and heavy activity execution.
 
 For both safety and performance reasons, it is desirable that the LLM-generated scripts are never executed on the controller machine.
 
@@ -31,7 +32,8 @@ In the future we may well refactor to run on distributed nodes, perhaps even IPv
 ## Current service topology (main)
 
 - `controller` (FastAPI): public API, LLM/tool orchestration, business logic.
-- Temporal worker service (`controller-temporal-worker` in compose): durable execution for long-running workflows/retries and heavy-task queue consumption/dispatch.
+- Temporal worker service (`controller-temporal-worker` in compose): controller-owned durable execution for long-running workflows/retries, workflow registration, and backup orchestration.
+- Temporal worker service (`worker-heavy-temporal` in compose): heavy-task queue consumer/dispatcher for `worker_heavy.temporal_worker` activities.
 - `worker-light` (FastAPI single-flight for validation-capable light ops): session filesystem, git, linting, runtime execution, geometric validation, static asset serving.
 - `worker-heavy` (FastAPI single-flight executor): simulation, manufacturability analysis, review handover, backend-native simulation render coordination.
 - `worker-renderer` (FastAPI single-flight executor): headless rendering for static preview, selection snapshots, depth/segmentation previews, and preview-manifest persistence. Unlike `worker-light` and `worker-heavy`, it stays in the containerized renderer deployment in development, integration, eval, and production because the graphics stack must not depend on the host display session. EGL remains the desired default, but the current native EGL render probes segfault for reasons that are not yet isolated, so the current renderer image falls back to an OSMesa-backed VTK window class.
@@ -85,7 +87,7 @@ The worker API is physically split into three specialized services to optimize r
 
 - **Purpose**: Handles headless preview rendering jobs.
 - **Responsibilities**:
-  - Explicit preview generation through build123d/VTK, including multi-view bundles and progressive status updates.
+  - Explicit preview generation through the renderer worker's selected backend, including multi-view bundles and progressive status updates.
   - Selection snapshots, depth images, segmentation images, and render-manifest persistence.
   - Preview-only post-processing that does not require physics stepping.
 - **HTTP boundary**: renderer endpoints are internal-only; public benchmark routes stay on the controller, worker-light, and worker-heavy paths.
@@ -201,7 +203,7 @@ Worker-specific logic stays in:
   - selection snapshots and render-manifest generation for preview bundles
   - all headless rendering dependencies and preview post-processing
 
-Validation now lives in `worker-light`; the static preview part of validation is still executed by `worker-renderer`. The point of the split is to keep validation on the build123d/VTK geometry path while isolating the graphics stack from simulation state and keeping the fast geometry gate off the heavy worker.
+Validation now lives in `worker-light`; the static preview part of validation is still executed by `worker-renderer`. The point of the split is to keep validation on the worker-light geometry path while isolating the graphics stack from simulation state and keeping the fast geometry gate off the heavy worker.
 
 Note: we want to offload work from `worker_heavy` as much as possible because:
 

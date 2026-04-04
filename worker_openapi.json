@@ -3264,6 +3264,12 @@
             "title": "Segmentation",
             "description": "Request segmentation output."
           },
+          "payload_path": {
+            "type": "boolean",
+            "title": "Payload Path",
+            "description": "Request the optional payload-path overlay on persistent handoff bundles and scratch previews.",
+            "default": false
+          },
           "drafting": {
             "type": "boolean",
             "title": "Drafting",

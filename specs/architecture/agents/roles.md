@@ -38,7 +38,7 @@ The benchmarks are consisting of CAD models which are converted into XML.
 - The benchmarks are verified for geometric validity and fast preview generation before they are handed to engineering. They are not solved by an engineer yet, just benchmarks are created and verified for validity.
   - Validity means no intersections and other problems; it also means that the code will compile in the first place.
   - MJCF is verified for correctness by XML schema and by backend-parity coverage in dedicated simulation tests.
-  - The fast validation-preview path uses build123d/VTK for static handoff renders by default; it is not itself a Genesis-runtime proof path.
+  - The fast validation-preview path uses the renderer worker's selected preview backend for static handoff renders by default; it is not itself a Genesis-runtime proof path.
 - MJCF is created programmatically, not by a LLM.
 - Authored top-level part labels must be unique and must not be `environment` or start with `zone_`; those names are reserved for the scene root and simulator-generated objective bodies and collide with MJCF mesh/body naming if reused.
 
@@ -235,7 +235,7 @@ The Engineering Planner workflow is:
 
    - Read `benchmark_definition.yaml` as present from the benchmark generator (goal/forbid/build zones, runtime jitter, planner-authored benchmark estimates, and runtime-derived benchmark/customer caps `max_unit_cost`/`max_weight_g`).
    - Read `benchmark_assembly_definition.yaml` as required benchmark-owned read-only handoff context copied into the engineer workspace. Use it to understand benchmark-owned fixtures, motion, and which benchmark-owned components explicitly allow engineer interaction, but fail closed if the file is missing and do not treat it as an engineer-owned costing artifact.
-   - Read benchmark visuals from `renders/benchmark_renders/` and environment geometry metadata.
+   - Read benchmark visuals from `renders/benchmark_renders/`, the planner's own stage bundle under `renders/engineer_plan_renders/` once it exists, and environment geometry metadata.
    - Read required skills/config inputs (CAD drafting skill, manufacturing knowledge when cost/quantity matters, manufacturing config + catalog).
 
 2. **Plan the mechanism and budgets**
@@ -370,7 +370,7 @@ Engineer-side visual-inspection policy:
 1. `Engineering Planner`, `Engineering Coder`, `Engineering Plan Reviewer`, and `Engineering Execution Reviewer` are all policy-configured visual-inspection roles.
 2. The requirement is conditional on render-image availability in `renders/**`.
 3. The current policy minimum is one distinct image per required node, but the architecture treats this as config-owned rather than hardcoded.
-4. Engineering Coder and Engineering Execution Reviewer must be able to inspect both benchmark evidence under `renders/benchmark_renders/` and engineer-owned preview evidence under `renders/engineer_renders/` or `renders/final_preview_renders/` when those bundles exist for the current revision.
+4. Engineering Coder must be able to inspect benchmark evidence under `renders/benchmark_renders/` and engineer-plan evidence under `renders/engineer_plan_renders/` when those bundles exist for the current revision. Engineering Execution Reviewer must be able to inspect benchmark evidence under `renders/benchmark_renders/` and final solution submission evidence under `renders/final_solution_submission_renders/` when those bundles exist. Engineering Plan Reviewer must be able to inspect benchmark evidence, engineer-plan evidence, final solution submission evidence, and scratch evidence under `renders/tmp/` when those artifacts exist for the current revision.
 
 Reviewer manifest naming in engineering:
 

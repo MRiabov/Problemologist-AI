@@ -254,7 +254,7 @@ lightweight enough to seed workspaces without extra authoring.
 
 The public preview contract should gain a companion to `preview()`:
 
-- `preview()` continues to render 3D geometry and assembly context, and it may optionally overlay motion context when `motion_forecast=True`.
+- `preview()` continues to render 3D geometry and assembly context, and it may optionally overlay motion context when `payload_path=True`.
 - `preview_drawing()` renders the technical drawing package.
 
 The implementation may use build123d technical drawing primitives, `project_to_viewport()`, `TechnicalDrawing`, `ExportSVG`, and `ExportDXF`.

@@ -6429,6 +6429,11 @@
             ],
             "title": "Segmentation"
           },
+          "payload_path": {
+            "type": "boolean",
+            "title": "Payload Path",
+            "default": false
+          },
           "drafting": {
             "type": "boolean",
             "title": "Drafting",

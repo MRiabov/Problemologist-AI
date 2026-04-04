@@ -80,16 +80,16 @@ The renderer worker does not inherit a host X server as its normal execution pat
 
 The rendering backend is not a single global choice. We split rendering by purpose:
 
-1. Explicit preview renders use build123d/VTK by default inside `worker-renderer`.
+1. Explicit preview renders use the renderer worker's selected backend inside `worker-renderer`.
 2. Simulation-video rendering is a switchable contract; the current implementation keeps it on `worker-heavy`/MuJoCo because that was the lowest-overhead route.
 3. Genesis-native visual outputs follow the selected simulation backend when the artifact depends on Genesis-only behavior such as FEM, fluids, or backend-native stress/state output.
 
-This split is intentional. Preview evidence does not require Genesis runtime features and therefore stays on the build123d/VTK geometry path, but it is produced only on demand through the dedicated render worker boundary.
+This split is intentional. Preview evidence does not require Genesis runtime features and therefore stays on the renderer-worker preview path, but it is produced only on demand through the dedicated render worker boundary.
 
 Preview renders are context artifacts, not backend-authoritative proof of simulation behavior. Genesis-specific runtime behavior is still established through actual Genesis simulation runs where Genesis behavior is required.
 
-On-demand preview uses the worker-light-facing `preview(...)` helper instead of any validation-time render path. Benchmark callers compose `build()` output with objective overlays reconstructed through the public `utils.objectives_geometry()` helper from the `objectives` section of `benchmark_definition.yaml` before previewing benchmark context, while engineer callers preview their solution geometry directly and may optionally overlay payload-trajectory context with `motion_forecast=True`. The helper is part of the exposed `utils` package, alongside `preview()` and `validate()`, so callers import it instead of defining benchmark-specific geometry logic in agent code. It accepts modality booleans, the optional `motion_forecast` overlay flag, and multi-view camera inputs, normalizes scalar values into view bundles, returns a job ack, and causes the renderer worker to persist workflow-specific preview artifacts under the existing render buckets without implying Genesis parity. When the overlay flag is enabled, the renderer composites the finest available payload-path artifact for the current workflow into the static preview bundle; the overlay is review context only and does not establish build-safe starts or goal-zone finish semantics. The canonical RGB preview filename rule is defined in [Simulation and Rendering](./simulation-and-rendering.md#render-profile-ownership): the part label prefixes the basename as `{part_name}_render_{angle_1}_{angle_2}.png`, so the default 45/45 orbit for `Part(Box(), label="test_part")` is `test_part_render_e45_a45.png`.
-As a rule of thumb, any preview file that leaves `worker-renderer` should already be persisted to S3; worker-light may proxy it back into a local workspace afterward, but the renderer boundary itself should not remain the final byte sink.
+On-demand preview uses the worker-light-facing `preview(...)` helper instead of any validation-time render path. Benchmark callers compose `build()` output with objective overlays reconstructed through the public `utils.objectives_geometry()` helper from the `objectives` section of `benchmark_definition.yaml` before previewing benchmark context, while engineer callers preview their solution geometry directly and may optionally overlay payload-path context with `payload_path=True`. The helper is part of the exposed `utils` package, alongside `preview()` and `validate()`, so callers import it instead of defining benchmark-specific geometry logic in agent code. It accepts modality booleans, the optional `payload_path` overlay flag, and multi-view camera inputs, normalizes scalar values into view bundles, returns a job ack, and causes the renderer worker to persist workflow-specific preview artifacts into `renders/tmp/` while the active stage is running. When the overlay flag is enabled, the renderer composites the finest available payload-path artifact for the current workflow into the static preview bundle; the overlay is review context only and does not establish build-safe starts or goal-zone finish semantics. Manual preview artifacts are ephemeral scratch: they are deleted at handoff and never promoted into the persisted handoff bundles. The canonical RGB preview filename rule is defined in [Simulation and Rendering](./simulation-and-rendering.md#render-profile-ownership): the part label prefixes the basename as `{part_name}_render_{angle_1}_{angle_2}.png`, so the default 45/45 orbit for `Part(Box(), label="test_part")` is `test_part_render_e45_a45.png`.
+As a rule of thumb, any preview file that is expected to survive beyond the active stage should already be persisted to S3; worker-light may proxy it back into a local workspace afterward, but the renderer boundary itself should not remain the final byte sink.
 
 #### Rendering views
 
@@ -98,22 +98,17 @@ I presume the model will need to render a view or a set of views to get an under
 Preview evidence is generated explicitly, not as a validation side effect. The default policy is:
 
 1. `/benchmark/validate` performs validation only and does not generate preview artifacts by default.
-2. `preview(...)` generates benchmark, engineer, or final preview evidence through the renderer worker when requested.
-3. `/benchmark/simulate` may generate backend-native dynamic renders or videos using the selected simulation backend in the renderer worker.
+2. `preview(...)` and `preview_drawing(...)` generate ephemeral manual preview evidence under `renders/tmp/` for the active stage.
+3. Stage handoffs generate 24-view persistent bundles separately under:
+   1. benchmark preview evidence under `renders/benchmark_renders/`,
+   2. engineering planner handoff evidence under `renders/engineer_plan_renders/`,
+   3. final solution submission evidence under `renders/final_solution_submission_renders/`.
 
-Preview bundles preserve the workflow that produced them instead of flattening every image into a single directory:
+These persistent bundles are read-only to agent roles; only backend/runtime utilities write them, and `renders/tmp/` is cleared at handoff.
 
-1. benchmark preview evidence is persisted under `renders/benchmark_renders/`,
-2. single-view engineer inspection previews are persisted under `renders/engineer_renders/`,
-3. final engineer preview evidence is persisted under `renders/final_preview_renders/`.
+For renderer-backed handoff renders, the requested modality set is persisted under the selected persistent bundle directory and the manifest records the modality-specific artifact path and request-scoped view index for each requested view. RGB handoff bundles display the payload-path overlay specified by the relevant benchmark or engineer motion contract by default. RGB previews preserve material colors. Depth and segmentation previews remain PNG-based, and segmentation renders carry a legend mapping colors to object identity.
 
-<!--TODO: there is some naming drift about the directory names. "final engineer preview evidence" is not really defined anywhere thus and used loosely in multiple contexts.-->
-
-<!--In practice, I expect "final previews" to show about what the customer sees - the views of the image, benchmark objects, payload, objective-->
-
-For build123d/VTK-backed preview renders, the requested modality set is persisted under the selected bundle directory and the manifest records the modality-specific artifact path and request-scoped view index for each requested view. RGB previews preserve material colors. Depth and segmentation previews remain PNG-based, and segmentation renders carry a legend mapping colors to object identity.
-
-Those files are context artifacts for downstream agents and reviewers. They follow the same persistence/discovery flow as the existing preview images rather than introducing a second artifact channel, and the render path itself now encodes whether the evidence belongs to benchmark input, engineer inspection, or final preview review.
+Those persistent bundle files are context artifacts for downstream agents and reviewers. They follow the same persistence/discovery flow as the existing preview images rather than introducing a second artifact channel, and the render path itself now encodes whether the evidence belongs to benchmark input, engineer planning, or final solution submission. The scratch tree under `renders/tmp/` is excluded from this promotion flow.
 
 Dynamic simulation renders and videos are resolved at runtime from the selected simulation backend and are recorded in `simulation_result.json`; they do not take their camera/view contract from `agents_config.yaml` or from benchmark task metadata. The heavy worker executes those jobs and persists the outputs. See [Simulation and Rendering](./simulation-and-rendering.md#render-profile-ownership) for the ownership split.
 
@@ -121,11 +116,11 @@ The simulation backend still exposes a typed render-capability record so the run
 
 For the RGB preview image, manufactured-part material colors come from the manufacturing material configuration associated with each part's `material_id`. The preview is therefore expected to preserve meaningful color differences between materials, not flatten everything to the same neutral shade.
 
-Render outputs are published as immutable bundle directories under `renders/**`. Each bundle carries a bundle-local render manifest plus any sidecars needed for later lookup. The append-only discovery surface is `renders/render_index.jsonl`, which records `bundle_id`, `created_at`, `revision`, `scene_hash`, bundle path, and primary media paths for each published bundle. `renders/render_manifest.json` may remain as a latest-bundle compatibility alias for current-revision tooling, but the bundle-local manifest and history index are the source of truth for historical lookup.
+Persistent render outputs are published as immutable bundle directories under `renders/benchmark_renders/`, `renders/engineer_plan_renders/`, and `renders/final_solution_submission_renders/`. Each bundle carries a bundle-local render manifest plus any sidecars needed for later lookup. The append-only discovery surface is `renders/render_index.jsonl`, which records `bundle_id`, `created_at`, `revision`, `scene_hash`, bundle path, and primary media paths for each published bundle. `renders/tmp/` is scratch-only and does not enter the index. `renders/render_manifest.json` may remain as a latest-bundle compatibility alias for current-revision tooling, but the bundle-local manifest and history index are the source of truth for historical lookup.
 
 Bundle-local sidecars are allowed when they help agent tooling resolve the exact render state:
 
-1. `preview_scene.json` stores the exact build123d scene snapshot used for preview rendering.
+1. `preview_scene.json` stores the exact scene snapshot used for preview rendering.
 2. `frames.jsonl` stores sparse frame metadata for video evidence.
 3. `objects.parquet` stores dense object pose tables for query helpers. The active `PhysicsBackend` export path produces this file, so both MuJoCo and Genesis can emit it.
 
@@ -158,6 +153,8 @@ render:
     enabled: true
     axes: true
     edges: true
+  handoff_rgb_payload_path_overlay:
+    enabled: true
 ```
 
 If one of the `enabled` flags is set to `false`, the corresponding preview artifact type is not emitted into `renders/**`. This switch controls static preview artifact persistence, not the higher-level worker routing policy.
@@ -165,7 +162,7 @@ If one of the `enabled` flags is set to `false`, the corresponding preview artif
 
 Each modality can independently enable world-coordinate axes and edge emphasis. Those overlays are controlled by `render.<modality>.axes` and `render.<modality>.edges`.
 
-The RGB static preview can overlay adaptive world-coordinate axes with tick labels and a subtle CAD-style edge emphasis. Depth and segmentation previews can use the same axes overlay, and their edge highlights use a visible non-black accent so they do not disappear into the background or read as void.
+The RGB static preview can overlay adaptive world-coordinate axes with tick labels and a subtle CAD-style edge emphasis. Depth and segmentation previews can use the same axes overlay, and their edge highlights use a visible non-black accent so they do not disappear into the background or read as void. The handoff RGB payload-path overlay is controlled separately by `render.handoff_rgb_payload_path_overlay.enabled`; it defaults to on for persistent handoff bundles and can be disabled when a workflow needs a clean RGB bundle. That switch affects only the persistent handoff bundle path, not explicit scratch previews requested with `preview(..., payload_path=True)`.
 
 ### Workbench technical details
 

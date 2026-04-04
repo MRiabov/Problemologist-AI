@@ -45,7 +45,7 @@ Prefer the structured request object when you already have bundle metadata:
 ```python
 pick_preview_pixel(
     RenderBundlePointPickRequest(
-        bundle_path="renders/engineer_renders/example_bundle",
+        bundle_path="renders/engineer_plan_renders/example_bundle",
         pixel_x=312,
         pixel_y=184,
         image_width=1024,
@@ -53,7 +53,7 @@ pick_preview_pixel(
         view_index=0,
         orbit_pitch=45.0,
         orbit_yaw=45.0,
-        manifest_path="renders/engineer_renders/example_bundle/render_manifest.json",
+        manifest_path="renders/engineer_plan_renders/example_bundle/render_manifest.json",
     )
 )
 ```
@@ -62,7 +62,7 @@ For a quick scalar call, pass the same inputs directly:
 
 ```python
 pick_preview_pixel(
-    bundle_path="renders/engineer_renders/example_bundle",
+    bundle_path="renders/engineer_plan_renders/example_bundle",
     pixel_x=312,
     pixel_y=184,
     image_width=1024,
@@ -70,7 +70,7 @@ pick_preview_pixel(
     view_index=0,
     orbit_pitch=45.0,
     orbit_yaw=45.0,
-    manifest_path="renders/engineer_renders/example_bundle/render_manifest.json",
+    manifest_path="renders/engineer_plan_renders/example_bundle/render_manifest.json",
 )
 ```
 

@@ -126,7 +126,7 @@ The cache rule is:
 
 The reason is architectural rather than incidental:
 
-- explicit preview requests use build123d/VTK for preview evidence by default,
+- explicit preview requests use the renderer worker's selected preview backend for preview evidence by default,
 - `/benchmark/simulate` may still use Genesis for the same session,
 - a single shared per-session backend cache would let the preview path poison the later simulation path with the wrong backend instance.
 
@@ -140,9 +140,9 @@ The backend contract is:
 
 1. `physics.backend` selects the physics simulation backend.
 2. Genesis remains the backend for Genesis-only simulation behavior such as FEM and fluids.
-3. Explicit preview rendering uses build123d/VTK by default and is executed by the renderer worker.
+3. Explicit preview rendering uses the renderer worker's selected preview backend and is executed by the renderer worker.
 4. The explicit preview path is a fast geometry/context artifact path, not a Genesis-runtime proof path.
-5. Benchmark preview evidence is stored under `renders/benchmark_renders/`, engineer single-view inspection previews are stored under `renders/engineer_renders/`, and engineer-side final preview evidence is stored under `renders/final_preview_renders/`.
+5. Manual preview evidence is written into `renders/tmp/` during the active stage, while the 24-view handoff bundles are written separately under `renders/benchmark_renders/`, `renders/engineer_plan_renders/`, or `renders/final_solution_submission_renders/` depending on the workflow.
 
 This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asymmetric:
 
@@ -171,17 +171,17 @@ The rule is:
 
 03. The runtime-selected simulation render choice is serialized in `simulation_result.json` so reviewers can replay the exact evidence path.
 
-04. Explicit build123d/VTK preview remains a separate preview contract, executed by the renderer worker, and continues to live in the preview manifest path.
+04. Explicit preview remains a separate preview contract, executed by the renderer worker, and continues to live in the preview manifest path.
 
-05. On-demand preview requests use the worker-light-facing `preview(...)` helper, normalize scalar/list camera inputs into zip-paired views, render a composed `Part | Compound` at the requested camera and modality set, stream queued/view-ready status over the websocket control path, and persist workflow-specific preview artifacts. The canonical RGB preview artifact stem is `{part_name}_render_{angle_1}_{angle_2}`, and the persisted file is `<stem>.png`; `part_name` comes from the rendered component label, so previewing `Part(Box(), label="test_part")` at the default 45/45 orbit uses the unchanged `e45_a45` angle family and produces `test_part_render_e45_a45.png`. They are separate from simulation evidence and from validation results.
+05. `preview(...)` is the ephemeral on-demand path. It normalizes scalar/list camera inputs into zip-paired views, renders a composed `Part | Compound` at the requested camera and modality set, streams queued/view-ready status over the websocket control path, and writes the resulting files into `renders/tmp/` for the active stage. The canonical RGB preview artifact stem is `{part_name}_render_{angle_1}_{angle_2}`, and the persisted file is `<stem>.png`; `part_name` comes from the rendered component label, so previewing `Part(Box(), label="test_part")` at the default 45/45 orbit uses the unchanged `e45_a45` angle family and produces `test_part_render_e45_a45.png`. Scratch previews are separate from simulation evidence, validation results, and the persisted 24-view handoff bundles.
 
-06. When `preview(..., motion_forecast=True)` is requested, the static preview bundle may also include a motion-path overlay. The renderer resolves that overlay from the finest available motion artifact for the current workflow, preferring engineer-coder `payload_trajectory_definition.yaml`, then planner `motion_forecast`, then benchmark motion evidence when applicable. The overlay is review context only and does not affect validation or simulation semantics.
+06. When `preview(..., payload_path=True)` is requested, the static preview bundle may also include a motion-path overlay. The renderer resolves that overlay from the finest available motion artifact for the current workflow, preferring engineer-coder `payload_trajectory_definition.yaml`, then planner `motion_forecast`, then benchmark motion evidence when applicable. The overlay is review context only and does not affect validation or simulation semantics.
 
-07. Every render-producing request publishes an immutable bundle directory with a bundle-local manifest. Historical discovery flows through the render bundle contract in [CAD and other infrastructure](./CAD-and-other-infra.md); `renders/render_manifest.json` may remain as a current-bundle compatibility alias. Simulation bundles may also persist `frames.jsonl` and `objects.parquet` sidecars when the active `PhysicsBackend` export path provides them.
+07. Every persistent handoff render request publishes an immutable 24-view bundle directory with a bundle-local manifest, using the established 8-azimuth by 3-elevation view family. RGB handoff bundles display the payload-path overlay specified by the relevant benchmark or engineer motion contract by default, and the overlay can be disabled through `render.handoff_rgb_payload_path_overlay.enabled` in `config/agents_config.yaml`. Historical discovery flows through the render bundle contract in [CAD and other infrastructure](./CAD-and-other-infra.md); `renders/render_manifest.json` may remain as a current-bundle compatibility alias. Simulation bundles may also persist `frames.jsonl` and `objects.parquet` sidecars when the active `PhysicsBackend` export path provides them.
 
 08. The `worker_light.utils.render_query` helper family resolves against that bundle-local snapshot when the model needs a point coordinate from a render.
 
-09. The render bundle path itself identifies whether the evidence belongs to benchmark input, engineer inspection, or final validation.
+09. The render bundle path itself identifies whether the evidence belongs to benchmark input, engineer planning, or final solution submission. Final solution submission bundles must be composed from the benchmark-owned scene plus the approved engineer solution so benchmark fixtures and objective overlays are present by default.
 
 10. If a backend cannot satisfy the selected render path, the failure should surface as a validation/runtime contract error rather than being hidden behind an unrelated global fallback.
 

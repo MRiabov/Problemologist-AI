@@ -23,6 +23,7 @@ The filesystem rules are:
 Reusable starter files and prompt-context artifacts are defined once in `shared/agent_templates/`, which is part of the prompt-context contract.
 The shared starter set includes `.admin/clear_env.py`, which resets the current
 seeded workspace in place without changing the conversation context.
+The shared starter set also includes `shared/agent_templates/common/.gitignore`, which is copied into each materialized workspace as read-only workspace metadata so the ignore policy stays inspectable without being agent-writable. That ignore file ignores the workspace `renders/` tree while re-including `*.json` files, so render parquet and other binary artifacts stay out of git history but JSON manifests remain visible.
 PromptManager consumes these prompt-context inputs when it materializes the runtime prompt.
 For CLI-provider-backed sessions, the runtime materializes the checked-in skill tree into `.agents/skills/` in the workspace. That copy is read-only runtime context, not canonical source. All CLI-provider implementations follow this same workspace-materialization contract. See [agent-skill.md](./agent-skill.md) for the source-tree and promotion contract.
 
@@ -41,23 +42,28 @@ The agent-specific workspace surface is role-scoped.
 Representative examples:
 
 - Engineering Planner:
-  - read: `skills/**`, `utils/**`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`, `plan.md`, `todo.md`, `journal.md`, `renders/**`
-  - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml`, `benchmark_definition.yaml`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`
+  - read: `skills/**`, `utils/**`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`, `plan.md`, `todo.md`, `journal.md`, `renders/benchmark_renders/**`, `renders/engineer_plan_renders/**`, `renders/tmp/**`
+  - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml`, `benchmark_definition.yaml`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`, `renders/tmp/**`
 - Engineering Coder:
-  - read: `skills/**`, `utils/**`, `benchmark_script.py`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
-  - write: `solution_script.py`, additional `*.py` implementation files, `todo.md`, `journal.md`, `renders/**`, `plan_refusal.md`
+  - read: `skills/**`, `utils/**`, `benchmark_script.py`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/benchmark_renders/**`, `renders/engineer_plan_renders/**`, `renders/tmp/**`
+  - write: `solution_script.py`, additional `*.py` implementation files, `todo.md`, `journal.md`, `renders/tmp/**`, `plan_refusal.md`
 - Benchmark Planner:
-  - read: `skills/**`, `utils/**`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `plan.md`, `todo.md`, `journal.md`, `renders/**`
-  - write: `plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`
+  - read: `skills/**`, `utils/**`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `plan.md`, `todo.md`, `journal.md`, `renders/benchmark_renders/**`, `renders/tmp/**`
+  - write: `plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `renders/tmp/**`
 - Benchmark Coder:
-  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `reviews/**`, `renders/**`
-  - write: `benchmark_script.py`, additional `*.py` implementation files, `todo.md`, `journal.md`, `renders/**`, `plan_refusal.md`
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `reviews/**`, `renders/benchmark_renders/**`, `renders/tmp/**`
+  - write: `benchmark_script.py`, additional `*.py` implementation files, `todo.md`, `journal.md`, `renders/tmp/**`, `plan_refusal.md`
 - Reviewer roles:
-  - read: the stage-owned planner/coder artifacts plus the authored source and planner drafting scripts for that stage once they exist (`benchmark_script.py`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py` for benchmark execution review; `solution_script.py`, `solution_plan_evidence_script.py`, and `solution_plan_technical_drawing_script.py` for engineering execution review), `renders/**`, and `journal.md`
-  - write: stage-scoped `reviews/*.yaml` files only
+  - read:
+    - Benchmark Reviewer: `renders/benchmark_renders/**`, `renders/tmp/**`
+    - Engineering Plan Reviewer: `renders/benchmark_renders/**`, `renders/engineer_plan_renders/**`, `renders/final_solution_submission_renders/**`, `renders/tmp/**`
+    - Engineering Execution Reviewer: `renders/benchmark_renders/**`, `renders/final_solution_submission_renders/**`, `renders/tmp/**`
+  - write: stage-scoped `reviews/*.yaml` files only; when a reviewer calls `preview(...)` or `preview_drawing(...)`, the scratch preview is written into `renders/tmp/**`
 - COTS Search subagent:
   - read: `parts.db`, COTS query helpers/CLI, and the caller-provided request string
   - write: structured COTS result payload returned to the caller
+
+Render-bucket policy: `renders/tmp/` is the only agent-writable render tree. `renders/benchmark_renders/`, `renders/engineer_plan_renders/`, and `renders/final_solution_submission_renders/` are backend-owned read-only bundles.
 
 ## System-only metadata
 
@@ -74,6 +80,8 @@ Manifest ownership summary:
 | Benchmark technical drawing script | Benchmark Planner | planner drafting submission | `benchmark_plan_technical_drawing_script.py` |
 | Engineering plan evidence script | Engineering Planner | planner drafting submission | `solution_plan_evidence_script.py` |
 | Engineering technical drawing script | Engineering Planner | planner drafting submission | `solution_plan_technical_drawing_script.py` |
+
+Scratch preview files in `renders/tmp/` are not published bundles and do not create entries in `renders/render_index.jsonl`.
 
 <!-- FIXME: consider moving render metadata manifests into `.manifests/` in a future refactor so render metadata and handoff metadata share one backend-owned manifest bucket. The root renders/render_manifest.json path stays a compatibility alias only. -->
 
@@ -144,15 +152,16 @@ The policy uses gitignore-style glob patterns (`*`, `**`, path prefixes) for fil
 
 Rules:
 
-1. Every read/write/edit/upload/download operation is checked against this policy in `FilesystemMiddleware`.
-2. `deny` takes precedence over `allow`.
-3. If a path is not matched by `allow`, access is denied by default.
-4. Agent-specific rules override `defaults`.
-5. Reviewer roles get `write/edit` tools, but policy only allows writes to their stage-specific persisted review YAML pairs.
-6. `.manifests/**` is non-overridable deny for all LLM agent roles; only backend runtime utilities may access it.
-7. No agent role may be granted access to filesystem paths outside its sandbox/workspace root.
-8. `config/agents_config.yaml` also owns preview-render modality policy under top-level `render: {rgb, depth, segmentation}` and the motion cadence/tolerance policy for benchmark planner, engineer planner, and engineer coder layers.
-9. Those flags control whether build123d/VTK-backed preview artifacts are persisted into `renders/**` for each modality; they do not change worker routing or backend selection policy. The motion policy controls waypoint frequency and tolerance budgets but does not relocate the contract structure out of the YAML artifacts. The bundle subdirectory still reflects the workflow that produced it.
+01. Every read/write/edit/upload/download operation is checked against this policy in `FilesystemMiddleware`.
+02. `deny` takes precedence over `allow`.
+03. If a path is not matched by `allow`, access is denied by default.
+04. Agent-specific rules override `defaults`.
+05. Reviewer roles get `write/edit` tools, but policy only allows writes to their stage-specific persisted review YAML pairs.
+06. `.manifests/**` is non-overridable deny for all LLM agent roles; only backend runtime utilities may access it.
+07. No agent role may be granted access to filesystem paths outside its sandbox/workspace root.
+08. `config/agents_config.yaml` also owns preview-render modality policy under top-level `render: {rgb, depth, segmentation}` and the motion cadence/tolerance policy for benchmark planner, engineer planner, and engineer coder layers.
+09. Those flags control whether renderer-backed preview artifacts are emitted into `renders/tmp/` during the active stage and into the stage-owned persistent handoff bundles for each modality; they do not change worker routing or backend selection policy. The motion policy controls waypoint frequency and tolerance budgets but does not relocate the contract structure out of the YAML artifacts. The persistent bundle subdirectory still reflects the workflow that produced it.
+10. `renders/tmp/` is the only agent-writable render tree. The persistent render bundle directories are backend-owned read-only paths and must not be writable by agent roles.
 
 ## Immutability validation
 
