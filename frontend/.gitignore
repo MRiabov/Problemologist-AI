@@ -25,3 +25,6 @@ dist-ssr
 
 # Verification
 verification/
+
+codex-runtime/
+qwen-runtime/
