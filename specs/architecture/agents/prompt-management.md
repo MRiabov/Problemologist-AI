@@ -28,7 +28,7 @@ The unified prompt manager treats these inputs as authoritative:
 - `config/prompts.yaml`: structured role prompts and appendix fragments.
 - `shared/agent_templates/`: prompt-context files, helper scripts, and boilerplate that belong in the workspace context.
 - `shared/assets/template_repos/`: role-scoped starter workspace material copied into the run-local workspace, including the reusable drafting scaffold when the technical-drawing mode is enabled.
-- the checked-in skill tree and its workspace materializations, as described in [agent-skill.md](./agent-skill.md), plus any compact generated index derived from that tree when the backend needs one. Those runtime copies are inputs to the agent, not a separate prompt source.
+- the checked-in skill tree and its workspace materializations, as described in [agent-skill.md](./agent-skill.md), plus any compact generated index derived from the active skill tree when the backend needs one. When a skill-training run materializes a session-local `suggested_skills/` overlay/worktree, that overlay is the active skill tree for that run. Those runtime copies are inputs to the agent, not a separate prompt source.
 - planner-authored drafting scripts, when present, are prompt-context inputs too: `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `solution_plan_evidence_script.py`, and `solution_plan_technical_drawing_script.py`.
 - `worker_light/agent_files/`: legacy compatibility mirror only.
 - runtime-generated context: task text, agent identity, task ID, workspace state, backend selection, and tool registration.
@@ -60,7 +60,7 @@ It must:
 5. add the drafting appendix when drafting mode is active for the planner family,
 6. add the backend appendix,
 7. append runtime-generated context,
-8. append a compact generated skill index when the backend family needs one.
+8. append a compact generated skill index when the backend family needs one, preferably derived from the active skill tree for the current session.
 
 The backend choice selects which appendix branch is used. It does not select a different prompt manager or a different prompt source model.
 
@@ -113,6 +113,7 @@ Skills own the durable, reusable guidance that prompts should not have to carry:
 The canonical skill-tree contract, authoring shape, loading model, and improvement loop live in [agent-skill.md](./agent-skill.md).
 
 PromptManager may append a compact generated catalog for discoverability when a backend needs it, but it must not re-author skill bodies or turn skills into a second prompt system.
+When skill training is active, the compact catalog should reflect the session-local overlay if one exists.
 
 The rule of thumb is simple: prompts frame the work; skills explain the work.
 

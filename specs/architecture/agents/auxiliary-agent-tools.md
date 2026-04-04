@@ -14,7 +14,7 @@
 - Bundle history and render-file layout are owned by the rendering architecture docs, not by this file.
 - Helper names are not a stability guarantee. If a helper mutates benchmark state, it must say which artifact it mutates and whether the artifact is benchmark-owned, engineer-owned, or derived.
 - Post-simulation helpers must require post-simulation artifacts.
-- Skill-loop helpers must stay inside `suggested_skills/`.
+- Skill-loop helpers must stay inside the active `suggested_skills/` worktree/checkpoint and must not assume the canonical `skills/` tree is mutable.
 - Experimental helpers must fail closed when required artifacts are missing and must not create placeholder state.
 - Prompt templates may mention an auxiliary helper, but the runtime contract is still owned by the source file that implements it.
 
@@ -39,7 +39,7 @@
 | `worker_heavy.utils.validation` | `define_fluid(...)`, `get_stress_report(...)`, `preview_stress(...)`, `set_soft_mesh(...)` | Experimental / diagnostic | `define_fluid()` mutates `benchmark_definition.yaml`. `get_stress_report()` and `preview_stress()` require `simulation_result.json`. `set_soft_mesh()` toggles FEM intent and can switch the benchmark backend to Genesis. |
 | `worker_heavy.utils.electronics` | `calculate_power_budget(...)`, `create_circuit(...)`, `route_wire(...)`, `simulate_circuit_transient(...)`, `validate_circuit(...)` | Support namespace | Used by the electromechanical workflow as helper functions, not as separate high-level agent capabilities. |
 | `controller.agent.tools` | `run_validate_and_price_script(fs)` | Internal bridge | Runs the checked-in planner pricing script. The exposed planner gate is `validate_costing_and_price()`, which uses this bridge. |
-| `controller.agent.nodes.skills` | `save_suggested_skill(title, content)` | Skill-training staging helper | Writes staged skill drafts into `suggested_skills/` for the standalone training loop. It is a compatibility write primitive, not evidence that a separate `skill_agent` is required by the target architecture. |
+| `controller.agent.nodes.skills` | `save_suggested_skill(title, content)` | Skill-training staging helper | Writes staged skill drafts into the session-local `suggested_skills/` worktree/checkpoint for the standalone training loop. It is a compatibility write primitive, not evidence that a separate `skill_agent` is required by the target architecture. |
 
 ## Planned render-query surfaces
 
@@ -59,13 +59,13 @@
 
 - `controller.tools.fs.create_fs_tools(...)` and `worker_light.utils.filesystem.get_filesystem_middleware(...)` are backend plumbing for the filesystem tool surface, not additional model abilities.
 - `worker_light.utils.assets.validate_asset_source(...)` is an asset-serving guard, not a general agent tool.
-- `worker_light.utils.git.*` manages workspace repository state and skill sync. It supports the runtime, but it is not a separate tool contract for the model.
+- `worker_light.utils.git.*` manages workspace repository state and skill sync/promotion bookkeeping. It supports the runtime, but it is not a separate tool contract for the model.
 - `scripts/experiments/**` are evidence and measurement harnesses. They can justify a future helper contract, but they are not runtime tools themselves.
 
 ## Rules
 
 1. If a helper writes a benchmark-owned file, the ownership must be explicit and the helper must fail closed on missing inputs.
-2. If a helper depends on `simulation_result.json`, `benchmark_definition.yaml`, or `suggested_skills/`, the helper is not a general-purpose prompt primitive and usually belongs in the standalone training path.
+2. If a helper depends on `simulation_result.json`, `benchmark_definition.yaml`, or `suggested_skills/`, the helper is not a general-purpose prompt primitive and usually belongs in the standalone training path, where it resolves the active overlay first.
 3. If a helper reads render history, it must resolve a published bundle through the owning render contract, not through an unnamed latest alias alone.
 4. If a helper is only useful for one role family, the role gate must be visible in the runtime config rather than inferred from prose.
 5. If a helper needs a point coordinate from a render, it must validate the bundle snapshot before returning a world-space hit, and it must expose enough inputs to replay the exact bundle, view, and pixel choice later.

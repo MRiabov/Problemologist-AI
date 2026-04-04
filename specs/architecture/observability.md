@@ -148,6 +148,8 @@ We track the following structured domain events to compute the evaluation metric
 
 34. Codex skill-loop skill-update event (`skill_update`) with the follow-up prompt path, output path, trigger reason, updated skill paths, simulation/verification outcome, and the captured skill-update text.
 
+35. Codex skill-loop skill-promotion event (`skill_promotion`) with the active overlay path, approved base commit, target repo or branch, merge strategy, outcome (`published`, `conflict`, `escalated`, `rejected`), PR or commit metadata, and any conflicting skill paths.
+
 Visual-inspection-policy enforcement must also be reconstructable from traces even if we do not persist dedicated reminder events:
 
 1. When a role is subject to config-driven visual inspection (`config/agents_config.yaml`), the trace should make it possible to determine whether images existed, whether `inspect_media(...)` was called, and whether the configured minimum image count was satisfied.
@@ -203,6 +205,8 @@ We define (a growing list of) (aggregate) metrics:
 15. On-demand preview latency by modality, purpose, and requested view count: median preview time split by requested modality, render purpose, and requested view count.
 16. Visual-evidence usage rate: % of review attempts with available renders that actually called the media-inspection tool and attached media to the model.
 17. Visual-policy compliance rate by role: % of runs where roles configured with `visual_inspection.required=true` satisfied their current `min_images` requirement when render images were available.
+18. Skill publication latency: elapsed time from a `skill_update` event or overlay completion to successful promotion into canonical `skills/`.
+19. Skill promotion conflict rate: % of promotion attempts that required conflict resolution or human escalation.
 
 <!-- 1. Infrastructure/framework stability:
     - % of sessions completed successfully to their expected end and not failing under timeouts, container crashes, etc.LLM-suggested. -->
@@ -244,6 +248,7 @@ We decided on persisting a local `events.jsonl` file with all events for deeper 
 Codex skill-loop runs should emit self-reflection and skill-update records into a local `events.jsonl` sidecar under the run workspace, and the same records may later be promoted into the controller DB event stream when an episode-backed integration path exists. The full self-reflection text is intentionally retained for diagnostics and postmortem debugging.
 
 The retained episode bundle should also preserve the workspace inputs and outputs that influenced the run, including `prompt.md`, `plan.md`, `todo.md`, `journal.md`, `logs/skill_loop/journal.md`, `logs/skill_loop/context_snapshot.md`, review YAML, validation/simulation outputs, `plan_refusal.md` when present, and render bundles so later training can reconstruct the failure context without relying on a separate journalling agent or lossy summary pass. A standalone training CLI such as `train_skills.py` or equivalent can consume that bundle later.
+When the promotion arbiter publishes or rejects a skill diff, it should emit a traceable outcome record that links the originating session overlay back to the canonical skill-repo commit.
 
 ## Best practice: Give LLMs a way to complain
 

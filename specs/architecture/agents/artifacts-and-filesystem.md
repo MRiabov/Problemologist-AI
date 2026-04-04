@@ -26,6 +26,8 @@ seeded workspace in place without changing the conversation context.
 PromptManager consumes these prompt-context inputs when it materializes the runtime prompt.
 For CLI-provider-backed sessions, the runtime materializes the checked-in skill tree into `.agents/skills/` in the workspace. That copy is read-only runtime context, not canonical source. See [agent-skill.md](./agent-skill.md) for the source-tree and promotion contract.
 
+Skill-training sessions may additionally materialize `suggested_skills/` as a writable session-local worktree/checkpoint seeded from the approved `skills/` tree. That overlay is session-scoped, not canonical source, and the training loop should read it first when it exists. Publication back into canonical `skills/` happens through a separate promotion flow.
+
 Role-specific planner scaffolds remain in `shared/assets/template_repos/` and are copied into each workspace before node entry.
 `worker_light/agent_files/` is a legacy compatibility mirror for bootstrap and local inspection, not the canonical source of truth.
 

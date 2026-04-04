@@ -49,7 +49,7 @@ single manifest write:
    - benchmark and engineer coder skills
    - workspace prompt fragments if the refusal gate is advertised there
 6. Replay/training consumers:
-   - `specs/migrations/minor/codex-self-improving-skill-loop.md`
+   - `specs/migrations/minor/self-improving-skill-loop.md`
    - the standalone training/replay CLI or backend core that consumes retained
      bundles
 

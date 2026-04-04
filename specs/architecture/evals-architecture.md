@@ -147,20 +147,24 @@ All visual-inspection evals above are config-driven rather than prompt-only. The
 
 #### Medium evals - Skill Training Loop (Standalone)
 
-The skill-training path is a standalone replay/training loop over retained episode bundles, not a dedicated agent-graph stage. A capable CLI-provider session can still author the deltas, but the architecture measures the training loop by persisted artifacts and later reuse rather than by a separate journalling agent. The reusable resume/orchestration helpers should be factored out of `evals/logic/runner.py` so both the eval launcher and the training CLI can share them. Compatibility shims are allowed only as migration bridges; the long-term architecture should not preserve a shim-over-shim chain when a direct owning CLI or helper import can replace it.
+The skill-training path is a standalone replay/training loop over retained episode bundles, not a dedicated agent-graph stage. A capable CLI-provider session can still author the deltas, but the architecture measures the training loop by persisted artifacts and later reuse rather than by a separate journalling agent. The training loop should treat any session-local `suggested_skills/` checkout/worktree as the active overlay for that run, seeded from the approved `skills/` snapshot recorded in session metadata. Publication back into canonical `skills/` is handled by a separate promotion arbiter or release flow. The reusable resume/orchestration helpers should be factored out of `evals/logic/runner.py` so both the eval launcher and the training CLI can share them. Compatibility shims are allowed only as migration bridges; the long-term architecture should not preserve a shim-over-shim chain when a direct owning CLI or helper import can replace it.
 
 1. **Validity**: Generated skills (`SKILL.md`) are valid markdown/YAML and adhere to the skill schema in 100% of cases. (fast)
 2. **Utility**: Generated skills are referenced/used by other agents in subsequent similar tasks (requires long-term tracking). (long-term)
 3. **Non-duplication**: Generated skills do not duplicate existing skills (upon inspecting git changes after 30 turns- the skill rows aren't churned) (long-term) (not exactly an eval, but a tracking logic).
 4. **No overwrite**: Skills aren't overwritten from scratch in 100% of cases.
    - Skills can not be overwritten for more than 5 lines, to prevent catastrophic overwriting.
-5. **Retained bundle completeness**: The training bundle keeps `journal.md`, `logs/skill_loop/journal.md`, `logs/skill_loop/context_snapshot.md`, prompt snapshots, review YAML, validation/simulation outputs, render bundles, and `events.jsonl` long enough for `train_skills.py` or equivalent to replay the episode without reconstructing the transcript by hand.
+5. **Retained bundle completeness**: The training bundle keeps `journal.md`, `logs/skill_loop/journal.md`, `logs/skill_loop/context_snapshot.md`, prompt snapshots, review YAML, validation/simulation outputs, render bundles, and `events.jsonl` long enough for `train_skills.py` or equivalent to replay the episode without reconstructing the transcript by hand. The retained metadata should also preserve the approved skills-repo pin or checkout metadata used to seed the session overlay.
 
 #### Artifact retention and journaling
 
 1. Struggle detection: The agent detects and logs entries for 90% of "struggles" (failed tool calls > 4) detected in the logs.
 2. **Linkage**: 97% journal entries are correctly linked to a unique problem/observation ID.
 3. Retained episode bundles preserve the short outputs that downstream training needs: reviewer summary text, reviewer critique, self-analysis notes, and refusal artifacts.
+
+#### Publication and conflict handling
+
+Skill publication is separate from skill learning. When multiple session overlays produce conflicting changes to the same skill, a promotion arbiter should resolve or escalate against the approved base commit instead of letting the training loop silently drop one diff.
 
 ### Slow (essentially, production tasks)
 
