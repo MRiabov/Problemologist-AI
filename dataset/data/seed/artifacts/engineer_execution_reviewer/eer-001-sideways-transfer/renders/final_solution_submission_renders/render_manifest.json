@@ -1,98 +1,98 @@
 {
   "version": "1.0",
-  "bundle_id": "1bf4cb93-c4df-587d-8666-77867c051867",
-  "created_at": "2026-04-02T14:01:56.678812+00:00",
-  "episode_id": "02502551-29d0-50ed-a239-5c7d8228ba82",
-  "worker_session_id": "seed-renders-eer-012-sideways-transfer-fake-cots",
+  "bundle_id": "7e2bf317-9a39-567a-88bf-84159f480393",
+  "created_at": "2026-04-02T13:57:53.763120+00:00",
+  "episode_id": "d5ae9fb0-ffb4-5a77-9a7f-d1bc1a0e3008",
+  "worker_session_id": "seed-renders-eer-001-sideways-transfer",
   "revision": "30e2ea2e3eefabb156ace5197ff1673bdf77b1b2",
-  "scene_hash": "43efc78c4d45c5e59ac3f2ba7cb14c8c898e28d07d1e1a71f2dc876e62b8c606",
-  "bundle_path": "renders/final_preview_renders",
+  "scene_hash": "1591e66f0603d2952816c0b243f2357d86696139f3b76d26e70a86cbe8b49fb6",
+  "bundle_path": "renders/final_solution_submission_renders",
   "environment_version": "1.0",
   "preview_evidence_paths": [
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a0.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a0_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a0_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a45.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a45_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a45_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a90.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a90_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a90_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a135.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a135_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a135_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a180.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a180_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a180_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a225.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a225_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a225_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a270.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a270_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a270_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a315.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a315_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a315_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a0.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a0_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a0_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a45.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a45_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a45_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a90.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a90_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a90_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a135.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a135_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a135_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a180.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a180_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a180_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a225.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a225_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a225_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a270.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a270_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a270_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a315.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a315_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a315_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a0.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a0_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a0_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a45.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a45_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a45_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a90.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a90_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a90_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a135.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a135_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a135_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a180.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a180_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a180_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a225.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a225_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a225_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a270.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a270_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a270_segmentation.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a315.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a315_depth.png",
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a315_segmentation.png"
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a0.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a0_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a0_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a45.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a45_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a45_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a90.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a90_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a90_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a135.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a135_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a135_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a180.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a180_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a180_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a225.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a225_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a225_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a270.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a270_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a270_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a315.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a315_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a315_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a0.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a0_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a0_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a45.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a45_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a45_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a90.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a90_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a90_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a135.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a135_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a135_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a180.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a180_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a180_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a225.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a225_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a225_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a270.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a270_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a270_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a315.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a315_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a315_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a0.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a0_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a0_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a45.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a45_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a45_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a90.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a90_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a90_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a135.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a135_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a135_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a180.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a180_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a180_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a225.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a225_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a225_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a270.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a270_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a270_segmentation.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a315.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a315_depth.png",
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a315_segmentation.png"
   ],
   "artifacts": {
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a0.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a0.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e15_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a0.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a0_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a0_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a0.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -101,614 +101,614 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a0_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a0_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e15_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a0.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a0_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a0_segmentation.png",
-        "svg": null,
-        "dxf": null
-      },
-      "depth_min_m": 2784.5966796875,
-      "depth_max_m": 2929.484130859375,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
-      "segmentation_legend": []
-    },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a0_segmentation.png": {
-      "modality": "segmentation",
-      "group_key": "sideways_transfer_review_seed_render_e15_a0",
-      "view_index": null,
-      "orbit_pitch": null,
-      "orbit_yaw": null,
-      "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a0.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a0_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a0_segmentation.png",
-        "svg": null,
-        "dxf": null
-      },
-      "depth_min_m": null,
-      "depth_max_m": null,
-      "depth_interpretation": null,
-      "segmentation_legend": [
-        {
-          "instance_id": "base_plate",
-          "instance_name": "base_plate",
-          "semantic_label": "base_plate",
-          "object_type": "part",
-          "object_id": 0,
-          "body_name": "base_plate",
-          "geom_name": "base_plate",
-          "color_rgb": [
-            235,
-            59,
-            59
-          ],
-          "color_hex": "#eb3b3b"
-        },
-        {
-          "instance_id": "entry_funnel",
-          "instance_name": "entry_funnel",
-          "semantic_label": "entry_funnel",
-          "object_type": "part",
-          "object_id": 1,
-          "body_name": "entry_funnel",
-          "geom_name": "entry_funnel",
-          "color_rgb": [
-            59,
-            110,
-            235
-          ],
-          "color_hex": "#3b6eeb"
-        },
-        {
-          "instance_id": "roller_bed",
-          "instance_name": "roller_bed",
-          "semantic_label": "roller_bed",
-          "object_type": "part",
-          "object_id": 2,
-          "body_name": "roller_bed",
-          "geom_name": "roller_bed",
-          "color_rgb": [
-            161,
-            235,
-            59
-          ],
-          "color_hex": "#a1eb3b"
-        },
-        {
-          "instance_id": "idler_guide",
-          "instance_name": "idler_guide",
-          "semantic_label": "idler_guide",
-          "object_type": "part",
-          "object_id": 3,
-          "body_name": "idler_guide",
-          "geom_name": "idler_guide",
-          "color_rgb": [
-            235,
-            59,
-            213
-          ],
-          "color_hex": "#eb3bd5"
-        },
-        {
-          "instance_id": "goal_tray",
-          "instance_name": "goal_tray",
-          "semantic_label": "goal_tray",
-          "object_type": "part",
-          "object_id": 4,
-          "body_name": "goal_tray",
-          "geom_name": "goal_tray",
-          "color_rgb": [
-            59,
-            235,
-            205
-          ],
-          "color_hex": "#3bebcd"
-        },
-        {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
-          "object_type": "part",
-          "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
-          "color_rgb": [
-            235,
-            154,
-            59
-          ],
-          "color_hex": "#eb9a3b"
-        }
-      ]
-    },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a45.png": {
-      "modality": "rgb",
-      "group_key": "sideways_transfer_review_seed_render_e15_a45",
-      "view_index": null,
-      "orbit_pitch": null,
-      "orbit_yaw": null,
-      "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a45.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a45_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a45_segmentation.png",
-        "svg": null,
-        "dxf": null
-      },
-      "depth_min_m": null,
-      "depth_max_m": null,
-      "depth_interpretation": null,
-      "segmentation_legend": []
-    },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a45_depth.png": {
-      "modality": "depth",
-      "group_key": "sideways_transfer_review_seed_render_e15_a45",
-      "view_index": null,
-      "orbit_pitch": null,
-      "orbit_yaw": null,
-      "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a45.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a45_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a45_segmentation.png",
-        "svg": null,
-        "dxf": null
-      },
-      "depth_min_m": 2444.7890625,
-      "depth_max_m": 3285.0625,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
-      "segmentation_legend": []
-    },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a45_segmentation.png": {
-      "modality": "segmentation",
-      "group_key": "sideways_transfer_review_seed_render_e15_a45",
-      "view_index": null,
-      "orbit_pitch": null,
-      "orbit_yaw": null,
-      "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a45.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a45_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a45_segmentation.png",
-        "svg": null,
-        "dxf": null
-      },
-      "depth_min_m": null,
-      "depth_max_m": null,
-      "depth_interpretation": null,
-      "segmentation_legend": [
-        {
-          "instance_id": "base_plate",
-          "instance_name": "base_plate",
-          "semantic_label": "base_plate",
-          "object_type": "part",
-          "object_id": 0,
-          "body_name": "base_plate",
-          "geom_name": "base_plate",
-          "color_rgb": [
-            235,
-            59,
-            59
-          ],
-          "color_hex": "#eb3b3b"
-        },
-        {
-          "instance_id": "entry_funnel",
-          "instance_name": "entry_funnel",
-          "semantic_label": "entry_funnel",
-          "object_type": "part",
-          "object_id": 1,
-          "body_name": "entry_funnel",
-          "geom_name": "entry_funnel",
-          "color_rgb": [
-            59,
-            110,
-            235
-          ],
-          "color_hex": "#3b6eeb"
-        },
-        {
-          "instance_id": "roller_bed",
-          "instance_name": "roller_bed",
-          "semantic_label": "roller_bed",
-          "object_type": "part",
-          "object_id": 2,
-          "body_name": "roller_bed",
-          "geom_name": "roller_bed",
-          "color_rgb": [
-            161,
-            235,
-            59
-          ],
-          "color_hex": "#a1eb3b"
-        },
-        {
-          "instance_id": "idler_guide",
-          "instance_name": "idler_guide",
-          "semantic_label": "idler_guide",
-          "object_type": "part",
-          "object_id": 3,
-          "body_name": "idler_guide",
-          "geom_name": "idler_guide",
-          "color_rgb": [
-            235,
-            59,
-            213
-          ],
-          "color_hex": "#eb3bd5"
-        },
-        {
-          "instance_id": "goal_tray",
-          "instance_name": "goal_tray",
-          "semantic_label": "goal_tray",
-          "object_type": "part",
-          "object_id": 4,
-          "body_name": "goal_tray",
-          "geom_name": "goal_tray",
-          "color_rgb": [
-            59,
-            235,
-            205
-          ],
-          "color_hex": "#3bebcd"
-        },
-        {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
-          "object_type": "part",
-          "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
-          "color_rgb": [
-            235,
-            154,
-            59
-          ],
-          "color_hex": "#eb9a3b"
-        }
-      ]
-    },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a90.png": {
-      "modality": "rgb",
-      "group_key": "sideways_transfer_review_seed_render_e15_a90",
-      "view_index": null,
-      "orbit_pitch": null,
-      "orbit_yaw": null,
-      "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a90.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a90_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a90_segmentation.png",
-        "svg": null,
-        "dxf": null
-      },
-      "depth_min_m": null,
-      "depth_max_m": null,
-      "depth_interpretation": null,
-      "segmentation_legend": []
-    },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a90_depth.png": {
-      "modality": "depth",
-      "group_key": "sideways_transfer_review_seed_render_e15_a90",
-      "view_index": null,
-      "orbit_pitch": null,
-      "orbit_yaw": null,
-      "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a90.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a90_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a90_segmentation.png",
-        "svg": null,
-        "dxf": null
-      },
-      "depth_min_m": 2326.570556640625,
-      "depth_max_m": 3397.532958984375,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
-      "segmentation_legend": []
-    },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a90_segmentation.png": {
-      "modality": "segmentation",
-      "group_key": "sideways_transfer_review_seed_render_e15_a90",
-      "view_index": null,
-      "orbit_pitch": null,
-      "orbit_yaw": null,
-      "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a90.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a90_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a90_segmentation.png",
-        "svg": null,
-        "dxf": null
-      },
-      "depth_min_m": null,
-      "depth_max_m": null,
-      "depth_interpretation": null,
-      "segmentation_legend": [
-        {
-          "instance_id": "base_plate",
-          "instance_name": "base_plate",
-          "semantic_label": "base_plate",
-          "object_type": "part",
-          "object_id": 0,
-          "body_name": "base_plate",
-          "geom_name": "base_plate",
-          "color_rgb": [
-            235,
-            59,
-            59
-          ],
-          "color_hex": "#eb3b3b"
-        },
-        {
-          "instance_id": "entry_funnel",
-          "instance_name": "entry_funnel",
-          "semantic_label": "entry_funnel",
-          "object_type": "part",
-          "object_id": 1,
-          "body_name": "entry_funnel",
-          "geom_name": "entry_funnel",
-          "color_rgb": [
-            59,
-            110,
-            235
-          ],
-          "color_hex": "#3b6eeb"
-        },
-        {
-          "instance_id": "roller_bed",
-          "instance_name": "roller_bed",
-          "semantic_label": "roller_bed",
-          "object_type": "part",
-          "object_id": 2,
-          "body_name": "roller_bed",
-          "geom_name": "roller_bed",
-          "color_rgb": [
-            161,
-            235,
-            59
-          ],
-          "color_hex": "#a1eb3b"
-        },
-        {
-          "instance_id": "idler_guide",
-          "instance_name": "idler_guide",
-          "semantic_label": "idler_guide",
-          "object_type": "part",
-          "object_id": 3,
-          "body_name": "idler_guide",
-          "geom_name": "idler_guide",
-          "color_rgb": [
-            235,
-            59,
-            213
-          ],
-          "color_hex": "#eb3bd5"
-        },
-        {
-          "instance_id": "goal_tray",
-          "instance_name": "goal_tray",
-          "semantic_label": "goal_tray",
-          "object_type": "part",
-          "object_id": 4,
-          "body_name": "goal_tray",
-          "geom_name": "goal_tray",
-          "color_rgb": [
-            59,
-            235,
-            205
-          ],
-          "color_hex": "#3bebcd"
-        },
-        {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
-          "object_type": "part",
-          "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
-          "color_rgb": [
-            235,
-            154,
-            59
-          ],
-          "color_hex": "#eb9a3b"
-        }
-      ]
-    },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a135.png": {
-      "modality": "rgb",
-      "group_key": "sideways_transfer_review_seed_render_e15_a135",
-      "view_index": null,
-      "orbit_pitch": null,
-      "orbit_yaw": null,
-      "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a135.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a135_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a135_segmentation.png",
-        "svg": null,
-        "dxf": null
-      },
-      "depth_min_m": null,
-      "depth_max_m": null,
-      "depth_interpretation": null,
-      "segmentation_legend": []
-    },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a135_depth.png": {
-      "modality": "depth",
-      "group_key": "sideways_transfer_review_seed_render_e15_a135",
-      "view_index": null,
-      "orbit_pitch": null,
-      "orbit_yaw": null,
-      "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a135.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a135_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a135_segmentation.png",
-        "svg": null,
-        "dxf": null
-      },
-      "depth_min_m": 2444.7890625,
-      "depth_max_m": 3285.0625,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
-      "segmentation_legend": []
-    },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a135_segmentation.png": {
-      "modality": "segmentation",
-      "group_key": "sideways_transfer_review_seed_render_e15_a135",
-      "view_index": null,
-      "orbit_pitch": null,
-      "orbit_yaw": null,
-      "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a135.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a135_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a135_segmentation.png",
-        "svg": null,
-        "dxf": null
-      },
-      "depth_min_m": null,
-      "depth_max_m": null,
-      "depth_interpretation": null,
-      "segmentation_legend": [
-        {
-          "instance_id": "base_plate",
-          "instance_name": "base_plate",
-          "semantic_label": "base_plate",
-          "object_type": "part",
-          "object_id": 0,
-          "body_name": "base_plate",
-          "geom_name": "base_plate",
-          "color_rgb": [
-            235,
-            59,
-            59
-          ],
-          "color_hex": "#eb3b3b"
-        },
-        {
-          "instance_id": "entry_funnel",
-          "instance_name": "entry_funnel",
-          "semantic_label": "entry_funnel",
-          "object_type": "part",
-          "object_id": 1,
-          "body_name": "entry_funnel",
-          "geom_name": "entry_funnel",
-          "color_rgb": [
-            59,
-            110,
-            235
-          ],
-          "color_hex": "#3b6eeb"
-        },
-        {
-          "instance_id": "roller_bed",
-          "instance_name": "roller_bed",
-          "semantic_label": "roller_bed",
-          "object_type": "part",
-          "object_id": 2,
-          "body_name": "roller_bed",
-          "geom_name": "roller_bed",
-          "color_rgb": [
-            161,
-            235,
-            59
-          ],
-          "color_hex": "#a1eb3b"
-        },
-        {
-          "instance_id": "idler_guide",
-          "instance_name": "idler_guide",
-          "semantic_label": "idler_guide",
-          "object_type": "part",
-          "object_id": 3,
-          "body_name": "idler_guide",
-          "geom_name": "idler_guide",
-          "color_rgb": [
-            235,
-            59,
-            213
-          ],
-          "color_hex": "#eb3bd5"
-        },
-        {
-          "instance_id": "goal_tray",
-          "instance_name": "goal_tray",
-          "semantic_label": "goal_tray",
-          "object_type": "part",
-          "object_id": 4,
-          "body_name": "goal_tray",
-          "geom_name": "goal_tray",
-          "color_rgb": [
-            59,
-            235,
-            205
-          ],
-          "color_hex": "#3bebcd"
-        },
-        {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
-          "object_type": "part",
-          "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
-          "color_rgb": [
-            235,
-            154,
-            59
-          ],
-          "color_hex": "#eb9a3b"
-        }
-      ]
-    },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a180.png": {
-      "modality": "rgb",
-      "group_key": "sideways_transfer_review_seed_render_e15_a180",
-      "view_index": null,
-      "orbit_pitch": null,
-      "orbit_yaw": null,
-      "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a180.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a180_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a180_segmentation.png",
-        "svg": null,
-        "dxf": null
-      },
-      "depth_min_m": null,
-      "depth_max_m": null,
-      "depth_interpretation": null,
-      "segmentation_legend": []
-    },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a180_depth.png": {
-      "modality": "depth",
-      "group_key": "sideways_transfer_review_seed_render_e15_a180",
-      "view_index": null,
-      "orbit_pitch": null,
-      "orbit_yaw": null,
-      "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a180.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a180_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a0.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2789.901611328125,
       "depth_max_m": 2929.484130859375,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a180_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a0_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "sideways_transfer_review_seed_render_e15_a0",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a0.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a0_segmentation.png",
+        "svg": null,
+        "dxf": null
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a45.png": {
+      "modality": "rgb",
+      "group_key": "sideways_transfer_review_seed_render_e15_a45",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a45.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a45_segmentation.png",
+        "svg": null,
+        "dxf": null
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a45_depth.png": {
+      "modality": "depth",
+      "group_key": "sideways_transfer_review_seed_render_e15_a45",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a45.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a45_segmentation.png",
+        "svg": null,
+        "dxf": null
+      },
+      "depth_min_m": 2444.7890625,
+      "depth_max_m": 3285.0625,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a45_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "sideways_transfer_review_seed_render_e15_a45",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a45.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a45_segmentation.png",
+        "svg": null,
+        "dxf": null
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a90.png": {
+      "modality": "rgb",
+      "group_key": "sideways_transfer_review_seed_render_e15_a90",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a90.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a90_segmentation.png",
+        "svg": null,
+        "dxf": null
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a90_depth.png": {
+      "modality": "depth",
+      "group_key": "sideways_transfer_review_seed_render_e15_a90",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a90.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a90_segmentation.png",
+        "svg": null,
+        "dxf": null
+      },
+      "depth_min_m": 2326.570556640625,
+      "depth_max_m": 3397.532958984375,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a90_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "sideways_transfer_review_seed_render_e15_a90",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a90.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a90_segmentation.png",
+        "svg": null,
+        "dxf": null
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a135.png": {
+      "modality": "rgb",
+      "group_key": "sideways_transfer_review_seed_render_e15_a135",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a135.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a135_segmentation.png",
+        "svg": null,
+        "dxf": null
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a135_depth.png": {
+      "modality": "depth",
+      "group_key": "sideways_transfer_review_seed_render_e15_a135",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a135.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a135_segmentation.png",
+        "svg": null,
+        "dxf": null
+      },
+      "depth_min_m": 2444.7890625,
+      "depth_max_m": 3285.0625,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a135_segmentation.png": {
+      "modality": "segmentation",
+      "group_key": "sideways_transfer_review_seed_render_e15_a135",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a135.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a135_segmentation.png",
+        "svg": null,
+        "dxf": null
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": [
+        {
+          "instance_id": "base_plate",
+          "instance_name": "base_plate",
+          "semantic_label": "base_plate",
+          "object_type": "part",
+          "object_id": 0,
+          "body_name": "base_plate",
+          "geom_name": "base_plate",
+          "color_rgb": [
+            235,
+            59,
+            59
+          ],
+          "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "entry_funnel",
+          "instance_name": "entry_funnel",
+          "semantic_label": "entry_funnel",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "entry_funnel",
+          "geom_name": "entry_funnel",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
+        },
+        {
+          "instance_id": "roller_bed",
+          "instance_name": "roller_bed",
+          "semantic_label": "roller_bed",
+          "object_type": "part",
+          "object_id": 2,
+          "body_name": "roller_bed",
+          "geom_name": "roller_bed",
+          "color_rgb": [
+            161,
+            235,
+            59
+          ],
+          "color_hex": "#a1eb3b"
+        },
+        {
+          "instance_id": "idler_guide",
+          "instance_name": "idler_guide",
+          "semantic_label": "idler_guide",
+          "object_type": "part",
+          "object_id": 3,
+          "body_name": "idler_guide",
+          "geom_name": "idler_guide",
+          "color_rgb": [
+            235,
+            59,
+            213
+          ],
+          "color_hex": "#eb3bd5"
+        },
+        {
+          "instance_id": "goal_tray",
+          "instance_name": "goal_tray",
+          "semantic_label": "goal_tray",
+          "object_type": "part",
+          "object_id": 4,
+          "body_name": "goal_tray",
+          "geom_name": "goal_tray",
+          "color_rgb": [
+            59,
+            235,
+            205
+          ],
+          "color_hex": "#3bebcd"
+        },
+        {
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
+          "object_type": "part",
+          "object_id": 5,
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
+          "color_rgb": [
+            235,
+            154,
+            59
+          ],
+          "color_hex": "#eb9a3b"
+        }
+      ]
+    },
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a180.png": {
+      "modality": "rgb",
+      "group_key": "sideways_transfer_review_seed_render_e15_a180",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a180.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a180_segmentation.png",
+        "svg": null,
+        "dxf": null
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a180_depth.png": {
+      "modality": "depth",
+      "group_key": "sideways_transfer_review_seed_render_e15_a180",
+      "view_index": null,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a180.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a180_segmentation.png",
+        "svg": null,
+        "dxf": null
+      },
+      "depth_min_m": 2789.901611328125,
+      "depth_max_m": 2929.484130859375,
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "segmentation_legend": []
+    },
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a180_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e15_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a180.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a180_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a180.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -792,13 +792,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -808,16 +808,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a225.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a225.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e15_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a225.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a225_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a225.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -826,34 +826,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a225_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a225_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e15_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a225.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a225_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a225.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2444.30224609375,
       "depth_max_m": 3286.2294921875,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a225_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a225_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e15_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a225.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a225_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a225.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -937,13 +937,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -953,16 +953,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a270.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a270.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e15_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a270.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a270_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a270.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -971,34 +971,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a270_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a270_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e15_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a270.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a270_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a270.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2335.837646484375,
       "depth_max_m": 3408.115234375,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a270_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a270_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e15_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a270.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a270_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a270.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1082,13 +1082,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -1098,16 +1098,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a315.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a315.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e15_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a315.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a315_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a315.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1116,34 +1116,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a315_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a315_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e15_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a315.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a315_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a315.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2444.302490234375,
       "depth_max_m": 3286.229736328125,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a315_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a315_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e15_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a315.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a315_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e15_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a315.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e15_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1227,13 +1227,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -1243,16 +1243,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a0.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a0.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e45_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a0.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a0_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a0_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a0.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1261,34 +1261,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a0_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a0_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e45_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a0.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a0_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a0_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a0.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 2818.267333984375,
+      "depth_min_m": 2828.67333984375,
       "depth_max_m": 2969.1650390625,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a0_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a0_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e45_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a0.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a0_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a0_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a0.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1372,13 +1372,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -1388,16 +1388,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a45.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a45.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e45_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a45.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a45_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a45_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a45.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1406,34 +1406,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a45_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a45_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e45_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a45.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a45_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a45_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a45.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2588.697509765625,
       "depth_max_m": 3204.666015625,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a45_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a45_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e45_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a45.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a45_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a45_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a45.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1517,13 +1517,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -1533,16 +1533,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a90.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a90.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e45_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a90.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a90_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a90_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a90.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1551,34 +1551,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a90_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a90_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e45_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a90.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a90_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a90_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a90.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2502.4296875,
       "depth_max_m": 3284.5576171875,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a90_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a90_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e45_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a90.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a90_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a90_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a90.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1662,13 +1662,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -1678,16 +1678,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a135.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a135.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e45_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a135.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a135_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a135_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a135.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1696,34 +1696,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a135_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a135_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e45_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a135.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a135_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a135_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a135.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2588.697509765625,
       "depth_max_m": 3204.666015625,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a135_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a135_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e45_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a135.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a135_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a135_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a135.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1807,13 +1807,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -1823,16 +1823,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a180.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a180.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e45_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a180.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a180_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a180.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1841,34 +1841,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a180_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a180_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e45_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a180.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a180_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a180.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2847.35986328125,
       "depth_max_m": 2969.1650390625,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a180_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a180_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e45_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a180.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a180_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a180.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1952,13 +1952,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -1968,16 +1968,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a225.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a225.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e45_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a225.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a225_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a225.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1986,34 +1986,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a225_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a225_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e45_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a225.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a225_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a225.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2587.1767578125,
       "depth_max_m": 3206.08056640625,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a225_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a225_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e45_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a225.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a225_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a225.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -2097,13 +2097,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -2113,16 +2113,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a270.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a270.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e45_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a270.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a270_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a270.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -2131,34 +2131,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a270_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a270_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e45_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a270.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a270_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a270.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2507.174072265625,
       "depth_max_m": 3293.636962890625,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a270_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a270_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e45_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a270.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a270_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a270.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -2242,13 +2242,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -2258,16 +2258,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a315.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a315.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e45_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a315.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a315_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a315.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -2276,34 +2276,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a315_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a315_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e45_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a315.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a315_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a315.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2587.1767578125,
       "depth_max_m": 3206.08056640625,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a315_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a315_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e45_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a315.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a315_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e45_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a315.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e45_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -2387,13 +2387,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -2403,16 +2403,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a0.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a0.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e75_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a0.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a0_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a0_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a0.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -2421,34 +2421,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a0_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a0_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e75_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a0.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a0_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a0_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a0.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 2859.39892578125,
+      "depth_min_m": 2863.622314453125,
       "depth_max_m": 2953.73095703125,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a0_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a0_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e75_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a0.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a0_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a0_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a0.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -2532,13 +2532,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -2548,16 +2548,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a45.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a45.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e75_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a45.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a45_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a45_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a45.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -2566,34 +2566,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a45_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a45_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e75_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a45.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a45_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a45_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a45.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2802.249755859375,
       "depth_max_m": 3037.080078125,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a45_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a45_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e75_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a45.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a45_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a45_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a45.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -2677,13 +2677,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -2693,16 +2693,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a90.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a90.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e75_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a90.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a90_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a90_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a90.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -2711,34 +2711,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a90_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a90_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e75_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a90.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a90_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a90_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a90.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2770.43359375,
       "depth_max_m": 3058.360107421875,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a90_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a90_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e75_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a90.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a90_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a90_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a90.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -2822,13 +2822,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -2838,16 +2838,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a135.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a135.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e75_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a135.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a135_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a135_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a135.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -2856,34 +2856,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a135_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a135_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e75_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a135.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a135_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a135_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a135.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2802.249755859375,
       "depth_max_m": 3037.080078125,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a135_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a135_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e75_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a135.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a135_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a135_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a135.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -2967,13 +2967,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -2983,16 +2983,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a180.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a180.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e75_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a180.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a180_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a180.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -3001,34 +3001,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a180_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a180_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e75_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a180.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a180_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a180.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2884.98291015625,
       "depth_max_m": 2953.73095703125,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a180_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a180_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e75_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a180.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a180_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a180.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -3112,13 +3112,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -3128,16 +3128,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a225.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a225.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e75_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a225.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a225_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a225.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -3146,34 +3146,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a225_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a225_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e75_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a225.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a225_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a225.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2799.765625,
       "depth_max_m": 3038.774658203125,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a225_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a225_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e75_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a225.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a225_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a225.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -3257,13 +3257,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -3273,16 +3273,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a270.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a270.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e75_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a270.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a270_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a270.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -3291,34 +3291,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a270_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a270_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e75_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a270.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a270_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a270.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2770.435546875,
       "depth_max_m": 3059.748291015625,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a270_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a270_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e75_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a270.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a270_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a270.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -3402,13 +3402,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,
@@ -3418,16 +3418,16 @@
         }
       ]
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a315.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a315.png": {
       "modality": "rgb",
       "group_key": "sideways_transfer_review_seed_render_e75_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a315.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a315_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a315.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -3436,34 +3436,34 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a315_depth.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a315_depth.png": {
       "modality": "depth",
       "group_key": "sideways_transfer_review_seed_render_e75_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a315.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a315_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a315.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
       "depth_min_m": 2799.765625,
       "depth_max_m": 3038.7744140625,
-      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
+      "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the renderer worker's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a315_segmentation.png": {
+    "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a315_segmentation.png": {
       "modality": "segmentation",
       "group_key": "sideways_transfer_review_seed_render_e75_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a315.jpg",
-        "depth": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a315_depth.png",
-        "segmentation": "renders/final_preview_renders/sideways_transfer_review_seed_render_e75_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a315.jpg",
+        "depth": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/sideways_transfer_review_seed_render_e75_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -3547,13 +3547,13 @@
           "color_hex": "#3bebcd"
         },
         {
-          "instance_id": "ServoMotor_DS3218",
-          "instance_name": "ServoMotor_DS3218",
-          "semantic_label": "ServoMotor_DS3218",
+          "instance_id": "drive_motor",
+          "instance_name": "drive_motor",
+          "semantic_label": "drive_motor",
           "object_type": "part",
           "object_id": 5,
-          "body_name": "ServoMotor_DS3218",
-          "geom_name": "ServoMotor_DS3218",
+          "body_name": "drive_motor",
+          "geom_name": "drive_motor",
           "color_rgb": [
             235,
             154,

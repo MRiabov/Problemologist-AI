@@ -1,0 +1,331 @@
+{
+  "component_label": "raised_shelf_lift_review_seed",
+  "entities": [
+    {
+      "label": "base_frame",
+      "semantic_label": "base_frame",
+      "instance_id": "base_frame",
+      "instance_name": "base_frame",
+      "object_type": "part",
+      "object_id": 0,
+      "pos": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/base_frame.obj"
+      ],
+      "box_size": null,
+      "material_id": "aluminum_6061",
+      "body_name": "base_frame",
+      "geom_name": "base_frame",
+      "zone_type": null,
+      "color_rgba": [
+        0.7529411764705882,
+        0.7529411764705882,
+        0.7529411764705882,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        235,
+        59,
+        59
+      ],
+      "include_in_segmentation": true
+    },
+    {
+      "label": "support_tower",
+      "semantic_label": "support_tower",
+      "instance_id": "support_tower",
+      "instance_name": "support_tower",
+      "object_type": "part",
+      "object_id": 1,
+      "pos": [
+        -190.0,
+        0.0,
+        12.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/support_tower.obj"
+      ],
+      "box_size": null,
+      "material_id": "aluminum_6061",
+      "body_name": "support_tower",
+      "geom_name": "support_tower",
+      "zone_type": null,
+      "color_rgba": [
+        0.7529411764705882,
+        0.7529411764705882,
+        0.7529411764705882,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        59,
+        110,
+        235
+      ],
+      "include_in_segmentation": true
+    },
+    {
+      "label": "lift_carriage",
+      "semantic_label": "lift_carriage",
+      "instance_id": "lift_carriage",
+      "instance_name": "lift_carriage",
+      "object_type": "part",
+      "object_id": 2,
+      "pos": [
+        30.0,
+        0.0,
+        180.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/lift_carriage.obj"
+      ],
+      "box_size": null,
+      "material_id": "hdpe",
+      "body_name": "lift_carriage",
+      "geom_name": "lift_carriage",
+      "zone_type": null,
+      "color_rgba": [
+        0.9450980392156862,
+        0.9607843137254902,
+        0.9764705882352941,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        161,
+        235,
+        59
+      ],
+      "include_in_segmentation": true
+    },
+    {
+      "label": "handoff_shelf",
+      "semantic_label": "handoff_shelf",
+      "instance_id": "handoff_shelf",
+      "instance_name": "handoff_shelf",
+      "object_type": "part",
+      "object_id": 3,
+      "pos": [
+        210.0,
+        0.0,
+        250.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/handoff_shelf.obj"
+      ],
+      "box_size": null,
+      "material_id": "hdpe",
+      "body_name": "handoff_shelf",
+      "geom_name": "handoff_shelf",
+      "zone_type": null,
+      "color_rgba": [
+        0.9450980392156862,
+        0.9607843137254902,
+        0.9764705882352941,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        235,
+        59,
+        213
+      ],
+      "include_in_segmentation": true
+    },
+    {
+      "label": "lift_motor",
+      "semantic_label": "lift_motor",
+      "instance_id": "lift_motor",
+      "instance_name": "lift_motor",
+      "object_type": "part",
+      "object_id": 4,
+      "pos": [
+        -170.0,
+        -80.0,
+        38.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/lift_motor.obj"
+      ],
+      "box_size": null,
+      "material_id": "cots-generic",
+      "body_name": "lift_motor",
+      "geom_name": "lift_motor",
+      "zone_type": null,
+      "color_rgba": [
+        0.62,
+        0.67,
+        0.73,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        59,
+        235,
+        205
+      ],
+      "include_in_segmentation": true
+    },
+    {
+      "label": "zone_goal",
+      "semantic_label": "zone_goal",
+      "instance_id": "zone_goal",
+      "instance_name": "zone_goal",
+      "object_type": "zone",
+      "object_id": 5,
+      "pos": [
+        375.0,
+        0.0,
+        260.0
+      ],
+      "euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mesh_paths": [],
+      "box_size": [
+        55.0,
+        55.0,
+        40.0
+      ],
+      "material_id": null,
+      "body_name": null,
+      "geom_name": null,
+      "zone_type": "goal",
+      "color_rgba": [
+        0.2,
+        0.72,
+        0.34,
+        0.22
+      ],
+      "segmentation_color_rgb": [
+        235,
+        154,
+        59
+      ],
+      "include_in_segmentation": false
+    },
+    {
+      "label": "zone_forbid_0_shelf_support_clearance",
+      "semantic_label": "zone_forbid_0_shelf_support_clearance",
+      "instance_id": "zone_forbid_0_shelf_support_clearance",
+      "instance_name": "zone_forbid_0_shelf_support_clearance",
+      "object_type": "zone",
+      "object_id": 6,
+      "pos": [
+        230.0,
+        0.0,
+        105.0
+      ],
+      "euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mesh_paths": [],
+      "box_size": [
+        50.0,
+        95.0,
+        105.0
+      ],
+      "material_id": null,
+      "body_name": null,
+      "geom_name": null,
+      "zone_type": "forbid",
+      "color_rgba": [
+        0.83,
+        0.2,
+        0.2,
+        0.2
+      ],
+      "segmentation_color_rgb": [
+        103,
+        59,
+        235
+      ],
+      "include_in_segmentation": false
+    },
+    {
+      "label": "zone_build",
+      "semantic_label": "zone_build",
+      "instance_id": "zone_build",
+      "instance_name": "zone_build",
+      "object_type": "zone",
+      "object_id": 7,
+      "pos": [
+        105.0,
+        0.0,
+        170.0
+      ],
+      "euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mesh_paths": [],
+      "box_size": [
+        365.0,
+        180.0,
+        170.0
+      ],
+      "material_id": null,
+      "body_name": null,
+      "geom_name": null,
+      "zone_type": "build",
+      "color_rgba": [
+        0.55,
+        0.55,
+        0.55,
+        0.14
+      ],
+      "segmentation_color_rgb": [
+        66,
+        235,
+        59
+      ],
+      "include_in_segmentation": false
+    }
+  ],
+  "bounds_min": [
+    -310.0,
+    -180.0,
+    0.0
+  ],
+  "bounds_max": [
+    470.0,
+    180.0,
+    340.0
+  ],
+  "center": [
+    80.0,
+    0.0,
+    170.0
+  ],
+  "diagonal": 923.9047569960878
+}
