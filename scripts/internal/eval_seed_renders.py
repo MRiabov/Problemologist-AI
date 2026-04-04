@@ -18,6 +18,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import colorsys
+
 from shared.agents import get_image_render_resolution
 from shared.enums import AgentName
 from shared.git_utils import repo_revision
@@ -33,12 +35,71 @@ from shared.script_contracts import (
     SOLUTION_SCRIPT_PATH,
     authored_script_path_for_agent,
 )
+from shared.workers.loader import load_component_from_script
 from shared.workers.schema import (
     RenderArtifactMetadata,
     RenderManifest,
     RenderSiblingPaths,
     SegmentationLegendEntry,
 )
+
+
+def _zone_color(zone_type: str) -> tuple[float, float, float, float]:
+    if zone_type == "goal":
+        return (0.20, 0.72, 0.34, 0.22)
+    if zone_type == "build":
+        return (0.55, 0.55, 0.55, 0.14)
+    return (0.83, 0.20, 0.20, 0.20)
+
+
+def _unique_color(index: int) -> tuple[int, int, int]:
+    hue = (index * 0.61803398875) % 1.0
+    saturation = 0.75
+    value = 0.92
+    red, green, blue = colorsys.hsv_to_rgb(hue, saturation, value)
+    return (
+        int(round(red * 255.0)),
+        int(round(green * 255.0)),
+        int(round(blue * 255.0)),
+    )
+
+
+def _preview_camera_distance(
+    scene: Compound,
+    *,
+    width: int,
+    height: int,
+    view_angle_deg: float = 30.0,
+    framing_margin: float = 1.2,
+) -> float:
+    aspect_ratio = max(float(width) / max(float(height), 1.0), 1e-6)
+    half_vertical_fov = math.radians(max(view_angle_deg, 1e-3) / 2.0)
+    half_horizontal_fov = math.atan(math.tan(half_vertical_fov) * aspect_ratio)
+    limiting_half_fov = max(min(half_vertical_fov, half_horizontal_fov), 1e-3)
+
+    # Simple radius estimate for the compound
+    bbox = scene.bounding_box()
+    diagonal = math.sqrt(bbox.xlen**2 + bbox.ylen**2 + bbox.zlen**2)
+    radius = max(diagonal * 0.5, 0.5)
+    return max(
+        (radius / math.sin(limiting_half_fov)) * framing_margin,
+        radius + 0.5,
+    )
+
+
+def camera_position_from_orbit(
+    center: tuple[float, float, float],
+    distance: float,
+    elevation_deg: float,
+    azimuth_deg: float,
+) -> tuple[float, float, float]:
+    rad_azim = math.radians(azimuth_deg)
+    rad_elev = math.radians(elevation_deg)
+    x = center[0] + distance * math.cos(rad_elev) * math.sin(rad_azim)
+    y = center[1] - distance * math.cos(rad_elev) * math.cos(rad_azim)
+    z = center[2] - distance * math.sin(rad_elev)
+    return (x, y, z)
+
 
 _NO_RENDER_ROLE = {
     "benchmark_plan_reviewer",

@@ -791,8 +791,7 @@ async def test_int_212_utils_preview_materializes_modality_manifest_and_depth_ar
         assert "PREVIEW_STATUS=Preview generated successfully" in exec_data.stdout
         assert "PREVIEW_RENDERING_TYPE=depth" in exec_data.stdout
         assert (
-            "PREVIEW_MANIFEST_PATH=renders/engineer_renders/render_manifest.json"
-            in exec_data.stdout
+            "PREVIEW_MANIFEST_PATH=renders/tmp/render_manifest.json" in exec_data.stdout
         )
         assert "PREVIEW_PITCH=-35.0" in exec_data.stdout
         assert "PREVIEW_YAW=45.0" in exec_data.stdout
@@ -802,7 +801,7 @@ async def test_int_212_utils_preview_materializes_modality_manifest_and_depth_ar
             if line.startswith("PREVIEW_ARTIFACT_PATH=")
         )
         artifact_path = artifact_line.split("=", 1)[1]
-        assert artifact_path.startswith("renders/engineer_renders/"), artifact_path
+        assert artifact_path.startswith("renders/tmp/"), artifact_path
         assert artifact_path.endswith("_depth.png"), artifact_path
         manifest_path = _manifest_path_for_artifact(artifact_path)
 
@@ -863,14 +862,11 @@ async def test_int_213_controller_preview_route_materializes_depth_artifact_via_
         assert preview_data.success, preview_data.message
         assert preview_data.status_text == "Preview generated successfully"
         assert preview_data.rendering_type.value == "depth"
-        assert (
-            preview_data.manifest_path
-            == "renders/engineer_renders/render_manifest.json"
-        )
+        assert preview_data.manifest_path == "renders/tmp/render_manifest.json"
         assert preview_data.pitch == -35.0
         assert preview_data.yaw == 45.0
         assert preview_data.artifact_path is not None
-        assert preview_data.artifact_path.startswith("renders/engineer_renders/")
+        assert preview_data.artifact_path.startswith("renders/tmp/")
         assert preview_data.artifact_path.endswith("_depth.png")
         preview_manifest_path = _manifest_path_for_artifact(preview_data.artifact_path)
 
@@ -932,7 +928,7 @@ async def test_int_214_utils_preview_normalizes_multi_view_requests_and_rejects_
             if line.startswith("MULTI_ARTIFACT_PATH=")
         )
         artifact_path = artifact_line.split("=", 1)[1]
-        assert artifact_path.startswith("renders/engineer_renders/"), artifact_path
+        assert artifact_path.startswith("renders/tmp/"), artifact_path
         assert artifact_path.endswith("_depth.png"), artifact_path
         manifest_path = _manifest_path_for_artifact(artifact_path)
 
@@ -997,7 +993,7 @@ async def test_int_215_engineer_preview_routes_to_engineer_bucket_without_assemb
         preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
         assert preview_data.success, preview_data.message
         assert preview_data.artifact_path is not None
-        assert preview_data.artifact_path.startswith("renders/engineer_renders/")
+        assert preview_data.artifact_path.startswith("renders/tmp/")
         assert preview_data.artifact_path.endswith("_depth.png")
         preview_manifest_path = _manifest_path_for_artifact(preview_data.artifact_path)
 
@@ -1068,10 +1064,7 @@ async def test_int_215_preview_websocket_stream_exposes_queued_running_and_view_
         assert preview_resp.status_code == 200, preview_resp.text
         preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
         assert preview_data.success, preview_data.message
-        assert (
-            preview_data.manifest_path
-            == "renders/engineer_renders/render_manifest.json"
-        )
+        assert preview_data.manifest_path == "renders/tmp/render_manifest.json"
 
         assert required_phases.issubset(set(phases)), phases
 

@@ -6,7 +6,7 @@
   "worker_session_id": "INT-033",
   "revision": "c78bee1338757a3bff9abc0f5f317a6c46af65ab",
   "scene_hash": "INT-033-engineer-planner",
-  "bundle_path": "renders/engineer_renders",
+  "bundle_path": "renders/engineer_plan_renders",
   "environment_version": "integration-test",
   "drafting": true,
   "source_script_sha256": "2f37062a1694579bde0ca3ddacbd25d96a4e92e5a342a136778524100d6d1c69",

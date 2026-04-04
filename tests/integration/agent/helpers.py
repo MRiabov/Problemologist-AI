@@ -920,7 +920,11 @@ svg_path.write_text(
 dxf_path.write_text("0\\nSECTION\\n2\\nENTITIES\\n0\\nENDSEC\\n0\\nEOF\\n", encoding="utf-8")
 manifest_json = {manifest.model_dump_json(indent=2)!r}
 (root / "render_manifest.json").write_text(manifest_json, encoding="utf-8")
-for compat_dir in (root / "engineer_renders", root / "benchmark_renders"):
+for compat_dir in (
+    root / "engineer_plan_renders",
+    root / "final_solution_submission_renders",
+    root / "benchmark_renders",
+):
     compat_dir.mkdir(parents=True, exist_ok=True)
     (compat_dir / "render_manifest.json").write_text(
         manifest_json, encoding="utf-8"

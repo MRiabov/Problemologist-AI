@@ -8,7 +8,9 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from evals.logic.dataset_selection import filter_rows_by_technical_drawing_mode  # noqa: E402
+from evals.logic.dataset_selection import (
+    filter_rows_by_technical_drawing_mode,  # noqa: E402
+)
 from evals.logic.models import EvalDatasetItem  # noqa: E402
 from shared.agents.config import DraftingMode  # noqa: E402
 from shared.enums import AgentName  # noqa: E402

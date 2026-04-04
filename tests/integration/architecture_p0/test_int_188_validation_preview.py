@@ -941,7 +941,7 @@ def build():
 
             ls_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/ls",
-                json=ListFilesRequest(path="renders/engineer_renders").model_dump(
+                json=ListFilesRequest(path="renders/engineer_plan_renders").model_dump(
                     mode="json"
                 ),
                 headers=headers,

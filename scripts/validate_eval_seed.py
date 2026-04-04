@@ -35,6 +35,7 @@ apply_stack_profile_env(_STACK_PROFILE_NAME, env=os.environ, root=ROOT)
 
 from controller.clients.worker import WorkerClient  # noqa: E402
 from evals.logic.curation import load_dataset_curation_manifest  # noqa: E402
+from evals.logic.models import EvalDatasetItem  # noqa: E402
 from evals.logic.specs import AGENT_SPECS  # noqa: E402
 from evals.logic.workspace import (  # noqa: E402
     InMemorySeedWorkspaceClient,

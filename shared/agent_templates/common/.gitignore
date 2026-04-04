@@ -1,0 +1,15 @@
+# Workspace runtime scratch
+logs/
+renders/**
+!renders/
+!renders/**/
+!renders/*.json
+!renders/**/*.json
+.cache/
+.tmp/
+*.log
+*.pid
+
+# Python bytecode and caches
+__pycache__/
+*.py[oc]

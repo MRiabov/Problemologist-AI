@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import argparse
-import atexit
 import asyncio
+import atexit
 import os
 import sys
 from pathlib import Path
@@ -11,7 +11,10 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from evals.logic.dataset_selection import parse_level_filters, resolve_agents  # noqa: E402
+from evals.logic.dataset_selection import (  # noqa: E402
+    parse_level_filters,
+    resolve_agents,
+)
 from evals.logic.stack_profiles import apply_stack_profile_env  # noqa: E402
 from scripts.internal.eval_run_lock import (  # noqa: E402
     EvalRunSelection,
@@ -210,9 +213,7 @@ async def _async_main(args: argparse.Namespace) -> int:
         return 1
 
     if not args.errors_only:
-        print(
-            f"Processed {checked} row(s): {touched} updated, {skipped} skipped."
-        )
+        print(f"Processed {checked} row(s): {touched} updated, {skipped} skipped.")
 
     return 0
 

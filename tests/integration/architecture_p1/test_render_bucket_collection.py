@@ -10,8 +10,11 @@ def test_submission_artifact_collection_preserves_bucketed_render_paths(tmp_path
 
     bucketed_render_paths = [
         root / "renders" / "benchmark_renders" / "render_a.png",
-        root / "renders" / "engineer_renders" / "render_b_depth.png",
-        root / "renders" / "final_preview_renders" / "render_c_segmentation.png",
+        root / "renders" / "engineer_plan_renders" / "render_b_depth.png",
+        root
+        / "renders"
+        / "final_solution_submission_renders"
+        / "render_c_segmentation.png",
     ]
     for path in bucketed_render_paths:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -30,8 +33,8 @@ def test_submission_artifact_collection_preserves_bucketed_render_paths(tmp_path
 
     expected_paths = {
         "renders/benchmark_renders/render_a.png",
-        "renders/engineer_renders/render_b_depth.png",
-        "renders/final_preview_renders/render_c_segmentation.png",
+        "renders/engineer_plan_renders/render_b_depth.png",
+        "renders/final_solution_submission_renders/render_c_segmentation.png",
     }
     assert expected_paths.issubset(set(artifacts.render_paths)), artifacts.render_paths
     assert expected_paths.issubset(set(artifacts.render_blobs_base64)), (

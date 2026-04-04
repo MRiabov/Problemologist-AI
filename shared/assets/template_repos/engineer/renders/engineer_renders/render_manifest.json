@@ -6,27 +6,27 @@
   "worker_session_id": "engineer-planner-template",
   "revision": "c78bee1338757a3bff9abc0f5f317a6c46af65ab",
   "scene_hash": "engineer-planner-template",
-  "bundle_path": "renders/engineer_renders",
+  "bundle_path": "renders/engineer_plan_renders",
   "environment_version": "1.0",
   "drafting": true,
   "source_script_sha256": "2f37062a1694579bde0ca3ddacbd25d96a4e92e5a342a136778524100d6d1c69",
   "preview_evidence_paths": [
-    "renders/cad_preview.png",
-    "renders/simulation_preview.png"
+    "renders/engineer_plan_renders/cad_preview.png",
+    "renders/engineer_plan_renders/simulation_preview.png"
   ],
   "artifacts": {
-    "renders/cad_preview.png": {
+    "renders/engineer_plan_renders/cad_preview.png": {
       "siblings": {
-        "rgb": "renders/cad_preview.png",
-        "svg": "renders/cad_preview.svg",
-        "dxf": "renders/cad_preview.dxf"
+        "rgb": "renders/engineer_plan_renders/cad_preview.png",
+        "svg": "renders/engineer_plan_renders/cad_preview.svg",
+        "dxf": "renders/engineer_plan_renders/cad_preview.dxf"
       }
     },
-    "renders/simulation_preview.png": {
+    "renders/engineer_plan_renders/simulation_preview.png": {
       "siblings": {
-        "rgb": "renders/simulation_preview.png",
-        "svg": "renders/simulation_preview.svg",
-        "dxf": "renders/simulation_preview.dxf"
+        "rgb": "renders/engineer_plan_renders/simulation_preview.png",
+        "svg": "renders/engineer_plan_renders/simulation_preview.svg",
+        "dxf": "renders/engineer_plan_renders/simulation_preview.dxf"
       }
     }
   }
