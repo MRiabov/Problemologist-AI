@@ -8,7 +8,7 @@ from pathlib import Path
 from controller.agent.benchmark.tools import _canonicalize_benchmark_constraints
 from shared.agents.config import DraftingMode, load_agents_config
 from shared.enums import AgentName
-from shared.git_utils import repo_revision
+from shared.git_utils import commit_submission_attempt, repo_revision
 from shared.models.schemas import PlannerSubmissionResult
 from shared.script_contracts import (
     drafting_render_manifest_path_for_agent,
@@ -273,6 +273,8 @@ def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
 
 
 def main() -> int:
+    workspace = Path.cwd()
+    commit_message = "submit_plan: unknown rejected"
     try:
         result = submit_plan()
     except Exception as exc:
@@ -283,8 +285,12 @@ def main() -> int:
             node_type=_planner_agent() or AgentName.ENGINEER_PLANNER,
         )
         print(result.model_dump_json(indent=2))
+        commit_message = f"submit_plan: {result.node_type.value} rejected"
+        commit_submission_attempt(workspace, commit_message)
         return 1
+    commit_message = f"submit_plan: {result.node_type.value} {result.status}"
     print(result.model_dump_json(indent=2))
+    commit_submission_attempt(workspace, commit_message)
     return 0
 
 

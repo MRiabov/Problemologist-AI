@@ -9,6 +9,7 @@ from typing import Any
 import yaml
 
 from shared.enums import AgentName
+from shared.git_utils import commit_submission_attempt
 from shared.models.schemas import ReviewComments, ReviewFrontmatter
 
 _REVIEW_PREFIX_BY_AGENT: dict[AgentName, str] = {
@@ -148,124 +149,122 @@ def _latest_review_rounds(
 def main() -> int:
     workspace = Path.cwd()
     agent_name = _reviewer_agent(workspace)
-    if agent_name is None:
-        _print_json(
-            {
-                "ok": False,
-                "status": "rejected",
-                "stage": "load",
-                "message": (
-                    "Unable to infer reviewer agent from workspace or AGENT_NAME: "
-                    "expected one of the reviewer stage manifests"
-                ),
-            }
-        )
-        return 1
+    payload: dict[str, Any]
+    exit_code = 1
+    commit_message = "submit_review: unknown rejected"
 
-    review_dir = _review_dir(workspace)
-    if not review_dir.exists():
-        _print_json(
-            {
+    if agent_name is None:
+        payload = {
+            "ok": False,
+            "status": "rejected",
+            "stage": "load",
+            "message": (
+                "Unable to infer reviewer agent from workspace or AGENT_NAME: "
+                "expected one of the reviewer stage manifests"
+            ),
+        }
+    else:
+        review_dir = _review_dir(workspace)
+        if not review_dir.exists():
+            payload = {
                 "ok": False,
                 "status": "rejected",
                 "stage": "load",
                 "message": "reviews/ directory not found",
             }
-        )
-        return 1
+            commit_message = f"submit_review: {agent_name.value} rejected"
+        else:
+            prefix = _review_prefix(agent_name)
+            latest_decision, _latest_comments, latest_markdown = _latest_review_rounds(
+                review_dir, prefix
+            )
 
-    prefix = _review_prefix(agent_name)
-    latest_decision, latest_comments, latest_markdown = _latest_review_rounds(
-        review_dir, prefix
-    )
-
-    if latest_decision is not None and (
-        latest_markdown is None or latest_decision[0] >= latest_markdown[0]
-    ):
-        round_number = latest_decision[0]
-        comments_path = review_dir / f"{prefix}-comments-round-{round_number}.yaml"
-        if not comments_path.exists():
-            _print_json(
-                {
+            if latest_decision is not None and (
+                latest_markdown is None or latest_decision[0] >= latest_markdown[0]
+            ):
+                round_number = latest_decision[0]
+                comments_path = (
+                    review_dir / f"{prefix}-comments-round-{round_number}.yaml"
+                )
+                if not comments_path.exists():
+                    payload = {
+                        "ok": False,
+                        "status": "rejected",
+                        "stage": "validation",
+                        "message": (
+                            f"Missing comments file for {prefix} round {round_number}: "
+                            f"{comments_path.name}"
+                        ),
+                    }
+                    commit_message = f"submit_review: {agent_name.value} rejected"
+                else:
+                    decision, comments, error = _validate_yaml_review_pair(
+                        latest_decision[1], comments_path
+                    )
+                    if error is not None:
+                        payload = {
+                            "ok": False,
+                            "status": "rejected",
+                            "stage": "validation",
+                            "message": error,
+                        }
+                        commit_message = f"submit_review: {agent_name.value} rejected"
+                    else:
+                        payload = {
+                            "ok": True,
+                            "status": "submitted",
+                            "stage": agent_name.value,
+                            "review_kind": "yaml_pair",
+                            "round": round_number,
+                            "decision_path": str(
+                                latest_decision[1].relative_to(workspace)
+                            ),
+                            "comments_path": str(comments_path.relative_to(workspace)),
+                            "decision": decision.model_dump(mode="json"),
+                            "comments": comments.model_dump(mode="json"),
+                        }
+                        commit_message = f"submit_review: {agent_name.value} submitted"
+                        exit_code = 0
+            elif latest_markdown is not None:
+                round_number = latest_markdown[0]
+                frontmatter, error = _validate_review_markdown(latest_markdown[1])
+                if error is not None:
+                    payload = {
+                        "ok": False,
+                        "status": "rejected",
+                        "stage": "validation",
+                        "message": error,
+                    }
+                    commit_message = f"submit_review: {agent_name.value} rejected"
+                else:
+                    payload = {
+                        "ok": True,
+                        "status": "submitted",
+                        "stage": agent_name.value,
+                        "review_kind": "markdown",
+                        "round": round_number,
+                        "review_path": str(latest_markdown[1].relative_to(workspace)),
+                        "frontmatter": frontmatter.model_dump(mode="json"),
+                    }
+                    commit_message = f"submit_review: {agent_name.value} submitted"
+                    exit_code = 0
+            else:
+                payload = {
                     "ok": False,
                     "status": "rejected",
                     "stage": "validation",
                     "message": (
-                        f"Missing comments file for {prefix} round {round_number}: "
-                        f"{comments_path.name}"
+                        f"No review artifact matching {prefix}-decision-round-<n>.yaml, "
+                        f"{prefix}-comments-round-<n>.yaml, or {prefix}-<n>.md"
                     ),
                 }
-            )
-            return 1
+                commit_message = f"submit_review: {agent_name.value} rejected"
 
-        decision, comments, error = _validate_yaml_review_pair(
-            latest_decision[1], comments_path
-        )
-        if error is not None:
-            _print_json(
-                {
-                    "ok": False,
-                    "status": "rejected",
-                    "stage": "validation",
-                    "message": error,
-                }
-            )
-            return 1
-
-        _print_json(
-            {
-                "ok": True,
-                "status": "submitted",
-                "stage": agent_name.value,
-                "review_kind": "yaml_pair",
-                "round": round_number,
-                "decision_path": str(latest_decision[1].relative_to(workspace)),
-                "comments_path": str(comments_path.relative_to(workspace)),
-                "decision": decision.model_dump(mode="json"),
-                "comments": comments.model_dump(mode="json"),
-            }
-        )
-        return 0
-
-    if latest_markdown is not None:
-        round_number = latest_markdown[0]
-        frontmatter, error = _validate_review_markdown(latest_markdown[1])
-        if error is not None:
-            _print_json(
-                {
-                    "ok": False,
-                    "status": "rejected",
-                    "stage": "validation",
-                    "message": error,
-                }
-            )
-            return 1
-
-        _print_json(
-            {
-                "ok": True,
-                "status": "submitted",
-                "stage": agent_name.value,
-                "review_kind": "markdown",
-                "round": round_number,
-                "review_path": str(latest_markdown[1].relative_to(workspace)),
-                "frontmatter": frontmatter.model_dump(mode="json"),
-            }
-        )
-        return 0
-
-    _print_json(
-        {
-            "ok": False,
-            "status": "rejected",
-            "stage": "validation",
-            "message": (
-                f"No review artifact matching {prefix}-decision-round-<n>.yaml, "
-                f"{prefix}-comments-round-<n>.yaml, or {prefix}-<n>.md"
-            ),
-        }
-    )
-    return 1
+    if agent_name is None:
+        commit_message = "submit_review: unknown rejected"
+    commit_submission_attempt(workspace, commit_message)
+    _print_json(payload)
+    return exit_code
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ from typing import Any
 from build123d import Compound
 
 from shared.enums import AgentName
+from shared.git_utils import commit_submission_attempt
 from shared.script_contracts import authored_script_path_for_agent
 from shared.workers.persistence import record_validation_result
 from utils.submission import simulate, validate
@@ -94,120 +95,125 @@ def main() -> int:
     session_id = os.getenv("SESSION_ID")
     episode_id = os.getenv("EPISODE_ID") or None
     agent_name = _coder_agent(workspace)
-    if agent_name is None:
-        _print_json(
-            {
-                "ok": False,
-                "status": "rejected",
-                "stage": "load",
-                "message": (
-                    "Unable to infer coder agent from workspace: expected "
-                    "benchmark_assembly_definition.yaml or assembly_definition.yaml"
-                ),
-                "log_path": str(_submission_log_path(workspace).relative_to(workspace)),
-            }
-        )
-        return 1
-
-    script_path = _script_path_for_agent(agent_name)
     log_path = _submission_log_path(workspace)
-    rejection: dict[str, Any] | None = None
-    validation_ok = False
-    simulation_success = False
     manifest_path = (
         workspace / ".manifests" / "engineering_execution_handoff_manifest.json"
     )
+    commit_message = "submit_for_review: unknown rejected"
+    payload: dict[str, Any]
+    exit_code = 1
 
-    with _capture_submission_output(log_path):
-        try:
-            solution = _load_solution(script_path)
-        except Exception as exc:
-            traceback.print_exc()
-            rejection = {
-                "ok": False,
-                "status": "rejected",
-                "stage": "load",
-                "message": str(exc),
-            }
-        else:
-            validation_ok, validation_message = validate(
-                solution,
-                output_dir=str(workspace),
-                session_id=session_id,
-            )
-            record_validation_result(
-                workspace,
-                validation_ok,
-                validation_message,
-                script_path=script_path,
-                session_id=session_id,
-            )
-            if not validation_ok:
+    if agent_name is None:
+        payload = {
+            "ok": False,
+            "status": "rejected",
+            "stage": "load",
+            "message": (
+                "Unable to infer coder agent from workspace: expected "
+                "benchmark_assembly_definition.yaml or assembly_definition.yaml"
+            ),
+            "log_path": str(log_path.relative_to(workspace)),
+        }
+    else:
+        rejection: dict[str, Any] | None = None
+        validation_ok = False
+        simulation_success = False
+
+        with _capture_submission_output(log_path):
+            try:
+                solution = _load_solution(
+                    script_path := _script_path_for_agent(agent_name)
+                )
+            except Exception as exc:
+                traceback.print_exc()
                 rejection = {
                     "ok": False,
                     "status": "rejected",
-                    "stage": "validation",
-                    "message": validation_message,
+                    "stage": "load",
+                    "message": str(exc),
                 }
             else:
-                simulation_result = simulate(
+                validation_ok, validation_message = validate(
                     solution,
                     output_dir=str(workspace),
                     session_id=session_id,
                 )
-                simulation_success = simulation_result.success
-                if not simulation_result.success:
+                record_validation_result(
+                    workspace,
+                    validation_ok,
+                    validation_message,
+                    script_path=script_path,
+                    session_id=session_id,
+                )
+                if not validation_ok:
                     rejection = {
                         "ok": False,
                         "status": "rejected",
-                        "stage": "simulation",
-                        "message": simulation_result.summary,
+                        "stage": "validation",
+                        "message": validation_message,
                     }
                 else:
-                    submitted = _handover_submit_for_review(
+                    simulation_result = simulate(
                         solution,
-                        cwd=workspace,
+                        output_dir=str(workspace),
                         session_id=session_id,
-                        reviewer_stage=(
-                            AgentName.ENGINEER_EXECUTION_REVIEWER
-                            if agent_name == AgentName.ENGINEER_CODER
-                            else AgentName.BENCHMARK_REVIEWER
-                        ),
-                        episode_id=episode_id,
-                        script_path=script_path,
                     )
-                    if not submitted:
+                    simulation_success = simulation_result.success
+                    if not simulation_result.success:
                         rejection = {
                             "ok": False,
                             "status": "rejected",
-                            "stage": "handover",
-                            "message": "submit_for_review returned false",
+                            "stage": "simulation",
+                            "message": simulation_result.summary,
                         }
+                    else:
+                        submitted = _handover_submit_for_review(
+                            solution,
+                            cwd=workspace,
+                            session_id=session_id,
+                            reviewer_stage=(
+                                AgentName.ENGINEER_EXECUTION_REVIEWER
+                                if agent_name == AgentName.ENGINEER_CODER
+                                else AgentName.BENCHMARK_REVIEWER
+                            ),
+                            episode_id=episode_id,
+                            script_path=script_path,
+                        )
+                        if not submitted:
+                            rejection = {
+                                "ok": False,
+                                "status": "rejected",
+                                "stage": "handover",
+                                "message": "submit_for_review returned false",
+                            }
 
-    log_path_rel = str(log_path.relative_to(workspace))
-    if rejection is not None:
-        rejection["log_path"] = log_path_rel
-        _print_json(rejection)
-        return 1
+        log_path_rel = str(log_path.relative_to(workspace))
+        if rejection is not None:
+            rejection["log_path"] = log_path_rel
+            payload = rejection
+            commit_message = f"submit_for_review: {agent_name.value} rejected"
+        else:
+            payload = {
+                "ok": True,
+                "status": "submitted",
+                "stage": (
+                    "engineering_execution_reviewer"
+                    if agent_name == AgentName.ENGINEER_CODER
+                    else "benchmark_reviewer"
+                ),
+                "manifest_path": str(manifest_path.relative_to(workspace))
+                if manifest_path.exists()
+                else None,
+                "validation_success": validation_ok,
+                "simulation_success": simulation_success,
+                "log_path": log_path_rel,
+            }
+            commit_message = f"submit_for_review: {agent_name.value} submitted"
+            exit_code = 0
 
-    _print_json(
-        {
-            "ok": True,
-            "status": "submitted",
-            "stage": (
-                "engineering_execution_reviewer"
-                if agent_name == AgentName.ENGINEER_CODER
-                else "benchmark_reviewer"
-            ),
-            "manifest_path": str(manifest_path.relative_to(workspace))
-            if manifest_path.exists()
-            else None,
-            "validation_success": validation_ok,
-            "simulation_success": simulation_success,
-            "log_path": log_path_rel,
-        }
-    )
-    return 0
+    commit_submission_attempt(workspace, commit_message)
+    _print_json(payload)
+    return exit_code
 
 
 if __name__ == "__main__":
