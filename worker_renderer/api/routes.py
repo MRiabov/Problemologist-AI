@@ -47,6 +47,7 @@ from worker_renderer.utils.build123d_rendering import (
     _RGB_AXES_COLOR,
     _RGB_EDGE_COLOR,
     PreviewScene,
+    _build_payload_path_overlay_bundle,
     _build_renderer,
     _composite_non_black,
     _depth_buffer_to_display_rgb,
@@ -56,6 +57,7 @@ from worker_renderer.utils.build123d_rendering import (
     camera_position_from_orbit,
     collect_preview_scene,
     render_preview_scene_bundle,
+    resolve_payload_path_points,
 )
 from worker_renderer.utils.file_validation import validate_benchmark_definition_yaml
 from worker_renderer.utils.rendering import (
@@ -187,7 +189,7 @@ def _maybe_store_large_render_artifact(
         return None
 
     object_key = rel_path
-    client.upload_file(render_path, object_key)
+    client.upload_file(str(render_path), object_key)
     logger.info(
         "renderer_object_store_uploaded",
         rel_path=rel_path,
@@ -224,6 +226,15 @@ def _load_workspace_benchmark_definition(
     if not is_valid:
         raise ValueError("; ".join(objectives_or_errors))
     return objectives_or_errors
+
+
+def _resolve_preview_payload_path_points(
+    root: Path, benchmark_definition: BenchmarkDefinition | None
+) -> list[tuple[float, float, float]] | None:
+    return resolve_payload_path_points(
+        root,
+        benchmark_definition=benchmark_definition,
+    )
 
 
 def _load_preview_scene_bundle(root: Path) -> tuple[PreviewScene | None, str | None]:
@@ -399,7 +410,11 @@ def _collect_render_artifacts(
                 max_workers=min(8, len(sidecar_candidates))
             ) as executor:
                 futures = {
-                    executor.submit(upload_client.upload_file, sidecar_path, rel_key): (
+                    executor.submit(
+                        upload_client.upload_file,
+                        str(sidecar_path),
+                        rel_key,
+                    ): (
                         rel_key,
                         sidecar_path,
                     )
@@ -551,6 +566,8 @@ def _render_single_preview(
     include_depth_edges: bool,
     include_segmentation_axes: bool,
     include_segmentation_edges: bool,
+    payload_path_points: list[tuple[float, float, float]] | None = None,
+    include_payload_path_overlay: bool = False,
 ) -> tuple[Path, dict[str, RenderArtifactMetadata]]:
     if width is None or height is None:
         default_width, default_height = get_image_render_resolution()
@@ -594,6 +611,21 @@ def _render_single_preview(
                 up=(0.0, 0.0, 1.0),
                 capture_depth=False,
             )
+            if include_payload_path_overlay and payload_path_points:
+                overlay_bundle = _build_payload_path_overlay_bundle(
+                    payload_path_points,
+                    width=width,
+                    height=height,
+                )
+                if overlay_bundle is not None:
+                    overlay_image, _ = _render_view(
+                        overlay_bundle,
+                        camera_position=camera_position,
+                        lookat=center,
+                        up=(0.0, 0.0, 1.0),
+                        capture_depth=False,
+                    )
+                    rgb_image = _composite_non_black(rgb_image, overlay_image)
         finally:
             del bundle
 
@@ -1031,6 +1063,14 @@ async def api_preview(
                         raise ValueError("depth preview rendering is disabled")
                     if request.segmentation and not render_policy.segmentation.enabled:
                         raise ValueError("segmentation preview rendering is disabled")
+                    payload_path_points = None
+                    if (
+                        request.payload_path
+                        and render_policy.handoff_rgb_payload_path_overlay.enabled
+                    ):
+                        payload_path_points = _resolve_preview_payload_path_points(
+                            root, objectives
+                        )
 
                     view_specs = _normalize_preview_views(
                         request.orbit_pitch, request.orbit_yaw
@@ -1107,6 +1147,9 @@ async def api_preview(
                                     include_depth_edges=render_policy.depth.edges,
                                     include_segmentation_axes=render_policy.segmentation.axes,
                                     include_segmentation_edges=render_policy.segmentation.edges,
+                                    payload_path_points=payload_path_points,
+                                    include_payload_path_overlay=request.payload_path
+                                    and render_policy.handoff_rgb_payload_path_overlay.enabled,
                                     width=render_width,
                                     height=render_height,
                                 )
@@ -1260,6 +1303,11 @@ async def api_static_preview(
                     objectives = _load_workspace_benchmark_definition(
                         root, session_id=x_session_id
                     )
+                    payload_path_points = None
+                    if render_policy.handoff_rgb_payload_path_overlay.enabled:
+                        payload_path_points = _resolve_preview_payload_path_points(
+                            root, objectives
+                        )
 
                     renders_dir = (
                         root
@@ -1287,6 +1335,8 @@ async def api_static_preview(
                             depth_edges=render_policy.depth.edges,
                             segmentation_axes=render_policy.segmentation.axes,
                             segmentation_edges=render_policy.segmentation.edges,
+                            payload_path_points=payload_path_points,
+                            include_payload_path_overlay=render_policy.handoff_rgb_payload_path_overlay.enabled,
                             width=render_width,
                             height=render_height,
                         )
@@ -1339,6 +1389,8 @@ async def api_static_preview(
                                 depth_edges=render_policy.depth.edges,
                                 segmentation_axes=render_policy.segmentation.axes,
                                 segmentation_edges=render_policy.segmentation.edges,
+                                payload_path_points=payload_path_points,
+                                include_payload_path_overlay=render_policy.handoff_rgb_payload_path_overlay.enabled,
                             )
                             _persist_preview_scene_bundle(
                                 bundle_root=renders_dir,

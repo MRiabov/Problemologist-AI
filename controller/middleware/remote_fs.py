@@ -111,6 +111,7 @@ def _preview_workflow_id(
             "rgb": request_model.get("rgb"),
             "depth": request_model.get("depth"),
             "segmentation": request_model.get("segmentation"),
+            "payload_path": request_model.get("payload_path"),
             "drafting": request_model.get("drafting"),
             "rendering_type": str(request_model.get("rendering_type", "")),
             "script_content": request_model.get("script_content"),
@@ -132,6 +133,7 @@ def _preview_workflow_id(
             "rgb": getattr(request_model, "rgb", None),
             "depth": getattr(request_model, "depth", None),
             "segmentation": getattr(request_model, "segmentation", None),
+            "payload_path": getattr(request_model, "payload_path", None),
             "drafting": getattr(request_model, "drafting", None),
             "rendering_type": str(getattr(request_model, "rendering_type", "")),
             "script_content": getattr(request_model, "script_content", None),
@@ -904,6 +906,7 @@ class RemoteFilesystemMiddleware:
         rgb: bool | None = None,
         depth: bool | None = None,
         segmentation: bool | None = None,
+        payload_path: bool = False,
         drafting: bool = False,
         rendering_type: str | PreviewRenderingType | None = None,
         bundle_base64: str | None = None,
@@ -973,6 +976,7 @@ class RemoteFilesystemMiddleware:
             rgb=rgb,
             depth=depth,
             segmentation=segmentation,
+            payload_path=payload_path,
             drafting=drafting,
             rendering_type=PreviewRenderingType(str(rendering_type))
             if rendering_type is not None

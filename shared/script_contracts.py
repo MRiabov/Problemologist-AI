@@ -147,7 +147,7 @@ def drafting_render_manifest_path_for_agent(
         AgentName.ELECTRONICS_PLANNER,
         AgentName.ELECTRONICS_REVIEWER,
     }:
-        return Path("renders/engineer_renders/render_manifest.json")
+        return Path("renders/engineer_plan_renders/render_manifest.json")
     return Path("renders/render_manifest.json")
 
 

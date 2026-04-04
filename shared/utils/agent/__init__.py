@@ -678,21 +678,23 @@ async def _preview_async(
     rgb: bool | None = None,
     depth: bool | None = None,
     segmentation: bool | None = None,
+    payload_path: bool = False,
     drafting: bool = False,
     rendering_type: PreviewRenderingType | str | None = None,
 ) -> PreviewDesignResponse:
     """Render an on-demand preview for a live build123d component."""
+    requested_rendering_type = (
+        PreviewRenderingType(str(rendering_type))
+        if rendering_type is not None
+        else PreviewRenderingType.RGB
+    )
     if _is_script_import_mode():
         return PreviewDesignResponse(
             success=True,
             status_text=SCRIPT_IMPORT_DEFERRED_MESSAGE,
             message=SCRIPT_IMPORT_DEFERRED_MESSAGE,
             drafting=drafting,
-            rendering_type=(
-                PreviewRenderingType(str(rendering_type))
-                if rendering_type is not None
-                else PreviewRenderingType.RGB
-            ),
+            rendering_type=requested_rendering_type,
         )
 
     preview_scene_bundle = export_preview_scene_bundle(
@@ -700,21 +702,31 @@ async def _preview_async(
         objectives=None,
         workspace_root=_workspace_root(),
     )
-    preview_request = PreviewDesignRequest(
-        script_path="preview_scene.json",
-        bundle_base64=preview_scene_bundle,
-        orbit_pitch=orbit_pitch,
-        orbit_yaw=orbit_yaw,
-        rgb=rgb,
-        depth=depth,
-        segmentation=segmentation,
-        drafting=drafting,
-        rendering_type=(
-            PreviewRenderingType(str(rendering_type))
-            if rendering_type is not None
-            else None
-        ),
-    )
+    try:
+        preview_request = PreviewDesignRequest(
+            script_path="preview_scene.json",
+            bundle_base64=preview_scene_bundle,
+            orbit_pitch=orbit_pitch,
+            orbit_yaw=orbit_yaw,
+            rgb=rgb,
+            depth=depth,
+            segmentation=segmentation,
+            payload_path=payload_path,
+            drafting=drafting,
+            rendering_type=(
+                PreviewRenderingType(str(rendering_type))
+                if rendering_type is not None
+                else None
+            ),
+        )
+    except Exception as exc:
+        return PreviewDesignResponse(
+            success=False,
+            status_text="Preview generation failed",
+            message=str(exc),
+            drafting=drafting,
+            rendering_type=requested_rendering_type,
+        )
     response = _call_worker_light_preview(
         preview_request, session_id=os.getenv("SESSION_ID")
     )
@@ -729,6 +741,7 @@ async def _preview_async(
             rgb=rgb,
             depth=depth,
             segmentation=segmentation,
+            payload_path=payload_path,
             drafting=drafting,
             rendering_type=(
                 PreviewRenderingType(str(rendering_type))
@@ -788,6 +801,7 @@ def preview(
     rgb: bool | None = None,
     depth: bool | None = None,
     segmentation: bool | None = None,
+    payload_path: bool = False,
     rendering_type: PreviewRenderingType | str | None = None,
 ) -> _PreviewResponseProxy:
     return _PreviewResponseProxy(
@@ -798,6 +812,7 @@ def preview(
             rgb=rgb,
             depth=depth,
             segmentation=segmentation,
+            payload_path=payload_path,
             rendering_type=rendering_type,
         )
     )
@@ -813,6 +828,7 @@ def preview_drawing(
             component,
             orbit_pitch=orbit_pitch,
             orbit_yaw=orbit_yaw,
+            payload_path=False,
             drafting=True,
         )
     )

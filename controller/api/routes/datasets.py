@@ -91,8 +91,8 @@ _ALLOWED_BINARY_SUFFIXES = (
 
 _REVISION_MANIFEST_PRIORITY = (
     "renders/benchmark_renders/render_manifest.json",
-    "renders/engineer_renders/render_manifest.json",
-    "renders/final_preview_renders/render_manifest.json",
+    "renders/engineer_plan_renders/render_manifest.json",
+    "renders/final_solution_submission_renders/render_manifest.json",
     ".manifests/benchmark_review_manifest.json",
     ".manifests/engineering_execution_handoff_manifest.json",
     ".manifests/engineering_plan_review_manifest.json",

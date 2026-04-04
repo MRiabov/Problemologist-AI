@@ -192,19 +192,7 @@ def select_single_preview_render_subdir(
     workspace_root: Path, *, agent_role: str | None = None
 ) -> str:
     """Choose the single-view preview bundle directory for the active workspace."""
-
-    if agent_role:
-        return (
-            "benchmark_renders"
-            if _is_benchmark_role(agent_role)
-            else "engineer_renders"
-        )
-
-    return (
-        "engineer_renders"
-        if (workspace_root / "assembly_definition.yaml").exists()
-        else "benchmark_renders"
-    )
+    return "tmp"
 
 
 def select_static_preview_render_subdir(
@@ -216,11 +204,11 @@ def select_static_preview_render_subdir(
         return (
             "benchmark_renders"
             if _is_benchmark_role(agent_role)
-            else "final_preview_renders"
+            else "final_solution_submission_renders"
         )
 
     return (
-        "final_preview_renders"
+        "final_solution_submission_renders"
         if (workspace_root / "assembly_definition.yaml").exists()
         else "benchmark_renders"
     )

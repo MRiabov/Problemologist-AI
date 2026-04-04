@@ -53,6 +53,7 @@ class ScriptToolRequest(BaseModel):
     rgb: bool | None = None
     depth: bool | None = None
     segmentation: bool | None = None
+    payload_path: bool = False
     drafting: bool = False
     rendering_type: PreviewRenderingType | None = None
     reviewer_stage: ReviewerStage | None = None
@@ -308,6 +309,7 @@ async def preview_script(
                 rgb=payload.rgb,
                 depth=payload.depth,
                 segmentation=payload.segmentation,
+                payload_path=payload.payload_path,
                 drafting=payload.drafting,
                 rendering_type=payload.rendering_type,
                 bundle_base64=payload.bundle_base64,

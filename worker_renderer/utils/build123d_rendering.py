@@ -12,12 +12,17 @@ from pathlib import Path
 
 import numpy as np
 import structlog
+import yaml
 from build123d import Compound
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field
 
 from shared.agents import get_image_render_resolution
-from shared.models.schemas import BenchmarkDefinition
+from shared.models.schemas import (
+    AssemblyDefinition,
+    BenchmarkDefinition,
+    PayloadTrajectoryDefinition,
+)
 from shared.models.simulation import RendererCapabilities, RenderMode
 from shared.rendering import (
     configure_headless_rendering,
@@ -110,6 +115,107 @@ class PreviewRenderResult:
     saved_paths: list[str]
     legend_by_path: dict[str, list[SegmentationLegendEntry]]
     depth_ranges_by_path: dict[str, tuple[float, float]]
+
+
+def _as_point3(value: object) -> tuple[float, float, float] | None:
+    if not isinstance(value, (list, tuple)) or len(value) != 3:
+        return None
+    try:
+        return (float(value[0]), float(value[1]), float(value[2]))
+    except Exception:
+        return None
+
+
+def resolve_payload_path_points(
+    workspace_root: Path,
+    *,
+    benchmark_definition: BenchmarkDefinition | None = None,
+) -> list[tuple[float, float, float]] | None:
+    """Resolve the best available payload-path polyline for overlay rendering."""
+
+    candidate_files = (
+        workspace_root / "payload_trajectory_definition.yaml",
+        workspace_root / "assembly_definition.yaml",
+        workspace_root / "benchmark_definition.yaml",
+    )
+
+    for candidate in candidate_files:
+        if not candidate.exists() or not candidate.is_file():
+            continue
+        try:
+            raw_payload = yaml.safe_load(candidate.read_text(encoding="utf-8")) or {}
+        except Exception:
+            continue
+        if not isinstance(raw_payload, dict):
+            continue
+
+        if candidate.name == "payload_trajectory_definition.yaml":
+            try:
+                definition = PayloadTrajectoryDefinition.model_validate(raw_payload)
+            except Exception:
+                continue
+            points: list[tuple[float, float, float]] = []
+            initial_point = _as_point3(definition.initial_pose.pos_mm)
+            if initial_point is not None:
+                points.append(initial_point)
+            for anchor in definition.anchors:
+                point = _as_point3(anchor.pos_mm)
+                if point is not None:
+                    points.append(point)
+            if len(points) >= 2:
+                return points
+            continue
+
+        if candidate.name == "assembly_definition.yaml":
+            try:
+                definition = AssemblyDefinition.model_validate(raw_payload)
+            except Exception:
+                continue
+            motion_forecast = definition.motion_forecast
+            if motion_forecast is None:
+                continue
+            points = [
+                point
+                for point in (
+                    _as_point3(anchor.pos_mm) for anchor in motion_forecast.anchors
+                )
+                if point is not None
+            ]
+            if len(points) >= 2:
+                return points
+            continue
+
+        if candidate.name == "benchmark_definition.yaml":
+            try:
+                definition = BenchmarkDefinition.model_validate(raw_payload)
+            except Exception:
+                continue
+            start_point = _as_point3(definition.moved_object.start_position)
+            goal = definition.objectives.goal_zone
+            goal_center = (
+                (float(goal.min[0]) + float(goal.max[0])) / 2.0,
+                (float(goal.min[1]) + float(goal.max[1])) / 2.0,
+                (float(goal.min[2]) + float(goal.max[2])) / 2.0,
+            )
+            points = [
+                point for point in (start_point, goal_center) if point is not None
+            ]
+            if len(points) >= 2:
+                return points
+
+    if benchmark_definition is not None:
+        start_point = _as_point3(benchmark_definition.moved_object.start_position)
+        goal = benchmark_definition.objectives.goal_zone
+        goal_center = (
+            (float(goal.min[0]) + float(goal.max[0])) / 2.0,
+            (float(goal.min[1]) + float(goal.max[1])) / 2.0,
+            (float(goal.min[2]) + float(goal.max[2])) / 2.0,
+        )
+        points = [point for point in (start_point, goal_center) if point is not None]
+        if len(points) >= 2:
+            return points
+
+    return None
 
 
 def _rgba_from_hex(color: str, alpha: float = 1.0) -> tuple[float, float, float, float]:
@@ -782,6 +888,56 @@ def _build_renderer(
     return _RendererBundle(renderer=renderer, window=render_window)
 
 
+def _build_payload_path_overlay_bundle(
+    points: list[tuple[float, float, float]],
+    *,
+    width: int,
+    height: int,
+) -> _RendererBundle | None:
+    if len(points) < 2:
+        return None
+
+    configure_headless_rendering()
+    renderer = vtkRenderer()
+    renderer.SetBackground(0.0, 0.0, 0.0)
+
+    vtk_points = vtk.vtkPoints()
+    polyline = vtk.vtkPolyLine()
+    polyline.GetPointIds().SetNumberOfIds(len(points))
+    for index, point in enumerate(points):
+        vtk_points.InsertNextPoint(float(point[0]), float(point[1]), float(point[2]))
+        polyline.GetPointIds().SetId(index, index)
+
+    cells = vtk.vtkCellArray()
+    cells.InsertNextCell(polyline)
+    poly_data = vtk.vtkPolyData()
+    poly_data.SetPoints(vtk_points)
+    poly_data.SetLines(cells)
+
+    mapper = vtkPolyDataMapper()
+    mapper.SetInputData(poly_data)
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
+    prop = actor.GetProperty()
+    prop.SetColor(0.96, 0.26, 0.18)
+    prop.SetLineWidth(5.0)
+    prop.LightingOff()
+    prop.SetAmbient(1.0)
+    prop.SetDiffuse(0.0)
+    prop.SetSpecular(0.0)
+    if hasattr(prop, "SetRenderLinesAsTubes"):
+        prop.SetRenderLinesAsTubes(True)
+    renderer.AddActor(actor)
+
+    render_window = create_headless_vtk_render_window()
+    render_window.AddRenderer(renderer)
+    if hasattr(render_window, "SetAlphaBitPlanes"):
+        render_window.SetAlphaBitPlanes(1)
+    render_window.SetSize(width, height)
+    render_window.SetMultiSamples(0)
+    return _RendererBundle(renderer=renderer, window=render_window)
+
+
 def _preview_segmentation_legend(scene: PreviewScene) -> list[SegmentationLegendEntry]:
     legend: list[SegmentationLegendEntry] = []
     for entity in scene.entities:
@@ -833,6 +989,14 @@ def export_preview_scene_bundle(
         bundle_root = Path(tmpdir)
         mesh_root = bundle_root / "meshes"
         mesh_root.mkdir(parents=True, exist_ok=True)
+        for rel_path in (
+            "benchmark_definition.yaml",
+            "assembly_definition.yaml",
+            "payload_trajectory_definition.yaml",
+        ):
+            source_path = workspace_root / rel_path
+            if source_path.exists() and source_path.is_file():
+                shutil.copy2(source_path, bundle_root / rel_path)
         scene = collect_preview_scene(
             component,
             objectives=objectives,
@@ -865,6 +1029,8 @@ def render_preview_scene(
     height: int | None = None,
     include_axes: bool = True,
     include_edges: bool = True,
+    payload_path_points: list[tuple[float, float, float]] | None = None,
+    include_payload_path_overlay: bool = False,
 ) -> Path:
     """Render a single preview image from a pre-built scene bundle."""
     if width is None or height is None:
@@ -895,6 +1061,21 @@ def render_preview_scene(
             up=(0.0, 0.0, 1.0),
             capture_depth=False,
         )
+        if include_payload_path_overlay and payload_path_points:
+            overlay_bundle = _build_payload_path_overlay_bundle(
+                payload_path_points,
+                width=width,
+                height=height,
+            )
+            if overlay_bundle is not None:
+                overlay_frame, _ = _render_view(
+                    overlay_bundle,
+                    camera_position=camera_position,
+                    lookat=center,
+                    up=(0.0, 0.0, 1.0),
+                    capture_depth=False,
+                )
+                frame = _composite_non_black(frame, overlay_frame)
     finally:
         # VTK objects are owned by the bundle; let them fall out of scope.
         del bundle
@@ -929,6 +1110,8 @@ def render_preview_scene_bundle(
     depth_edges: bool = True,
     segmentation_axes: bool = True,
     segmentation_edges: bool = True,
+    payload_path_points: list[tuple[float, float, float]] | None = None,
+    include_payload_path_overlay: bool = False,
 ) -> PreviewRenderResult:
     """Render the standard preview bundle from a pre-built mesh scene."""
     if width is None or height is None:
@@ -971,6 +1154,7 @@ def render_preview_scene_bundle(
             segmentation_path = output_dir / f"{group_key}_segmentation.png"
 
             rgb_bundle: _RendererBundle | None = None
+            rgb_overlay_bundle: _RendererBundle | None = None
             if include_rgb:
                 rgb_bundle = _build_renderer(
                     scene,
@@ -984,6 +1168,12 @@ def render_preview_scene_bundle(
                     edge_color=_RGB_EDGE_COLOR,
                     background=(0.98, 0.98, 0.99),
                 )
+                if include_payload_path_overlay and payload_path_points:
+                    rgb_overlay_bundle = _build_payload_path_overlay_bundle(
+                        payload_path_points,
+                        width=width,
+                        height=height,
+                    )
 
             depth_base_bundle: _RendererBundle | None = None
             depth_overlay_bundle: _RendererBundle | None = None
@@ -1055,6 +1245,15 @@ def render_preview_scene_bundle(
                     up=(0.0, 0.0, 1.0),
                     capture_depth=False,
                 )
+                if rgb_overlay_bundle is not None:
+                    rgb_overlay_image, _ = _render_view(
+                        rgb_overlay_bundle,
+                        camera_position=camera_position,
+                        lookat=center,
+                        up=(0.0, 0.0, 1.0),
+                        capture_depth=False,
+                    )
+                    rgb_image = _composite_non_black(rgb_image, rgb_overlay_image)
             if depth_base_bundle is not None:
                 _, depth_buffer = _render_view(
                     depth_base_bundle,
@@ -1116,6 +1315,9 @@ def render_preview_scene_bundle(
                 )
                 saved_paths.append(rel_segmentation_path)
                 legend_by_path[rel_segmentation_path] = legend_entries
+
+            if rgb_overlay_bundle is not None:
+                del rgb_overlay_bundle
 
     return PreviewRenderResult(
         saved_paths=saved_paths,

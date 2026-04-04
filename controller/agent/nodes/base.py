@@ -275,11 +275,11 @@ class BaseNode:
 
         manifest_candidates = [
             "renders/benchmark_renders/render_manifest.json",
-            "renders/engineer_renders/render_manifest.json",
-            "renders/final_preview_renders/render_manifest.json",
+            "renders/engineer_plan_renders/render_manifest.json",
+            "renders/final_solution_submission_renders/render_manifest.json",
             "workspace/renders/benchmark_renders/render_manifest.json",
-            "workspace/renders/engineer_renders/render_manifest.json",
-            "workspace/renders/final_preview_renders/render_manifest.json",
+            "workspace/renders/engineer_plan_renders/render_manifest.json",
+            "workspace/renders/final_solution_submission_renders/render_manifest.json",
         ]
         for candidate in manifest_candidates:
             if not await self.ctx.worker_client.exists(

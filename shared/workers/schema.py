@@ -663,6 +663,13 @@ class PreviewDesignRequest(BaseModel):
     segmentation: bool | None = Field(
         default=None, description="Request segmentation output."
     )
+    payload_path: bool = Field(
+        default=False,
+        description=(
+            "Request the optional payload-path overlay on persistent handoff "
+            "bundles and scratch previews."
+        ),
+    )
     drafting: bool = Field(
         default=False,
         description="Request a drafting preview instead of the default 3D modalities.",
@@ -766,6 +773,7 @@ class PreviewWorkflowParams(BaseModel):
     rgb: bool | None = None
     depth: bool | None = None
     segmentation: bool | None = None
+    payload_path: bool = False
     drafting: bool = False
     rendering_type: PreviewRenderingType | None = Field(
         default=None,
@@ -810,6 +818,7 @@ class HeavyPreviewParams(BaseModel):
     rgb: bool | None = None
     depth: bool | None = None
     segmentation: bool | None = None
+    payload_path: bool = False
     drafting: bool = False
     rendering_type: PreviewRenderingType | None = None
 

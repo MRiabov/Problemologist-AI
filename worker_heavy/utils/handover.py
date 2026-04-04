@@ -36,6 +36,7 @@ from worker_heavy.utils.file_validation import (
     validate_environment_attachment_contract,
     validate_planner_handoff_cross_contract,
 )
+from worker_heavy.utils.rendering import prerender_24_views
 from worker_heavy.utils.validation import (
     validate_benchmark_submission_simulation_bounds,
 )
@@ -648,6 +649,18 @@ def submit_for_review(
             "Prior simulation is stale for current script revision. Re-run simulate."
         )
 
+    revision = _latest_git_revision(cwd)
+    if not revision:
+        raise ValueError(
+            "Unable to determine current repository git revision for review manifest."
+        )
+    resolved_session_id = session_id or os.getenv("SESSION_ID", "default")
+    resolved_episode_id = (
+        episode_id
+        or os.getenv("EPISODE_ID")
+        or _derived_episode_id(resolved_session_id)
+    )
+
     # 4. Persist artifacts
     render_paths: list[str] = []
     for raw_render_path in simulation_result.render_paths:
@@ -673,7 +686,27 @@ def submit_for_review(
             shutil.copy(src_path, dest_path)
         render_paths.append(str(render_rel_path))
 
-    cad_path = renders_dir / "model.step"
+    import shutil
+
+    persistent_bundle_subdir = (
+        "benchmark_renders"
+        if normalized_stage == "benchmark_reviewer"
+        else "final_solution_submission_renders"
+    )
+    persistent_bundle_dir = renders_dir / persistent_bundle_subdir
+    persistent_bundle_render_paths = prerender_24_views(
+        component,
+        output_dir=str(persistent_bundle_dir),
+        workspace_root=cwd,
+        objectives=benchmark_definition,
+        session_id=resolved_session_id,
+        smoke_test_mode=os.getenv("SMOKE_TEST_MODE") == "1",
+        revision=revision,
+        environment_version=estimation.version,
+    )
+    render_paths = persistent_bundle_render_paths
+
+    cad_path = persistent_bundle_dir / "model.step"
     export_step(component, str(cad_path))
     if normalized_stage in {
         "benchmark_reviewer",
@@ -683,23 +716,9 @@ def submit_for_review(
     else:
         cad_path_value = str(cad_path) if cad_path.exists() else None
 
-    import shutil
-
-    shutil.copy(objectives_path, renders_dir / "benchmark_definition.yaml")
-    rendered_assembly_definition_path = renders_dir / assembly_definition_name
+    shutil.copy(objectives_path, persistent_bundle_dir / "benchmark_definition.yaml")
+    rendered_assembly_definition_path = persistent_bundle_dir / assembly_definition_name
     shutil.copy(cost_path, rendered_assembly_definition_path)
-
-    revision = _latest_git_revision(cwd)
-    if not revision:
-        raise ValueError(
-            "Unable to determine current repository git revision for review manifest."
-        )
-    resolved_session_id = session_id or os.getenv("SESSION_ID", "default")
-    resolved_episode_id = (
-        episode_id
-        or os.getenv("EPISODE_ID")
-        or _derived_episode_id(resolved_session_id)
-    )
 
     _validate_render_manifest_bundle(renders_dir=renders_dir, render_paths=render_paths)
     logger.info(

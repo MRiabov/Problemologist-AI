@@ -272,7 +272,7 @@ def render_technical_drawing_preview(
         / (
             "benchmark_renders"
             if (agent_role or "").startswith("benchmark_")
-            else "engineer_renders"
+            else "engineer_plan_renders"
         )
     )
     output_dir.mkdir(parents=True, exist_ok=True)

@@ -11,7 +11,12 @@ from controller.agent.config import settings
 from controller.agent.state import AgentState
 from controller.agent.tools import get_engineer_tools
 from shared.enums import AgentName
-from shared.script_contracts import BENCHMARK_SCRIPT_PATH, SOLUTION_SCRIPT_PATH
+from shared.script_contracts import (
+    BENCHMARK_SCRIPT_PATH,
+    SOLUTION_SCRIPT_PATH,
+    drafting_render_manifest_path_for_agent,
+    drafting_script_paths_for_agent,
+)
 from shared.type_checking import type_check
 
 from .base import BaseNode, SharedNodeContext
@@ -97,6 +102,11 @@ class CoderNode(BaseNode):
             BENCHMARK_SCRIPT_PATH,
             SOLUTION_SCRIPT_PATH,
             "benchmark_assembly_definition.yaml",
+            *[
+                str(path)
+                for path in drafting_script_paths_for_agent(AgentName.ENGINEER_PLANNER)
+            ],
+            str(drafting_render_manifest_path_for_agent(AgentName.ENGINEER_PLANNER)),
         ]
 
         prediction, _, journal_entry = await self._run_program(

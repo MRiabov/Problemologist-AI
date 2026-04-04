@@ -28,6 +28,7 @@ def preview(
     rgb: bool | None = None,
     depth: bool | None = None,
     segmentation: bool | None = None,
+    payload_path: bool = False,
     drafting: bool = False,
     rendering_type: PreviewRenderingType | str | None = None,
     output_dir: Path | None = None,
@@ -57,6 +58,7 @@ def preview(
         rgb=rgb,
         depth=depth,
         segmentation=segmentation,
+        payload_path=payload_path,
         drafting=drafting,
         rendering_type=(
             PreviewRenderingType(str(rendering_type))

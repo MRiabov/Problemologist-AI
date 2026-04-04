@@ -857,6 +857,7 @@ class WorkerClient:
         rgb: bool | None = None,
         depth: bool | None = None,
         segmentation: bool | None = None,
+        payload_path: bool = False,
         drafting: bool = False,
         rendering_type: PreviewRenderingType | str | None = None,
         bundle_base64: str | None = None,
@@ -870,6 +871,7 @@ class WorkerClient:
             "rgb": rgb,
             "depth": depth,
             "segmentation": segmentation,
+            "payload_path": payload_path,
             "drafting": drafting,
             "rendering_type": rendering_type,
         }

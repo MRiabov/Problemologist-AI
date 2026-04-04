@@ -78,7 +78,7 @@ SCHEMA_BACKED_HANDOFF_PATHS: tuple[str, ...] = (
     "solution_plan_evidence_script.py",
     "solution_plan_technical_drawing_script.py",
     "renders/benchmark_renders/render_manifest.json",
-    "renders/engineer_renders/render_manifest.json",
+    "renders/engineer_plan_renders/render_manifest.json",
     BENCHMARK_SCRIPT_PATH,
     SOLUTION_SCRIPT_PATH,
     "validation_results.json",

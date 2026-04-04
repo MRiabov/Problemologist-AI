@@ -265,6 +265,7 @@ async def api_preview(
             rgb=request.rgb,
             depth=request.depth,
             segmentation=request.segmentation,
+            payload_path=request.payload_path,
             orbit_pitch=request.orbit_pitch,
             orbit_yaw=request.orbit_yaw,
         )
@@ -282,6 +283,7 @@ async def api_preview(
             rgb=request.rgb,
             depth=request.depth,
             segmentation=request.segmentation,
+            payload_path=request.payload_path,
             rendering_type=request.rendering_type,
             drafting=request.drafting,
             session_id=x_session_id,

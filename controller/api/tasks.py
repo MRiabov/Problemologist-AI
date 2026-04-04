@@ -289,7 +289,7 @@ async def _copy_approved_benchmark_bundle(
 
     root_manifest_path = "renders/render_manifest.json"
     alias_paths = (
-        "renders/engineer_renders/render_manifest.json",
+        "renders/engineer_plan_renders/render_manifest.json",
         "renders/benchmark_renders/render_manifest.json",
     )
     if await source_client.exists(root_manifest_path, bypass_agent_permissions=True):

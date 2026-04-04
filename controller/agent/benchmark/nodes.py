@@ -37,7 +37,11 @@ from shared.observability.schemas import (
     ConversationLengthExceededEvent,
     ReviewDecisionEvent,
 )
-from shared.script_contracts import BENCHMARK_SCRIPT_PATH
+from shared.script_contracts import (
+    BENCHMARK_SCRIPT_PATH,
+    drafting_render_manifest_path_for_agent,
+    drafting_script_paths_for_agent,
+)
 from shared.simulation.schemas import (
     RandomizationStrategy,
     SimulatorBackendType,
@@ -1548,7 +1552,21 @@ class BenchmarkCoderNode(BaseNode):
             state,
             inputs,
             get_benchmark_tools,
-            [SCRIPT_FILE, "plan.md", "todo.md", "benchmark_definition.yaml"],
+            [
+                SCRIPT_FILE,
+                "plan.md",
+                "todo.md",
+                "benchmark_definition.yaml",
+                *[
+                    str(path)
+                    for path in drafting_script_paths_for_agent(
+                        AgentName.BENCHMARK_PLANNER
+                    )
+                ],
+                str(
+                    drafting_render_manifest_path_for_agent(AgentName.BENCHMARK_PLANNER)
+                ),
+            ],
             AgentName.BENCHMARK_CODER,
         )
 

@@ -180,6 +180,10 @@ class RenderModalityConfig(BaseModel):
     edges: bool = True
 
 
+class RenderPayloadPathOverlayConfig(BaseModel):
+    enabled: bool = True
+
+
 class RenderPolicyConfig(BaseModel):
     image_resolution: RenderResolutionConfig = Field(
         default_factory=lambda: RenderResolutionConfig(width=1024, height=768)
@@ -193,6 +197,9 @@ class RenderPolicyConfig(BaseModel):
     rgb: RenderModalityConfig = Field(default_factory=RenderModalityConfig)
     depth: RenderModalityConfig = Field(default_factory=RenderModalityConfig)
     segmentation: RenderModalityConfig = Field(default_factory=RenderModalityConfig)
+    handoff_rgb_payload_path_overlay: RenderPayloadPathOverlayConfig = Field(
+        default_factory=RenderPayloadPathOverlayConfig
+    )
 
     @model_validator(mode="before")
     @classmethod
