@@ -11,6 +11,7 @@ from evals.logic.codex_session_trace import CodexSessionTraceArtifact
 from evals.logic.codex_workspace import (
     CodexExecRunResult,
     WorkspaceVerificationResult,
+    get_cli_provider,
     is_coder_agent,
 )
 from evals.logic.codex_workspace import (
@@ -68,7 +69,7 @@ def _load_skill_loop_prompt(prompt_key: str) -> str:
 
     if prompt_key == "self_analysis":
         return (
-            "Continue the same Codex session on a failed or stalled run.\n"
+            "Continue the same local CLI-provider session on a failed or stalled run.\n"
             "Analyze the workspace using `journal.md`, `logs/skill_loop/journal.md`,\n"
             "`logs/skill_loop/context_snapshot.md`, `prompt.md`, the session trace,\n"
             "`validation_results.json`, and `simulation_result.json` if it exists.\n"
@@ -81,7 +82,7 @@ def _load_skill_loop_prompt(prompt_key: str) -> str:
         )
     if prompt_key == "skill_update":
         return (
-            "Continue the same Codex session.\n"
+            "Continue the same local CLI-provider session.\n"
             "Treat any existing `suggested_skills/` tree as the active skill\n"
             "worktree/checkpoint for this session, seeded from the approved\n"
             "`skills/` snapshot.\n"
@@ -128,10 +129,10 @@ def _skill_loop_needed(
         return False, "skill loop only runs for coder roles"
 
     if launch_return_code is None:
-        return True, "codex launch did not report a return code"
+        return True, "CLI-provider launch did not report a return code"
 
     if launch_return_code != 0:
-        return True, f"codex exited with code {launch_return_code}"
+        return True, f"CLI-provider exited with code {launch_return_code}"
 
     if verification_result is None:
         return True, "workspace verification did not run"
@@ -187,7 +188,7 @@ def _skill_loop_prompt_context(
             "Context:",
             f"- Agent: {agent_name.value}",
             f"- Task ID: {item.id}",
-            f"- Codex session ID: {codex_session_id}",
+            f"- Session ID: {codex_session_id}",
             f"- Trigger: {trigger_reason}",
             *verification_lines,
             *simulation_lines,
@@ -323,11 +324,11 @@ def _write_skill_loop_state_snapshot(
         simulation_result.summary if simulation_result is not None else None
     )
     context_lines = [
-        "# Codex Skill Loop Context Snapshot",
+        "# CLI Provider Skill Loop Context Snapshot",
         "",
         f"- Stage: {stage}",
         f"- Primary session ID: {primary_session_id or codex_session_id}",
-        f"- Codex session ID: {codex_session_id}",
+        f"- Session ID: {codex_session_id}",
         f"- Trigger reason: {trigger_reason}",
         f"- Verification success: {verification_success}",
         f"- Simulation success: {simulation_success}",
@@ -363,9 +364,10 @@ def _skill_loop_capture_root(
     eval_log_key: str | None,
     workspace_dir: Path,
 ) -> Path:
+    provider = get_cli_provider()
     if log_context.session_log_root is not None and eval_log_key:
-        return log_context.session_log_root / eval_log_key / "codex"
-    return workspace_dir / "logs" / "codex"
+        return log_context.session_log_root / eval_log_key / provider.provider_name
+    return workspace_dir / "logs" / provider.provider_name
 
 
 def _result_failure_reason(
@@ -375,13 +377,13 @@ def _result_failure_reason(
     exception_text: str | None = None,
 ) -> str | None:
     if exception_text:
-        return f"codex skill loop {stage} failed: {exception_text}"
+        return f"CLI-provider skill loop {stage} failed: {exception_text}"
     if result is None:
-        return f"codex skill loop {stage} failed"
+        return f"CLI-provider skill loop {stage} failed"
     if result.timed_out:
-        return f"codex skill loop {stage} timed out"
+        return f"CLI-provider skill loop {stage} timed out"
     if result.return_code not in {0, None}:
-        return f"codex exited with code {result.return_code}"
+        return f"CLI-provider exited with code {result.return_code}"
     return None
 
 
@@ -489,6 +491,7 @@ async def _run_skill_loop(
         "record_skill_loop_event", _record_skill_loop_event
     )
     eval_log_key = deps.get("eval_log_key")
+    provider = get_cli_provider()
 
     summary = CodexSkillLoopSummary(enabled=is_coder_agent(agent_name))
     simulation_result = _load_workspace_simulation_result(workspace_dir)
@@ -525,9 +528,9 @@ async def _run_skill_loop(
         return summary, codex_trace_artifacts
 
     if codex_trace_artifacts is None or not codex_trace_artifacts.session_id:
-        summary.failure_reason = "missing Codex session trace"
+        summary.failure_reason = "missing CLI-provider session trace"
         append_readable_log_line(
-            "CODEX_SKILL_LOOP_FAILED "
+            "CLI_PROVIDER_SKILL_LOOP_FAILED "
             f"stage=primary session_id={_sanitize_readable_text(primary_session_id or '')} "
             f"reason={_sanitize_readable_text(summary.failure_reason)}",
             log_context=log_context,
@@ -563,7 +566,7 @@ async def _run_skill_loop(
         prompt_text=self_analysis_prompt_text,
     )
     append_readable_log_line(
-        "CODEX_SKILL_LOOP_STAGE "
+        "CLI_PROVIDER_SKILL_LOOP_STAGE "
         f"stage=self_analysis session_id={codex_session_id} "
         f"prompt_path={_sanitize_readable_text(str(self_analysis_prompt_path))}",
         log_context=log_context,
@@ -612,7 +615,7 @@ async def _run_skill_loop(
                     session_id=codex_session_id,
                     runtime_root=codex_runtime_root,
                 )
-                / ".codex"
+                / provider.home_dir_name
                 / "sessions",
             )
         except Exception as exc:
@@ -697,7 +700,7 @@ async def _run_skill_loop(
     if self_analysis_failure_reason is not None:
         summary.failure_reason = self_analysis_failure_reason
         append_readable_log_line(
-            "CODEX_SKILL_LOOP_FAILED "
+            "CLI_PROVIDER_SKILL_LOOP_FAILED "
             f"stage=self_analysis session_id={codex_session_id} "
             f"reason={_sanitize_readable_text(summary.failure_reason)}",
             log_context=log_context,
@@ -727,7 +730,7 @@ async def _run_skill_loop(
         prompt_text=skill_update_prompt_text,
     )
     append_readable_log_line(
-        "CODEX_SKILL_LOOP_STAGE "
+        "CLI_PROVIDER_SKILL_LOOP_STAGE "
         f"stage=skill_update session_id={codex_session_id} "
         f"prompt_path={_sanitize_readable_text(str(skill_update_prompt_path))}",
         log_context=log_context,
@@ -776,7 +779,7 @@ async def _run_skill_loop(
                     session_id=codex_session_id,
                     runtime_root=codex_runtime_root,
                 )
-                / ".codex"
+                / provider.home_dir_name
                 / "sessions",
             )
         except Exception as exc:
@@ -867,7 +870,7 @@ async def _run_skill_loop(
     if skill_update_failure_reason is not None:
         summary.failure_reason = skill_update_failure_reason
         append_readable_log_line(
-            "CODEX_SKILL_LOOP_FAILED "
+            "CLI_PROVIDER_SKILL_LOOP_FAILED "
             f"stage=skill_update session_id={codex_session_id} "
             f"reason={_sanitize_readable_text(summary.failure_reason)}",
             log_context=log_context,
@@ -882,7 +885,7 @@ async def _run_skill_loop(
         return summary, codex_trace_artifacts
 
     append_readable_log_line(
-        "CODEX_SKILL_LOOP_COMPLETE "
+        "CLI_PROVIDER_SKILL_LOOP_COMPLETE "
         f"session_id={codex_session_id} "
         f"trigger_reason={_sanitize_readable_text(trigger_reason)}",
         log_context=log_context,

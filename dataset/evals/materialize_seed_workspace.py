@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from evals.logic.cli_provider import available_cli_providers  # noqa: E402
 from evals.logic.stack_profiles import apply_stack_profile_env  # noqa: E402
 from scripts.internal.eval_run_lock import (  # noqa: E402
     EvalRunSelection,
@@ -78,7 +79,18 @@ def _parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--provider",
+        default=os.getenv("PROBLEMOLOGIST_CLI_PROVIDER", "codex"),
+        choices=available_cli_providers(),
+        help=(
+            "CLI provider to use when launching the workspace after materialization "
+            "(default: codex)."
+        ),
+    )
+    parser.add_argument(
+        "--launch-cli-exec",
         "--launch-codex",
+        dest="launch_cli_exec",
         action="store_true",
         help=(
             "After materializing the workspace, launch the configured CLI "
@@ -86,9 +98,10 @@ def _parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--open-cli-ui",
         "--open-codex",
         "--open",
-        dest="open_codex",
+        dest="open_cli_ui",
         action="store_true",
         help=(
             "After materializing the workspace, open the interactive CLI "
@@ -261,8 +274,8 @@ def main() -> None:
     for rel_path in materialized.copied_paths:
         print(f"  - {rel_path}")
 
-    if args.launch_codex and args.open_codex:
-        raise SystemExit("Choose only one of --launch-codex or --open-codex.")
+    if args.launch_cli_exec and args.open_cli_ui:
+        raise SystemExit("Choose only one of --launch-cli-exec or --open-cli-ui.")
 
     lock_lease = None
     if args.env_up:
@@ -290,7 +303,7 @@ def main() -> None:
             context="seed workspace materializer startup",
         )
 
-    if args.launch_codex:
+    if args.launch_cli_exec:
         raise SystemExit(
             launch_cli_exec(
                 materialized.workspace_dir,
@@ -298,10 +311,11 @@ def main() -> None:
                 agent_name=agent,
                 task_id=row.id,
                 yolo=args.yolo,
+                provider_name=args.provider,
             )
         )
 
-    if args.open_codex:
+    if args.open_cli_ui:
         raise SystemExit(
             open_cli_ui(
                 materialized.workspace_dir,
@@ -309,6 +323,7 @@ def main() -> None:
                 agent_name=agent,
                 task_id=row.id,
                 yolo=args.yolo,
+                provider_name=args.provider,
             )
         )
 

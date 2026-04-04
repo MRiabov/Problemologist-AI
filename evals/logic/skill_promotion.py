@@ -3,9 +3,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-from difflib import SequenceMatcher
 import subprocess
 from datetime import UTC, datetime
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Literal
 
@@ -210,7 +210,9 @@ def _read_repo_file_at_commit(
     return completed.stdout
 
 
-def _text_hunks(base_lines: list[str], other_lines: list[str]) -> list[tuple[int, int, list[str]]]:
+def _text_hunks(
+    base_lines: list[str], other_lines: list[str]
+) -> list[tuple[int, int, list[str]]]:
     return [
         (i1, i2, other_lines[j1:j2])
         for tag, i1, i2, j1, j2 in SequenceMatcher(
@@ -307,9 +309,7 @@ def _plan_overlay_publication(
         overlay_path = overlay_root / rel_path
         canonical_path = canonical_root / rel_path
         overlay_bytes = overlay_path.read_bytes()
-        current_bytes = (
-            canonical_path.read_bytes() if canonical_path.exists() else None
-        )
+        current_bytes = canonical_path.read_bytes() if canonical_path.exists() else None
 
         if rel_path in canonical_changed:
             if overlay_path.suffix.lower() not in {
@@ -339,9 +339,7 @@ def _plan_overlay_publication(
                 continue
 
             current_text = (
-                current_bytes.decode("utf-8")
-                if current_bytes is not None
-                else ""
+                current_bytes.decode("utf-8") if current_bytes is not None else ""
             )
             overlay_text = overlay_bytes.decode("utf-8")
             merged_text = _merge_text_file(

@@ -19,8 +19,11 @@ from controller.agent.review_handover import (
 )
 from evals.logic.cli_provider import (
     REASONING_EFFORT_UNSET,
+    CliInvocation,
     CliProvider,
-    get_default_cli_provider,
+)
+from evals.logic.cli_provider import (
+    get_cli_provider as _get_cli_provider,
 )
 from evals.logic.models import EvalDatasetItem
 from evals.logic.review_checks import (
@@ -61,7 +64,6 @@ from worker_heavy.utils.file_validation import (
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
 ROOT = Path(__file__).resolve().parents[2]
-_CODEX_RUNTIME_ROOT_NAME = "codex-runtime"
 SKILL_SOURCE_ROOT = ROOT / "skills"
 CODEX_SKILL_TREE_ROOT = Path(".agents") / "skills"
 
@@ -146,8 +148,10 @@ class CodexExecRunResult(BaseModel):
     output_last_message_path: Path | None = None
 
 
-def get_cli_provider() -> CliProvider:
-    return get_default_cli_provider()
+def get_cli_provider(provider_name: str | None = None) -> CliProvider:
+    if provider_name is None:
+        return _get_cli_provider()
+    return _get_cli_provider(provider_name)
 
 
 @dataclass(slots=True)
@@ -708,11 +712,17 @@ def resolve_cli_home_root(
     task_id: str,
     session_id: str | None = None,
     runtime_root: Path | None = None,
+    provider_name: str | None = None,
 ) -> Path:
     """Return the isolated HOME directory used for a CLI-provider run."""
 
-    runtime_root = (runtime_root or ROOT) / _CODEX_RUNTIME_ROOT_NAME
-    session_key = session_id or f"local-codex-{task_id}-{os.getpid()}"
+    provider = (
+        get_cli_provider(provider_name)
+        if provider_name is not None
+        else get_cli_provider()
+    )
+    runtime_root = (runtime_root or ROOT) / provider.runtime_root_name
+    session_key = session_id or f"{provider.session_prefix}-{task_id}-{os.getpid()}"
     return runtime_root / "homes" / session_key
 
 
@@ -725,9 +735,15 @@ def prepare_cli_home(
     reasoning_effort: Literal["low", "medium", "high", "xhigh"]
     | None
     | object = REASONING_EFFORT_UNSET,
+    provider_name: str | None = None,
 ) -> Path:
     """Seed an isolated CLI-provider home with the active auth bundle."""
-    return get_cli_provider().prepare_home(
+    provider = (
+        get_cli_provider(provider_name)
+        if provider_name is not None
+        else get_cli_provider()
+    )
+    return provider.prepare_home(
         codex_home_root=codex_home_root,
         workspace_dir=workspace_dir,
         source_auth_path=source_auth_path,
@@ -819,6 +835,89 @@ def build_cli_prompt(
     )
 
 
+def _normalize_cli_invocation(
+    *,
+    provider: CliProvider,
+    prompt_text: str,
+    workspace_dir: Path,
+    yolo: bool,
+    resume_session_id: str | None = None,
+    output_last_message_path: Path | None = None,
+    kind: str = "exec",
+) -> CliInvocation:
+    build_method_name = f"build_{kind}_invocation"
+    build_method = getattr(provider, build_method_name, None)
+    if callable(build_method):
+        if kind == "exec":
+            return build_method(
+                workspace_dir=workspace_dir,
+                prompt_text=prompt_text,
+                yolo=yolo,
+                resume_session_id=resume_session_id,
+                output_last_message_path=output_last_message_path,
+            )
+        return build_method(
+            workspace_dir=workspace_dir,
+            prompt_text=prompt_text,
+            yolo=yolo,
+        )
+
+    legacy_method_name = f"build_{kind}_command"
+    legacy_method = getattr(provider, legacy_method_name)
+    if kind == "exec":
+        argv = legacy_method(
+            workspace_dir=workspace_dir,
+            yolo=yolo,
+            resume_session_id=resume_session_id,
+            output_last_message_path=output_last_message_path,
+        )
+        return CliInvocation(
+            argv=argv,
+            prompt_text=prompt_text,
+            prompt_transport="stdin",
+            cwd=workspace_dir,
+            resume_session_id=resume_session_id,
+            output_last_message_path=output_last_message_path,
+        )
+
+    argv = legacy_method(
+        workspace_dir=workspace_dir,
+        prompt_text=prompt_text,
+        yolo=yolo,
+    )
+    return CliInvocation(
+        argv=argv,
+        prompt_text=prompt_text,
+        prompt_transport="positional",
+        cwd=workspace_dir,
+    )
+
+
+def _run_subprocess_invocation(
+    *,
+    invocation: CliInvocation,
+    env: dict[str, str],
+    timeout_seconds: float | None,
+) -> subprocess.CompletedProcess[str]:
+    merged_env = dict(env)
+    merged_env.update(invocation.env_overrides)
+    stdin_text = (
+        invocation.prompt_text if invocation.prompt_transport == "stdin" else None
+    )
+    if invocation.prompt_transport != "stdin" and invocation.prompt_text is not None:
+        # The provider owns prompt transport; non-stdin prompts are carried in argv.
+        stdin_text = None
+    return subprocess.run(
+        invocation.argv,
+        input=stdin_text,
+        text=True,
+        cwd=str(invocation.cwd) if invocation.cwd is not None else None,
+        env=merged_env,
+        check=False,
+        timeout=timeout_seconds,
+    )
+
+
 def _run_cli_exec_command(
     *,
     workspace_dir: Path,
@@ -831,15 +930,21 @@ def _run_cli_exec_command(
     timeout_seconds: float | None = None,
     resume_session_id: str | None = None,
     output_last_message_path: Path | None = None,
+    provider_name: str | None = None,
     reasoning_effort: Literal["low", "medium", "high", "xhigh"]
     | None
     | object = REASONING_EFFORT_UNSET,
 ) -> CodexExecRunResult:
-    provider = get_cli_provider()
+    provider = (
+        get_cli_provider(provider_name)
+        if provider_name is not None
+        else get_cli_provider()
+    )
     codex_home_root = resolve_cli_home_root(
         task_id=task_id,
         session_id=session_id,
         runtime_root=runtime_root,
+        provider_name=provider_name,
     )
     provider.prepare_home(
         codex_home_root=codex_home_root,
@@ -847,25 +952,25 @@ def _run_cli_exec_command(
         agent_name=agent_name,
         reasoning_effort=reasoning_effort,
     )
-    cmd = provider.build_exec_command(
+    invocation = _normalize_cli_invocation(
+        provider=provider,
+        prompt_text=prompt_text,
         workspace_dir=workspace_dir,
         yolo=yolo,
         resume_session_id=resume_session_id,
         output_last_message_path=output_last_message_path,
     )
-    print("launching: " + " ".join(cmd))
+    print("launching: " + " ".join(invocation.argv))
 
     result = CodexExecRunResult(
-        command=cmd,
+        command=invocation.argv,
         timeout_seconds=timeout_seconds,
         session_id=session_id,
         output_last_message_path=output_last_message_path,
     )
     try:
-        completed = subprocess.run(
-            cmd,
-            input=prompt_text,
-            text=True,
+        completed = _run_subprocess_invocation(
+            invocation=invocation,
             env=provider.build_env(
                 task_id=task_id,
                 workspace_dir=workspace_dir,
@@ -873,8 +978,7 @@ def _run_cli_exec_command(
                 session_id=session_id,
                 agent_name=agent_name,
             ),
-            check=False,
-            timeout=timeout_seconds,
+            timeout_seconds=timeout_seconds,
         )
     except subprocess.TimeoutExpired:
         result.timed_out = True
@@ -1035,9 +1139,15 @@ def build_cli_env(
     codex_home_root: Path,
     session_id: str | None = None,
     agent_name: AgentName | None = None,
+    provider_name: str | None = None,
 ) -> dict[str, str]:
     """Prepare a generic CLI-provider subprocess environment for a local workspace run."""
-    return get_cli_provider().build_env(
+    provider = (
+        get_cli_provider(provider_name)
+        if provider_name is not None
+        else get_cli_provider()
+    )
+    return provider.build_env(
         task_id=task_id,
         workspace_dir=workspace_dir,
         codex_home_root=codex_home_root,
@@ -1056,6 +1166,7 @@ def launch_cli_exec(
     runtime_root: Path | None = None,
     yolo: bool = True,
     timeout_seconds: float | None = None,
+    provider_name: str | None = None,
     reasoning_effort: Literal["low", "medium", "high", "xhigh"]
     | None
     | object = REASONING_EFFORT_UNSET,
@@ -1070,6 +1181,7 @@ def launch_cli_exec(
         runtime_root=runtime_root,
         yolo=yolo,
         timeout_seconds=timeout_seconds,
+        provider_name=provider_name,
         reasoning_effort=reasoning_effort,
     )
     if result.timed_out:
@@ -1089,6 +1201,7 @@ def resume_cli_exec(
     yolo: bool = True,
     timeout_seconds: float | None = None,
     output_last_message_path: Path | None = None,
+    provider_name: str | None = None,
     reasoning_effort: Literal["low", "medium", "high", "xhigh"]
     | None
     | object = REASONING_EFFORT_UNSET,
@@ -1106,6 +1219,7 @@ def resume_cli_exec(
         timeout_seconds=timeout_seconds,
         resume_session_id=codex_session_id,
         output_last_message_path=output_last_message_path,
+        provider_name=provider_name,
         reasoning_effort=reasoning_effort,
     )
 
@@ -1119,29 +1233,37 @@ def open_cli_ui(
     session_id: str | None = None,
     runtime_root: Path | None = None,
     yolo: bool = True,
+    provider_name: str | None = None,
 ) -> int:
     """Open the interactive CLI-provider UI with a workspace prompt."""
     if not (workspace_dir / ".git").exists():
         init_workspace_repo(workspace_dir)
-    provider = get_cli_provider()
+    provider = (
+        get_cli_provider(provider_name)
+        if provider_name is not None
+        else get_cli_provider()
+    )
     codex_home_root = resolve_cli_home_root(
         task_id=task_id,
         session_id=session_id,
         runtime_root=runtime_root,
+        provider_name=provider_name,
     )
     provider.prepare_home(
         codex_home_root=codex_home_root,
         workspace_dir=workspace_dir,
         agent_name=agent_name,
     )
-    cmd = provider.build_ui_command(
-        workspace_dir=workspace_dir,
+    invocation = _normalize_cli_invocation(
+        provider=provider,
         prompt_text=prompt_text,
+        workspace_dir=workspace_dir,
         yolo=yolo,
+        kind="ui",
     )
-    print("launching: " + " ".join(cmd))
-    completed = subprocess.run(
-        cmd,
+    print("launching: " + " ".join(invocation.argv))
+    completed = _run_subprocess_invocation(
+        invocation=invocation,
         env=provider.build_env(
             task_id=task_id,
             workspace_dir=workspace_dir,
@@ -1149,7 +1271,7 @@ def open_cli_ui(
             session_id=session_id,
             agent_name=agent_name,
         ),
-        check=False,
+        timeout_seconds=None,
     )
     return completed.returncode
 

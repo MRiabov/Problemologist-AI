@@ -17,6 +17,7 @@ from evals.logic.codex_session_trace import (
 )
 from evals.logic.codex_workspace import (
     WorkspaceVerificationResult,
+    get_cli_provider,
     resolve_cli_home_root,
     resume_cli_exec,
     verify_workspace_for_agent,
@@ -45,6 +46,8 @@ class SkillTrainingSessionMetadata(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     agent_name: str | None = None
+    complexity_level: int | None = None
+    provider_name: str | None = None
     task_id: str | None = None
     task: str | None = None
     session_id: str | None = None
@@ -76,6 +79,7 @@ class SkillTrainingSession(BaseModel):
     agent_name: AgentName
     task_id: str
     session_id: str
+    provider_name: str
     cli_runtime_root: Path
     launch_return_code: int | None = None
     verification_result: WorkspaceVerificationResult
@@ -200,6 +204,17 @@ def _resolve_task_id(
     return session_id
 
 
+def _resolve_complexity_level(
+    *,
+    metadata: SkillTrainingSessionMetadata,
+) -> int:
+    if metadata.complexity_level is not None:
+        return metadata.complexity_level
+    # Legacy bundles may predate complexity-level persistence. Default to the
+    # lowest valid value so retained-session replay remains loadable.
+    return 0
+
+
 def _resolve_session_id(
     *,
     metadata: SkillTrainingSessionMetadata,
@@ -210,6 +225,20 @@ def _resolve_session_id(
     if candidate:
         return candidate
     return eval_log_key
+
+
+def _resolve_provider_name(
+    *,
+    metadata: SkillTrainingSessionMetadata,
+    override: str | None,
+) -> str:
+    # Legacy retained bundles may not have recorded a provider yet. Treat those
+    # as Codex sessions so replay stays anchored to the original backend instead
+    # of inheriting whatever provider happens to be active in this process.
+    candidate = override or metadata.provider_name or "codex"
+    if not candidate:
+        return "codex"
+    return candidate
 
 
 def _resolve_workspace_dir(
@@ -307,10 +336,7 @@ def _seed_skill_overlay_state(
     )
 
     skill_snapshot_root = workspace_dir / "skills"
-    if (
-        skill_snapshot_root.exists()
-        and not _overlay_has_skill_content(overlay_dir)
-    ):
+    if skill_snapshot_root.exists() and not _overlay_has_skill_content(overlay_dir):
         copy_tree(skill_snapshot_root, overlay_dir)
     init_workspace_repo(overlay_dir)
     return overlay_dir, repo_root, base_commit, branch
@@ -326,6 +352,10 @@ def _update_session_metadata(
     branch: str | None,
 ) -> None:
     payload = metadata.model_dump(mode="json")
+    if metadata.complexity_level is None:
+        payload.pop("complexity_level", None)
+    if metadata.provider_name is None:
+        payload.pop("provider_name", None)
     payload["suggested_skills_dir"] = overlay_dir.as_posix()
     payload["suggested_skills_base_commit"] = base_commit
     payload["suggested_skills_branch"] = branch
@@ -367,6 +397,8 @@ async def load_skill_training_session(
             )
 
     metadata = _load_session_metadata(session_metadata_path)
+    provider_name = _resolve_provider_name(metadata=metadata, override=None)
+    provider = get_cli_provider(provider_name)
     workspace_dir = _resolve_workspace_dir(
         metadata=metadata,
         override=args.workspace_dir,
@@ -393,9 +425,7 @@ async def load_skill_training_session(
         skills_repo_root,
         suggested_skills_base_commit,
         skills_repo_branch,
-    ) = (
-        _seed_skill_overlay_state(workspace_dir)
-    )
+    ) = _seed_skill_overlay_state(workspace_dir)
     _update_session_metadata(
         path=session_metadata_path,
         metadata=metadata,
@@ -432,12 +462,14 @@ async def load_skill_training_session(
         task_id=task_id,
         session_id=session_id,
         cli_runtime_root=cli_runtime_root,
+        provider_name=provider.provider_name,
         launch_return_code=_resolve_launch_return_code(metadata=metadata),
         verification_result=verification_result,
         simulation_result=simulation_result,
         item=EvalDatasetItem(
             id=task_id,
-            task=metadata.task or f"Retained Codex session {session_id}",
+            task=metadata.task or f"Retained CLI-provider session {session_id}",
+            complexity_level=_resolve_complexity_level(metadata=metadata),
         ),
         skill_loop_journal_path=skill_loop_journal_path,
         skill_loop_context_snapshot_path=skill_loop_context_snapshot_path,
@@ -456,6 +488,7 @@ async def run_skill_training_session(
     log,
 ) -> tuple[SkillLoopSummary, CodexSessionTraceArtifact | None]:
     log_context = RunnerLogContext(root=ROOT, session_log_root=session.session_log_root)
+    provider = get_cli_provider(session.provider_name)
     should_run, trigger_reason = _skill_loop_needed(
         agent_name=session.agent_name,
         launch_return_code=session.launch_return_code,
@@ -481,7 +514,9 @@ async def run_skill_training_session(
     codex_trace_artifacts = await asyncio.to_thread(
         capture_latest_codex_session_artifacts,
         workspace_dir=session.workspace_dir,
-        artifact_root=session.session_log_root / session.eval_log_key / "codex",
+        artifact_root=(
+            session.session_log_root / session.eval_log_key / provider.provider_name
+        ),
         baseline_snapshot=baseline_snapshot,
         launched_after_ns=None,
         sessions_root=resolve_cli_home_root(
@@ -489,12 +524,12 @@ async def run_skill_training_session(
             session_id=session.session_id,
             runtime_root=session.cli_runtime_root,
         )
-        / ".codex"
+        / provider.home_dir_name
         / "sessions",
     )
     if codex_trace_artifacts is None or not codex_trace_artifacts.session_id:
         raise FileNotFoundError(
-            "missing Codex session trace for the retained episode bundle"
+            "missing CLI-provider session trace for the retained episode bundle"
         )
 
     summary, updated_trace = await _run_skill_loop(

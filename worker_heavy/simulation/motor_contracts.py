@@ -42,10 +42,7 @@ def resolve_solution_motor_joint_contract(
     *, part_name: str, dofs: list[str] | tuple[str, ...]
 ) -> tuple[str, list[float]]:
     normalized_part_name = _normalize_text(part_name)
-    normalized_dofs = [
-        _normalize_text(dof).lower()
-        for dof in dofs
-    ]
+    normalized_dofs = [_normalize_text(dof).lower() for dof in dofs]
     if len(normalized_dofs) != 1:
         raise ValueError(
             f"motor '{normalized_part_name}' must declare exactly one DOF token"
@@ -73,7 +70,9 @@ class ResolvedMotorContract:
     control_speed: float
     control_frequency: float | None
 
-    def to_scene_record(self, *, dofs: list[str], moving_part_type: str) -> dict[str, Any]:
+    def to_scene_record(
+        self, *, dofs: list[str], moving_part_type: str
+    ) -> dict[str, Any]:
         record: dict[str, Any] = {
             "part_name": self.part_name,
             "name": self.part_name,
@@ -149,7 +148,9 @@ def resolve_solution_motor_contract(
     torque = float(physics["torque"])
     max_velocity = float(physics["max_velocity"])
     actuator_type = CONTROL_MODE_TO_ACTUATOR_TYPE[control_mode]
-    normalized_joint_name = _normalize_text(joint_name or f"{normalized_part_name}_joint")
+    normalized_joint_name = _normalize_text(
+        joint_name or f"{normalized_part_name}_joint"
+    )
 
     return ResolvedMotorContract(
         part_name=normalized_part_name,

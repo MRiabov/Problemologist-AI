@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import shutil
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal, Protocol, runtime_checkable
 
@@ -18,11 +18,37 @@ ROOT = Path(__file__).resolve().parents[2]
 ReasoningEffort = Literal["low", "medium", "high", "xhigh"]
 ReasoningEffortArg = ReasoningEffort | None | object
 REASONING_EFFORT_UNSET: object = object()
+PromptTransport = Literal["none", "stdin", "prompt_flag", "positional"]
+
+
+@dataclass(frozen=True, slots=True)
+class CliInvocation:
+    argv: list[str]
+    prompt_text: str | None = None
+    prompt_transport: PromptTransport = "none"
+    cwd: Path | None = None
+    env_overrides: dict[str, str] = field(default_factory=dict)
+    resume_session_id: str | None = None
+    output_last_message_path: Path | None = None
+
+    def __post_init__(self) -> None:
+        if self.prompt_transport == "none" and self.prompt_text is not None:
+            raise ValueError(
+                "prompt_text must be omitted when prompt_transport is none"
+            )
+        if self.prompt_transport != "none" and self.prompt_text is None:
+            raise ValueError(
+                "prompt_text is required when prompt_transport is not none"
+            )
 
 
 @runtime_checkable
 class CliProvider(Protocol):
     provider_name: str
+    binary_name: str
+    home_dir_name: str
+    runtime_root_name: str
+    session_prefix: str
 
     def translate_reasoning_effort(
         self, reasoning_effort: ReasoningEffort | None
@@ -48,29 +74,32 @@ class CliProvider(Protocol):
         agent_name: AgentName | None = None,
     ) -> dict[str, str]: ...
 
-    def build_exec_command(
-        self,
-        *,
-        workspace_dir: Path,
-        yolo: bool,
-        resume_session_id: str | None = None,
-        output_last_message_path: Path | None = None,
-    ) -> list[str]: ...
-
-    def build_ui_command(
+    def build_exec_invocation(
         self,
         *,
         workspace_dir: Path,
         prompt_text: str,
         yolo: bool,
-    ) -> list[str]: ...
+        resume_session_id: str | None = None,
+        output_last_message_path: Path | None = None,
+    ) -> CliInvocation: ...
+
+    def build_ui_invocation(
+        self,
+        *,
+        workspace_dir: Path,
+        prompt_text: str,
+        yolo: bool,
+    ) -> CliInvocation: ...
+
+    def build_help_invocation(self) -> CliInvocation: ...
 
     def build_help_command(self) -> list[str]: ...
 
 
 def _copy_auth_bundle(source_auth_path: Path, codex_home_dir: Path) -> None:
     if not source_auth_path.exists():
-        raise FileNotFoundError(f"Codex auth file not found: {source_auth_path}")
+        raise FileNotFoundError(f"CLI auth file not found: {source_auth_path}")
     shutil.copy2(source_auth_path, codex_home_dir / "auth.json")
 
 
@@ -80,10 +109,25 @@ def _execution_flags(*, yolo: bool) -> list[str]:
     return ["--full-auto"]
 
 
+def _qwen_execution_flags(*, yolo: bool) -> list[str]:
+    flags = ["--chat-recording"]
+    if yolo:
+        flags.append("--yolo")
+    else:
+        flags.append("--sandbox")
+    return flags
+
+
 @dataclass(frozen=True, slots=True)
 class CodexCliProvider:
     provider_name: str = "codex"
     binary_name: str = "codex"
+    home_dir_name: str = ".codex"
+    runtime_root_name: str = "codex-runtime"
+    session_prefix: str = "local-codex"
+
+    def _default_source_auth_path(self) -> Path:
+        return Path.home() / self.home_dir_name / "auth.json"
 
     def prepare_home(
         self,
@@ -94,9 +138,9 @@ class CodexCliProvider:
         agent_name: AgentName | None = None,
         reasoning_effort: ReasoningEffortArg = REASONING_EFFORT_UNSET,
     ) -> Path:
-        source_auth_path = source_auth_path or (Path.home() / ".codex" / "auth.json")
+        source_auth_path = source_auth_path or self._default_source_auth_path()
 
-        codex_home_dir = codex_home_root / ".codex"
+        codex_home_dir = codex_home_root / self.home_dir_name
         codex_home_dir.mkdir(parents=True, exist_ok=True)
         (codex_home_root / ".cache").mkdir(parents=True, exist_ok=True)
         (codex_home_root / ".config").mkdir(parents=True, exist_ok=True)
@@ -179,7 +223,7 @@ class CodexCliProvider:
         env["PYGLET_HEADLESS"] = "1"
         env.pop("LIBGL_ALWAYS_SOFTWARE", None)
         env["HOME"] = str(codex_home_root)
-        env["CODEX_HOME"] = str(codex_home_root / ".codex")
+        env["CODEX_HOME"] = str(codex_home_root / self.home_dir_name)
         env["XDG_CACHE_HOME"] = str(codex_home_root / ".cache")
         env["XDG_CONFIG_HOME"] = str(codex_home_root / ".config")
         env.setdefault("TMPDIR", str(codex_home_root / ".tmp"))
@@ -203,7 +247,7 @@ class CodexCliProvider:
         env.setdefault("CONTROLLER_URL", "http://localhost:18000")
         env.setdefault("WORKER_LIGHT_URL", "http://localhost:18001")
         env.setdefault(
-            "SESSION_ID", session_id or f"local-codex-{task_id}-{os.getpid()}"
+            "SESSION_ID", session_id or f"{self.session_prefix}-{task_id}-{os.getpid()}"
         )
         env.setdefault("IS_HEAVY_WORKER", "1")
         env.setdefault("PROBLEMOLOGIST_SCRIPT_IMPORT_MODE", "0")
@@ -223,7 +267,7 @@ class CodexCliProvider:
             env.setdefault("AGENT_NAME", agent_name.value)
         return env
 
-    def build_exec_command(
+    def _build_exec_argv(
         self,
         *,
         workspace_dir: Path,
@@ -248,7 +292,45 @@ class CodexCliProvider:
         )
         return cmd
 
-    def build_ui_command(
+    def build_exec_invocation(
+        self,
+        *,
+        workspace_dir: Path,
+        prompt_text: str,
+        yolo: bool,
+        resume_session_id: str | None = None,
+        output_last_message_path: Path | None = None,
+    ) -> CliInvocation:
+        return CliInvocation(
+            argv=self._build_exec_argv(
+                workspace_dir=workspace_dir,
+                yolo=yolo,
+                resume_session_id=resume_session_id,
+                output_last_message_path=output_last_message_path,
+            ),
+            prompt_text=prompt_text,
+            prompt_transport="stdin",
+            cwd=workspace_dir,
+            resume_session_id=resume_session_id,
+            output_last_message_path=output_last_message_path,
+        )
+
+    def build_exec_command(
+        self,
+        *,
+        workspace_dir: Path,
+        yolo: bool,
+        resume_session_id: str | None = None,
+        output_last_message_path: Path | None = None,
+    ) -> list[str]:
+        return self._build_exec_argv(
+            workspace_dir=workspace_dir,
+            yolo=yolo,
+            resume_session_id=resume_session_id,
+            output_last_message_path=output_last_message_path,
+        )
+
+    def _build_ui_argv(
         self,
         *,
         workspace_dir: Path,
@@ -266,8 +348,206 @@ class CodexCliProvider:
             prompt_text,
         ]
 
+    def build_ui_invocation(
+        self,
+        *,
+        workspace_dir: Path,
+        prompt_text: str,
+        yolo: bool,
+    ) -> CliInvocation:
+        return CliInvocation(
+            argv=self._build_ui_argv(
+                workspace_dir=workspace_dir,
+                prompt_text=prompt_text,
+                yolo=yolo,
+            ),
+            prompt_text=prompt_text,
+            prompt_transport="positional",
+            cwd=workspace_dir,
+        )
+
+    def build_ui_command(
+        self,
+        *,
+        workspace_dir: Path,
+        prompt_text: str,
+        yolo: bool,
+    ) -> list[str]:
+        return self._build_ui_argv(
+            workspace_dir=workspace_dir,
+            prompt_text=prompt_text,
+            yolo=yolo,
+        )
+
+    def build_help_invocation(self) -> CliInvocation:
+        return CliInvocation(
+            argv=self.build_help_command(),
+            prompt_transport="none",
+        )
+
     def build_help_command(self) -> list[str]:
         return [self.binary_name, "exec", "--help"]
+
+
+@dataclass(frozen=True, slots=True)
+class QwenCliProvider(CodexCliProvider):
+    provider_name: str = "qwen"
+    binary_name: str = "qwen"
+    home_dir_name: str = ".qwen"
+    runtime_root_name: str = "qwen-runtime"
+    session_prefix: str = "local-qwen"
+
+    def build_env(
+        self,
+        *,
+        task_id: str,
+        workspace_dir: Path,
+        codex_home_root: Path,
+        session_id: str | None = None,
+        agent_name: AgentName | None = None,
+    ) -> dict[str, str]:
+        env = CodexCliProvider.build_env(
+            self,
+            task_id=task_id,
+            workspace_dir=workspace_dir,
+            codex_home_root=codex_home_root,
+            session_id=session_id,
+            agent_name=agent_name,
+        )
+        env["QWEN_HOME"] = env["CODEX_HOME"]
+        return env
+
+    def _build_exec_argv(
+        self,
+        *,
+        workspace_dir: Path,
+        yolo: bool,
+        resume_session_id: str | None = None,
+        output_last_message_path: Path | None = None,
+    ) -> list[str]:
+        cmd = [self.binary_name, *_qwen_execution_flags(yolo=yolo)]
+        if resume_session_id is not None:
+            cmd.extend(["--resume", resume_session_id])
+        if output_last_message_path is not None:
+            output_last_message_path.parent.mkdir(parents=True, exist_ok=True)
+        return cmd
+
+    def build_exec_invocation(
+        self,
+        *,
+        workspace_dir: Path,
+        prompt_text: str,
+        yolo: bool,
+        resume_session_id: str | None = None,
+        output_last_message_path: Path | None = None,
+    ) -> CliInvocation:
+        return CliInvocation(
+            argv=self._build_exec_argv(
+                workspace_dir=workspace_dir,
+                yolo=yolo,
+                resume_session_id=resume_session_id,
+                output_last_message_path=output_last_message_path,
+            )
+            + [prompt_text],
+            prompt_text=prompt_text,
+            prompt_transport="positional",
+            cwd=workspace_dir,
+            resume_session_id=resume_session_id,
+            output_last_message_path=output_last_message_path,
+        )
+
+    def build_exec_command(
+        self,
+        *,
+        workspace_dir: Path,
+        yolo: bool,
+        resume_session_id: str | None = None,
+        output_last_message_path: Path | None = None,
+    ) -> list[str]:
+        return self._build_exec_argv(
+            workspace_dir=workspace_dir,
+            yolo=yolo,
+            resume_session_id=resume_session_id,
+            output_last_message_path=output_last_message_path,
+        )
+
+    def _build_ui_argv(
+        self,
+        *,
+        workspace_dir: Path,
+        prompt_text: str,
+        yolo: bool,
+    ) -> list[str]:
+        return [
+            self.binary_name,
+            *_qwen_execution_flags(yolo=yolo),
+            "--prompt-interactive",
+            prompt_text,
+        ]
+
+    def build_ui_invocation(
+        self,
+        *,
+        workspace_dir: Path,
+        prompt_text: str,
+        yolo: bool,
+    ) -> CliInvocation:
+        return CliInvocation(
+            argv=self._build_ui_argv(
+                workspace_dir=workspace_dir,
+                prompt_text=prompt_text,
+                yolo=yolo,
+            ),
+            prompt_text=prompt_text,
+            prompt_transport="prompt_flag",
+            cwd=workspace_dir,
+        )
+
+    def build_ui_command(
+        self,
+        *,
+        workspace_dir: Path,
+        prompt_text: str,
+        yolo: bool,
+    ) -> list[str]:
+        return self._build_ui_argv(
+            workspace_dir=workspace_dir,
+            prompt_text=prompt_text,
+            yolo=yolo,
+        )
+
+    def build_help_command(self) -> list[str]:
+        return [self.binary_name, "--help"]
+
+
+_CLI_PROVIDER_REGISTRY: dict[str, type[CliProvider]] = {
+    "codex": CodexCliProvider,
+    "qwen": QwenCliProvider,
+}
+
+
+def available_cli_providers() -> list[str]:
+    return sorted(_CLI_PROVIDER_REGISTRY)
+
+
+def _resolve_provider_name(provider_name: str | None) -> str:
+    resolved = (
+        (provider_name or os.getenv("PROBLEMOLOGIST_CLI_PROVIDER") or "codex")
+        .strip()
+        .lower()
+    )
+    if resolved not in _CLI_PROVIDER_REGISTRY:
+        raise SystemExit(
+            "Unknown CLI provider '{provider}'. Available: {available}".format(
+                provider=resolved,
+                available=", ".join(available_cli_providers()),
+            )
+        )
+    return resolved
+
+
+def get_cli_provider(provider_name: str | None = None) -> CliProvider:
+    return _CLI_PROVIDER_REGISTRY[_resolve_provider_name(provider_name)]()
 
 
 _DEFAULT_PROVIDER = CodexCliProvider()

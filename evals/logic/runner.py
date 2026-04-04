@@ -19,6 +19,7 @@ from typing import Any
 from dotenv import load_dotenv
 from pyrate_limiter import Duration, Limiter, Rate
 
+from evals.logic.cli_provider import available_cli_providers
 from evals.logic.codex_session_trace import (
     CodexSessionTraceArtifact,
 )
@@ -281,9 +282,13 @@ async def _run_cli_eval(
     run_reviewers_with_judge: bool = False,
     enable_skill_loop: bool = False,
     enable_codex_skill_loop: bool | None = None,
+    provider_name: str | None = None,
 ) -> bool:
     if enable_codex_skill_loop is not None:
         enable_skill_loop = enable_codex_skill_loop
+    provider_label = (
+        provider_name or os.getenv("PROBLEMOLOGIST_CLI_PROVIDER", "codex")
+    ).strip() or "codex"
     return await _run_cli_eval_impl(
         item=item,
         stats=stats,
@@ -297,6 +302,7 @@ async def _run_cli_eval(
         run_judge=run_judge,
         run_reviewers_with_judge=run_reviewers_with_judge,
         enable_skill_loop=enable_skill_loop,
+        provider_name=provider_name,
         deps={
             "materialize_workspace": _materialize_workspace,
             "launch_cli_exec": _launch_cli_exec,
@@ -313,7 +319,7 @@ async def _run_cli_eval(
             "workspace_metrics": _workspace_metrics,
             "reviewer_metrics_from_verification": _reviewer_metrics_from_verification,
             "eval_log_key": _resolve_eval_log_key(
-                task_id=item.id, session_id=f"codex-{item.id}"
+                task_id=item.id, session_id=f"{provider_label}-{item.id}"
             ),
         },
     )
@@ -331,6 +337,7 @@ async def run_single_eval(
     update_manifests: bool = True,
     enable_skill_loop: bool = False,
     enable_codex_skill_loop: bool | None = None,
+    provider_name: str | None = None,
 ):
     if enable_codex_skill_loop is not None:
         enable_skill_loop = enable_codex_skill_loop
@@ -362,6 +369,7 @@ async def run_single_eval(
             run_judge=run_judge,
             run_reviewers_with_judge=run_reviewers_with_judge,
             enable_skill_loop=enable_skill_loop,
+            provider_name=provider_name,
         )
         return
 
@@ -579,6 +587,16 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Enable the Codex self-improving skill loop for Codex backend runs "
             "(default: disabled)."
+        ),
+    )
+    parser.add_argument(
+        "--provider",
+        type=str,
+        default=os.getenv("PROBLEMOLOGIST_CLI_PROVIDER", "codex"),
+        choices=available_cli_providers(),
+        help=(
+            "CLI provider to use for local backend runs (default: codex). "
+            "The provider choice is orthogonal to --runner-backend."
         ),
     )
     parser.add_argument(
@@ -986,6 +1004,7 @@ async def main():
                     runner_backend=runner_backend,
                     update_manifests=args.update_manifests,
                     enable_skill_loop=args.codex_skill_loop,
+                    provider_name=args.provider,
                 )
 
         await asyncio.gather(*(_guarded(item, agent) for item, agent in tasks))

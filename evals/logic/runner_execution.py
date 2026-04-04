@@ -17,6 +17,7 @@ from evals.logic.codex_session_trace import (
 from evals.logic.codex_session_trace import (
     snapshot_workspace_state as _snapshot_workspace_state,
 )
+from evals.logic.codex_workspace import get_cli_provider as _get_cli_provider
 from evals.logic.codex_workspace import launch_cli_exec as _launch_cli_exec
 from evals.logic.codex_workspace import (
     materialize_seed_workspace as _materialize_workspace,
@@ -351,6 +352,7 @@ async def _run_git_eval(
             "agent_name": agent_name.value,
             "episode_id": None,
             "eval_mode": EvalMode.GIT.value,
+            "complexity_level": item.complexity_level,
             "failure_reason": failure_reason,
             "session_id": session_id,
             "success": success,
@@ -401,11 +403,17 @@ async def _run_cli_eval(
     run_reviewers_with_judge: bool = False,
     enable_skill_loop: bool = False,
     enable_codex_skill_loop: bool | None = None,
+    provider_name: str | None = None,
     deps: dict[str, Any] | None = None,
 ) -> bool:
     deps = deps or {}
     if enable_codex_skill_loop is not None:
         enable_skill_loop = enable_codex_skill_loop
+    provider = (
+        _get_cli_provider(provider_name)
+        if provider_name is not None
+        else _get_cli_provider()
+    )
     materialize_workspace = _dep(deps, "materialize_workspace", _materialize_workspace)
     launch_cli_exec = _dep(deps, "launch_cli_exec", _launch_cli_exec)
     verify_workspace_for_agent = _dep(
@@ -440,16 +448,21 @@ async def _run_cli_eval(
         "reviewer_metrics_from_verification",
         _reviewer_metrics_from_verification,
     )
+    provider = (
+        _get_cli_provider(provider_name)
+        if provider_name is not None
+        else _get_cli_provider()
+    )
 
     task_id = item.id
     spec = AGENT_SPECS[agent_name]
-    session_id = f"codex-{task_id}-{uuid.uuid4().hex[:8]}"
+    session_id = f"{provider.session_prefix}-{task_id}-{uuid.uuid4().hex[:8]}"
     eval_log_key = _resolve_eval_log_key(task_id=task_id, session_id=session_id)
     cli_workspace_root = (
         log_context.session_log_root.parent
         if log_context.session_log_root is not None
         else root
-    ) / "codex-workspaces"
+    ) / f"{provider.provider_name}-workspaces"
     cli_runtime_root = cli_workspace_root.parent
     cli_workspace_root.mkdir(parents=True, exist_ok=True)
     workspace_dir = cli_workspace_root / (
@@ -461,6 +474,7 @@ async def _run_cli_eval(
         agent_name=agent_name,
         eval_mode=spec.mode,
         runner_backend=EvalRunnerBackend.CODEX.value,
+        provider_name=provider.provider_name,
     )
     log.info("eval_start", backend=EvalRunnerBackend.CODEX.value)
 
@@ -503,6 +517,8 @@ async def _run_cli_eval(
                 "agent_name": agent_name.value,
                 "episode_id": None,
                 "eval_mode": spec.mode.value,
+                "complexity_level": item.complexity_level,
+                "provider_name": provider.provider_name,
                 "runner_backend": EvalRunnerBackend.CODEX.value,
                 "session_id": session_id,
                 "status": "materialized",
@@ -534,14 +550,18 @@ async def _run_cli_eval(
             timeout_seconds=primary_timeout_seconds,
         )
         if launch_return_code != 0:
-            failure_reason = f"codex exited with code {launch_return_code}"
+            failure_reason = f"CLI-provider exited with code {launch_return_code}"
 
         if log_context.session_log_root is not None:
             try:
                 codex_trace_artifacts = await asyncio.to_thread(
                     capture_latest_codex_session_artifacts,
                     workspace_dir=materialized.workspace_dir,
-                    artifact_root=log_context.session_log_root / eval_log_key / "codex",
+                    artifact_root=(
+                        log_context.session_log_root
+                        / eval_log_key
+                        / provider.provider_name
+                    ),
                     baseline_snapshot=baseline_snapshot,
                     launched_after_ns=launch_started_at_ns,
                     sessions_root=resolve_cli_home_root(
@@ -549,7 +569,7 @@ async def _run_cli_eval(
                         session_id=session_id,
                         runtime_root=cli_runtime_root,
                     )
-                    / ".codex"
+                    / provider.home_dir_name
                     / "sessions",
                 )
             except Exception as exc:
@@ -736,6 +756,7 @@ async def _run_cli_eval(
             "agent_name": agent_name.value,
             "episode_id": None,
             "eval_mode": spec.mode.value,
+            "provider_name": provider.provider_name,
             "runner_backend": EvalRunnerBackend.CODEX.value,
             "session_id": session_id,
             "status": "completed" if success else "failed",
@@ -844,6 +865,7 @@ async def run_single_eval(
     update_manifests: bool = True,
     enable_skill_loop: bool = False,
     enable_codex_skill_loop: bool | None = None,
+    provider_name: str | None = None,
     deps: dict[str, Any] | None = None,
 ):
     spec = AGENT_SPECS[agent_name]
@@ -886,6 +908,7 @@ async def run_single_eval(
             run_judge=run_judge,
             run_reviewers_with_judge=run_reviewers_with_judge,
             enable_skill_loop=enable_skill_loop,
+            provider_name=provider_name,
             deps=deps,
         )
         return
@@ -1040,6 +1063,7 @@ async def run_single_eval(
                             "agent_name": agent_name.value,
                             "episode_id": episode_id or None,
                             "eval_mode": spec.mode.value,
+                            "complexity_level": item.complexity_level,
                             "session_id": session_id or None,
                             "status": "trigger_failed",
                             "success": False,
@@ -1492,6 +1516,7 @@ async def run_single_eval(
                         "agent_name": agent_name.value,
                         "episode_id": episode_id or None,
                         "eval_mode": spec.mode.value,
+                        "complexity_level": item.complexity_level,
                         "session_id": session_id or None,
                         "status": "controller_request_failed",
                         "success": False,
@@ -1506,6 +1531,7 @@ async def run_single_eval(
                 "agent_name": agent_name.value,
                 "episode_id": episode_id or None,
                 "eval_mode": spec.mode.value,
+                "complexity_level": item.complexity_level,
                 "session_id": session_id or None,
                 "status": "completed",
                 "success": success,
