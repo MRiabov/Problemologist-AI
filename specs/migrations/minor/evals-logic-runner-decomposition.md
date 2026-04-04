@@ -134,14 +134,14 @@ Use this checklist to track the implementation from the first extraction through
 
 - [ ] Reduce `evals/logic/runner.py` to parser/bootstrap/dispatch/reporting glue.
 - [ ] Keep the `dataset/evals/run_evals.py` compatibility shim unchanged.
-- [ ] Confirm the standalone skill-training path can reuse the extracted helpers.
+- [x] Confirm the standalone skill-training path can reuse the extracted helpers.
 - [ ] Plan the eventual removal of redundant compatibility wrappers once direct call sites are updated.
 
 ### Validation and rollout
 
-- [ ] Verify the narrowest Codex/backend slice first, then widen only if the split is stable.
-- [ ] Run the relevant eval integration coverage through `./scripts/run_integration_tests.sh`.
-- [ ] Update docs only if import paths or observable file contracts change.
+- [x] Verify the narrowest Codex/backend slice first, then widen only if the split is stable.
+- [x] Run the relevant eval integration coverage through `./scripts/run_integration_tests.sh`.
+- [x] Update docs only if import paths or observable file contracts change.
 - [ ] Retire any wrapper that only forwards to another wrapper once the migration no longer needs it.
 
 ## File-Level Change Set
@@ -151,10 +151,12 @@ The implementation should touch the smallest set of files that actually enforce 
 - `evals/logic/runner.py`
 - `evals/logic/runner_reporting.py`
 - `evals/logic/runner_skill_loop.py`
+- `evals/logic/skill_training.py`
 - `evals/logic/runner_metrics.py`
 - `evals/logic/runner_judging.py`
 - `evals/logic/runner_execution.py`
 - `dataset/evals/run_evals.py` if the façade needs import adjustments
+- `dataset/evals/train_skills.py`
 - `specs/devtools.md`
 - `specs/architecture/evals-architecture.md`
 - integration tests that cover the Codex runner and the controller-backed eval paths

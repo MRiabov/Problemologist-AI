@@ -115,11 +115,11 @@ Use this checklist to track the implementation from backend wiring through runti
 
 ### Loop triggers and control flow
 
-- [ ] Trigger the loop when the primary run times out.
+- [x] Trigger the loop when the primary run times out.
 - [x] Trigger the loop when the primary run exits early.
 - [x] Trigger the loop when simulation success is not reported.
 - [x] Keep the follow-up flow bounded to the self-analysis turn and the skill-drafting turn.
-- [ ] Fail closed if the session cannot be resumed or if the follow-up prompt cannot be delivered.
+- [x] Fail closed if the session cannot be resumed or if the follow-up prompt cannot be delivered.
 - [x] Keep the main eval/task run and the skill-improvement loop asynchronous from one another.
 
 ### Context preservation
@@ -132,10 +132,10 @@ Use this checklist to track the implementation from backend wiring through runti
 ### Skill-output staging
 
 - [x] Write the self-analysis output into the follow-up flow before generating skill changes.
-- [ ] Write generated skill content into `suggested_skills/` first.
-- [ ] Keep canonical `skills/` as the reviewed source of truth.
-- [ ] Preserve the existing rule that skill updates are explicit, versioned, and reviewable.
-- [ ] Keep promotion into `skills/` as a separate step, not an automatic side effect of the loop.
+- [x] Write generated skill content into `suggested_skills/` first.
+- [x] Keep canonical `skills/` as the reviewed source of truth.
+- [x] Preserve the existing rule that skill updates are explicit, versioned, and reviewable.
+- [x] Keep promotion into `skills/` as a separate step, not an automatic side effect of the loop.
 
 ### Prompt and artifact wiring
 
@@ -143,9 +143,9 @@ Use this checklist to track the implementation from backend wiring through runti
 - [x] Keep the follow-up prompts short and file-driven instead of embedding the whole history again.
 - [x] Ensure the workspace prompt and runtime docs describe the resume-based multi-turn contract clearly enough for Codex runs.
 - [x] Expose an opt-in CLI flag in the Codex eval entrypoint so the backend loop stays disabled by default.
-- [ ] Keep `dataset/evals/run_evals.py` thin so it remains a CLI entrypoint, not the loop owner.
-- [ ] Keep `dataset/evals/materialize_seed_workspace.py` as a workspace helper, not the orchestration layer.
-- [ ] Add the dedicated `train_skills.py` entrypoint and wire it to retained episode bundles.
+- [x] Keep `dataset/evals/run_evals.py` thin so it remains a CLI entrypoint, not the loop owner.
+- [x] Keep `dataset/evals/materialize_seed_workspace.py` as a workspace helper, not the orchestration layer.
+- [x] Add the dedicated `train_skills.py` entrypoint and wire it to retained episode bundles.
 
 ### Runner decomposition
 
@@ -154,9 +154,9 @@ Use this checklist to track the implementation from backend wiring through runti
 ### Validation and rollout
 
 - [x] Add integration coverage for a resumed Codex session that receives multiple follow-up prompts.
-- [ ] Add integration coverage for the timeout/early-exit/no-success triggers that start the loop.
-- [ ] Add integration coverage that verifies `suggested_skills/` receives the draft before any promotion step.
-- [ ] Verify the narrowest Codex/backend slice first, then widen only if the loop behavior is stable.
+- [x] Add integration coverage for the timeout/early-exit/no-success triggers that start the loop.
+- [x] Add integration coverage that verifies `suggested_skills/` receives the draft before any promotion step.
+- [x] Verify the narrowest Codex/backend slice first, then widen only if the loop behavior is stable.
 - [x] Update any related architecture docs or prompts that still describe manual copy/paste as the only way to continue the conversation.
 
 ## File-Level Change Set
@@ -169,6 +169,7 @@ The implementation should touch the smallest set of files that actually enforce 
 - `dataset/evals/materialize_seed_workspace.py`
 - `dataset/evals/run_evals.py`
 - `dataset/evals/train_skills.py`
+- `evals/logic/skill_training.py`
 - `specs/architecture/agents/agent-skill.md`
 - `specs/architecture/agents/agent-harness.md`
 - `specs/architecture/observability.md`
