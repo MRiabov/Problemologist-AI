@@ -28,11 +28,11 @@ from evals.logic.codex_session_trace import (
 )
 from evals.logic.codex_workspace import (
     CodexExecRunResult,
-    build_codex_env,
-    launch_codex_exec,
+    build_cli_env,
+    launch_cli_exec,
     materialize_seed_workspace,
-    prepare_codex_home,
-    resume_codex_exec,
+    prepare_cli_home,
+    resume_cli_exec,
     verify_planner_workspace,
 )
 from evals.logic.models import EvalDatasetItem
@@ -102,6 +102,9 @@ class RecordingCliProvider:
 
     def prepare_home(self, **kwargs):
         return self._delegate.prepare_home(**kwargs)
+
+    def translate_reasoning_effort(self, reasoning_effort):
+        return self._delegate.translate_reasoning_effort(reasoning_effort)
 
     def build_env(self, **kwargs):
         env = self._delegate.build_env(**kwargs)
@@ -508,7 +511,7 @@ def test_resume_codex_exec_uses_cli_provider_resume_command(
 
     monkeypatch.setenv("HOME", str(fake_home))
 
-    result = resume_codex_exec(
+    result = resume_cli_exec(
         workspace_dir=workspace_dir,
         prompt_text="self-analyze the failed run",
         task_id="task-1",
@@ -1053,13 +1056,13 @@ def test_run_evals_codex_env_uses_isolated_home_and_workspace_pythonpath(tmp_pat
     workspace_dir = tmp_path / "workspace"
     workspace_dir.mkdir()
     codex_home_root = tmp_path / "codex-home"
-    codex_home_dir = prepare_codex_home(
+    codex_home_dir = prepare_cli_home(
         codex_home_root=codex_home_root,
         workspace_dir=workspace_dir,
         source_auth_path=source_auth_path,
     )
 
-    env = build_codex_env(
+    env = build_cli_env(
         task_id="task-1",
         workspace_dir=workspace_dir,
         codex_home_root=codex_home_root,
@@ -1093,6 +1096,46 @@ def test_run_evals_codex_env_uses_isolated_home_and_workspace_pythonpath(tmp_pat
 
 
 @pytest.mark.integration_p0
+def test_cli_provider_reasoning_effort_translation_hook_is_used(tmp_path):
+    source_auth_path = tmp_path / "source-home" / ".codex" / "auth.json"
+    source_auth_path.parent.mkdir(parents=True, exist_ok=True)
+    source_auth_path.write_text(
+        json.dumps(
+            {
+                "OPENAI_API_KEY": None,
+                "tokens": {"account_id": "acct-1", "access_token": "token-1"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    class RemappedCodexProvider(CodexCliProvider):
+        def translate_reasoning_effort(
+            self, reasoning_effort: str | None
+        ) -> str | None:
+            if reasoning_effort == "xhigh":
+                return "ultra"
+            return super().translate_reasoning_effort(reasoning_effort)
+
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+    provider = RemappedCodexProvider()
+    codex_home_root = tmp_path / "codex-home"
+    codex_home_dir = provider.prepare_home(
+        codex_home_root=codex_home_root,
+        workspace_dir=workspace_dir,
+        source_auth_path=source_auth_path,
+        agent_name=AgentName.ENGINEER_PLANNER,
+        reasoning_effort="xhigh",
+    )
+
+    config_text = (codex_home_dir / "config.toml").read_text(encoding="utf-8")
+    assert 'model_reasoning_effort = "ultra"' in config_text
+
+
+@pytest.mark.integration_p0
 def test_run_evals_codex_env_supports_repo_root_imports(tmp_path):
     source_auth_path = tmp_path / "source-home" / ".codex" / "auth.json"
     source_auth_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1117,13 +1160,13 @@ def test_run_evals_codex_env_supports_repo_root_imports(tmp_path):
     )
 
     codex_home_root = tmp_path / "codex-home"
-    prepare_codex_home(
+    prepare_cli_home(
         codex_home_root=codex_home_root,
         workspace_dir=workspace_dir,
         source_auth_path=source_auth_path,
     )
 
-    env = build_codex_env(
+    env = build_cli_env(
         task_id="task-1",
         workspace_dir=workspace_dir,
         codex_home_root=codex_home_root,
@@ -1165,7 +1208,7 @@ def test_run_evals_codex_env_uses_role_reasoning_effort_and_can_disable(
     workspace_dir.mkdir()
 
     planner_home_root = tmp_path / "codex-home-planner"
-    planner_home = prepare_codex_home(
+    planner_home = prepare_cli_home(
         codex_home_root=planner_home_root,
         workspace_dir=workspace_dir,
         source_auth_path=source_auth_path,
@@ -1175,7 +1218,7 @@ def test_run_evals_codex_env_uses_role_reasoning_effort_and_can_disable(
     assert 'model_reasoning_effort = "xhigh"' in planner_config
 
     coder_home_root = tmp_path / "codex-home-coder"
-    coder_home = prepare_codex_home(
+    coder_home = prepare_cli_home(
         codex_home_root=coder_home_root,
         workspace_dir=workspace_dir,
         source_auth_path=source_auth_path,
@@ -1190,7 +1233,7 @@ def test_run_evals_codex_env_uses_role_reasoning_effort_and_can_disable(
         lambda: disabled_agents_config,
     )
     disabled_home_root = tmp_path / "codex-home-disabled"
-    disabled_home = prepare_codex_home(
+    disabled_home = prepare_cli_home(
         codex_home_root=disabled_home_root,
         workspace_dir=workspace_dir,
         source_auth_path=source_auth_path,
@@ -1522,14 +1565,14 @@ result = build()
         encoding="utf-8",
     )
     codex_home_root = tmp_path / "codex-home"
-    prepare_codex_home(
+    prepare_cli_home(
         codex_home_root=codex_home_root,
         workspace_dir=workspace_dir,
         source_auth_path=source_auth_path,
     )
 
     session_id = f"INT-207-{uuid4().hex[:8]}"
-    env = build_codex_env(
+    env = build_cli_env(
         task_id=item.id,
         workspace_dir=workspace_dir,
         codex_home_root=codex_home_root,
@@ -1639,7 +1682,7 @@ def test_launch_codex_exec_uses_expected_sandbox_policy(
     )
     monkeypatch.setenv("HOME", str(fake_home))
 
-    result = launch_codex_exec(
+    result = launch_cli_exec(
         workspace_dir,
         "run the seeded workspace",
         task_id="ec-001-drawing-full",
@@ -2017,13 +2060,13 @@ async def test_codex_materialized_planner_workspace_submits(
         encoding="utf-8",
     )
     codex_home_root = tmp_path / "codex-home"
-    prepare_codex_home(
+    prepare_cli_home(
         codex_home_root=codex_home_root,
         workspace_dir=workspace_dir,
         source_auth_path=source_auth_path,
     )
 
-    env = build_codex_env(
+    env = build_cli_env(
         task_id=item.id,
         workspace_dir=workspace_dir,
         codex_home_root=codex_home_root,
@@ -2335,7 +2378,7 @@ def test_clear_env_re_materializes_seeded_workspace_in_place(tmp_path: Path):
     shutil.rmtree(workspace_dir / ".manifests", ignore_errors=True)
 
     codex_home_root = tmp_path / "codex-home"
-    env = build_codex_env(
+    env = build_cli_env(
         task_id=item.id,
         workspace_dir=workspace_dir,
         codex_home_root=codex_home_root,

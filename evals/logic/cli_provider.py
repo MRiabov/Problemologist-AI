@@ -25,6 +25,10 @@ REASONING_EFFORT_UNSET: object = object()
 class CliProvider(Protocol):
     provider_name: str
 
+    def translate_reasoning_effort(
+        self, reasoning_effort: ReasoningEffort | None
+    ) -> str | None: ...
+
     def prepare_home(
         self,
         *,
@@ -122,6 +126,10 @@ class CodexCliProvider:
         else:
             resolved_reasoning_effort = reasoning_effort
 
+        resolved_reasoning_effort = self.translate_reasoning_effort(
+            resolved_reasoning_effort
+        )
+
         config_path = codex_home_dir / "config.toml"
         config_lines = [
             'model = "gpt-5.4-mini"',
@@ -141,6 +149,11 @@ class CodexCliProvider:
             )
         config_path.write_text("\n".join(config_lines), encoding="utf-8")
         return codex_home_dir
+
+    def translate_reasoning_effort(
+        self, reasoning_effort: ReasoningEffort | None
+    ) -> str | None:
+        return reasoning_effort
 
     def build_env(
         self,

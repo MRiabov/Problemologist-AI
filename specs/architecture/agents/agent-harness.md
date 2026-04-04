@@ -2,7 +2,7 @@
 
 ## Scope summary
 
-- Primary focus: the runtime harness for agent workflows, including the prompt/workspace contract, submission helpers, and debug Codex mode.
+- Primary focus: the runtime harness for agent workflows, including the prompt/workspace contract, submission helpers, and debug CLI-provider mode.
 - Defines the DSPy/LangGraph/LangFuse runtime shape, backend selection, and local eval-debug behavior.
 - Covers agent memory, journal/review artifacts, and the runtime contract that feeds the prompt and workspace.
 - Use this file for anything that changes how an agent starts, runs, or submits in the workspace.
@@ -14,7 +14,7 @@ We use DSPy.ReAct as the primary agent runtime and LangGraph to manage agent orc
 The controller can run either:
 
 1. an API-backed model path, or
-2. a Codex CLI-backed local workspace path.
+2. a CLI-provider-backed local workspace path.
 
 Codex is the default eval-debug backend, and the controller-backed API path remains available when a run must use a paid API provider or needs controller-specific orchestration traces.
 
@@ -28,23 +28,23 @@ Adapter choice is an explicit runtime contract:
 4. Do not silently swap adapters per request. Adapter overrides must be explicit in code/config and visible in observability metadata.
 5. Fail closed if adapter selection is invalid or unsupported for a node.
 
-## Debug Codex mode
+## Debug CLI-provider mode
 
-The debug Codex mode exists to reduce the cost of repeated eval iteration.
+The debug CLI-provider mode exists to reduce the cost of repeated eval iteration.
 
-It is a local Codex-backed backend for eval debugging and repeated agent runs. It is an application mode, not a new benchmark graph and not a replacement for the controller-backed runtime.
+It is a local CLI-provider-backed backend for eval debugging and repeated agent runs. It is an application mode, not a new benchmark graph and not a replacement for the controller-backed runtime.
 
 The conceptual split is:
 
 1. `controller` is the orchestration layer and remains the same application responsibility.
-2. The LLM/tool substrate can be either API-backed or Codex CLI-backed.
-3. Judge and reviewer logic can run against the same deterministic workspace artifacts in Codex mode when the local contracts are satisfied.
+2. The LLM/tool substrate can be either API-backed or CLI-provider-backed.
+3. Judge and reviewer logic can run against the same deterministic workspace artifacts in CLI-provider mode when the local contracts are satisfied.
 
 ## Backend selection
 
 The runner exposes the backend as an explicit mode:
 
-1. `codex` launches a local Codex workspace and runs the task there.
+1. The configured CLI provider launches a local workspace and runs the task there.
 2. `controller` uses the existing HTTP orchestration path and paid model providers.
 3. `codex` is the default backend.
 4. The backend can be selected through `--call-paid-api`, `--runner-backend`, or `EVAL_RUNNER_BACKEND`.
@@ -53,7 +53,7 @@ The runner exposes the backend as an explicit mode:
 
 ## Workspace materialization
 
-The Codex backend materializes a run-local workspace before the agent starts.
+The CLI-provider backend materializes a run-local workspace before the agent starts.
 
 The materialized workspace is the source of truth for the session, not the repository root.
 
@@ -115,7 +115,7 @@ The Codex prompt must direct reviewers to the stage-specific `reviews/` files an
 
 ## Filesystem contract
 
-The Codex backend must follow the same filesystem rules as the rest of the runtime.
+The CLI-provider backend must follow the same filesystem rules as the rest of the runtime.
 Path handling is fail closed.
 
 The filesystem rules are:
@@ -132,7 +132,7 @@ The shared backend uses the same rule in `shared/workers/filesystem/backend.py`.
 
 ## Submission contract
 
-Planner submission is explicit and local in Codex mode.
+Planner submission is explicit and local in CLI-provider mode.
 The agent does not call the controller to submit the handoff.
 
 The submission contract is:
@@ -174,29 +174,29 @@ Rules:
 4. Reviewer outputs are stage-scoped YAML pairs and the decision YAML is the routing source of truth.
 5. Token compression is configured by `config/agents_config.yaml` and keeps canonical context telemetry available for compaction.
 6. Feedback from simulation, cost checks, and manufacturability checks is recorded in markdown for downstream debugging and skill learning.
-7. Codex self-improvement runs persist a local `logs/skill_loop/events.jsonl` sidecar so self-reflection text and follow-up skill-update output remain available for later diagnostics, and the runner promotes those structured records into DB traces when an episode-backed path exists.
+7. CLI-provider self-improvement runs persist a local `logs/skill_loop/events.jsonl` sidecar so self-reflection text and follow-up skill-update output remain available for later diagnostics, and the runner promotes those structured records into DB traces when an episode-backed path exists.
 8. The eval launcher should stay thin; the shared orchestration core in `evals/logic/runner.py` should be split into smaller reusable modules, and a separate `train_skills.py`-style CLI owns the standalone replay/training loop over the retained bundle when skill training is enabled.
 
 ## Runner behavior
 
-The runner behavior for Codex mode is:
+The runner behavior for CLI-provider mode is:
 
 1. Materialize the workspace for the selected eval row.
-2. Launch `codex exec` in that workspace with the prompt text.
-3. Verify the workspace locally after Codex exits.
+2. Launch the configured CLI provider in that workspace with the prompt text.
+3. Verify the workspace locally after the provider exits.
 4. Optionally run local judge/reviewer passes against the same workspace artifacts when the run requests judge/reviewer mode and the local stage contracts are satisfied.
 5. Persist session metadata including workspace path, launch return code, verification result, judge/reviewer outcomes when run, and failure reason, then promote queryable observability events into the controller DB when an episode-backed path is available.
-6. Fail closed if the local Codex CLI is missing or the workspace verification fails.
+6. Fail closed if the local CLI provider is missing or the workspace verification fails.
 7. Controller-backed eval runs apply the `eval` stack profile so the eval bootstrap does not tear down or probe the integration stack, the profile skips the frontend dev server because evals do not need it, and the render path still uses the containerized `worker-renderer` service rather than a host-launched Xvfb fallback.
 8. Long-running controller-backed eval runs emit the audible reminder `eval setup running` every five minutes until the run exits.
 
-The runner does not require controller/worker orchestration for the agent loop in Codex mode.
+The runner does not require controller/worker orchestration for the agent loop in CLI-provider mode.
 The controller-backed preflight and health checks remain part of the paid-provider/controller path only.
-The standalone skill-training replay is not the eval launcher’s job; it consumes the retained episode bundle through a separate training entrypoint and may reuse the same Codex session id when one is present.
+The standalone skill-training replay is not the eval launcher’s job; it consumes the retained episode bundle through a separate training entrypoint and may reuse the same session id when one is present.
 
 ## Observability
 
-Codex mode emits two observability layers:
+CLI-provider mode emits two observability layers:
 
 1. Raw run artifacts:
    - the CLI session stream under `CODEX_HOME/sessions/rollout-*.jsonl`

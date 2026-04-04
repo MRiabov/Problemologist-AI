@@ -109,6 +109,9 @@ consume the same motion intent, not different solution languages.
 - Keep the contract explicit about solution-owned labels and the backend-facing
   actuator names those labels produce.
 - Do not add a second solution motor schema just for Genesis.
+- If the starter workspace needs a visible example, add it in both the shared
+  `solution_script.py` template and the engineer `assembly_definition.yaml`
+  template so authors can see the supported motor contract immediately.
 
 ### 2. Keep MuJoCo as the reference implementation
 
@@ -148,6 +151,9 @@ consume the same motion intent, not different solution languages.
 - Reject a scene that silently downgrades a motorized solution part to static
   geometry.
 - Do not let a missing mapping degrade into a fake success with zero motion.
+- Make the validation and file-validation path report the same fail-closed
+  result before simulation starts when a motor mapping is missing, unsupported,
+  or inconsistent with the declared COTS motor data.
 
 ### 6. Add integration coverage for solution motors
 
@@ -168,6 +174,9 @@ consume the same motion intent, not different solution languages.
   implementation needs authors to see the supported contract.
 - Keep any example concise and backend-neutral.
 - Update prompt-facing guidance only if the starter material actually changes.
+- Refresh the integration-test catalog so the new parity coverage is recorded
+  explicitly, either by extending the existing electromechanical rows or by
+  adding a dedicated solution-motor backend-parity row.
 
 ## Non-Goals
 
@@ -220,6 +229,9 @@ The safe order is:
 - [ ] Keep the MuJoCo reference behavior stable while the parity work lands.
 - [ ] Define the Genesis motor materialization strategy from the same shared
   contract.
+- [ ] Add a visible starter-workspace motor example in the shared
+  `solution_script.py` template and the engineer `assembly_definition.yaml`
+  template if authors need a concrete reference.
 
 ### Runtime
 
@@ -228,6 +240,8 @@ The safe order is:
   `get_all_actuator_names()` across backends.
 - [ ] Keep power gating and overload monitoring backend-agnostic.
 - [ ] Fail closed on unresolved or unsupported motor mappings.
+- [ ] Keep the validation and file-validation path fail-closed on missing or
+  incompatible motor mappings before simulation starts.
 
 ### Validation
 
@@ -235,6 +249,8 @@ The safe order is:
   controller inputs.
 - [ ] Add a validation failure for missing or invalid motor mappings before
   simulation starts.
+- [ ] Make the validation failure surface the same motor identity and control
+  mode context that the simulation path uses.
 
 ### Tests
 
@@ -243,6 +259,8 @@ The safe order is:
   Genesis.
 - [ ] Add negative integration coverage for unresolved motor mappings.
 - [ ] Add regression coverage for unpowered and overloaded motors.
+- [ ] Refresh `specs/integration-test-list.md` so the solution-motor parity row
+  is explicit and tied to the actual integration coverage.
 
 ### Docs
 
@@ -268,6 +286,7 @@ enforce the new contract:
 - `tests/worker_heavy/simulation/test_genesis_builder_electronics.py`
 - `tests/integration/architecture_p1/test_electronics_full.py`
 - `shared/assets/template_repos/engineer/assembly_definition.yaml`
+- `shared/agent_templates/common/solution_script.py`
 - `specs/architecture/simulation-and-rendering.md`
 - `specs/architecture/electronics-and-electromechanics.md`
 - `specs/integration-test-list.md`

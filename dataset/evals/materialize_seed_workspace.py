@@ -2,8 +2,8 @@
 
 This is an inspection helper, not the eval runner. It copies the seeded
 artifacts for a single dataset row into a persistent temp directory and writes
-the Codex prompt to `prompt.md` so you can inspect the exact workspace contents
-an agent would start from.
+the provider prompt to `prompt.md` so you can inspect the exact workspace
+contents an agent would start from.
 """
 
 from __future__ import annotations
@@ -32,8 +32,8 @@ from scripts.internal.eval_run_lock import (  # noqa: E402
 apply_stack_profile_env("eval", env=os.environ, root=ROOT)
 
 from evals.logic.codex_workspace import (  # noqa: E402
-    launch_codex_exec,
-    open_codex_ui,
+    launch_cli_exec,
+    open_cli_ui,
 )
 from evals.logic.codex_workspace import (
     materialize_seed_workspace as materialize_codex_workspace,
@@ -56,7 +56,7 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Create a local temp workspace from a seeded eval row and write "
-            "prompt.md for inspection or Codex launching."
+            "prompt.md for inspection or CLI-provider launching."
         )
     )
     parser.add_argument(
@@ -81,8 +81,8 @@ def _parse_args() -> argparse.Namespace:
         "--launch-codex",
         action="store_true",
         help=(
-            "After materializing the workspace, launch `codex exec` in that "
-            "directory using prompt.md as the prompt."
+            "After materializing the workspace, launch the configured CLI "
+            "provider in that directory using prompt.md as the prompt."
         ),
     )
     parser.add_argument(
@@ -91,16 +91,17 @@ def _parse_args() -> argparse.Namespace:
         dest="open_codex",
         action="store_true",
         help=(
-            "After materializing the workspace, open the interactive Codex UI "
-            "in that directory using prompt.md as the initial prompt."
+            "After materializing the workspace, open the interactive CLI "
+            "provider UI in that directory using prompt.md as the initial prompt."
         ),
     )
     parser.add_argument(
         "--env-up",
         action="store_true",
         help=(
-            "Run scripts/env_up.sh before launching Codex so the controller and "
-            "worker services are available on the local ports."
+            "Run scripts/env_up.sh before launching the configured CLI "
+            "provider so the controller and worker services are available on the "
+            "local ports."
         ),
     )
     parser.add_argument(
@@ -127,13 +128,13 @@ def _parse_args() -> argparse.Namespace:
         "--yolo",
         dest="yolo",
         action="store_true",
-        help="Launch Codex without approvals or sandboxing.",
+        help="Launch the configured CLI provider without approvals or sandboxing.",
     )
     yolo_group.add_argument(
         "--no-yolo",
         dest="yolo",
         action="store_false",
-        help="Launch Codex with the normal sandboxed behavior.",
+        help="Launch the configured CLI provider with the normal sandboxed behavior.",
     )
     return parser.parse_args()
 
@@ -291,7 +292,7 @@ def main() -> None:
 
     if args.launch_codex:
         raise SystemExit(
-            launch_codex_exec(
+            launch_cli_exec(
                 materialized.workspace_dir,
                 materialized.prompt_text,
                 agent_name=agent,
@@ -302,7 +303,7 @@ def main() -> None:
 
     if args.open_codex:
         raise SystemExit(
-            open_codex_ui(
+            open_cli_ui(
                 materialized.workspace_dir,
                 materialized.prompt_text,
                 agent_name=agent,

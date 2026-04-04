@@ -7,7 +7,7 @@
 - Covers persistence/storage expectations, concurrency model, WebSocket control-plane transport, and Temporal orchestration boundary.
 - Use this file when changing infra topology or controller-to-worker integration behavior.
 
-The controller remains the orchestration layer. The LLM/tool substrate under that controller can be either API-backed or Codex CLI-backed, but that is a backend choice, not a change to the controller's role.
+The controller remains the orchestration layer. The LLM/tool substrate under that controller can be either API-backed or CLI-provider-backed, but that is a backend choice, not a change to the controller's role.
 
 Terminology is strict:
 
@@ -165,7 +165,7 @@ Backend responsibility is split by operation purpose:
 Backend choice is orthogonal to the controller and worker-plane split:
 
 - API-backed runs execute through the controller's HTTP orchestration path.
-- Codex-backed runs execute through the local Codex workspace path.
+- CLI-provider-backed runs execute through the local workspace path.
 - Both paths still rely on the same worker services for filesystem, execution, validation, simulation, and the renderer worker.
 
 Direct `worker-heavy` benchmark endpoints (`/benchmark/*`) are reserved for integration tests that verify worker-level boundaries, not an alternate orchestration model with independent queueing semantics.

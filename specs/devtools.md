@@ -22,7 +22,7 @@ The developer instrumentation layer is split into a small set of canonical entry
 | -- | -- | -- | -- |
 | Local bootstrap | `scripts/env_up.sh`, `scripts/env_down.sh` | Bring the selected local stack profile up and down, including infra, app processes, and profile-scoped cleanup | Public and stable |
 | Integration orchestration | `scripts/run_integration_tests.sh`, `scripts/internal/integration_runner.py` | Run the canonical integration suite through the real stack and the real HTTP/system boundaries | Public wrapper, internal implementation |
-| Eval orchestration | `dataset/evals/run_evals.py`, `evals/logic/runner.py` (split into reusable helpers under `evals/logic/`), `dataset/evals/materialize_seed_workspace.py` | Run evals, materialize seeded workspaces, and expose the Codex-debug path | Public wrapper plus internal implementation |
+| Eval orchestration | `dataset/evals/run_evals.py`, `evals/logic/runner.py` (split into reusable helpers under `evals/logic/`), `dataset/evals/materialize_seed_workspace.py` | Run evals, materialize seeded workspaces, and expose the CLI-provider-backed debug path | Public wrapper plus internal implementation |
 | Eval coordination | `scripts/internal/eval_run_lock.py`, `scripts/internal/eval_seed_renders.py` | Serialize eval runs and regenerate deterministic seed render bundles | Internal helper modules |
 | Seed and fixture validation | `scripts/validate_eval_seed.py`, `scripts/validate_integration_mock_response_preflight.py`, `scripts/normalize_integration_mock_responses.py` | Validate seeded eval rows against the current seeded-entry contract, including planner inventory exactness and plan grounding; validate integration mock-response scenarios; repair deterministic fixture drift | Public maintenance utilities |
 | Derived artifact regeneration | `scripts/generate_openapi.py`, `scripts/persist_test_results.py` | Regenerate API schemas and persist test-history outputs | Public utilities |
@@ -116,20 +116,20 @@ The eval tooling mirrors the integration tooling, but it owns a separate lock, a
 - It owns backend selection, task filtering, complexity-level filtering, concurrency, rate limiting, and run logging.
 - It uses the eval run lock to protect the stack while bootstrapping and then runs as a shared consumer of the eval lock during execution.
 - Controller-backed runs bootstrap exclusively only while `scripts/env_up.sh` is running, then downgrade to the shared lock for the actual eval loop.
-- Codex-backed runs and `--skip-env-up` runs join the shared eval lock directly.
+- CLI-provider-backed runs and `--skip-env-up` runs join the shared eval lock directly.
 - It records the active bootstrap owner in `/tmp/problemologist-eval.run.json` and updates that state only while the lease is writable.
 - It writes logs under `logs/evals/runs/run_*` and maintains `logs/evals/current/` plus `logs/evals/latest.log`.
-- It can run against the controller-backed path or the local Codex path.
+- It can run against the controller-backed path or the local CLI-provider path.
 - Controller-backed eval runs bootstrap the `eval` profile through `scripts/env_up.sh` unless the caller explicitly skips that step.
 - `--skip-env-up` joins the shared eval lock directly so multiple eval consumers can coexist when the stack is already up.
-- Codex-backed eval runs remain local to the materialized workspace and do not require the controller/worker stack to be booted for the agent loop itself.
+- CLI-provider-backed eval runs remain local to the materialized workspace and do not require the controller/worker stack to be booted for the agent loop itself.
 
 ### `dataset/evals/materialize_seed_workspace.py`
 
 - `dataset/evals/materialize_seed_workspace.py` is an inspection helper for a single seeded eval row.
-- It materializes the row into a temp workspace, writes the Codex prompt to `prompt.md`, and prints the copied file list for inspection.
+- It materializes the row into a temp workspace, writes the provider prompt to `prompt.md`, and prints the copied file list for inspection.
 - It is not the eval runner and should not be treated as the owner of the eval loop.
-- It can optionally bootstrap the `eval` profile, launch Codex, or open the Codex UI.
+- It can optionally bootstrap the `eval` profile, launch the configured CLI provider, or open the interactive UI through that provider backend.
 - It uses the exclusive eval lock while bootstrapping and then downgrades to the shared validation lock so multiple validation-only consumers can coexist while the stack remains protected.
 - After bootstrap it stops mutating the lock state and keeps only the shared lock file handle open.
 - It exposes explicit sandbox selection through `--yolo` and `--no-yolo`; the script should never invent a hidden bypass mode.
@@ -137,7 +137,7 @@ The eval tooling mirrors the integration tooling, but it owns a separate lock, a
 ### `dataset/evals/eval_seed_update_autopilot.py`
 
 - `dataset/evals/eval_seed_update_autopilot.py` is the reusable seed-update autopilot for eval rows.
-- It caches one migration investigation, then reuses that context to batch-update selected seeds through resumable Codex sessions.
+- It caches one migration investigation, then reuses that context to batch-update selected seeds through resumable CLI-provider sessions.
 - It validates each updated seed with `scripts/validate_eval_seed.py` and keeps its own persistent log/state tree under `logs/evals/`.
 - The `scripts/throwaway/` wrapper remains for compatibility, but the canonical entrypoint lives in `dataset/evals/`.
 

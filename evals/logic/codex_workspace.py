@@ -704,20 +704,20 @@ def _write_template_files(dst_root: Path, template_files: dict[str, str]) -> lis
     return copied
 
 
-def resolve_codex_home_root(
+def resolve_cli_home_root(
     *,
     task_id: str,
     session_id: str | None = None,
     runtime_root: Path | None = None,
 ) -> Path:
-    """Return the isolated HOME directory used for a Codex run."""
+    """Return the isolated HOME directory used for a CLI-provider run."""
 
     runtime_root = (runtime_root or ROOT) / _CODEX_RUNTIME_ROOT_NAME
     session_key = session_id or f"local-codex-{task_id}-{os.getpid()}"
     return runtime_root / "homes" / session_key
 
 
-def prepare_codex_home(
+def prepare_cli_home(
     *,
     codex_home_root: Path,
     workspace_dir: Path,
@@ -727,7 +727,7 @@ def prepare_codex_home(
     | None
     | object = REASONING_EFFORT_UNSET,
 ) -> Path:
-    """Seed an isolated Codex home with the active auth bundle."""
+    """Seed an isolated CLI-provider home with the active auth bundle."""
     return get_cli_provider().prepare_home(
         codex_home_root=codex_home_root,
         workspace_dir=workspace_dir,
@@ -804,12 +804,12 @@ def _build_codex_runtime_context(
     return "\n".join(runtime_context_lines)
 
 
-def build_codex_prompt(
+def build_cli_prompt(
     *,
     item: EvalDatasetItem,
     agent_name: AgentName,
 ) -> str:
-    """Build a role-specific Codex prompt for the materialized workspace."""
+    """Build a role-specific prompt for the materialized workspace."""
 
     runtime_context = _build_codex_runtime_context(item=item, agent_name=agent_name)
     prompt_manager = PromptManager()
@@ -820,7 +820,7 @@ def build_codex_prompt(
     )
 
 
-def _run_codex_exec_command(
+def _run_cli_exec_command(
     *,
     workspace_dir: Path,
     prompt_text: str,
@@ -837,7 +837,7 @@ def _run_codex_exec_command(
     | object = REASONING_EFFORT_UNSET,
 ) -> CodexExecRunResult:
     provider = get_cli_provider()
-    codex_home_root = resolve_codex_home_root(
+    codex_home_root = resolve_cli_home_root(
         task_id=task_id,
         session_id=session_id,
         runtime_root=runtime_root,
@@ -1000,7 +1000,7 @@ def materialize_seed_workspace(
                 )
             )
 
-    prompt_text = build_codex_prompt(
+    prompt_text = build_cli_prompt(
         item=item,
         agent_name=agent_name,
     )
@@ -1029,7 +1029,7 @@ def materialize_seed_workspace(
     )
 
 
-def build_codex_env(
+def build_cli_env(
     *,
     task_id: str,
     workspace_dir: Path,
@@ -1037,7 +1037,7 @@ def build_codex_env(
     session_id: str | None = None,
     agent_name: AgentName | None = None,
 ) -> dict[str, str]:
-    """Prepare a generic Codex subprocess environment for a local workspace run."""
+    """Prepare a generic CLI-provider subprocess environment for a local workspace run."""
     return get_cli_provider().build_env(
         task_id=task_id,
         workspace_dir=workspace_dir,
@@ -1047,7 +1047,7 @@ def build_codex_env(
     )
 
 
-def launch_codex_exec(
+def launch_cli_exec(
     workspace_dir: Path,
     prompt_text: str,
     *,
@@ -1061,8 +1061,8 @@ def launch_codex_exec(
     | None
     | object = REASONING_EFFORT_UNSET,
 ) -> int:
-    """Launch `codex exec` in a workspace and stream output to the terminal."""
-    result = _run_codex_exec_command(
+    """Launch the configured CLI provider in a workspace and stream output."""
+    result = _run_cli_exec_command(
         workspace_dir=workspace_dir,
         prompt_text=prompt_text,
         task_id=task_id,
@@ -1078,7 +1078,7 @@ def launch_codex_exec(
     return result.return_code if result.return_code is not None else 1
 
 
-def resume_codex_exec(
+def resume_cli_exec(
     workspace_dir: Path,
     prompt_text: str,
     *,
@@ -1094,9 +1094,9 @@ def resume_codex_exec(
     | None
     | object = REASONING_EFFORT_UNSET,
 ) -> CodexExecRunResult:
-    """Resume an existing `codex exec` session with a follow-up prompt."""
+    """Resume an existing CLI-provider session with a follow-up prompt."""
 
-    return _run_codex_exec_command(
+    return _run_cli_exec_command(
         workspace_dir=workspace_dir,
         prompt_text=prompt_text,
         task_id=task_id,
@@ -1111,7 +1111,7 @@ def resume_codex_exec(
     )
 
 
-def open_codex_ui(
+def open_cli_ui(
     workspace_dir: Path,
     prompt_text: str,
     *,
@@ -1121,11 +1121,11 @@ def open_codex_ui(
     runtime_root: Path | None = None,
     yolo: bool = True,
 ) -> int:
-    """Open the interactive Codex UI with a workspace prompt."""
+    """Open the interactive CLI-provider UI with a workspace prompt."""
     if not (workspace_dir / ".git").exists():
         init_workspace_repo(workspace_dir)
     provider = get_cli_provider()
-    codex_home_root = resolve_codex_home_root(
+    codex_home_root = resolve_cli_home_root(
         task_id=task_id,
         session_id=session_id,
         runtime_root=runtime_root,
@@ -1153,6 +1153,15 @@ def open_codex_ui(
         check=False,
     )
     return completed.returncode
+
+
+resolve_codex_home_root = resolve_cli_home_root
+prepare_codex_home = prepare_cli_home
+build_codex_prompt = build_cli_prompt
+build_codex_env = build_cli_env
+launch_codex_exec = launch_cli_exec
+resume_codex_exec = resume_cli_exec
+open_codex_ui = open_cli_ui
 
 
 def _load_review_frontmatter_local(

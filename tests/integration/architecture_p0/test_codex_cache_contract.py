@@ -3,7 +3,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from evals.logic.codex_workspace import build_codex_env, prepare_codex_home
+from evals.logic.codex_workspace import build_cli_env, prepare_cli_home
 
 
 def test_codex_home_uses_per_session_cache_roots(tmp_path: Path) -> None:
@@ -14,13 +14,13 @@ def test_codex_home_uses_per_session_cache_roots(tmp_path: Path) -> None:
     auth_source.write_text("{}", encoding="utf-8")
 
     codex_home_root = tmp_path / "codex-home"
-    prepare_codex_home(
+    prepare_cli_home(
         codex_home_root=codex_home_root,
         workspace_dir=workspace_dir,
         source_auth_path=auth_source,
     )
 
-    env = build_codex_env(
+    env = build_cli_env(
         task_id="task-001",
         workspace_dir=workspace_dir,
         codex_home_root=codex_home_root,
@@ -48,7 +48,7 @@ def test_codex_env_defaults_to_headless_rendering(tmp_path: Path, monkeypatch) -
     auth_source.write_text("{}", encoding="utf-8")
 
     codex_home_root = tmp_path / "codex-home"
-    prepare_codex_home(
+    prepare_cli_home(
         codex_home_root=codex_home_root,
         workspace_dir=workspace_dir,
         source_auth_path=auth_source,
@@ -57,7 +57,7 @@ def test_codex_env_defaults_to_headless_rendering(tmp_path: Path, monkeypatch) -
     monkeypatch.setenv("DISPLAY", ":109")
     monkeypatch.setenv("XAUTHORITY", "/tmp/xauthority")
 
-    env = build_codex_env(
+    env = build_cli_env(
         task_id="task-001",
         workspace_dir=workspace_dir,
         codex_home_root=codex_home_root,
@@ -84,13 +84,13 @@ def test_codex_env_imports_mujoco_under_headless_defaults(tmp_path: Path) -> Non
     auth_source.write_text("{}", encoding="utf-8")
 
     codex_home_root = tmp_path / "codex-home"
-    prepare_codex_home(
+    prepare_cli_home(
         codex_home_root=codex_home_root,
         workspace_dir=workspace_dir,
         source_auth_path=auth_source,
     )
 
-    env = build_codex_env(
+    env = build_cli_env(
         task_id="task-001",
         workspace_dir=workspace_dir,
         codex_home_root=codex_home_root,
@@ -125,7 +125,7 @@ def test_codex_env_can_split_mujoco_and_renderer_backends(
     auth_source.write_text("{}", encoding="utf-8")
 
     codex_home_root = tmp_path / "codex-home"
-    prepare_codex_home(
+    prepare_cli_home(
         codex_home_root=codex_home_root,
         workspace_dir=workspace_dir,
         source_auth_path=auth_source,
@@ -134,7 +134,7 @@ def test_codex_env_can_split_mujoco_and_renderer_backends(
     monkeypatch.setenv("PROBLEMOLOGIST_PHYSICS_GL_BACKEND", "egl")
     monkeypatch.setenv("PROBLEMOLOGIST_RENDER_GL_BACKEND", "osmesa")
 
-    env = build_codex_env(
+    env = build_cli_env(
         task_id="task-001",
         workspace_dir=workspace_dir,
         codex_home_root=codex_home_root,
