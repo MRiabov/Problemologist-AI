@@ -1118,7 +1118,7 @@ def build():
             reviewer_stage=AgentName.BENCHMARK_REVIEWER,
         )
         validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=benchmark_request.model_dump(mode="json"),
             headers=headers,
         )
@@ -1299,7 +1299,7 @@ def build():
             reviewer_stage=AgentName.BENCHMARK_REVIEWER,
         )
         validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=benchmark_request.model_dump(mode="json"),
             headers=headers,
         )
@@ -1899,7 +1899,7 @@ async def _validate_and_simulate(
         reviewer_stage=AgentName.BENCHMARK_REVIEWER,
     )
     validate_resp = await client.post(
-        f"{WORKER_HEAVY_URL}/benchmark/validate",
+        f"{WORKER_LIGHT_URL}/benchmark/validate",
         json=benchmark_request.model_dump(mode="json"),
         headers=headers,
     )

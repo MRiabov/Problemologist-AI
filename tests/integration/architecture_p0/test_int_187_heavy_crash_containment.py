@@ -72,7 +72,7 @@ async def test_int_187_heavy_worker_crash_containment_boundary():
 
         # Subsequent heavy request must still be served after crash.
         validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json={"script_path": "ok.py", "script_content": VALID_SCRIPT},
             headers={"X-Session-ID": ok_sid},
         )

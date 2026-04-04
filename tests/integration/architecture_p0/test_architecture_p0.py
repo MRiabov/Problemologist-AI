@@ -245,7 +245,7 @@ def build():
         bundle64 = await get_bundle(client, session_id)
 
         validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(
                 script_path="script.py",
                 bundle_base64=bundle64,
@@ -816,7 +816,7 @@ def build():
         )
 
         validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(
                 script_path="script.py",
                 backend=selected_backend(),
@@ -938,7 +938,7 @@ def build():
         bundle64 = await get_bundle(client, session_id)
 
         resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(
                 script_path="valid_hole.py", bundle_base64=bundle64
             ).model_dump(mode="json"),
@@ -1016,7 +1016,7 @@ def build():
         )
 
         overlap_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
             timeout=180.0,
@@ -1065,7 +1065,7 @@ def build():
         )
 
         jitter_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
             timeout=180.0,

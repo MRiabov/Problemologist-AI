@@ -504,7 +504,7 @@ async def test_int_192_controller_script_tools_validate_waits_through_temporal_q
 
         busy_task = asyncio.create_task(
             client.post(
-                f"{WORKER_HEAVY_URL}/benchmark/validate",
+                f"{WORKER_LIGHT_URL}/benchmark/validate",
                 json=BenchmarkToolRequest(
                     script_path="busy_script.py",
                     backend=SimulatorBackendType.MUJOCO,

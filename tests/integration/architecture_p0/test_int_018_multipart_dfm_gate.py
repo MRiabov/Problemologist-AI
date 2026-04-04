@@ -143,11 +143,12 @@ randomization:
             )
             assert resp.status_code == 200, resp.text
 
-        validate_resp = await _post_heavy_tool(
-            client,
-            "/benchmark/validate",
-            BenchmarkToolRequest(script_path="benchmark_script.py"),
-            headers,
+        validate_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
+            json=BenchmarkToolRequest(script_path="benchmark_script.py").model_dump(
+                mode="json"
+            ),
+            headers=headers,
         )
         assert validate_resp.status_code == 200, validate_resp.text
         validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
@@ -261,11 +262,12 @@ randomization:
             )
             assert resp.status_code == 200, resp.text
 
-        validate_resp = await _post_heavy_tool(
-            client,
-            "/benchmark/validate",
-            BenchmarkToolRequest(script_path="benchmark_script.py"),
-            headers,
+        validate_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
+            json=BenchmarkToolRequest(script_path="benchmark_script.py").model_dump(
+                mode="json"
+            ),
+            headers=headers,
         )
         assert validate_resp.status_code == 200, validate_resp.text
         validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())

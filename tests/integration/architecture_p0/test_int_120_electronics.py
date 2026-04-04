@@ -112,7 +112,7 @@ async def test_int_120_circuit_validation_gate():
         # 2. Call /benchmark/validate_circuit
         req_val = ElectronicsValidationRequest(section=faulty_section)
         resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate_circuit",
+            f"{WORKER_LIGHT_URL}/benchmark/validate_circuit",
             json=req_val.model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
         )
@@ -208,7 +208,7 @@ async def test_int_121_short_circuit_detection():
         )
         req_val = ElectronicsValidationRequest(section=short_circuit)
         resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate_circuit",
+            f"{WORKER_LIGHT_URL}/benchmark/validate_circuit",
             json=req_val.model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
         )
@@ -255,7 +255,7 @@ async def test_int_122_overcurrent_supply_detection():
         )
         req_val = ElectronicsValidationRequest(section=overcurrent)
         resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate_circuit",
+            f"{WORKER_LIGHT_URL}/benchmark/validate_circuit",
             json=req_val.model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
         )
@@ -303,7 +303,7 @@ async def test_int_123_overcurrent_wire_detection():
         )
         req_val = ElectronicsValidationRequest(section=wire_overcurrent)
         resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate_circuit",
+            f"{WORKER_LIGHT_URL}/benchmark/validate_circuit",
             json=req_val.model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
         )
@@ -344,7 +344,7 @@ async def test_int_124_open_circuit_detection():
         )
         req_val = ElectronicsValidationRequest(section=open_circuit)
         resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate_circuit",
+            f"{WORKER_LIGHT_URL}/benchmark/validate_circuit",
             json=req_val.model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
         )
@@ -621,7 +621,7 @@ electronics_requirements:
         )
 
         resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
             timeout=180.0,

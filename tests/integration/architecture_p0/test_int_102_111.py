@@ -157,7 +157,7 @@ def build():
         # 2. Test INT-111: validate_and_price gate
         val_req = BenchmarkToolRequest(script_path="script.py")
         resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=val_req.model_dump(mode="json"),
             headers=base_headers,
             timeout=300.0,

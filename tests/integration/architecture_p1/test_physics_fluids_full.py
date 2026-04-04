@@ -161,7 +161,7 @@ async def test_int_131_full_fluid_objective_path():
         await _write_file(client, session_id, "script.py", _simple_script())
 
         validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
             timeout=300.0,
@@ -281,7 +281,7 @@ totals:
         )
 
         resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
             timeout=300.0,
@@ -502,7 +502,7 @@ totals:
         )
 
         resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
             timeout=300.0,

@@ -366,7 +366,7 @@ def build():
         bundle64 = await get_bundle(client, session_id)
 
         validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(
                 script_path="script.py",
                 bundle_base64=bundle64,
@@ -449,7 +449,7 @@ def build():
         assert wire_objectives_resp.status_code == 200, wire_objectives_resp.text
 
         wire_validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
             headers=fail_headers,
             timeout=180.0,

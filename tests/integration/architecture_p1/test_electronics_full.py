@@ -266,7 +266,7 @@ async def test_int_132_full_electromechanical_path():
         )
 
         validate_circuit_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate_circuit",
+            f"{WORKER_LIGHT_URL}/benchmark/validate_circuit",
             json=ElectronicsValidationRequest(section=section).model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
             timeout=300.0,
@@ -286,7 +286,7 @@ async def test_int_132_full_electromechanical_path():
         )
 
         validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
             timeout=300.0,
@@ -370,7 +370,7 @@ async def test_int_217_solution_motor_backend_parity():
             )
 
             validate_resp = await client.post(
-                f"{WORKER_HEAVY_URL}/benchmark/validate",
+                f"{WORKER_LIGHT_URL}/benchmark/validate",
                 json=BenchmarkToolRequest(script_path="script.py").model_dump(
                     mode="json"
                 ),
@@ -402,7 +402,7 @@ async def test_int_217_solution_motor_backend_parity():
             ),
         )
         fail_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
             timeout=300.0,

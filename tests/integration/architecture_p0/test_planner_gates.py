@@ -1137,7 +1137,7 @@ The cube must slide reliably under the declared surface/friction assumptions.
             script_path="solution.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
         )
         validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=validate_req.model_dump(mode="json"),
             headers=base_headers,
         )
@@ -1295,7 +1295,7 @@ def build():
             },
         )
         resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(
                 script_path="solution.py",
                 backend=selected_backend(),
@@ -1456,7 +1456,7 @@ async def test_int_011_planner_caps_enforcement(
             script_path="solution.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
         )
         await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=val_req.model_dump(mode="json"),
             headers=base_headers,
         )
@@ -1522,7 +1522,7 @@ async def test_int_015_engineer_handover_immutability(
             script_path="solution.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
         )
         await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=val_req.model_dump(mode="json"),
             headers=base_headers,
         )
@@ -1610,7 +1610,7 @@ def build():
             script_path="script.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
         )
         val_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
@@ -1723,7 +1723,7 @@ def build():
             script_path="script.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
         )
         val_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
@@ -1833,7 +1833,7 @@ def build():
             script_path="script.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
         )
         val_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
@@ -1911,7 +1911,7 @@ def build():
             script_path="script.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
         )
         val_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=val_req.model_dump(mode="json"),
             headers=base_headers,
         )
@@ -1989,7 +1989,7 @@ async def test_int_010_planner_pricing_script_integration(
             script_path="solution.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
         )
         await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=val_req.model_dump(mode="json"),
             headers=base_headers,
         )
@@ -2197,7 +2197,7 @@ def build():
             reviewer_stage=AgentName.ENGINEER_EXECUTION_REVIEWER,
         )
         validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
@@ -2313,7 +2313,7 @@ def build():
             script_path="script.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
         )
         val_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
@@ -2437,7 +2437,7 @@ def build():
             script_path="script.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
         )
         val_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
@@ -2535,7 +2535,7 @@ def build():
 
         # 2) Validation present but simulation missing must fail closed.
         val_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
@@ -2598,7 +2598,7 @@ def build():
         # 4) Happy path: validate + simulate + submit on latest revision succeeds.
         await setup_workspace(client, base_headers, {"script.py": goal_script})
         val_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
@@ -2741,7 +2741,7 @@ def build():
         )
 
         validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(
                 script_path="script.py",
                 backend=SimulatorBackendType.MUJOCO,
