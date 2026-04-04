@@ -397,6 +397,42 @@ class QwenCliProvider(CodexCliProvider):
     runtime_root_name: str = "qwen-runtime"
     session_prefix: str = "local-qwen"
 
+    def _default_source_auth_path(self) -> Path:
+        return Path.home() / self.home_dir_name / "oauth_creds.json"
+
+    def _copy_qwen_home_state(self, source_home_dir: Path, qwen_home_dir: Path) -> None:
+        for filename in (
+            "settings.json",
+            "oauth_creds.json",
+            "installation_id",
+            "source.json",
+            "output-language.md",
+        ):
+            source_path = source_home_dir / filename
+            if source_path.exists():
+                shutil.copy2(source_path, qwen_home_dir / filename)
+
+    def prepare_home(
+        self,
+        *,
+        codex_home_root: Path,
+        workspace_dir: Path,
+        source_auth_path: Path | None = None,
+        agent_name: AgentName | None = None,
+        reasoning_effort: ReasoningEffortArg = REASONING_EFFORT_UNSET,
+    ) -> Path:
+        source_auth_path = source_auth_path or self._default_source_auth_path()
+        qwen_home_dir = CodexCliProvider.prepare_home(
+            self,
+            codex_home_root=codex_home_root,
+            workspace_dir=workspace_dir,
+            source_auth_path=source_auth_path,
+            agent_name=agent_name,
+            reasoning_effort=reasoning_effort,
+        )
+        self._copy_qwen_home_state(source_auth_path.parent, qwen_home_dir)
+        return qwen_home_dir
+
     def build_env(
         self,
         *,
