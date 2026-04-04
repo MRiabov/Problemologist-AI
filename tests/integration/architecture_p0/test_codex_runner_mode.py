@@ -21,7 +21,10 @@ from controller.agent.prompt_manager import PromptManager
 from controller.api.routes.script_tools import ScriptToolRequest
 from controller.prompts import load_prompts
 from evals.logic import runner
-from evals.logic.codex_session_trace import CodexSessionTraceArtifact
+from evals.logic.codex_session_trace import (
+    CodexSessionTraceArtifact,
+    diff_workspace_snapshots,
+)
 from evals.logic.codex_workspace import (
     CodexExecRunResult,
     build_codex_env,
@@ -255,6 +258,24 @@ def test_run_evals_help_exposes_codex_backend():
     assert re.search(r"default:\s*1\s*for\s*smoke-\s*test\s*runs", completed.stdout)
     assert "codex" in normalized_stdout
     assert "--codex-skill-loop" in normalized_stdout
+
+
+@pytest.mark.integration_p0
+def test_train_skills_help_exposes_retained_bundle_cli():
+    completed = subprocess.run(
+        [sys.executable, "dataset/evals/train_skills.py", "--help"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    normalized_stdout = " ".join(completed.stdout.split())
+    assert "--session-metadata-path" in normalized_stdout
+    assert "--session-log-root" in normalized_stdout
+    assert "--eval-log-key" in normalized_stdout
+    assert "--codex-runtime-root" in normalized_stdout
 
 
 @pytest.mark.integration_p0
@@ -627,9 +648,16 @@ async def test_run_evals_codex_skill_loop_flag_enables_loop_backend(
 
 
 @pytest.mark.integration_p0
+@pytest.mark.parametrize(
+    "launch_return_code,expected_timed_out",
+    [
+        pytest.param(1, False, id="early-exit"),
+        pytest.param(124, True, id="timeout"),
+    ],
+)
 @pytest.mark.asyncio
 async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
-    tmp_path, monkeypatch
+    tmp_path, monkeypatch, launch_return_code, expected_timed_out
 ):
     item = EvalDatasetItem(
         id="codex-skill-loop-001",
@@ -656,6 +684,7 @@ async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
     baseline_snapshot = runner._snapshot_workspace_state(workspace_dir=workspace_dir)
     captured_prompts: list[tuple[str, str]] = []
     resume_calls: list[tuple[str, str, float | None, str]] = []
+    resume_call_count = 0
 
     def fake_resume_codex_exec(
         workspace_dir: Path,
@@ -671,9 +700,20 @@ async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
         output_last_message_path: Path | None = None,
         reasoning_effort: str = "high",
     ) -> CodexExecRunResult:
+        nonlocal resume_call_count
+        resume_call_count += 1
         resume_calls.append(
             (codex_session_id, prompt_text, timeout_seconds, reasoning_effort)
         )
+        if resume_call_count == 2:
+            drafted_skill_path = (
+                workspace_dir / "suggested_skills" / "generated-skill.md"
+            )
+            drafted_skill_path.parent.mkdir(parents=True, exist_ok=True)
+            drafted_skill_path.write_text(
+                "# Generated skill\n\n- drafted from retained bundle\n",
+                encoding="utf-8",
+            )
         if output_last_message_path is not None:
             output_last_message_path.parent.mkdir(parents=True, exist_ok=True)
             output_last_message_path.write_text("last message", encoding="utf-8")
@@ -699,7 +739,14 @@ async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
                 str(kwargs.get("sessions_root")),
             )
         )
-        return codex_trace_artifacts
+        after_snapshot = runner._snapshot_workspace_state(workspace_dir=workspace_dir)
+        return CodexSessionTraceArtifact(
+            session_id=codex_trace_artifacts.session_id,
+            workspace_diff=diff_workspace_snapshots(
+                before=baseline_snapshot,
+                after=after_snapshot,
+            ),
+        )
 
     monkeypatch.setattr(runner, "_resume_codex_exec", fake_resume_codex_exec)
     monkeypatch.setattr(
@@ -717,7 +764,7 @@ async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
         eval_log_key="ec-001",
         baseline_snapshot=baseline_snapshot,
         codex_trace_artifacts=codex_trace_artifacts,
-        launch_return_code=1,
+        launch_return_code=launch_return_code,
         verification_result=verification_result,
         log=runner.logger,
     )
@@ -725,6 +772,7 @@ async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
     assert summary.triggered is True
     assert summary.primary_turn is not None
     assert summary.primary_turn.session_id == codex_trace_artifacts.session_id
+    assert summary.primary_turn.timed_out is expected_timed_out
     assert summary.primary_turn.simulation_success is False
     assert summary.self_analysis_turn is not None
     assert summary.skill_update_turn is not None
@@ -737,6 +785,7 @@ async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
     assert resume_calls[1][3] == "xhigh"
     assert "journal.md" in resume_calls[0][1]
     assert "suggested_skills/" in resume_calls[1][1]
+    assert (workspace_dir / "suggested_skills" / "generated-skill.md").exists()
     assert (workspace_dir / "logs" / "skill_loop" / "self_analysis.md").exists()
     assert (workspace_dir / "logs" / "skill_loop" / "skill_update.md").exists()
     events_path = workspace_dir / "logs" / "skill_loop" / "events.jsonl"
@@ -752,10 +801,16 @@ async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
     ]
     assert events[0]["reflection_text"] == "last message"
     assert events[1]["skill_update_text"] == "last message"
+    assert "suggested_skills/generated-skill.md" in events[1]["updated_skill_paths"]
     assert events[0]["codex_session_id"] == codex_trace_artifacts.session_id
     assert events[1]["codex_session_id"] == codex_trace_artifacts.session_id
     assert updated_trace is not None
     assert updated_trace.session_id == codex_trace_artifacts.session_id
+    assert "suggested_skills/generated-skill.md" in (
+        updated_trace.workspace_diff.changed_paths
+        if updated_trace.workspace_diff
+        else []
+    )
 
 
 @pytest.mark.integration_p0
