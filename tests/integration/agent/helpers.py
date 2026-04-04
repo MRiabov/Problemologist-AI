@@ -910,11 +910,11 @@ depth_path = root / {depth_name!r}
 segmentation_path = root / {segmentation_name!r}
 svg_path = root / {svg_name!r}
 dxf_path = root / {dxf_name!r}
-Image.new("RGB", (1, 1), (255, 0, 0)).save(image_path)
-Image.new("RGB", (1, 1), (0, 255, 0)).save(depth_path)
-Image.new("RGB", (1, 1), (0, 0, 255)).save(segmentation_path)
+Image.new("RGB", (640, 480), (255, 0, 0)).save(image_path)
+Image.new("RGB", (640, 480), (0, 255, 0)).save(depth_path)
+Image.new("RGB", (640, 480), (0, 0, 255)).save(segmentation_path)
 svg_path.write_text(
-    "<svg xmlns='http://www.w3.org/2000/svg' width='1' height='1'></svg>",
+    "<svg xmlns='http://www.w3.org/2000/svg' width='640' height='480'></svg>",
     encoding="utf-8",
 )
 dxf_path.write_text("0\\nSECTION\\n2\\nENTITIES\\n0\\nENDSEC\\n0\\nEOF\\n", encoding="utf-8")

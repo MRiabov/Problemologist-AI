@@ -562,22 +562,47 @@ def test_materialize_seed_workspace_uses_generic_cli_flag_names(
 
 
 @pytest.mark.integration_p0
-def test_cli_provider_registry_supports_qwen(tmp_path: Path):
+def test_cli_provider_registry_supports_qwen(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     from evals.logic.cli_provider import available_cli_providers, get_cli_provider
 
-    source_auth_path = tmp_path / "source-home" / ".qwen" / "auth.json"
-    source_auth_path.parent.mkdir(parents=True, exist_ok=True)
-    source_auth_path.write_text(
+    fake_home = tmp_path / "source-home"
+    qwen_home = fake_home / ".qwen"
+    qwen_home.mkdir(parents=True, exist_ok=True)
+    (qwen_home / "settings.json").write_text(
         json.dumps(
             {
-                "OPENAI_API_KEY": None,
-                "tokens": {"account_id": "acct-1", "access_token": "token-1"},
+                "security": {"auth": {"selectedType": "qwen-oauth"}},
+                "model": {"name": "coder-model"},
             },
             indent=2,
         )
         + "\n",
         encoding="utf-8",
     )
+    (qwen_home / "oauth_creds.json").write_text(
+        json.dumps(
+            {
+                "access_token": "token-1",
+                "token_type": "Bearer",
+                "refresh_token": "refresh-1",
+                "resource_url": "portal.qwen.ai",
+                "expiry_date": 1775310754389,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (qwen_home / "installation_id").write_text(
+        "d803ea40-01b8-46bf-8863-89d16777dfb1\n", encoding="utf-8"
+    )
+    (qwen_home / "source.json").write_text(
+        json.dumps({"source": "qwenchat"}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("HOME", str(fake_home))
 
     provider = get_cli_provider("qwen")
     qwen_home_root = resolve_cli_home_root(
@@ -590,7 +615,6 @@ def test_cli_provider_registry_supports_qwen(tmp_path: Path):
     codex_home_dir = provider.prepare_home(
         codex_home_root=qwen_home_root,
         workspace_dir=workspace_dir,
-        source_auth_path=source_auth_path,
     )
     env = provider.build_env(
         task_id="task-1",
@@ -619,7 +643,18 @@ def test_cli_provider_registry_supports_qwen(tmp_path: Path):
     assert provider.session_prefix == "local-qwen"
     assert env["CODEX_HOME"].endswith("/.qwen")
     assert env["QWEN_HOME"] == env["CODEX_HOME"]
-    assert (codex_home_dir / "auth.json").exists()
+    assert (
+        json.loads((codex_home_dir / "settings.json").read_text(encoding="utf-8"))[
+            "security"
+        ]["auth"]["selectedType"]
+        == "qwen-oauth"
+    )
+    assert (
+        json.loads((codex_home_dir / "oauth_creds.json").read_text(encoding="utf-8"))[
+            "refresh_token"
+        ]
+        == "refresh-1"
+    )
     assert qwen_home_root.parent.parent.name == "qwen-runtime"
     assert qwen_home_root.parent.name == "homes"
     assert qwen_home_root.name.startswith("local-qwen-task-1-")
