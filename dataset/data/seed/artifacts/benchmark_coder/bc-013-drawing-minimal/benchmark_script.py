@@ -1,0 +1,256 @@
+from __future__ import annotations
+
+import math
+
+import yaml
+from build123d import (
+    Align,
+    Box,
+    Compound,
+    Cylinder,
+    Location,
+    Sphere,
+)
+
+from utils.metadata import CompoundMetadata, PartMetadata
+
+
+def _load_moved_object() -> dict:
+    """Load moved_object contract from planner handoff."""
+    with open("benchmark_definition.yaml", encoding="utf-8") as fh:
+        payload = yaml.safe_load(fh) or {}
+    moved = payload.get("moved_object", {})
+    return moved if isinstance(moved, dict) else {}
+
+
+def _build_moved_object(moved: dict):
+    """Construct the moved object from the benchmark_definition.yaml contract."""
+    label = str(moved.get("label", "")).strip()
+    if not label:
+        raise ValueError("moved_object.label must be a non-empty string")
+    start = moved.get("start_position", [0.0, 0.0, 0.0])
+    radius_range = moved.get("static_randomization", {}).get("radius", [0.01, 0.01])
+    radius = float(max(radius_range)) if radius_range else 0.01
+    shape = str(moved.get("shape", "sphere")).strip().lower()
+    material_id = str(moved.get("material_id", "abs")).strip()
+    if not material_id:
+        raise ValueError("moved_object.material_id must be a non-empty string")
+
+    if shape == "sphere":
+        moved_part = Sphere(radius, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    elif shape in {"cube", "box"}:
+        edge = radius * 2.0
+        moved_part = Box(
+            edge, edge, edge, align=(Align.CENTER, Align.CENTER, Align.CENTER)
+        )
+    elif shape == "cylinder":
+        moved_part = Cylinder(
+            radius=radius,
+            height=radius * 2.0,
+            align=(Align.CENTER, Align.CENTER, Align.CENTER),
+        )
+    else:
+        raise ValueError(
+            f"Unsupported moved_object.shape '{shape}'. Expected sphere, cube, box, or cylinder."
+        )
+
+    moved_part = moved_part.move(
+        Location((float(start[0]), float(start[1]), float(start[2])))
+    )
+    moved_part.label = label
+    moved_part.metadata = PartMetadata(material_id=material_id, fixed=False)
+    return moved_part
+
+
+_moved_object_contract = _load_moved_object()
+_moved_object = _build_moved_object(_moved_object_contract)
+
+
+def build() -> Compound:
+    """Return the benchmark assembly geometry for this workspace.
+
+    Benchmark fixtures (all fixed):
+    - `base_plate`: 300×200×10 mm floor plate at [0, 0, 5] mm.
+    - `deflector_ramp`: 120×160×15 mm ramp tilted 30°, centered at [40, 0, 60] mm.
+    - `side_goal_wall`: vertical wall at goal zone near [170, 0, 50] mm.
+    - `catch_bin`: goal bin at [170, 0, 15] mm, 60×70×20 mm.
+    """
+    children = [_moved_object]
+
+    # base_plate: 300×200×10, centered at [0, 0, 5]
+    base_plate = Box(
+        300.0,
+        200.0,
+        10.0,
+        align=(Align.CENTER, Align.CENTER, Align.CENTER),
+    ).move(Location((0.0, 0.0, 5.0)))
+    base_plate.label = "base_plate"
+    base_plate.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    children.append(base_plate)
+
+    # deflector_ramp: 120×160×15, tilted 30° about Y axis, centered at [40, 0, 60]
+    # The ramp surface must angle downward toward +X so the ball deflects sideways into the goal.
+    ramp_width = 120.0  # X dimension
+    ramp_depth = 160.0  # Y dimension
+    ramp_thick = 15.0  # Z dimension
+    ramp_angle_deg = 30.0
+    math.radians(ramp_angle_deg)
+
+    ramp_body = Box(
+        ramp_width,
+        ramp_depth,
+        ramp_thick,
+        align=(Align.CENTER, Align.CENTER, Align.CENTER),
+    )
+    # Tilt the ramp about the Y axis so the +X edge is lower than the -X edge.
+    # Rotation order: (RX, RY, RZ) - we rotate about Y by 30°.
+    ramp_body = ramp_body.rotate(
+        center=(0.0, 0.0, 0.0),
+        rotation=(0.0, ramp_angle_deg, 0.0),
+    )
+    # Position the ramp center at [40, 0, 60].
+    ramp_body = ramp_body.move(Location((40.0, 0.0, 60.0)))
+    ramp_body.label = "deflector_ramp"
+    ramp_body.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    children.append(ramp_body)
+
+    # side_goal_wall: vertical wall forming the goal bin back wall.
+    # Goal zone is [140, -35, 5] to [200, 35, 25], so center is [170, 0, 15].
+    # We make a U-shaped wall: back wall + two side walls.
+    goal_center_x = 170.0
+    goal_center_y = 0.0
+    goal_center_z = 15.0
+    wall_thick = 8.0
+    wall_height = 40.0
+
+    # Back wall: 60×8×40 at [170, -35, wall_height/2]
+    back_wall = Box(
+        60.0,
+        wall_thick,
+        wall_height,
+        align=(Align.CENTER, Align.CENTER, Align.BOTTOM),
+    ).move(
+        Location((goal_center_x, goal_center_y - 35.0 + wall_thick / 2, goal_center_z))
+    )
+    back_wall.label = "side_goal_wall_back"
+    back_wall.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    children.append(back_wall)
+
+    # Left wall: 8×70×40
+    left_wall = Box(
+        wall_thick,
+        70.0,
+        wall_height,
+        align=(Align.CENTER, Align.CENTER, Align.BOTTOM),
+    ).move(
+        Location((goal_center_x - 30.0 + wall_thick / 2, goal_center_y, goal_center_z))
+    )
+    left_wall.label = "side_goal_wall_left"
+    left_wall.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    children.append(left_wall)
+
+    # Right wall: 8×70×40
+    right_wall = Box(
+        wall_thick,
+        70.0,
+        wall_height,
+        align=(Align.CENTER, Align.CENTER, Align.BOTTOM),
+    ).move(
+        Location((goal_center_x + 30.0 - wall_thick / 2, goal_center_y, goal_center_z))
+    )
+    right_wall.label = "side_goal_wall_right"
+    right_wall.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    children.append(right_wall)
+
+    # catch_bin: floor of the goal bin, 60×70×5 at [170, 0, 5]
+    catch_bin = Box(
+        60.0,
+        70.0,
+        5.0,
+        align=(Align.CENTER, Align.CENTER, Align.CENTER),
+    ).move(Location((goal_center_x, goal_center_y, 5.0)))
+    catch_bin.label = "catch_bin"
+    catch_bin.metadata = PartMetadata(material_id="hdpe", fixed=True)
+    children.append(catch_bin)
+
+    environment = Compound(children=children)
+    environment.label = "benchmark_environment"
+    environment.metadata = CompoundMetadata()
+    return environment
+
+
+def _load_objectives() -> dict:
+    """Load objective zones from benchmark_definition.yaml."""
+    with open("benchmark_definition.yaml", encoding="utf-8") as fh:
+        payload = yaml.safe_load(fh) or {}
+    objectives = payload.get("objectives", {})
+    return objectives if isinstance(objectives, dict) else {}
+
+
+def _build_objective_zone(label: str, bounds_min, bounds_max):
+    """Create a box representing an AABB objective zone."""
+    size_x = float(bounds_max[0]) - float(bounds_min[0])
+    size_y = float(bounds_max[1]) - float(bounds_min[1])
+    size_z = float(bounds_max[2]) - float(bounds_min[2])
+    center = (
+        (float(bounds_min[0]) + float(bounds_max[0])) / 2.0,
+        (float(bounds_min[1]) + float(bounds_max[1])) / 2.0,
+        (float(bounds_min[2]) + float(bounds_max[2])) / 2.0,
+    )
+    zone = Box(
+        max(size_x, 0.0),
+        max(size_y, 0.0),
+        max(size_z, 0.0),
+        align=(Align.CENTER, Align.CENTER, Align.CENTER),
+    ).move(Location(center))
+    zone.label = label
+    zone.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    return zone
+
+
+def objectives_geometry() -> Compound:
+    """Return the benchmark objective overlay geometry for this workspace."""
+    objectives = _load_objectives()
+    children = []
+
+    goal_zone = objectives.get("goal_zone")
+    if isinstance(goal_zone, dict):
+        children.append(
+            _build_objective_zone(
+                "zone_goal",
+                goal_zone.get("min", [0.0, 0.0, 0.0]),
+                goal_zone.get("max", [0.0, 0.0, 0.0]),
+            )
+        )
+
+    for index, forbid_zone in enumerate(objectives.get("forbid_zones", []) or []):
+        if isinstance(forbid_zone, dict):
+            zone_name = (
+                str(forbid_zone.get("name", f"forbid_{index}")).strip()
+                or f"forbid_{index}"
+            )
+            children.append(
+                _build_objective_zone(
+                    f"zone_forbid_{index}_{zone_name}",
+                    forbid_zone.get("min", [0.0, 0.0, 0.0]),
+                    forbid_zone.get("max", [0.0, 0.0, 0.0]),
+                )
+            )
+
+    build_zone = objectives.get("build_zone")
+    if isinstance(build_zone, dict):
+        children.append(
+            _build_objective_zone(
+                "zone_build",
+                build_zone.get("min", [0.0, 0.0, 0.0]),
+                build_zone.get("max", [0.0, 0.0, 0.0]),
+            )
+        )
+
+    overlay = Compound(children=children) if children else Compound()
+    overlay.label = "benchmark_objectives"
+    overlay.metadata = CompoundMetadata()
+    return overlay
+
+
+result = build()
