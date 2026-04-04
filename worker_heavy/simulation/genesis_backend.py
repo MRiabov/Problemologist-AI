@@ -44,6 +44,7 @@ from shared.simulation.backends import (
     build_render_bundle_object_pose_records,
 )
 from shared.workers.schema import RenderBundleObjectPoseRecord
+from worker_heavy.simulation.motor_contracts import resolve_solution_motor_contract
 
 logger = structlog.get_logger(__name__)
 
@@ -70,6 +71,7 @@ class GenesisBackend(PhysicsRendererBackend):
         self.entity_configs = {}  # name -> dict (from json)
         self.cameras = {}  # name -> gs.Camera
         self.motors = []  # part_name -> dict
+        self.motor_contracts = {}  # name -> resolved controllable motor contract
         self.mjcf_actuators = {}  # name -> {joint: str, force_range: tuple}
         self.cables = {}  # name -> gs.Entity
         self.virtual_cable_tensions = {}  # name -> float fallback when Cable morph is unavailable
@@ -253,6 +255,7 @@ class GenesisBackend(PhysicsRendererBackend):
             self.entity_configs = {}
             self.cameras = {}
             self.motors = []
+            self.motor_contracts = {}
             self.mjcf_actuators = {}
             self.cables = {}
             self.applied_controls = {}
@@ -577,6 +580,7 @@ class GenesisBackend(PhysicsRendererBackend):
 
                     # 3. Add Motors / Controls
                     self.motors = [m.model_dump() for m in data.motors]
+                    self._materialize_solution_motor_contracts()
                     self.cables = {}  # Keep as dict, but we'll populate from data
 
                     # 4. Add Cables (Wiring)
@@ -1295,8 +1299,8 @@ class GenesisBackend(PhysicsRendererBackend):
 
                     if joint:
                         idx = joint.dof_start
-                        forces = entity.get_dofs_force().cpu().numpy()
-                        vels = entity.get_dofs_velocity().cpu().numpy()
+                        forces = self._as_numpy_vector(entity.get_dofs_force())
+                        vels = self._as_numpy_vector(entity.get_dofs_velocity())
 
                         return ActuatorState(
                             force=float(forces[idx]),
@@ -1307,26 +1311,28 @@ class GenesisBackend(PhysicsRendererBackend):
                 except Exception as e:
                     logger.debug("failed_to_get_mjcf_actuator_state", error=str(e))
 
-        # 2. Check standard motors
-        entity_name = actuator_name
-        for motor in getattr(self, "motors", []):
-            if motor["part_name"] == actuator_name:
-                break
-
+        # 2. Check solution motors loaded from the shared moving-part contract
+        motor_contract = self.motor_contracts.get(actuator_name)
+        entity_name = motor_contract["entity_name"] if motor_contract else actuator_name
         if entity_name in self.entities:
             entity = self.entities[entity_name]
             try:
-                forces = entity.get_dofs_force().cpu().numpy()
-                vels = entity.get_dofs_velocity().cpu().numpy()
+                forces = self._as_numpy_vector(entity.get_dofs_force())
+                vels = self._as_numpy_vector(entity.get_dofs_velocity())
 
                 force = float(forces[0]) if forces.size > 0 else 0.0
                 vel = float(vels[0]) if vels.size > 0 else 0.0
+                forcerange = (
+                    tuple(motor_contract["force_range"])
+                    if motor_contract
+                    else (-1000, 1000)
+                )
 
                 return ActuatorState(
                     force=force,
                     velocity=vel,
                     ctrl=ctrl_val,
-                    forcerange=(-1000, 1000),
+                    forcerange=forcerange,
                 )
             except Exception:
                 pass
@@ -1345,6 +1351,85 @@ class GenesisBackend(PhysicsRendererBackend):
                 entity=str(entity),
                 session_id=self.session_id,
             )
+
+    @staticmethod
+    def _as_numpy_vector(values: Any) -> np.ndarray:
+        if hasattr(values, "cpu"):
+            values = values.cpu().numpy()
+        return np.asarray(values, dtype=float)
+
+    def _entity_has_controllable_dofs(self, entity: Any) -> bool:
+        try:
+            dof_forces = self._as_numpy_vector(entity.get_dofs_force())
+            return dof_forces.size > 0
+        except Exception:
+            return False
+
+    def _materialize_solution_motor_contracts(self) -> None:
+        """Resolve solution-authored motor metadata into validated runtime contracts."""
+        self.motor_contracts = {}
+        errors: list[str] = []
+
+        for motor in self.motors:
+            part_name = str(
+                motor.get("part_name")
+                or motor.get("name")
+                or motor.get("actuator_name")
+                or ""
+            ).strip()
+            if not part_name:
+                continue
+
+            control = motor.get("control")
+            if not control:
+                continue
+
+            entity = self.entities.get(part_name)
+            if entity is None:
+                errors.append(
+                    f"motor '{part_name}' does not map to a loaded Genesis entity"
+                )
+                continue
+
+            entity_cfg = self.entity_configs.get(part_name, {})
+            if entity_cfg.get("fixed"):
+                errors.append(
+                    f"motor '{part_name}' cannot be controlled because the entity is fixed"
+                )
+                continue
+
+            try:
+                contract = resolve_solution_motor_contract(
+                    part_name=part_name,
+                    cots_id=motor.get("cots_id"),
+                    control=control,
+                    joint_name=str(motor.get("joint") or f"{part_name}_joint"),
+                )
+            except ValueError as exc:
+                errors.append(str(exc))
+                continue
+
+            if not self._entity_has_controllable_dofs(entity):
+                errors.append(
+                    f"motor '{part_name}' does not expose a controllable DOF on the Genesis entity"
+                )
+                continue
+
+            self.motor_contracts[part_name] = {
+                "part_name": contract.part_name,
+                "entity_name": part_name,
+                "joint": contract.joint_name,
+                "cots_id": contract.cots_id,
+                "control_mode": contract.control_mode,
+                "control_speed": contract.control_speed,
+                "control_frequency": contract.control_frequency,
+                "actuator_type": contract.actuator_type,
+                "force_range": contract.force_range,
+                "max_velocity": contract.max_velocity,
+            }
+
+        if errors:
+            raise ValueError("; ".join(errors))
 
     def apply_control(self, control_inputs: dict[str, float]) -> None:
         # control_inputs: motor_id -> value
@@ -1375,9 +1460,11 @@ class GenesisBackend(PhysicsRendererBackend):
                         logger.debug("mjcf_apply_control_failed", error=str(e))
                 continue
 
-            # 2. Handle standard motors
-            if motor_id in self.entities:
-                entity = self.entities[motor_id]
+            # 2. Handle solution motors loaded from the shared moving-part contract
+            motor_contract = self.motor_contracts.get(motor_id)
+            entity_name = motor_contract["entity_name"] if motor_contract else motor_id
+            if entity_name in self.entities:
+                entity = self.entities[entity_name]
                 try:
                     self._set_entity_dofs_force(
                         entity, np.array([val], dtype=np.float32)
@@ -1401,7 +1488,13 @@ class GenesisBackend(PhysicsRendererBackend):
         return names
 
     def get_all_actuator_names(self) -> list[str]:
-        names = [m["part_name"] for m in getattr(self, "motors", [])]
+        names = list(self.motor_contracts.keys())
+        if not names:
+            names = [
+                m["part_name"]
+                for m in getattr(self, "motors", [])
+                if str(m.get("part_name") or "").strip()
+            ]
         names.extend(list(self.mjcf_actuators.keys()))
         return names
 
@@ -1567,4 +1660,5 @@ class GenesisBackend(PhysicsRendererBackend):
         self.cables = {}
         self.virtual_cable_tensions = {}
         self.cameras = {}
+        self.motor_contracts = {}
         self._is_built = False

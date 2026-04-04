@@ -4,8 +4,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from shared.models.schemas import WireTerminal
-from worker_heavy.simulation.builder import GenesisSimulationBuilder
+import numpy as np
+
+from shared.enums import MotorControlMode, MovingPartType
+from shared.models.schemas import MotorControl, MovingPart, WireTerminal
+from worker_heavy.simulation.builder import AssemblyPartData, GenesisSimulationBuilder
 from worker_heavy.simulation.genesis_backend import GenesisBackend
 
 
@@ -58,12 +61,99 @@ class TestGenesisBuilderElectronics(unittest.TestCase):
         self.assertEqual(data["cables"][0]["wire_id"], "wire_1")
         self.assertEqual(len(data["cables"][0]["points"]), 2)
 
+    def test_solution_motors_are_serialized_as_controlled_contracts(self):
+        mock_assembly = MagicMock()
+        mock_assembly.children = []
+
+        mock_part = MagicMock()
+        mock_part_data = AssemblyPartData(
+            label="drive_motor",
+            part=mock_part,
+            pos=[0.0, 0.0, 0.0],
+            euler=[0.0, 0.0, 0.0],
+            is_fixed=False,
+            material_id="aluminum_6061",
+            cots_id="ServoMotor_DS3218",
+        )
+
+        moving_parts = [
+            MovingPart(
+                part_name="drive_motor",
+                type=MovingPartType.MOTOR,
+                dofs=["rotate_z"],
+                control=MotorControl(mode=MotorControlMode.CONSTANT, speed=1.0),
+            ),
+            MovingPart(
+                part_name="guide_rail",
+                type=MovingPartType.PASSIVE,
+                dofs=["slide_z"],
+                control=None,
+            ),
+        ]
+
+        def _fake_process_geometry(_part, mesh_path_base, **_kwargs):
+            obj_path = mesh_path_base.with_suffix(".obj")
+            obj_path.parent.mkdir(parents=True, exist_ok=True)
+            obj_path.write_text("dummy mesh", encoding="utf-8")
+            return [obj_path]
+
+        mock_config = MagicMock(
+            materials={},
+            cnc=None,
+            injection_molding=None,
+            three_dp=None,
+        )
+
+        with (
+            patch(
+                "worker_heavy.simulation.builder.CommonAssemblyTraverser.traverse",
+                return_value=[mock_part_data],
+            ),
+            patch(
+                "worker_heavy.workbenches.config.load_config", return_value=mock_config
+            ),
+            patch.object(
+                self.builder.processor,
+                "process_geometry",
+                side_effect=_fake_process_geometry,
+            ),
+        ):
+            self.builder.build_from_assembly(
+                assembly=mock_assembly, moving_parts=moving_parts
+            )
+
+        scene_path = self.output_dir / "scene.json"
+        with scene_path.open() as f:
+            data = json.load(f)
+
+        self.assertIn("motors", data)
+        self.assertEqual(len(data["motors"]), 1)
+
+        motor = data["motors"][0]
+        self.assertEqual(motor["part_name"], "drive_motor")
+        self.assertEqual(motor["cots_id"], "ServoMotor_DS3218")
+        self.assertEqual(motor["actuator_type"], "velocity")
+        self.assertEqual(motor["control"]["mode"], "CONSTANT")
+        self.assertEqual(motor["control"]["speed"], 1.0)
+        self.assertEqual(motor["force_range"], [-1.96, 1.96])
+
     def test_applied_control_persistence(self):
         backend = GenesisBackend()
         # Mock entity
         mock_entity = MagicMock()
+        mock_entity.get_dofs_force.return_value = np.array([0.0], dtype=np.float32)
+        mock_entity.get_dofs_velocity.return_value = np.array([0.0], dtype=np.float32)
         backend.entities = {"motor1": mock_entity}
-        backend.motors = [{"part_name": "motor1"}]
+        backend.entity_configs = {"motor1": {"fixed": False}}
+        backend.motors = [
+            {
+                "part_name": "motor1",
+                "control": {"mode": "CONSTANT", "speed": 0.5},
+                "cots_id": "ServoMotor_DS3218",
+                "joint": "motor1_joint",
+            }
+        ]
+        backend._materialize_solution_motor_contracts()
 
         # Apply control
         backend.apply_control({"motor1": 0.5})
@@ -72,6 +162,26 @@ class TestGenesisBuilderElectronics(unittest.TestCase):
         state = backend.get_actuator_state("motor1")
 
         self.assertEqual(state.ctrl, 0.5, f"Expected ctrl 0.5, got {state.ctrl}")
+        self.assertEqual(state.forcerange, (-1.96, 1.96))
+
+    def test_unresolved_solution_motor_contract_fails_closed(self):
+        backend = GenesisBackend()
+        mock_entity = MagicMock()
+        mock_entity.get_dofs_force.return_value = np.array([0.0], dtype=np.float32)
+        mock_entity.get_dofs_velocity.return_value = np.array([0.0], dtype=np.float32)
+        backend.entities = {"motor1": mock_entity}
+        backend.entity_configs = {"motor1": {"fixed": False}}
+        backend.motors = [
+            {
+                "part_name": "motor1",
+                "control": {"mode": "CONSTANT", "speed": 1.0},
+                "cots_id": "ServoMotor_DOES_NOT_EXIST",
+                "joint": "motor1_joint",
+            }
+        ]
+
+        with self.assertRaises(ValueError):
+            backend._materialize_solution_motor_contracts()
 
     def test_tendon_support(self):
         backend = GenesisBackend()

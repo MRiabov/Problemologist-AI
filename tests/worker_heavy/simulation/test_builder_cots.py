@@ -93,6 +93,40 @@ def test_add_actuator_manual_override():
     assert actuator.get("forcerange") == "-1.0 1.0"
 
 
+def test_add_actuator_uses_type_specific_attributes():
+    """Test that actuator XML attrs match the selected actuator tag."""
+    compiler = SceneCompiler()
+
+    compiler.add_actuator(
+        name="velocity_motor",
+        joint="joint_velocity",
+        cots_id="DS3218",
+        actuator_type="velocity",
+    )
+    compiler.add_actuator(
+        name="torque_motor",
+        joint="joint_torque",
+        cots_id="DS3218",
+        actuator_type="motor",
+    )
+
+    xml_str = ET.tostring(compiler.root, encoding="utf-8").decode()
+    root = ET.fromstring(xml_str)
+
+    velocity_actuator = root.find(".//actuator/velocity")
+    assert velocity_actuator is not None
+    assert velocity_actuator.get("kp") is None
+    assert velocity_actuator.get("kv") is not None
+    assert velocity_actuator.get("forcerange") is not None
+
+    torque_actuator = root.find(".//actuator/motor")
+    assert torque_actuator is not None
+    assert torque_actuator.get("kp") is None
+    assert torque_actuator.get("kv") is None
+    assert torque_actuator.get("gear") == "1"
+    assert torque_actuator.get("forcerange") is not None
+
+
 def test_add_actuator_unknown_motor():
     """Test fallback for unknown motors."""
     compiler = SceneCompiler()

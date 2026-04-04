@@ -12,6 +12,10 @@ import structlog
 import trimesh
 from build123d import Align, Box, Compound, Cylinder, Solid, Sphere, export_stl
 
+from worker_heavy.simulation.motor_contracts import (
+    resolve_solution_motor_contract,
+    resolve_solution_motor_joint_contract,
+)
 from worker_heavy.simulation.naming import moved_object_scene_name
 
 # YACV removed in favor of custom trimesh-based export capable of preserving topology
@@ -242,6 +246,44 @@ class CommonAssemblyTraverser:
                 if getattr(comp, "assembly_part_ref", None) == label:
                     return True
         return False
+
+
+def _normalize_joint_axis(axis: list[float] | None) -> list[float] | None:
+    if axis is None:
+        return None
+    return [float(value) for value in axis]
+
+
+def _resolve_controlled_joint_contract(
+    *,
+    part_name: str,
+    dofs: list[str],
+    joint_type: str | None,
+    joint_axis: list[float] | None,
+) -> tuple[str, list[float]]:
+    resolved_joint_type, resolved_joint_axis = resolve_solution_motor_joint_contract(
+        part_name=part_name,
+        dofs=dofs,
+    )
+    normalized_joint_axis = _normalize_joint_axis(joint_axis)
+
+    if joint_type is None:
+        joint_type = resolved_joint_type
+    elif str(joint_type).strip().lower() != resolved_joint_type:
+        raise ValueError(
+            f"motor '{part_name}' declares a joint type '{joint_type}' that does not "
+            f"match its DOF token '{dofs[0]}'"
+        )
+
+    if normalized_joint_axis is None:
+        normalized_joint_axis = resolved_joint_axis
+    elif [float(v) for v in normalized_joint_axis] != resolved_joint_axis:
+        raise ValueError(
+            f"motor '{part_name}' declares a joint axis {normalized_joint_axis} that "
+            f"does not match its DOF token '{dofs[0]}'"
+        )
+
+    return joint_type, normalized_joint_axis
 
 
 logger = structlog.get_logger(__name__)
@@ -680,15 +722,24 @@ class SceneCompiler:
                     final_forcerange = (-torque, torque)
                 if kp is None:
                     final_kp = physics["kp"]
-                    if kv is None:
-                        final_kv = physics["kv"]
+                if kv is None:
+                    final_kv = physics["kv"]
 
         attrs = {
             "name": name,
             "joint": joint,
-            "kp": str(final_kp),
-            "kv": str(final_kv),
         }
+        if actuator_type == "position":
+            attrs["kp"] = str(final_kp)
+            attrs["kv"] = str(final_kv)
+        elif actuator_type == "velocity":
+            attrs["kv"] = str(final_kv)
+        elif actuator_type == "motor":
+            attrs["gear"] = "1"
+        else:
+            attrs["kp"] = str(final_kp)
+            attrs["kv"] = str(final_kv)
+
         if final_forcerange is not None:
             attrs["forcerange"] = f"{final_forcerange[0]} {final_forcerange[1]}"
 
@@ -818,7 +869,12 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
 
         # 2. Add parts from assembly
         parts_data = CommonAssemblyTraverser.traverse(assembly, electronics)
-        cots_lookup = {d.label: d.cots_id for d in parts_data}
+        parts_by_name = {d.label: d for d in parts_data}
+        moving_parts_by_name = {
+            mp.part_name: mp
+            for mp in (moving_parts or [])
+            if getattr(mp, "control", None)
+        }
 
         for data in parts_data:
             if data.weld_target:
@@ -837,6 +893,20 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                 material_id = data.material_id or (
                     "cots-generic" if data.cots_id else None
                 )
+                moving_part = moving_parts_by_name.get(data.label)
+                joint_type = data.joint_type
+                joint_axis = data.joint_axis
+                if moving_part is not None:
+                    if len(list(moving_part.dofs or [])) != 1:
+                        raise ValueError(
+                            f"moving part '{data.label}' must declare exactly one DOF"
+                        )
+                    joint_type, joint_axis = _resolve_controlled_joint_contract(
+                        part_name=data.label,
+                        dofs=list(moving_part.dofs or []),
+                        joint_type=joint_type,
+                        joint_axis=joint_axis,
+                    )
                 mesh_path_base = self.assets_dir / data.label
                 # Use coarser mesh for smoke tests
                 tolerance = 1.0 if smoke_test_mode else 0.1
@@ -863,8 +933,8 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                     pos=data.pos,
                     euler=data.euler,
                     is_fixed=data.is_fixed,
-                    joint_type=data.joint_type,
-                    joint_axis=data.joint_axis,
+                    joint_type=joint_type,
+                    joint_axis=joint_axis,
                     joint_range=data.joint_range,
                     geom_rgba=self._resolve_geom_rgba(material_id, mfg_config),
                 )
@@ -916,26 +986,40 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
 
         # 4. Add actuators for moving parts (T011)
         if moving_parts:
-            from shared.enums import MotorControlMode
-
             for mp in moving_parts:
-                if mp.type == "motor":
-                    # T019: Determine actuator type based on control mode
-                    actuator_type = "position"
-                    if mp.control:
-                        if mp.control.mode == MotorControlMode.CONSTANT:
-                            actuator_type = "velocity"
-                        elif mp.control.mode == MotorControlMode.ON_OFF:
-                            actuator_type = "motor"  # Direct force/torque control
+                if not mp.control:
+                    continue
 
-                    # We assume the joint name follows the convention {part_name}_joint
-                    # which is what add_body uses.
-                    self.compiler.add_actuator(
-                        name=mp.part_name,
-                        joint=f"{mp.part_name}_joint",
-                        actuator_type=actuator_type,
-                        cots_id=cots_lookup.get(mp.part_name),
+                part_data = parts_by_name.get(mp.part_name)
+                if part_data is None:
+                    raise ValueError(
+                        f"moving part '{mp.part_name}' is not present in the assembly geometry"
                     )
+                if part_data.is_fixed:
+                    raise ValueError(
+                        f"moving part '{mp.part_name}' is marked fixed in the assembly geometry"
+                    )
+                joint_type, joint_axis = _resolve_controlled_joint_contract(
+                    part_name=mp.part_name,
+                    dofs=list(mp.dofs or []),
+                    joint_type=part_data.joint_type,
+                    joint_axis=part_data.joint_axis,
+                )
+
+                contract = resolve_solution_motor_contract(
+                    part_name=mp.part_name,
+                    cots_id=part_data.cots_id,
+                    control=mp.control,
+                    joint_name=f"{mp.part_name}_joint",
+                )
+
+                # MuJoCo remains the reference actuator materialization path.
+                self.compiler.add_actuator(
+                    name=contract.part_name,
+                    joint=contract.joint_name,
+                    actuator_type=contract.actuator_type,
+                    cots_id=contract.cots_id,
+                )
 
         # 5. Add Electronics (Wires/Tendons)
         if electronics and hasattr(electronics, "wiring"):
@@ -1197,9 +1281,42 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
 
         # 3. Add moving parts (Motors)
         scene_data["motors"] = []
+        parts_by_name = {d.label: d for d in parts_data}
         if moving_parts:
             for mp in moving_parts:
-                scene_data["motors"].append(mp.model_dump())
+                if not mp.control:
+                    continue
+
+                part_data = parts_by_name.get(mp.part_name)
+                if part_data is None:
+                    raise ValueError(
+                        f"moving part '{mp.part_name}' is not present in the assembly geometry"
+                    )
+                if part_data.is_fixed:
+                    raise ValueError(
+                        f"moving part '{mp.part_name}' is marked fixed in the assembly geometry"
+                    )
+                joint_type, joint_axis = _resolve_controlled_joint_contract(
+                    part_name=mp.part_name,
+                    dofs=list(mp.dofs or []),
+                    joint_type=part_data.joint_type,
+                    joint_axis=part_data.joint_axis,
+                )
+
+                contract = resolve_solution_motor_contract(
+                    part_name=mp.part_name,
+                    cots_id=part_data.cots_id,
+                    control=mp.control,
+                    joint_name=f"{mp.part_name}_joint",
+                )
+                moving_part_type = getattr(mp.type, "value", str(mp.type))
+                scene_data["motors"].append(
+                    contract.to_scene_record(
+                        dofs=list(mp.dofs), moving_part_type=moving_part_type
+                    )
+                )
+                scene_data["motors"][-1]["joint_type"] = joint_type
+                scene_data["motors"][-1]["joint_axis"] = joint_axis
         if objectives and hasattr(objectives, "fluids") and objectives.fluids:
             for fluid in objectives.fluids:
                 scene_data["fluids"].append(fluid.model_dump())
