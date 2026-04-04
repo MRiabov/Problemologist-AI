@@ -120,6 +120,7 @@ The eval tooling mirrors the integration tooling, but it owns a separate lock, a
 - It records the active bootstrap owner in `/tmp/problemologist-eval.run.json` and updates that state only while the lease is writable.
 - It writes logs under `logs/evals/runs/run_*` and maintains `logs/evals/current/` plus `logs/evals/latest.log`.
 - It can run against the controller-backed path or the local CLI-provider path.
+- Devtools that can target more than one CLI backend must expose the choice explicitly, for example `--provider qwen` or an equivalent provider selector, rather than inferring the backend from the binary name. This is orthogonal to `--runner-backend`, which remains the controller-vs-local execution-mode switch.
 - Controller-backed eval runs bootstrap the `eval` profile through `scripts/env_up.sh` unless the caller explicitly skips that step.
 - `--skip-env-up` joins the shared eval lock directly so multiple eval consumers can coexist when the stack is already up.
 - CLI-provider-backed eval runs remain local to the materialized workspace and do not require the controller/worker stack to be booted for the agent loop itself.
@@ -168,7 +169,7 @@ The validation helpers are developer tooling, not product behavior.
 - It seeds the local workspace through the real helper path and validates the row against the current contract set.
 - For planner rows, that contract includes exact inventory preservation, exact identifier mention coverage in `plan.md`, and the latest handoff cross-contract checks from the controller validation path.
 - It can refresh deterministic seed manifests and render bundles when asked.
-- It can optionally run the eval runner in judge mode after validation, using the codex backend by default.
+- It can optionally run the eval runner in judge mode after validation, using the local CLI-provider backend by default.
 - Validation-only `--skip-env-up` runs join the shared validation lock so multiple seed checks can proceed in parallel while still preventing eval teardown during an active validation consumer.
 - The script keeps the lock exclusive only while bootstrapping the eval stack, then downgrades to the shared validation lock before health checks and validation work continue.
 - If `--run-judge` is requested for more than 10 selected seed rows, the script requires `-y` before it will launch the expensive judge pass.

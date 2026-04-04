@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,8 +10,8 @@ from typing import Literal, Protocol, runtime_checkable
 from evals.logic.stack_profiles import apply_stack_profile_env
 from shared.agents.config import load_agents_config
 from shared.enums import AgentName
-from shared.runtime.headless import load_headless_opengl_config
 from shared.git_utils import repo_revision
+from shared.runtime.headless import load_headless_opengl_config
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -192,7 +191,9 @@ class CodexCliProvider:
         if venv_bin.exists():
             current_path = env.get("PATH", "")
             env["PATH"] = (
-                f"{venv_bin}{os.pathsep}{current_path}" if current_path else str(venv_bin)
+                f"{venv_bin}{os.pathsep}{current_path}"
+                if current_path
+                else str(venv_bin)
             )
             env.setdefault("VIRTUAL_ENV", str(ROOT / ".venv"))
             env["PYTHON_BIN"] = str(venv_bin / "python")
@@ -201,7 +202,9 @@ class CodexCliProvider:
 
         env.setdefault("CONTROLLER_URL", "http://localhost:18000")
         env.setdefault("WORKER_LIGHT_URL", "http://localhost:18001")
-        env.setdefault("SESSION_ID", session_id or f"local-codex-{task_id}-{os.getpid()}")
+        env.setdefault(
+            "SESSION_ID", session_id or f"local-codex-{task_id}-{os.getpid()}"
+        )
         env.setdefault("IS_HEAVY_WORKER", "1")
         env.setdefault("PROBLEMOLOGIST_SCRIPT_IMPORT_MODE", "0")
         env.setdefault("COTS_DB_PATH", str(ROOT / "parts.db"))

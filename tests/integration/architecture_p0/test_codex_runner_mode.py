@@ -522,9 +522,9 @@ def test_resume_codex_exec_uses_cli_provider_resume_command(
     )
 
     assert result.return_code == 0
-    logged_args = (tmp_path / "codex-resume-args.log").read_text(
-        encoding="utf-8"
-    ).splitlines()
+    logged_args = (
+        (tmp_path / "codex-resume-args.log").read_text(encoding="utf-8").splitlines()
+    )
     assert logged_args[0] == "exec"
     assert logged_args[1] == "-C"
     assert logged_args[2] == str(workspace_dir)
@@ -571,12 +571,10 @@ async def test_run_evals_codex_judge_does_not_launch_reviewers_without_flag(
     )
 
     monkeypatch.setattr(runner, "SESSION_LOG_ROOT", tmp_path / "session-root")
-    monkeypatch.setattr(
-        runner, "_materialize_codex_workspace", lambda **_: materialized
-    )
-    monkeypatch.setattr(runner, "_launch_codex_exec", lambda *_, **__: 0)
+    monkeypatch.setattr(runner, "_materialize_workspace", lambda **_: materialized)
+    monkeypatch.setattr(runner, "_launch_cli_exec", lambda *_, **__: 0)
 
-    async def fake_verify_codex_workspace_for_agent(**_: object) -> SimpleNamespace:
+    async def fake_verify_workspace_for_agent(**_: object) -> SimpleNamespace:
         return SimpleNamespace(
             success=True,
             errors=[],
@@ -592,8 +590,8 @@ async def test_run_evals_codex_judge_does_not_launch_reviewers_without_flag(
 
     monkeypatch.setattr(
         runner,
-        "_verify_codex_workspace_for_agent",
-        fake_verify_codex_workspace_for_agent,
+        "_verify_workspace_for_agent",
+        fake_verify_workspace_for_agent,
     )
     monkeypatch.setattr(
         runner, "_record_hard_check_outcomes", fake_record_hard_check_outcomes
@@ -602,7 +600,7 @@ async def test_run_evals_codex_judge_does_not_launch_reviewers_without_flag(
     monkeypatch.setattr(runner, "_write_eval_session_metadata", lambda **_: None)
     monkeypatch.setattr(
         runner,
-        "_resolve_codex_home_root",
+        "_resolve_cli_home_root",
         lambda **_: tmp_path / "codex-home",
     )
     monkeypatch.setattr(
@@ -614,7 +612,7 @@ async def test_run_evals_codex_judge_does_not_launch_reviewers_without_flag(
     async def fail_codex_skill_loop(**_: object) -> tuple[object, object]:
         raise AssertionError("codex skill loop should stay disabled by default")
 
-    monkeypatch.setattr(runner, "_run_codex_skill_loop", fail_codex_skill_loop)
+    monkeypatch.setattr(runner, "_run_skill_loop", fail_codex_skill_loop)
 
     reviewer_called = False
 
@@ -632,7 +630,7 @@ async def test_run_evals_codex_judge_does_not_launch_reviewers_without_flag(
     )
 
     stats = {AgentName.BENCHMARK_CODER: {"total": 0, "success": 0}}
-    success = await runner._run_codex_eval(
+    success = await runner._run_cli_eval(
         item=item,
         stats=stats,
         agent_name=AgentName.BENCHMARK_CODER,
@@ -673,12 +671,10 @@ async def test_run_evals_codex_skill_loop_flag_enables_loop_backend(
     )
 
     monkeypatch.setattr(runner, "SESSION_LOG_ROOT", tmp_path / "session-root")
-    monkeypatch.setattr(
-        runner, "_materialize_codex_workspace", lambda **_: materialized
-    )
-    monkeypatch.setattr(runner, "_launch_codex_exec", lambda *_, **__: 0)
+    monkeypatch.setattr(runner, "_materialize_workspace", lambda **_: materialized)
+    monkeypatch.setattr(runner, "_launch_cli_exec", lambda *_, **__: 0)
 
-    async def fake_verify_codex_workspace_for_agent(**_: object) -> SimpleNamespace:
+    async def fake_verify_workspace_for_agent(**_: object) -> SimpleNamespace:
         return SimpleNamespace(
             success=True,
             errors=[],
@@ -686,19 +682,19 @@ async def test_run_evals_codex_skill_loop_flag_enables_loop_backend(
             verification_name="codex-verify",
         )
 
-    async def fake_run_codex_skill_loop(**_: object):
+    async def fake_run_skill_loop(**_: object):
         return runner.CodexSkillLoopSummary(enabled=True, triggered=True), None
 
     monkeypatch.setattr(
         runner,
-        "_verify_codex_workspace_for_agent",
-        fake_verify_codex_workspace_for_agent,
+        "_verify_workspace_for_agent",
+        fake_verify_workspace_for_agent,
     )
-    monkeypatch.setattr(runner, "_run_codex_skill_loop", fake_run_codex_skill_loop)
+    monkeypatch.setattr(runner, "_run_skill_loop", fake_run_skill_loop)
     monkeypatch.setattr(runner, "_write_eval_session_metadata", lambda **_: None)
     monkeypatch.setattr(
         runner,
-        "_resolve_codex_home_root",
+        "_resolve_cli_home_root",
         lambda **_: tmp_path / "codex-home",
     )
     monkeypatch.setattr(
@@ -708,7 +704,7 @@ async def test_run_evals_codex_skill_loop_flag_enables_loop_backend(
     )
 
     stats = {AgentName.BENCHMARK_CODER: {"total": 0, "success": 0}}
-    success = await runner._run_codex_eval(
+    success = await runner._run_cli_eval(
         item=item,
         stats=stats,
         agent_name=AgentName.BENCHMARK_CODER,
@@ -771,7 +767,7 @@ async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
     resume_calls: list[tuple[str, str, float | None, str]] = []
     resume_call_count = 0
 
-    def fake_resume_codex_exec(
+    def fake_resume_cli_exec(
         workspace_dir: Path,
         prompt_text: str,
         *,
@@ -838,7 +834,7 @@ async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
             ),
         )
 
-    monkeypatch.setattr(runner, "_resume_codex_exec", fake_resume_codex_exec)
+    monkeypatch.setattr(runner, "_resume_cli_exec", fake_resume_cli_exec)
     monkeypatch.setattr(
         runner,
         "_capture_latest_codex_session_artifacts",
@@ -846,11 +842,11 @@ async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
     )
     monkeypatch.setattr(runner, "SESSION_LOG_ROOT", tmp_path / "session-root")
 
-    summary, updated_trace = await runner._run_codex_skill_loop(
+    summary, updated_trace = await runner._run_skill_loop(
         item=item,
         agent_name=AgentName.ENGINEER_CODER,
         workspace_dir=workspace_dir,
-        codex_runtime_root=tmp_path / "codex-runtime",
+        cli_runtime_root=tmp_path / "codex-runtime",
         eval_log_key="ec-001",
         baseline_snapshot=baseline_snapshot,
         codex_trace_artifacts=codex_trace_artifacts,
@@ -946,7 +942,7 @@ def test_run_evals_codex_readable_logs_mirror_imported_transcript(
         transcript_path=transcript_path,
     )
 
-    runner._mirror_codex_session_trace_to_readable_logs(  # type: ignore[attr-defined]
+    runner._mirror_session_trace_to_readable_logs(  # type: ignore[attr-defined]
         artifact,
         eval_log_key="ec-001",
     )

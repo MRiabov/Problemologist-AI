@@ -105,33 +105,33 @@ submission.
 
 ## Proposed Target State
 
-01. `plan_refusal.md` remains the canonical refusal proof artifact for both
-    benchmark coder and engineer coder roles.
-02. Codex coder workspaces get an explicit refusal completion gate,
-    `bash scripts/refuse_plan.sh`, parallel to the existing planner success
-    gate.
-03. The refusal helper validates `plan_refusal.md` before accepting the
-    refusal, including frontmatter schema, role-specific reason enums, and
-    evidence/body requirements.
-04. The refusal helper writes a backend-owned refusal manifest under
-    `.manifests/` with session, episode, worker-session, role, revision, and
-    refusal-hash metadata. The manifest is the machine-checkable record that
-    the refusal was intentionally submitted.
-05. The refusal helper emits structured observability events that include the
-    refusal reasons, role, revision, and proof artifact references.
-06. Backend routing logic uses the refusal manifest as a gate where the refusal
-    is consumed, including reviewer entry, replay/training consumers, and any
-    future skill-loop logic that needs to branch on refusal instead of on a
-    bare file presence check.
-07. Reviewer routing continues to rely on `plan_refusal.md` as the canonical
-    proof artifact, but it validates the refusal against the refusal manifest
-    and observability trail instead of treating the refusal as a bare file
-    presence check.
-08. `shared.utils.agent.refuse_plan(...)` becomes compatibility-only or is
-    redirected to the validated refusal submission path. `refusal.json` is not
-    a canonical artifact in the target state.
-09. Benchmark coder and engineer coder skills can explain one explicit refusal
-    workflow instead of describing a hidden file-side effect.
+1. `plan_refusal.md` remains the canonical refusal proof artifact for both
+   benchmark coder and engineer coder roles.
+2. Codex coder workspaces get an explicit refusal completion gate,
+   `bash scripts/refuse_plan.sh`, parallel to the existing planner success
+   gate.
+3. The refusal helper validates `plan_refusal.md` before accepting the
+   refusal, including frontmatter schema, role-specific reason enums, and
+   evidence/body requirements.
+4. The refusal helper writes a backend-owned refusal manifest under
+   `.manifests/` with session, episode, worker-session, role, revision, and
+   refusal-hash metadata. The manifest is the machine-checkable record that
+   the refusal was intentionally submitted.
+5. The refusal helper emits structured observability events that include the
+   refusal reasons, role, revision, and proof artifact references.
+6. Backend routing logic uses the refusal manifest as a gate where the refusal
+   is consumed, including reviewer entry, replay/training consumers, and any
+   future skill-loop logic that needs to branch on refusal instead of on a
+   bare file presence check.
+7. Reviewer routing continues to rely on `plan_refusal.md` as the canonical
+   proof artifact, but it validates the refusal against the refusal manifest
+   and observability trail instead of treating the refusal as a bare file
+   presence check.
+8. `shared.utils.agent.refuse_plan(...)` becomes compatibility-only or is
+   redirected to the validated refusal submission path. `refusal.json` is not
+   a canonical artifact in the target state.
+9. Benchmark coder and engineer coder skills can explain one explicit refusal
+   workflow instead of describing a hidden file-side effect.
 
 ## Required Work
 
@@ -262,23 +262,23 @@ waived with a written rationale.
 - [ ] Add `scripts/refuse_plan.sh` to the Codex coder workspace template.
 - [ ] Add the refusal helper backend implementation.
 - [ ] Keep the refusal helper thin at the shell layer and strict at the
-      validation layer.
+  validation layer.
 
 ### Validation and manifest
 
 - [ ] Validate `plan_refusal.md` before refusal submission is accepted.
 - [ ] Write the refusal manifest with session, role, revision, and refusal-hash
-      metadata.
+  metadata.
 - [ ] Keep the refusal manifest backend-owned and inaccessible to agent file
-      tools.
+  tools.
 
 ### Observability and routing
 
 - [ ] Emit explicit refusal submission events.
 - [ ] Make reviewer confirmation consume the refusal manifest plus
-      `plan_refusal.md`.
+  `plan_refusal.md`.
 - [ ] Preserve current fail-closed routing for missing or invalid refusal
-      artifacts.
+  artifacts.
 
 ### Skills and docs
 
@@ -286,13 +286,13 @@ waived with a written rationale.
 - [ ] Update `tools.md`.
 - [ ] Update `agent-skill.md`.
 - [ ] Update benchmark and engineer coder skills so the refusal workflow is
-      easy to explain.
+  easy to explain.
 - [ ] Update the prompt fragments that advertise coder completion gates.
 
 ### Cleanup
 
 - [ ] Deprecate `shared.utils.agent.refuse_plan(...)` if the new helper fully
-      replaces it.
+  replaces it.
 - [ ] Remove `refusal.json` from the active contract.
 - [ ] Add or refresh integration coverage for the refusal submission path.
 

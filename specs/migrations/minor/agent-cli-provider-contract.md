@@ -39,8 +39,9 @@ That shape works for a single backend, but it makes adding `gemini`, `claude`, o
 2. The runtime chooses a provider implementation explicitly. Codex remains the default provider implementation, but the orchestration code does not hard-code `codex` outside the Codex provider module.
 3. `evals/logic/codex_workspace.py` and `evals/logic/runner.py` depend on the provider protocol instead of on the native CLI binary name, while preserving the existing workspace contract and observable artifacts.
 4. `QwenCliProvider` exists as a second concrete CLI-provider implementation with the same contract surface as Codex, even if its backend-specific command details differ.
-5. Tests exercise the provider seam with provider mocks or fake provider objects instead of creating fake native CLI binaries. A tiny real-CLI smoke check may remain if the repository still wants one, but it should not be the main test seam.
-6. The docs describe the CLI-provider contract consistently and state that Codex is the current default implementation rather than the only supported backend family.
+5. Devtools that can target more than one CLI backend expose the choice explicitly, for example `--provider qwen` or an equivalent selector, rather than inferring the backend from the binary name. This is orthogonal to `--runner-backend`, which remains the controller-vs-local execution-mode selector.
+6. Tests exercise the provider seam with provider mocks or fake provider objects instead of creating fake native CLI binaries. A tiny real-CLI smoke check may remain if the repository still wants one, but it should not be the main test seam.
+7. The docs describe the CLI-provider contract consistently and state that Codex is the current default implementation rather than the only supported backend family.
 
 ## Required Work
 
@@ -64,6 +65,7 @@ That shape works for a single backend, but it makes adding `gemini`, `claude`, o
 
 - Update `specs/devtools.md` to describe the provider seam and the default Codex implementation.
 - Update `specs/devtools.md` to describe `QwenCliProvider` as a supported concrete backend alongside Codex.
+- Update `specs/devtools.md` to say multi-backend devtools should expose an explicit provider selector such as `--provider qwen`.
 - Update `specs/architecture/agents/agent-harness.md` to use CLI-provider language instead of a Codex-only backend description.
 - Update `specs/architecture/distributed-execution.md` and `specs/architecture/agents/artifacts-and-filesystem.md` so the CLI backend wording is provider-neutral.
 - Update `specs/architecture/evals-architecture.md` if it still implies that Codex is the only replayable CLI backend.
@@ -113,6 +115,7 @@ Use this checklist to track the provider seam from the initial abstraction throu
 - [ ] Add `QwenCliProvider` behind the same provider contract.
 - [ ] Route `evals/logic/codex_workspace.py` and `evals/logic/runner.py` through provider injection.
 - [ ] Keep Codex as the default provider implementation.
+- [ ] Document explicit provider selection for multi-backend devtools, e.g. `--provider qwen`.
 
 ### Docs
 

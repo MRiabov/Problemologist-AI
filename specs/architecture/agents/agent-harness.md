@@ -16,7 +16,7 @@ The controller can run either:
 1. an API-backed model path, or
 2. a CLI-provider-backed local workspace path.
 
-Codex is the default eval-debug backend, and the controller-backed API path remains available when a run must use a paid API provider or needs controller-specific orchestration traces.
+The local CLI-provider path is the default eval-debug backend, and the controller-backed API path remains available when a run must use a paid API provider or needs controller-specific orchestration traces.
 
 ## DSPy adapter contract
 
@@ -42,13 +42,13 @@ The conceptual split is:
 
 ## Backend selection
 
-The runner exposes the backend as an explicit mode:
+The runner exposes the execution mode as an explicit choice:
 
 1. The configured CLI provider launches a local workspace and runs the task there.
 2. `controller` uses the existing HTTP orchestration path and paid model providers.
-3. `codex` is the default backend.
-4. The backend can be selected through `--call-paid-api`, `--runner-backend`, or `EVAL_RUNNER_BACKEND`.
-5. `--call-paid-api` flips the runner to the paid-provider/controller path; `--runner-backend` remains the explicit override.
+3. The local CLI-provider path is the default backend.
+4. The controller-vs-local execution mode can be selected through `--call-paid-api`, `--runner-backend`, or `EVAL_RUNNER_BACKEND`.
+5. `--call-paid-api` flips the runner to the paid-provider/controller path; `--runner-backend` remains the explicit controller-vs-local override. Multi-backend local tools may also expose `--provider` as a separate selector.
 6. Role-specific `reasoning_effort` comes from `config/agents_config.yaml`, and the same config file can disable emitting that request parameter for backends or models that do not support it.
 
 ## Workspace materialization
@@ -59,7 +59,7 @@ The materialized workspace is the source of truth for the session, not the repos
 
 The workspace contract is:
 
-01. The workspace root is the current directory for the Codex process.
+01. The workspace root is the current directory for the local CLI-provider process.
 02. The initial prompt is written to `prompt.md` at the workspace root.
 03. Shared boilerplate starter files and prompt-context material come from `shared/agent_templates/`.
 04. Role-specific planner starter files come from the role template repositories under `shared/assets/template_repos/`.
@@ -107,11 +107,11 @@ Planner behavior is:
 4. Iterate until the helper reports `ok=true` and `status=submitted`.
 5. Treat `.manifests/` as system-owned output, not as editable planner input.
 
-Coder roles use the same Codex workspace contract, but they do not submit plans through the planner helper.
+Coder roles use the same CLI-provider workspace contract, but they do not submit plans through the planner helper.
 The prompt tells them to work in the role-owned authored source file, supporting implementation files, and the local execution-review helper.
 
 Reviewer roles operate on the same workspace but write review artifacts instead of planner output.
-The Codex prompt must direct reviewers to the stage-specific `reviews/` files and must not ask them to rewrite planner-owned source files.
+The CLI-provider prompt must direct reviewers to the stage-specific `reviews/` files and must not ask them to rewrite planner-owned source files.
 
 ## Filesystem contract
 
@@ -124,7 +124,7 @@ The filesystem rules are:
 2. `/workspace` is only a compatibility alias in runtime plumbing.
 3. Prompt text must not expand the alias into the canonical contract.
 4. Path traversal outside the workspace root is a deterministic error.
-5. The local Codex client and the shared filesystem backend both resolve paths by containment against the resolved workspace root.
+5. The local CLI-provider client and the shared filesystem backend both resolve paths by containment against the resolved workspace root.
 6. String-prefix checks are not sufficient and are not accepted as the path-safety rule.
 
 The local containment checks live in `evals/logic/codex_workspace.py`.
@@ -139,7 +139,7 @@ The submission contract is:
 
 1. The helper validates the required planner files for the active agent role.
 2. Benchmark planner submissions canonicalize benchmark constraints before validation.
-3. The helper infers the planner variant from the workspace files and does not require `AGENT_NAME`, so the Codex launch environment stays generic.
+3. The helper infers the planner variant from the workspace files and does not require `AGENT_NAME`, so the local launch environment stays generic.
 4. A successful submission writes the stage manifest to `.manifests/`.
 5. The helper returns structured `PlannerSubmissionResult` JSON on stdout.
 6. Success requires `ok=true` and `status=submitted`.
@@ -154,7 +154,7 @@ The skill-tree contract is owned by [agent-skill.md](./agent-skill.md).
 The harness only needs the runtime-facing summary:
 
 1. The checked-in `skills/` tree is the canonical skill source.
-2. Codex workspaces materialize that tree into `.agents/skills/` inside the run-local workspace.
+2. CLI-provider workspaces materialize that tree into `.agents/skills/` inside the run-local workspace.
 3. Controller-backed runtime surfaces expose the same content through the `/skills` mount.
 4. `suggested_skills/` is writable staging, not canonical source.
 5. Workspace skill copies are read-only runtime inputs from the agent's perspective.
@@ -222,15 +222,15 @@ The recorded fields include:
 
 The promotion contract is:
 
-1. Every promoted event must carry `episode_id`, `user_session_id` when available, and a backend/source marker that distinguishes controller-backed runs from Codex/CLI-backed runs.
+1. Every promoted event must carry `episode_id`, `user_session_id` when available, and a backend/source marker that distinguishes controller-backed runs from CLI-provider-backed runs.
 2. The backend/source marker may live in existing JSON metadata for the first pass; a dedicated column is only required if query performance or indexing later justify a migration.
 3. Validation and failure families are emitted as individual event rows, not collapsed into a single summary blob, so queries can count validation failures directly.
-4. The primary Codex-side structured event families for this path are `submission_validation`, `node_entry_validation_failed`, `logic_failure`, `lint_failure_code`, `lint_failure_docs`, `simulation_instability`, `review_decision`, `excessive_dof_detected`, `skill_self_reflection`, and `skill_update`.
-5. The raw `.codex` session stream remains the replay/debug source; the DB trace stream is the queryable index.
+4. The primary CLI-provider-side structured event families for this path are `submission_validation`, `node_entry_validation_failed`, `logic_failure`, `lint_failure_code`, `lint_failure_docs`, `simulation_instability`, `review_decision`, `excessive_dof_detected`, `skill_self_reflection`, and `skill_update`.
+5. The raw session stream under `CODEX_HOME/sessions/` remains the replay/debug source; the DB trace stream is the queryable index.
 
 ## Validation contract
 
-The accepted Codex-mode behavior is defined by integration coverage, not by unit-only checks.
+The accepted CLI-provider-mode behavior is defined by integration coverage, not by unit-only checks.
 
 The current validation contract is:
 
@@ -239,8 +239,8 @@ The current validation contract is:
 3. Materialized planner workspaces do not contain `/workspace` in the prompt text.
 4. Planner submission succeeds from the local workspace helper.
 5. Path traversal outside the workspace root is rejected.
-6. The Codex launcher uses the native `workspace-write` sandbox with the legacy landlock backend, an isolated `CODEX_HOME` seeded with the active auth bundle and a minimal generated `config.toml`, and a `PYTHONPATH` that prefers the materialized workspace while still appending the repo root so shared repo modules import correctly during local execution.
-7. Codex judge/reviewer mode can run locally from the same workspace artifacts when requested.
+6. The CLI-provider launcher uses the native `workspace-write` sandbox with the legacy landlock backend, an isolated `CODEX_HOME` seeded with the active auth bundle and a minimal generated `config.toml`, and a `PYTHONPATH` that prefers the materialized workspace while still appending the repo root so shared repo modules import correctly during local execution.
+7. CLI-provider judge/reviewer mode can run locally from the same workspace artifacts when requested.
 8. The controller backend still executes tasks after its preflight step.
 
 The integration test file that exercises this contract is `tests/integration/architecture_p0/test_codex_runner_mode.py`.

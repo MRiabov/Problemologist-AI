@@ -5,7 +5,6 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -18,16 +17,16 @@ from controller.agent.review_handover import (
     validate_plan_reviewer_handover,
     validate_reviewer_handover,
 )
+from evals.logic.cli_provider import (
+    REASONING_EFFORT_UNSET,
+    CliProvider,
+    get_default_cli_provider,
+)
 from evals.logic.models import EvalDatasetItem
 from evals.logic.review_checks import (
     parse_review_decision_yaml,
     review_artifacts_complete_for_prefix,
     review_filename_candidates,
-)
-from evals.logic.cli_provider import (
-    REASONING_EFFORT_UNSET,
-    CliProvider,
-    get_default_cli_provider,
 )
 from evals.logic.workspace import resolve_seed_artifact_dir
 from shared.agent_templates import (
