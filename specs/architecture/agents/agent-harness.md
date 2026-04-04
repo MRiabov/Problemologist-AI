@@ -144,6 +144,7 @@ The submission contract is:
 5. The helper returns structured `PlannerSubmissionResult` JSON on stdout.
 6. Success requires `ok=true` and `status=submitted`.
 7. Failure remains local to the workspace and does not masquerade as an accepted handoff.
+8. Every submission attempt snapshots the workspace in git after the helper finishes when the attempt changed substantive workspace files; clean no-op attempts and runtime scratch-only changes do not force a commit.
 
 The helper script is intentionally simple: it is a local shell/Python command, not a controller API.
 

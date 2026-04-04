@@ -150,6 +150,8 @@ We track the following structured domain events to compute the evaluation metric
 
 35. CLI-provider skill-loop skill-promotion event (`skill_promotion`) with the active overlay path, approved base commit, target repo or branch, merge strategy, outcome (`published`, `conflict`, `escalated`, `rejected`), PR or commit metadata, and any conflicting skill paths.
 
+Submission helpers also snapshot the workspace in git on submission attempts that changed substantive workspace files, including rejected attempts that mutated the workspace. Runtime scratch files such as submission logs or local cache directories do not force a commit by themselves. This history is part of the reproducibility record and is intentionally separate from the stage manifests, which remain the routing source of truth.
+
 Visual-inspection-policy enforcement must also be reconstructable from traces even if we do not persist dedicated reminder events:
 
 1. When a role is subject to config-driven visual inspection (`config/agents_config.yaml`), the trace should make it possible to determine whether images existed, whether `inspect_media(...)` was called, and whether the configured minimum image count was satisfied.
