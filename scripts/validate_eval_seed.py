@@ -1,7 +1,6 @@
 import argparse
 import asyncio
 import atexit
-import json
 import os
 import subprocess
 import sys
@@ -14,7 +13,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from evals.logic.dataset_selection import (  # noqa: E402
-    filter_rows_by_technical_drawing_mode,
     parse_level_filters,
     resolve_agents,
 )
@@ -26,6 +24,7 @@ from scripts.internal.eval_run_lock import (  # noqa: E402
     downgrade_eval_run_lock_to_shared,
     release_eval_run_lock,
 )
+from scripts.internal.eval_seed_selection import load_seed_dataset  # noqa: E402
 
 _STACK_PROFILE_NAME = (
     "integration"
@@ -36,7 +35,6 @@ apply_stack_profile_env(_STACK_PROFILE_NAME, env=os.environ, root=ROOT)
 
 from controller.clients.worker import WorkerClient  # noqa: E402
 from evals.logic.curation import load_dataset_curation_manifest  # noqa: E402
-from evals.logic.models import EvalDatasetItem  # noqa: E402
 from evals.logic.specs import AGENT_SPECS  # noqa: E402
 from evals.logic.workspace import (  # noqa: E402
     InMemorySeedWorkspaceClient,
@@ -183,8 +181,9 @@ def _parse_args() -> argparse.Namespace:
         action=argparse.BooleanOptionalAction,
         default=False,
         help=(
-            "Regenerate deterministic seed render bundles before validation "
-            "(default: disabled)."
+            "Deprecated compatibility alias. Regenerate deterministic seed "
+            "render bundles before validation (default: disabled). Prefer "
+            "scripts/update_eval_seed_renders.py for maintenance runs."
         ),
     )
     parser.add_argument(
@@ -250,52 +249,6 @@ def _parse_args() -> argparse.Namespace:
         ),
     )
     return parser.parse_args()
-
-
-def _load_dataset(
-    agent: AgentName,
-    *,
-    task_id: str | None,
-    limit: int,
-    levels: set[int] | None,
-    technical_drawing_mode: DraftingMode,
-) -> list[EvalDatasetItem]:
-    dataset_roots = [
-        ROOT / "dataset" / "evals" / "datasets",
-        ROOT / "dataset" / "data" / "seed" / "role_based",
-    ]
-    json_path = next(
-        (
-            root / f"{agent.value}.json"
-            for root in dataset_roots
-            if (root / f"{agent.value}.json").exists()
-        ),
-        None,
-    )
-    if json_path is None:
-        searched = ", ".join(str(path) for path in dataset_roots)
-        raise FileNotFoundError(
-            f"Dataset for agent '{agent.value}' not found. Searched: {searched}"
-        )
-
-    with json_path.open() as handle:
-        data = json.load(handle)
-
-    if task_id:
-        data = [item for item in data if item["id"] == task_id]
-    if levels:
-        data = [item for item in data if item.get("complexity_level") in levels]
-    data = filter_rows_by_technical_drawing_mode(
-        data, technical_drawing_mode=technical_drawing_mode
-    )
-    if limit > 0:
-        data = data[:limit]
-
-    seed_dataset = json_path.relative_to(ROOT)
-    return [
-        EvalDatasetItem.model_validate({**item_raw, "seed_dataset": seed_dataset})
-        for item_raw in data
-    ]
 
 
 def _build_session_id(agent: AgentName, task_id: str) -> str:
@@ -396,7 +349,7 @@ async def _async_main(args: argparse.Namespace) -> int:
     work_items: list[tuple[AgentName, EvalDatasetItem]] = []
 
     for agent in agents:
-        dataset = _load_dataset(
+        dataset = load_seed_dataset(
             agent,
             task_id=args.task_id,
             limit=args.limit,

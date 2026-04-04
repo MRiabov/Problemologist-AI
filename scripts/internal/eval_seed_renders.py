@@ -22,26 +22,22 @@ from shared.agents import get_image_render_resolution
 from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition, CompoundMetadata, PartMetadata
-from shared.rendering import select_static_preview_render_subdir
-from shared.script_contracts import authored_script_path_for_agent
-from shared.workers.loader import load_component_from_script
+from shared.rendering import (
+    materialize_render_artifacts,
+    render_static_preview,
+)
+from shared.rendering.renderer_client import bundle_workspace_base64
+from shared.script_contracts import (
+    BENCHMARK_SCRIPT_PATH,
+    LEGACY_SCRIPT_PATH,
+    SOLUTION_SCRIPT_PATH,
+    authored_script_path_for_agent,
+)
 from shared.workers.schema import (
     RenderArtifactMetadata,
     RenderManifest,
     RenderSiblingPaths,
     SegmentationLegendEntry,
-)
-from worker_renderer.api.routes import (
-    _build_preview_manifest,
-    _persist_preview_scene_bundle,
-)
-from worker_renderer.utils.build123d_rendering import (
-    _preview_camera_distance,
-    _unique_color,
-    _zone_color,
-    camera_position_from_orbit,
-    collect_preview_scene,
-    render_preview_scene_bundle,
 )
 
 _NO_RENDER_ROLE = {
@@ -185,6 +181,51 @@ def _load_preview_component(
 
 def _role_name_for_artifact(artifact_dir: Path) -> str:
     return artifact_dir.parent.name
+
+
+def _resolve_render_script_path(artifact_dir: Path, role_name: str) -> Path:
+    candidates = [authored_script_path_for_agent(role_name)]
+    for fallback in (
+        BENCHMARK_SCRIPT_PATH,
+        SOLUTION_SCRIPT_PATH,
+        LEGACY_SCRIPT_PATH,
+    ):
+        candidate = Path(fallback)
+        if candidate not in candidates:
+            candidates.append(candidate)
+
+    for candidate in candidates:
+        resolved = artifact_dir / candidate
+        if resolved.exists():
+            return resolved
+
+    candidate_list = ", ".join(
+        str(artifact_dir / candidate) for candidate in candidates
+    )
+    raise FileNotFoundError(
+        f"no render script found for {role_name} in {artifact_dir}; "
+        f"checked: {candidate_list}"
+    )
+
+
+def _stage_render_bundle_root(artifact_dir: Path) -> Path:
+    staging_root = Path(tempfile.mkdtemp(prefix="seed-render-bundle-"))
+    for child in artifact_dir.iterdir():
+        destination = staging_root / child.name
+        if child.is_dir():
+            shutil.copytree(child, destination)
+        else:
+            shutil.copy2(child, destination)
+
+    for package_name in ("utils", "worker_light"):
+        package_dir = ROOT / package_name
+        if package_dir.exists():
+            shutil.copytree(
+                package_dir,
+                staging_root / package_name,
+                ignore=shutil.ignore_patterns("__pycache__"),
+            )
+    return staging_root
 
 
 def _latest_revision() -> str:
@@ -675,57 +716,30 @@ def update_seed_artifact_renders(artifact_dir: Path) -> list[str]:
     if role_name not in _RENDER_ROLE_WITH_SCRIPT | _RENDER_ROLE_WITH_DEFINITION_PREVIEW:
         return []
 
-    definition = _load_benchmark_definition(artifact_dir)
-    component = _load_preview_component(artifact_dir, definition, role_name)
+    script_path = _resolve_render_script_path(artifact_dir, role_name)
 
     if renders_dir.exists():
         shutil.rmtree(renders_dir)
 
-    bundle_subdir = select_static_preview_render_subdir(
-        artifact_dir, agent_role=role_name
-    )
-    bundle_root = renders_dir / bundle_subdir
     session_id = f"seed-renders-{artifact_dir.name}-{uuid.uuid4().hex[:8]}"
-
-    with tempfile.TemporaryDirectory() as mesh_tmpdir:
-        source_mesh_root = Path(mesh_tmpdir)
-        preview_scene = collect_preview_scene(
-            component,
-            objectives=definition,
-            workspace_root=artifact_dir,
-            smoke_test_mode=False,
-            mesh_root=source_mesh_root,
-        )
-        render_result = render_preview_scene_bundle(
-            preview_scene,
-            output_dir=bundle_root,
-            workspace_root=artifact_dir,
-            smoke_test_mode=False,
-            include_rgb=True,
-            include_depth=True,
-            include_segmentation=True,
-            width=_IMAGE_SIZE[0],
-            height=_IMAGE_SIZE[1],
-            rgb_axes=True,
-            rgb_edges=True,
-            depth_axes=True,
-            depth_edges=True,
-            segmentation_axes=True,
-            segmentation_edges=True,
-        )
-        _persist_preview_scene_bundle(
-            bundle_root=bundle_root,
-            scene=preview_scene,
-            source_mesh_root=source_mesh_root,
-        )
-        _build_preview_manifest(
-            root=artifact_dir,
-            bundle_root=bundle_root,
-            saved_paths=render_result.saved_paths,
-            legend_by_path=render_result.legend_by_path,
-            depth_ranges_by_path=render_result.depth_ranges_by_path,
-            view_metadata_by_path=None,
+    staging_root = _stage_render_bundle_root(artifact_dir)
+    try:
+        bundle_base64 = bundle_workspace_base64(staging_root)
+        response = render_static_preview(
+            bundle_base64=bundle_base64,
+            script_path=script_path.name,
             session_id=session_id,
+            agent_role=role_name,
         )
+        if not response.success:
+            raise RuntimeError(
+                response.message or response.status_text or "render regeneration failed"
+            )
 
-    return list(render_result.saved_paths)
+        saved_paths = materialize_render_artifacts(
+            response.artifacts,
+            artifact_dir,
+        )
+        return saved_paths
+    finally:
+        shutil.rmtree(staging_root, ignore_errors=True)
