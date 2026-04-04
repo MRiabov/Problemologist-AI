@@ -107,21 +107,21 @@ The safe order is:
 
 ### Overlay semantics
 
-- [ ] Define the session-local `suggested_skills/` overlay/checkpoint contract in the skill docs.
-- [ ] Teach the training CLI to resolve the overlay first and the canonical tree second.
-- [ ] Record the approved base commit or lock metadata used to seed the overlay.
+- [x] Define the session-local `suggested_skills/` overlay/checkpoint contract in the skill docs.
+- [x] Teach the training CLI to resolve the overlay first and the canonical tree second.
+- [x] Record the approved base commit or lock metadata used to seed the overlay.
 
 ### Promotion semantics
 
-- [ ] Add or formalize a promotion arbiter for publishing approved skill diffs.
+- [x] Add or formalize a promotion arbiter for publishing approved skill diffs.
 - [ ] Ensure the arbiter can branch, rebase, cherry-pick, or split changes when needed.
-- [ ] Fail closed and escalate when a conflict cannot be resolved safely.
+- [x] Fail closed and escalate when a conflict cannot be resolved safely.
 
 ### Observability and rollout
 
-- [ ] Emit traceable promotion outcome records with source and target skill-repo metadata.
+- [x] Emit traceable promotion outcome records with source and target skill-repo metadata.
 - [ ] Update the prompt and architecture docs to describe the overlay-first contract.
-- [ ] Add integration coverage for concurrent training runs and promotion conflict handling.
+- [x] Add integration coverage for concurrent training runs and promotion conflict handling.
 
 ### Legacy cleanup
 

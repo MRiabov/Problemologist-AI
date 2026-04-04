@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from functools import lru_cache
 from pathlib import Path
 
 import yaml
@@ -31,7 +30,6 @@ def _skill_description(skill_path: Path) -> str:
     return description
 
 
-@lru_cache(maxsize=8)
 def _iter_skill_catalog_entries_from_roots(
     canonical_root: str, overlay_root: str | None
 ) -> tuple[tuple[str, str], ...]:

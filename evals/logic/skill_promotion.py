@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+from difflib import SequenceMatcher
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
@@ -15,7 +16,6 @@ from controller.observability.tracing import record_worker_events
 from shared.observability.schemas import SkillPromotionEvent
 from worker_light.utils.git import (
     commit_all,
-    copy_tree,
     repo_head_state,
     repo_is_clean,
 )
@@ -48,6 +48,7 @@ class SkillPromotionSessionMetadata(BaseModel):
     workspace_dir: str | None = None
     suggested_skills_dir: str | None = None
     suggested_skills_base_commit: str | None = None
+    skills_repo_root: str | None = None
     skills_repo_head_commit: str | None = None
     skills_repo_branch: str | None = None
 
@@ -134,6 +135,32 @@ def _overlay_changed_paths(overlay_root: Path) -> list[str]:
     return changed_paths
 
 
+def _overlay_deleted_paths(overlay_root: Path) -> list[str]:
+    if not (overlay_root / ".git").exists():
+        return []
+    try:
+        completed = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(overlay_root),
+                "diff",
+                "--name-only",
+                "--diff-filter=D",
+                "HEAD",
+                "--",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except Exception:
+        return []
+    if completed.returncode != 0:
+        return []
+    return [line.strip() for line in completed.stdout.splitlines() if line.strip()]
+
+
 def _repo_changed_paths_since(repo_root: Path, base_commit: str) -> list[str]:
     try:
         completed = subprocess.run(
@@ -157,27 +184,197 @@ def _repo_changed_paths_since(repo_root: Path, base_commit: str) -> list[str]:
     return [line.strip() for line in completed.stdout.splitlines() if line.strip()]
 
 
-def _detect_conflicting_paths(
+def _read_repo_file_at_commit(
+    *,
+    repo_root: Path,
+    commit: str,
+    rel_path: str,
+) -> str | None:
+    try:
+        completed = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo_root),
+                "show",
+                f"{commit}:{rel_path}",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except Exception:
+        return None
+    if completed.returncode != 0:
+        return None
+    return completed.stdout
+
+
+def _text_hunks(base_lines: list[str], other_lines: list[str]) -> list[tuple[int, int, list[str]]]:
+    return [
+        (i1, i2, other_lines[j1:j2])
+        for tag, i1, i2, j1, j2 in SequenceMatcher(
+            a=base_lines, b=other_lines
+        ).get_opcodes()
+        if tag != "equal"
+    ]
+
+
+def _merge_text_file(
+    *,
+    base_text: str,
+    current_text: str,
+    overlay_text: str,
+) -> str | None:
+    base_lines = base_text.splitlines(keepends=True)
+    current_lines = current_text.splitlines(keepends=True)
+    overlay_lines = overlay_text.splitlines(keepends=True)
+
+    current_hunks = _text_hunks(base_lines, current_lines)
+    overlay_hunks = _text_hunks(base_lines, overlay_lines)
+
+    for current_hunk in current_hunks:
+        for overlay_hunk in overlay_hunks:
+            current_start, current_end, current_replacement = current_hunk
+            overlay_start, overlay_end, overlay_replacement = overlay_hunk
+            if (
+                current_start == current_end
+                and overlay_start == overlay_end
+                and current_start == overlay_start
+            ):
+                if current_replacement != overlay_replacement:
+                    return None
+                continue
+            if current_start < overlay_end and overlay_start < current_end:
+                if (
+                    current_start == overlay_start
+                    and current_end == overlay_end
+                    and current_replacement == overlay_replacement
+                ):
+                    continue
+                return None
+
+    merged_hunks = sorted(
+        [*current_hunks, *overlay_hunks], key=lambda item: (item[0], item[1], item[2])
+    )
+    merged_lines: list[str] = []
+    cursor = 0
+    seen_hunks: set[tuple[int, int, tuple[str, ...]]] = set()
+    for start, end, replacement in merged_hunks:
+        hunk_key = (start, end, tuple(replacement))
+        if hunk_key in seen_hunks:
+            continue
+        seen_hunks.add(hunk_key)
+        if start < cursor:
+            return None
+        merged_lines.extend(base_lines[cursor:start])
+        merged_lines.extend(replacement)
+        cursor = max(cursor, end)
+    merged_lines.extend(base_lines[cursor:])
+    return "".join(merged_lines)
+
+
+def _plan_overlay_publication(
     *,
     canonical_root: Path,
     overlay_root: Path,
     approved_base_commit: str | None,
-) -> list[str]:
+) -> tuple[list[str], dict[str, bytes], list[str]]:
     if not approved_base_commit:
-        return []
+        return [], {}, []
     current_state = repo_head_state(canonical_root)
     current_head = current_state.get("head_commit")
-    if not current_head or current_head == approved_base_commit:
-        return []
+    if not current_head:
+        return [], {}, []
 
     overlay_changed = set(_overlay_changed_paths(overlay_root))
-    if not overlay_changed:
-        return []
+    overlay_deleted = set(_overlay_deleted_paths(overlay_root))
+    if not overlay_changed and not overlay_deleted:
+        return [], {}, []
 
     canonical_changed = set(
         _repo_changed_paths_since(canonical_root, approved_base_commit)
     )
-    return sorted(overlay_changed.intersection(canonical_changed))
+    planned_updates: dict[str, bytes] = {}
+    conflicts: list[str] = []
+
+    for rel_path in sorted({*overlay_changed, *overlay_deleted}):
+        if rel_path in overlay_deleted:
+            if rel_path in canonical_changed:
+                conflicts.append(rel_path)
+            continue
+
+        overlay_path = overlay_root / rel_path
+        canonical_path = canonical_root / rel_path
+        overlay_bytes = overlay_path.read_bytes()
+        current_bytes = (
+            canonical_path.read_bytes() if canonical_path.exists() else None
+        )
+
+        if rel_path in canonical_changed:
+            if overlay_path.suffix.lower() not in {
+                ".cfg",
+                ".ini",
+                ".json",
+                ".md",
+                ".py",
+                ".sh",
+                ".toml",
+                ".txt",
+                ".yaml",
+                ".yml",
+                ".xml",
+            }:
+                if current_bytes != overlay_bytes:
+                    conflicts.append(rel_path)
+                continue
+
+            base_text = _read_repo_file_at_commit(
+                repo_root=canonical_root,
+                commit=approved_base_commit,
+                rel_path=rel_path,
+            )
+            if base_text is None:
+                conflicts.append(rel_path)
+                continue
+
+            current_text = (
+                current_bytes.decode("utf-8")
+                if current_bytes is not None
+                else ""
+            )
+            overlay_text = overlay_bytes.decode("utf-8")
+            merged_text = _merge_text_file(
+                base_text=base_text,
+                current_text=current_text,
+                overlay_text=overlay_text,
+            )
+            if merged_text is None:
+                conflicts.append(rel_path)
+                continue
+
+            merged_bytes = merged_text.encode("utf-8")
+            if current_bytes == merged_bytes:
+                continue
+            planned_updates[rel_path] = merged_bytes
+            continue
+
+        if current_bytes == overlay_bytes:
+            continue
+        planned_updates[rel_path] = overlay_bytes
+
+    return conflicts, planned_updates, sorted(overlay_deleted)
+
+
+def _apply_planned_overlay_updates(
+    *,
+    canonical_root: Path,
+    planned_updates: dict[str, bytes],
+) -> None:
+    for rel_path, content in sorted(planned_updates.items()):
+        dst_path = canonical_root / rel_path
+        dst_path.parent.mkdir(parents=True, exist_ok=True)
+        dst_path.write_bytes(content)
 
 
 async def _record_promotion_event(
@@ -275,7 +472,7 @@ def promote_skill_overlay(
 
     base_state = repo_head_state(canonical_root)
     effective_base_commit = approved_base_commit or base_state.get("head_commit")
-    conflicting_skill_paths = _detect_conflicting_paths(
+    conflicting_skill_paths, planned_updates, deleted_paths = _plan_overlay_publication(
         canonical_root=canonical_root,
         overlay_root=overlay_root,
         approved_base_commit=effective_base_commit,
@@ -297,7 +494,7 @@ def promote_skill_overlay(
             workspace_dir=workspace_dir, result=result, session_id=session_id
         )
 
-    changed_paths = copy_tree(overlay_root, canonical_root)
+    changed_paths = sorted({*planned_updates, *deleted_paths})
     if not changed_paths:
         result = SkillPromotionResult(
             ok=False,
@@ -313,6 +510,15 @@ def promote_skill_overlay(
         return _finalize_promotion_result(
             workspace_dir=workspace_dir, result=result, session_id=session_id
         )
+
+    _apply_planned_overlay_updates(
+        canonical_root=canonical_root,
+        planned_updates=planned_updates,
+    )
+    for rel_path in deleted_paths:
+        target_path = canonical_root / rel_path
+        if target_path.exists():
+            target_path.unlink()
 
     message = commit_message or (
         "Promote suggested skills"

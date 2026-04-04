@@ -35,6 +35,7 @@ from evals.logic.runner_skill_loop import (
 from shared.enums import AgentName
 from shared.logging import configure_logging, get_logger
 from shared.models.simulation import SimulationResult
+from worker_light.utils.git import copy_tree, init_workspace_repo
 
 ROOT = Path(__file__).resolve().parents[2]
 SKILL_OVERLAY_ENV = "PROBLEMOLOGIST_SKILL_OVERLAY_ROOT"
@@ -62,6 +63,7 @@ class SkillTrainingSessionMetadata(BaseModel):
     suggested_skills_dir: str | None = None
     suggested_skills_base_commit: str | None = None
     suggested_skills_branch: str | None = None
+    skills_repo_root: str | None = None
     skills_repo_head_commit: str | None = None
     skills_repo_branch: str | None = None
 
@@ -84,6 +86,7 @@ class SkillTrainingSession(BaseModel):
     suggested_skills_dir: Path | None = None
     suggested_skills_base_commit: str | None = None
     suggested_skills_branch: str | None = None
+    skills_repo_root: Path | None = None
     skills_repo_head_commit: str | None = None
     skills_repo_branch: str | None = None
 
@@ -275,14 +278,42 @@ def _read_skill_repo_state(repo_root: Path) -> tuple[str | None, str | None]:
     )
 
 
+def _resolve_skill_repo_root(workspace_dir: Path) -> Path | None:
+    workspace_dir = workspace_dir.expanduser().resolve()
+    nested_skill_root = workspace_dir / "skills"
+    if (nested_skill_root / ".git").exists():
+        return nested_skill_root
+    if (workspace_dir / ".git").exists():
+        return workspace_dir
+    return None
+
+
+def _overlay_has_skill_content(root: Path) -> bool:
+    return any(
+        path.is_file() and not any(part == ".git" for part in path.parts)
+        for path in root.rglob("*")
+    )
+
+
 def _seed_skill_overlay_state(
     workspace_dir: Path,
-) -> tuple[Path, str | None, str | None]:
+) -> tuple[Path, Path | None, str | None, str | None]:
     overlay_dir = workspace_dir / "suggested_skills"
     overlay_dir.mkdir(parents=True, exist_ok=True)
     os.environ[SKILL_OVERLAY_ENV] = overlay_dir.as_posix()
-    base_commit, branch = _read_skill_repo_state(workspace_dir / "skills")
-    return overlay_dir, base_commit, branch
+    repo_root = _resolve_skill_repo_root(workspace_dir)
+    base_commit, branch = (
+        _read_skill_repo_state(repo_root) if repo_root is not None else (None, None)
+    )
+
+    skill_snapshot_root = workspace_dir / "skills"
+    if (
+        skill_snapshot_root.exists()
+        and not _overlay_has_skill_content(overlay_dir)
+    ):
+        copy_tree(skill_snapshot_root, overlay_dir)
+    init_workspace_repo(overlay_dir)
+    return overlay_dir, repo_root, base_commit, branch
 
 
 def _update_session_metadata(
@@ -290,6 +321,7 @@ def _update_session_metadata(
     path: Path,
     metadata: SkillTrainingSessionMetadata,
     overlay_dir: Path,
+    repo_root: Path | None,
     base_commit: str | None,
     branch: str | None,
 ) -> None:
@@ -297,6 +329,9 @@ def _update_session_metadata(
     payload["suggested_skills_dir"] = overlay_dir.as_posix()
     payload["suggested_skills_base_commit"] = base_commit
     payload["suggested_skills_branch"] = branch
+    payload["skills_repo_root"] = (
+        repo_root.as_posix() if repo_root is not None else None
+    )
     payload["skills_repo_head_commit"] = base_commit
     payload["skills_repo_branch"] = branch
     path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
@@ -353,13 +388,19 @@ async def load_skill_training_session(
         if args.codex_runtime_root is not None
         else session_log_root.parent.resolve()
     )
-    suggested_skills_dir, suggested_skills_base_commit, skills_repo_branch = (
+    (
+        suggested_skills_dir,
+        skills_repo_root,
+        suggested_skills_base_commit,
+        skills_repo_branch,
+    ) = (
         _seed_skill_overlay_state(workspace_dir)
     )
     _update_session_metadata(
         path=session_metadata_path,
         metadata=metadata,
         overlay_dir=suggested_skills_dir,
+        repo_root=skills_repo_root,
         base_commit=suggested_skills_base_commit,
         branch=skills_repo_branch,
     )
@@ -403,6 +444,7 @@ async def load_skill_training_session(
         suggested_skills_dir=suggested_skills_dir,
         suggested_skills_base_commit=suggested_skills_base_commit,
         suggested_skills_branch=skills_repo_branch,
+        skills_repo_root=skills_repo_root,
         skills_repo_head_commit=suggested_skills_base_commit,
         skills_repo_branch=skills_repo_branch,
     )
