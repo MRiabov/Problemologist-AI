@@ -6,7 +6,7 @@
 - Defines which files exist in an agent workspace and which roles may read or write them.
 - Covers immutable control files, review manifest naming, and the static file-validation contract.
 - Use this file for filesystem layout, artifact ownership, and permission-policy decisions.
-- Runtime harness, debug Codex mode, prompt generation, and skill loading live in [agent-harness.md](./agent-harness.md) and [agent-skill.md](./agent-skill.md).
+- Runtime harness, debug CLI-provider mode, prompt generation, and skill loading live in [agent-harness.md](./agent-harness.md) and [agent-skill.md](./agent-skill.md).
 
 ## Filesystem
 
@@ -24,7 +24,7 @@ Reusable starter files and prompt-context artifacts are defined once in `shared/
 The shared starter set includes `.admin/clear_env.py`, which resets the current
 seeded workspace in place without changing the conversation context.
 PromptManager consumes these prompt-context inputs when it materializes the runtime prompt.
-For CLI-provider-backed sessions, the runtime materializes the checked-in skill tree into `.agents/skills/` in the workspace. That copy is read-only runtime context, not canonical source. See [agent-skill.md](./agent-skill.md) for the source-tree and promotion contract.
+For CLI-provider-backed sessions, the runtime materializes the checked-in skill tree into `.agents/skills/` in the workspace. That copy is read-only runtime context, not canonical source. All CLI-provider implementations follow this same workspace-materialization contract. See [agent-skill.md](./agent-skill.md) for the source-tree and promotion contract.
 
 Skill-training sessions may additionally materialize `suggested_skills/` as a writable session-local worktree/checkpoint seeded from the approved `skills/` tree. That overlay is session-scoped, not canonical source, and the training loop should read it first when it exists. Publication back into canonical `skills/` happens through a separate promotion flow.
 

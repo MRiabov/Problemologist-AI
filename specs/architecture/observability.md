@@ -144,11 +144,11 @@ We track the following structured domain events to compute the evaluation metric
 
 32. LLM media attachment event (`llm_media_attached`) whenever a model request includes media parts, with node name, provider/model, attachment count, media kinds, and source artifact paths.
 
-33. Codex skill-loop self-reflection event (`skill_self_reflection`) with the follow-up prompt path, output path, trigger reason, simulation/verification outcome, and the captured reflection text.
+33. CLI-provider skill-loop self-reflection event (`skill_self_reflection`) with the follow-up prompt path, output path, trigger reason, simulation/verification outcome, and the captured reflection text.
 
-34. Codex skill-loop skill-update event (`skill_update`) with the follow-up prompt path, output path, trigger reason, updated skill paths, simulation/verification outcome, and the captured skill-update text.
+34. CLI-provider skill-loop skill-update event (`skill_update`) with the follow-up prompt path, output path, trigger reason, updated skill paths, simulation/verification outcome, and the captured skill-update text.
 
-35. Codex skill-loop skill-promotion event (`skill_promotion`) with the active overlay path, approved base commit, target repo or branch, merge strategy, outcome (`published`, `conflict`, `escalated`, `rejected`), PR or commit metadata, and any conflicting skill paths.
+35. CLI-provider skill-loop skill-promotion event (`skill_promotion`) with the active overlay path, approved base commit, target repo or branch, merge strategy, outcome (`published`, `conflict`, `escalated`, `rejected`), PR or commit metadata, and any conflicting skill paths.
 
 Visual-inspection-policy enforcement must also be reconstructable from traces even if we do not persist dedicated reminder events:
 
@@ -246,7 +246,7 @@ The system enforces fail-closed behavior for terminal states.
 
 We decided on persisting a local `events.jsonl` file with all events for deeper observability instead of sending individual events or a sqlite DB. This would allow sending all the events in one go instead of dozens of small requests. For 100 events per a 3-5 minute session (if that), it is acceptable. In fact, it wins a bit of performance: opening DB a hundred connections is slower than opening one and batch uploading it.
 
-Codex skill-loop runs should emit self-reflection and skill-update records into a local `events.jsonl` sidecar under the run workspace, and the same records may later be promoted into the controller DB event stream when an episode-backed integration path exists. The full self-reflection text is intentionally retained for diagnostics and postmortem debugging.
+CLI-provider skill-loop runs should emit self-reflection and skill-update records into a local `events.jsonl` sidecar under the run workspace, and the same records may later be promoted into the controller DB event stream when an episode-backed integration path exists. The full self-reflection text is intentionally retained for diagnostics and postmortem debugging.
 
 The retained episode bundle should also preserve the workspace inputs and outputs that influenced the run, including `prompt.md`, `plan.md`, `todo.md`, `journal.md`, `logs/skill_loop/journal.md`, `logs/skill_loop/context_snapshot.md`, review YAML, validation/simulation outputs, `plan_refusal.md` when present, and render bundles so later training can reconstruct the failure context without relying on a separate journalling agent or lossy summary pass. A standalone training CLI such as `train_skills.py` or equivalent can consume that bundle later.
 When the promotion arbiter publishes or rejects a skill diff, it should emit a traceable outcome record that links the originating session overlay back to the canonical skill-repo commit.

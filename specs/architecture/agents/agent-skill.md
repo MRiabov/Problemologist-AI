@@ -22,7 +22,7 @@ The checked-in `skills/` tree is the canonical skill source.
 
 Runtime copies are read-only inputs:
 
-1. Codex workspaces materialize the tree into `.agents/skills/`.
+1. CLI-provider workspaces materialize the tree into `.agents/skills/`.
 2. Controller-backed runtime surfaces expose the same content through `/skills`.
 3. `suggested_skills/` is the active session-local worktree/checkpoint for a training run, seeded from an approved `skills/` snapshot, and is not canonical source.
 4. Any compact generated skill index is a discoverability aid only, not a second source of truth.
@@ -45,15 +45,15 @@ Skill updates are explicit and reviewable, not an implicit side effect of normal
 Publication from a session overlay into canonical `skills/` is handled by a separate promotion arbiter or release flow.
 
 The skill-learning loop runs asynchronously from the main execution flow.
-The desired architecture does not require a dedicated journalling, compression, or skill agent to summarize the run before training; the retained episode bundle and the active Codex-capable session are sufficient inputs for a standalone training loop.
+The desired architecture does not require a dedicated journalling, compression, or skill agent to summarize the run before training; the retained episode bundle and the active CLI-provider-capable session are sufficient inputs for a standalone training loop.
 
 Skill revisions should be versioned so observability can correlate a skill version with later task outcomes.
 
 ## Recursive improvement loop
 
-Codex-backed skill learning may run as a bounded recursive loop.
+CLI-provider-backed skill learning may run as a bounded recursive loop.
 
-The loop keeps the same Codex session alive across follow-up turns instead of rebuilding conversation context from scratch, but the loop is owned by a standalone training entrypoint rather than by the eval launcher.
+The loop keeps the same CLI-provider session alive across follow-up turns instead of rebuilding conversation context from scratch, but the loop is owned by a standalone training entrypoint rather than by the eval launcher.
 
 The first follow-up turn performs self-analysis. A later follow-up turn drafts or repairs the skill content.
 
@@ -62,7 +62,7 @@ Promotion into the checked-in `skills/` tree remains a separate reviewable step 
 New training runs start from the approved canonical skill snapshot, not from another run's mutable overlay.
 
 The loop stays asynchronous relative to the main eval or task run, and it uses durable workspace artifacts such as `journal.md`, review YAML, validation/simulation results, render bundles, and `events.jsonl` to preserve the minimum state needed for later turns.
-Codex skill-loop runs also retain a workspace-local, reviewable snapshot under `logs/skill_loop/` so the follow-up turns can reuse the journal state without reconstructing the transcript by hand.
+CLI-provider skill-loop runs also retain a workspace-local, reviewable snapshot under `logs/skill_loop/` so the follow-up turns can reuse the journal state without reconstructing the transcript by hand.
 Retained skill-training bundles also persist the active overlay root and the approved canonical `skills/` base commit in session metadata so a later promotion arbiter can attribute the publication step back to the originating session and seed snapshot.
 
 The retained artifacts are also downstream training data. A dedicated `train_skills.py`-style CLI may reopen those artifacts later to produce skill deltas without requiring a separate journalling or skill graph stage.

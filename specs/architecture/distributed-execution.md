@@ -165,7 +165,7 @@ Backend responsibility is split by operation purpose:
 Backend choice is orthogonal to the controller and worker-plane split:
 
 - API-backed runs execute through the controller's HTTP orchestration path.
-- CLI-provider-backed runs execute through the local workspace path.
+- CLI-provider-backed runs execute through the local workspace path; the selected provider owns command shape, prompt transport, and resume syntax.
 - Both paths still rely on the same worker services for filesystem, execution, validation, simulation, and the renderer worker.
 
 Direct `worker-heavy` benchmark endpoints (`/benchmark/*`) are reserved for integration tests that verify worker-level boundaries, not an alternate orchestration model with independent queueing semantics.

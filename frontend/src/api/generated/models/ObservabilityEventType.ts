@@ -26,6 +26,7 @@ export enum ObservabilityEventType {
     SKILL_READ = 'skill_read',
     SKILL_SELF_REFLECTION = 'skill_self_reflection',
     SKILL_UPDATE = 'skill_update',
+    SKILL_PROMOTION = 'skill_promotion',
     LS_FILES_TOOL = 'ls_files_tool',
     GREP_TOOL = 'grep_tool',
     READ_FILE_TOOL = 'read_file_tool',

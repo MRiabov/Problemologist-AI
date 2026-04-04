@@ -57,7 +57,7 @@ Validation rule:
 
 ## Reviewer persistence naming contract
 
-Reviewer outputs are persisted as reviewer-scoped YAML file pairs. We do not use shared review filenames or shared per-round folders. Local Codex submission helpers may also accept a single markdown review document with YAML frontmatter, but routing still keys off the stage-scoped reviewer files.
+Reviewer outputs are persisted as reviewer-scoped YAML file pairs. We do not use shared review filenames or shared per-round folders. Local CLI-provider submission helpers may also accept a single markdown review document with YAML frontmatter, but routing still keys off the stage-scoped reviewer files.
 
 Required reviewer file pairs:
 

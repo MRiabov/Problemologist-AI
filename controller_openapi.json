@@ -5371,6 +5371,7 @@
           "skill_read",
           "skill_self_reflection",
           "skill_update",
+          "skill_promotion",
           "ls_files_tool",
           "grep_tool",
           "read_file_tool",

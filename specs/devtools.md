@@ -119,6 +119,7 @@ The eval tooling mirrors the integration tooling, but it owns a separate lock, a
 - `evals/logic/runner.py` is the real eval runner.
 - It is the orchestration core that should be decomposed into smaller reusable modules under `evals/logic/` rather than expanding further as a single file.
 - It owns backend selection, task filtering, complexity-level filtering, concurrency, rate limiting, and run logging.
+- Its local CLI-provider backend must expose an explicit provider selector so Codex remains the default while other concrete providers such as `QwenCliProvider` can be selected without inferring the backend from the binary name.
 - It uses the eval run lock to protect the stack while bootstrapping and then runs as a shared consumer of the eval lock during execution.
 - Controller-backed runs bootstrap exclusively only while `scripts/env_up.sh` is running, then downgrade to the shared lock for the actual eval loop.
 - CLI-provider-backed runs and `--skip-env-up` runs join the shared eval lock directly.
@@ -135,7 +136,7 @@ The eval tooling mirrors the integration tooling, but it owns a separate lock, a
 - `dataset/evals/materialize_seed_workspace.py` is an inspection helper for a single seeded eval row.
 - It materializes the row into a temp workspace, writes the provider prompt to `prompt.md`, and prints the copied file list for inspection.
 - It is not the eval runner and should not be treated as the owner of the eval loop.
-- It can optionally bootstrap the `eval` profile, launch the configured CLI provider, or open the interactive UI through that provider backend.
+- It can optionally bootstrap the `eval` profile, launch the configured CLI provider, or open the interactive UI through that provider backend. The current supported concrete providers are Codex and `QwenCliProvider`.
 - It uses the exclusive eval lock while bootstrapping and then downgrades to the shared validation lock so multiple validation-only consumers can coexist while the stack remains protected.
 - After bootstrap it stops mutating the lock state and keeps only the shared lock file handle open.
 - It exposes explicit sandbox selection through `--yolo` and `--no-yolo`; the script should never invent a hidden bypass mode.

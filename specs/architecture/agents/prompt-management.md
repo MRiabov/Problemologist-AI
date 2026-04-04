@@ -2,18 +2,18 @@
 
 ## Scope summary
 
-This document defines the unified prompt source model for controller/API agents and Codex CLI agents. It covers role prompts, appendices, prompt-context templates, merge order, and the prompt-side boundary to skills. The skill-tree contract, authoring shape, and improvement loop live in [agent-skill.md](./agent-skill.md). Migration mechanics live in [prompt-management-unification.md](../../migrations/minor/prompt-management-unification.md).
+This document defines the unified prompt source model for controller/API agents and CLI-provider agents. It covers role prompts, appendices, prompt-context templates, merge order, and the prompt-side boundary to skills. The skill-tree contract, authoring shape, and improvement loop live in [agent-skill.md](./agent-skill.md). Migration mechanics live in [prompt-management-unification.md](../../migrations/minor/prompt-management-unification.md).
 
 ## Purpose
 
 The prompt layer is intentionally thin. It frames the agent, states workspace and submission rules, and only points the model at skills when the backend does not already load them from the workspace tree. Detailed business logic, procedures, and examples belong in skills.
 
-The target state keeps prompt optimization unified. We do not maintain one base prompt source for API and another base prompt source for Codex.
+The target state keeps prompt optimization unified. We do not maintain one base prompt source for API and another base prompt source for CLI-provider backends.
 
 ## Design goals
 
 1. One PromptManager owns prompt assembly for every backend family.
-2. The same prompt source model feeds controller/API and Codex runtimes.
+2. The same prompt source model feeds controller/API and CLI-provider runtimes.
 3. Base prompts remain short, role-focused, and operational.
 4. Backend appendices describe backend-specific runtime differences, not domain knowledge.
 5. Skills own detailed procedures, reasoning patterns, and examples.
@@ -128,7 +128,7 @@ The current backend families are:
 - `api_based`
 
 The backend family determines which appendix branch is used and which runtime reminders are shown. It does not change the canonical prompt source or the ownership of the prompt manager.
-CLI-based Codex runs do not need the prompt to restate the full skill inventory when the workspace already exposes the relevant skill files.
+CLI-provider runs do not need the prompt to restate the full skill inventory when the workspace already exposes the relevant skill files.
 
 ## Assembly order
 
@@ -180,7 +180,7 @@ This boundary keeps the prompt surface short and pushes durable logic into the p
 - Treating `worker_light/agent_files/` as a source of truth.
 - Letting backend appendices absorb domain logic.
 - Allowing role prompts to grow into mini playbooks.
-- Building Codex and API prompts from separate unshared source models.
+- Building CLI-provider and API prompts from separate unshared source models.
 
 ## Validation expectations
 

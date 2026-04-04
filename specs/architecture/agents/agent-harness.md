@@ -16,7 +16,7 @@ The controller can run either:
 1. an API-backed model path, or
 2. a CLI-provider-backed local workspace path.
 
-The local CLI-provider path is the default eval-debug backend, and the controller-backed API path remains available when a run must use a paid API provider or needs controller-specific orchestration traces.
+The local CLI-provider path is the default eval-debug backend, and the controller-backed API path remains available when a run must use a paid API provider or needs controller-specific orchestration traces. The provider contract owns command shape, prompt transport, and resume syntax; the CLI binary name is not the contract.
 
 ## DSPy adapter contract
 
@@ -200,7 +200,7 @@ The standalone skill-training replay is not the eval launcher’s job; it consum
 CLI-provider mode emits two observability layers:
 
 1. Raw run artifacts:
-   - the CLI session stream under `CODEX_HOME/sessions/rollout-*.jsonl`
+   - the CLI session stream under the configured provider home sessions directory
    - the run-local `logs/skill_loop/events.jsonl` sidecar
    - any derived transcript artifacts rendered from those sources
 2. Queryable DB traces:
@@ -227,7 +227,7 @@ The promotion contract is:
 2. The backend/source marker may live in existing JSON metadata for the first pass; a dedicated column is only required if query performance or indexing later justify a migration.
 3. Validation and failure families are emitted as individual event rows, not collapsed into a single summary blob, so queries can count validation failures directly.
 4. The primary CLI-provider-side structured event families for this path are `submission_validation`, `node_entry_validation_failed`, `logic_failure`, `lint_failure_code`, `lint_failure_docs`, `simulation_instability`, `review_decision`, `excessive_dof_detected`, `skill_self_reflection`, and `skill_update`.
-5. The raw session stream under `CODEX_HOME/sessions/` remains the replay/debug source; the DB trace stream is the queryable index.
+5. The raw session stream under the configured provider home sessions directory remains the replay/debug source; the DB trace stream is the queryable index.
 
 ## Validation contract
 
@@ -240,7 +240,7 @@ The current validation contract is:
 3. Materialized planner workspaces do not contain `/workspace` in the prompt text.
 4. Planner submission succeeds from the local workspace helper.
 5. Path traversal outside the workspace root is rejected.
-6. The CLI-provider launcher uses the native `workspace-write` sandbox with the legacy landlock backend, an isolated `CODEX_HOME` seeded with the active auth bundle and a minimal generated `config.toml`, and a `PYTHONPATH` that prefers the materialized workspace while still appending the repo root so shared repo modules import correctly during local execution.
+6. The CLI-provider launcher uses the native `workspace-write` sandbox with the legacy landlock backend, an isolated provider home seeded with the active auth bundle and a minimal generated `config.toml`, and a `PYTHONPATH` that prefers the materialized workspace while still appending the repo root so shared repo modules import correctly during local execution.
 7. CLI-provider judge/reviewer mode can run locally from the same workspace artifacts when requested.
 8. The controller backend still executes tasks after its preflight step.
 
