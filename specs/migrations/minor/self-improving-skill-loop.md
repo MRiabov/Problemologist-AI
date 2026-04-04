@@ -1,18 +1,18 @@
-# Codex Self-Improving Skill Loop
+# Self-Improving Skill Loop
 
 <!-- Investigation doc. No behavior change yet. -->
 
 ## Purpose
 
-This migration adds a bounded recursive standalone skill-training loop to the Codex backend.
+This migration adds a bounded recursive standalone skill-training loop to the provider-backed backend.
 
-The target architecture is described in [agent-skill.md](../../architecture/agents/agent-skill.md) and [agent-harness.md](../../architecture/agents/agent-harness.md). The change is intentionally small in runtime scope but larger in storage scope: evaluation stays thin, while a standalone `train_skills.py`-style entrypoint replays retained episode bundles and resumes the same Codex session across follow-up turns instead of rebuilding context by hand.
+The target architecture is described in [agent-skill.md](../../architecture/agents/agent-skill.md) and [agent-harness.md](../../architecture/agents/agent-harness.md). The change is intentionally small in runtime scope but larger in storage scope: evaluation stays thin, while a standalone `train_skills.py`-style entrypoint replays retained episode bundles and resumes the same session across follow-up turns instead of rebuilding context by hand.
 
 ## Problem Statement
 
 Today the operator flow is manual:
 
-1. launch a Codex session,
+1. launch a session,
 2. stop it on timeout, early exit, or failed simulation success,
 3. ask for self-analysis in a second prompt, and
 4. ask for skill updates in a third prompt, then copy the result back into the repo.
@@ -27,13 +27,13 @@ The architecture already has the right storage boundaries:
 4. durable run memory in `journal.md`
 5. retained run artifacts such as review YAML, validation/simulation outputs, render bundles, prompt snapshots, and `events.jsonl`
 
-What is missing is a dedicated training primitive that can reopen the same Codex session from a retained episode bundle and drive multiple follow-up prompts without making the eval launcher or the eval orchestration core own the replay loop.
+What is missing is a dedicated training primitive that can reopen the same session from a retained episode bundle and drive multiple follow-up prompts without making the eval launcher or the eval orchestration core own the replay loop.
 
 ## Target State
 
 1. A standalone `train_skills.py`-style CLI owns skill training.
 2. `dataset/evals/run_evals.py` remains thin and does not own the replay loop.
-3. The training CLI treats `codex exec resume <session_id> <prompt>` as the multi-turn primitive for follow-up turns.
+3. The training CLI treats session resume as the multi-turn primitive for follow-up turns.
 4. The loop uses durable workspace state such as `journal.md` and the retained episode bundle to carry the minimum context needed between turns.
 5. The first follow-up turn performs self-analysis.
 6. The second follow-up turn drafts or repairs the skill content.
@@ -45,7 +45,7 @@ What is missing is a dedicated training primitive that can reopen the same Codex
 
 ### 1. Add session-resume support
 
-- Capture the session id from the initial `codex exec` launch.
+- Capture the session id from the initial launch.
 - Add a resume helper that reuses the same session for follow-up prompts.
 - Extract the shared session/bundle orchestration into a reusable backend core so both CLIs can call the same logic.
 - Split `evals/logic/runner.py` into smaller reusable modules, following the same internal-helper pattern used by `scripts/internal/`.
@@ -70,11 +70,11 @@ What is missing is a dedicated training primitive that can reopen the same Codex
 - Keep `dataset/evals/run_evals.py` as a thin CLI entrypoint.
 - Add `train_skills.py` or equivalent as the standalone replay and skill-training CLI.
 - Keep `dataset/evals/materialize_seed_workspace.py` as a workspace helper, not the loop owner.
-- Put the orchestration in the backend code that already owns Codex session launch, trace capture, and retained-episode bundle loading.
+- Put the orchestration in the backend code that already owns session launch, trace capture, and retained-episode bundle loading.
 
 ## Non-Goals
 
-- Do not replace `codex exec` with a new transport.
+- Do not replace the CLI provider with a new transport.
 - Do not create a new canonical skill source.
 - Do not auto-promote generated skills into `skills/`.
 - Do not make the loop unbounded.
@@ -85,7 +85,7 @@ What is missing is a dedicated training primitive that can reopen the same Codex
 
 The safe order is:
 
-1. Persist the Codex session id and retained episode bundle from the initial run.
+1. Persist the session id and retained episode bundle from the initial run.
 2. Add explicit session resume support for follow-up prompts.
 3. Split the `evals/logic/runner.py` core from the training CLI while keeping `dataset/evals/run_evals.py` as the thin shim.
 4. Add the self-analysis and skill-drafting turns to the training CLI.
@@ -94,7 +94,7 @@ The safe order is:
 
 ## Acceptance Criteria
 
-1. A timed-out or failed Codex run can be resumed for self-analysis without losing context.
+1. A timed-out or failed run can be resumed for self-analysis without losing context.
 2. The same session can receive multiple follow-up prompts in sequence.
 3. Skill-draft output lands in `suggested_skills/` before any promotion step.
 4. The retained episode bundle preserves the short outputs and artifacts needed for downstream training.
@@ -107,7 +107,7 @@ Use this checklist to track the implementation from backend wiring through runti
 
 ### Session lifecycle and resumption
 
-- [x] Capture the Codex session id from the initial `codex exec` launch.
+- [x] Capture the session id from the initial launch.
 - [x] Persist the session id in the existing eval/session metadata so later turns can find it deterministically.
 - [x] Add an explicit resume helper that targets a known session id rather than relying on implicit session selection.
 - [x] Confirm the resume helper can send at least two follow-up prompts into the same live session.
@@ -143,8 +143,8 @@ Use this checklist to track the implementation from backend wiring through runti
 
 - [x] Add or update reusable prompt fragments for the self-analysis and skill-drafting turns if the backend needs shared prompt text.
 - [x] Keep the follow-up prompts short and file-driven instead of embedding the whole history again.
-- [x] Ensure the workspace prompt and runtime docs describe the resume-based multi-turn contract clearly enough for Codex runs.
-- [x] Expose an opt-in CLI flag in the Codex eval entrypoint so the backend loop stays disabled by default.
+- [x] Ensure the workspace prompt and runtime docs describe the resume-based multi-turn contract clearly enough for provider-backed runs.
+- [x] Expose an opt-in CLI flag in the eval entrypoint so the backend loop stays disabled by default.
 - [x] Keep `dataset/evals/run_evals.py` thin so it remains a CLI entrypoint, not the loop owner.
 - [x] Keep `dataset/evals/materialize_seed_workspace.py` as a workspace helper, not the orchestration layer.
 - [x] Add the dedicated `train_skills.py` entrypoint and wire it to retained episode bundles.
@@ -155,10 +155,10 @@ Use this checklist to track the implementation from backend wiring through runti
 
 ### Validation and rollout
 
-- [x] Add integration coverage for a resumed Codex session that receives multiple follow-up prompts.
+- [x] Add integration coverage for a resumed session that receives multiple follow-up prompts.
 - [x] Add integration coverage for the timeout/early-exit/no-success triggers that start the loop.
 - [x] Add integration coverage that verifies `suggested_skills/` receives the draft before any promotion step.
-- [x] Verify the narrowest Codex/backend slice first, then widen only if the loop behavior is stable.
+- [x] Verify the narrowest backend slice first, then widen only if the loop behavior is stable.
 - [x] Update any related architecture docs or prompts that still describe manual copy/paste as the only way to continue the conversation.
 
 ## File-Level Change Set
@@ -177,4 +177,8 @@ The implementation should touch the smallest set of files that actually enforce 
 - `specs/architecture/observability.md`
 - `specs/architecture/evals-architecture.md`
 - `config/prompts.yaml` if the follow-up prompts need new reusable fragments
-- integration tests for the Codex backend and skill-learning path
+- integration tests for the backend and skill-learning path
+
+## Follow-on Refinement
+
+The skill-output staging contract is refined further in [skill-worktree-promotion-arbiter.md](./skill-worktree-promotion-arbiter.md). That follow-on migration treats `suggested_skills/` as a session-local worktree/checkpoint and routes publication into canonical `skills/` through a separate promotion arbiter.
