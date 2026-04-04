@@ -21,6 +21,7 @@ from controller.agent.prompt_manager import PromptManager
 from controller.api.routes.script_tools import ScriptToolRequest
 from controller.prompts import load_prompts
 from evals.logic import runner
+from evals.logic.cli_provider import CodexCliProvider
 from evals.logic.codex_session_trace import (
     CodexSessionTraceArtifact,
     diff_workspace_snapshots,
@@ -28,6 +29,7 @@ from evals.logic.codex_session_trace import (
 from evals.logic.codex_workspace import (
     CodexExecRunResult,
     build_codex_env,
+    launch_codex_exec,
     materialize_seed_workspace,
     prepare_codex_home,
     resume_codex_exec,
@@ -88,6 +90,84 @@ def _workspace_snapshot(workspace_dir: Path) -> dict[str, str]:
 
 def _assert_skills_tree_materialized(workspace_dir: Path) -> None:
     assert (workspace_dir / ".agents" / "skills").is_dir()
+
+
+class RecordingCliProvider:
+    provider_name = "codex"
+    binary_name = sys.executable
+
+    def __init__(self, args_log_path: Path):
+        self._delegate = CodexCliProvider()
+        self._args_log_path = args_log_path
+
+    def prepare_home(self, **kwargs):
+        return self._delegate.prepare_home(**kwargs)
+
+    def build_env(self, **kwargs):
+        env = self._delegate.build_env(**kwargs)
+        env["CLI_PROVIDER_ARGS_LOG"] = str(self._args_log_path)
+        return env
+
+    def build_exec_command(
+        self,
+        *,
+        workspace_dir: Path,
+        yolo: bool,
+        resume_session_id: str | None = None,
+        output_last_message_path: Path | None = None,
+    ) -> list[str]:
+        actual_command = self._delegate.build_exec_command(
+            workspace_dir=workspace_dir,
+            yolo=yolo,
+            resume_session_id=resume_session_id,
+            output_last_message_path=output_last_message_path,
+        )
+        code = textwrap.dedent(
+            """\
+            from __future__ import annotations
+
+            import os
+            import pathlib
+            import sys
+
+            log_path = pathlib.Path(os.environ["CLI_PROVIDER_ARGS_LOG"])
+            log_path.write_text("\\n".join(sys.argv[1:]), encoding="utf-8")
+            """
+        )
+        return [sys.executable, "-c", code, *actual_command]
+
+    def build_ui_command(
+        self,
+        *,
+        workspace_dir: Path,
+        prompt_text: str,
+        yolo: bool,
+    ) -> list[str]:
+        actual_command = self._delegate.build_ui_command(
+            workspace_dir=workspace_dir,
+            prompt_text=prompt_text,
+            yolo=yolo,
+        )
+        code = textwrap.dedent(
+            """\
+            from __future__ import annotations
+
+            import os
+            import pathlib
+            import sys
+
+            log_path = pathlib.Path(os.environ["CLI_PROVIDER_ARGS_LOG"])
+            log_path.write_text("\\n".join(sys.argv[1:]), encoding="utf-8")
+            """
+        )
+        return [sys.executable, "-c", code, *actual_command]
+
+    def build_help_command(self) -> list[str]:
+        return [
+            sys.executable,
+            "-c",
+            "print('workspace-write --sandbox')",
+        ]
 
 
 def _agents_config_with_technical_drawing_modes(
@@ -381,9 +461,12 @@ def test_materialize_seed_workspace_requires_explicit_yolo_choice(
 
 
 @pytest.mark.integration_p0
-def test_run_evals_codex_exec_help_exposes_workspace_write_sandbox():
+def test_run_evals_codex_exec_help_exposes_workspace_write_sandbox(
+    tmp_path: Path,
+):
+    provider = RecordingCliProvider(tmp_path / "provider-args.log")
     completed = subprocess.run(
-        ["codex", "exec", "--help"],
+        provider.build_help_command(),
         cwd=ROOT,
         capture_output=True,
         text=True,
@@ -667,6 +750,14 @@ async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
     )
     workspace_dir = tmp_path / "workspace"
     workspace_dir.mkdir()
+    (workspace_dir / "prompt.md").write_text(
+        "Workspace: current directory\n",
+        encoding="utf-8",
+    )
+    (workspace_dir / "journal.md").write_text(
+        "# Journal\n\n- Initial note before the skill loop.\n",
+        encoding="utf-8",
+    )
     (workspace_dir / "simulation_result.json").write_text(
         json.dumps({"success": False, "summary": "simulation did not report success"}),
         encoding="utf-8",
@@ -705,6 +796,11 @@ async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
         resume_calls.append(
             (codex_session_id, prompt_text, timeout_seconds, reasoning_effort)
         )
+        if resume_call_count == 1:
+            (workspace_dir / "journal.md").write_text(
+                "# Journal\n\n- Self-analysis captured the failure mode.\n",
+                encoding="utf-8",
+            )
         if resume_call_count == 2:
             drafted_skill_path = (
                 workspace_dir / "suggested_skills" / "generated-skill.md"
@@ -788,6 +884,8 @@ async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
     assert (workspace_dir / "suggested_skills" / "generated-skill.md").exists()
     assert (workspace_dir / "logs" / "skill_loop" / "self_analysis.md").exists()
     assert (workspace_dir / "logs" / "skill_loop" / "skill_update.md").exists()
+    assert (workspace_dir / "logs" / "skill_loop" / "journal.md").exists()
+    assert (workspace_dir / "logs" / "skill_loop" / "context_snapshot.md").exists()
     events_path = workspace_dir / "logs" / "skill_loop" / "events.jsonl"
     assert events_path.exists()
     events = [
@@ -804,9 +902,23 @@ async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
     assert "suggested_skills/generated-skill.md" in events[1]["updated_skill_paths"]
     assert events[0]["codex_session_id"] == codex_trace_artifacts.session_id
     assert events[1]["codex_session_id"] == codex_trace_artifacts.session_id
+    assert events[0]["journal_path"].endswith("logs/skill_loop/journal.md")
+    assert events[1]["context_snapshot_path"].endswith(
+        "logs/skill_loop/context_snapshot.md"
+    )
     assert updated_trace is not None
     assert updated_trace.session_id == codex_trace_artifacts.session_id
     assert "suggested_skills/generated-skill.md" in (
+        updated_trace.workspace_diff.changed_paths
+        if updated_trace.workspace_diff
+        else []
+    )
+    assert "logs/skill_loop/journal.md" in (
+        updated_trace.workspace_diff.changed_paths
+        if updated_trace.workspace_diff
+        else []
+    )
+    assert "logs/skill_loop/context_snapshot.md" in (
         updated_trace.workspace_diff.changed_paths
         if updated_trace.workspace_diff
         else []
