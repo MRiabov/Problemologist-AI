@@ -124,10 +124,12 @@ Use this checklist to track the implementation from backend wiring through runti
 
 ### Context preservation
 
-- [ ] Keep `journal.md` as the durable run-memory artifact for the follow-up turns.
-- [ ] Preserve the minimum workspace state needed for later turns without rebuilding the whole transcript by hand.
-- [ ] Keep any additional loop-state artifact workspace-local and reviewable if one is introduced.
-- [ ] Verify that a resumed session still has access to the same workspace-relative files the initial run used.
+- [x] Keep `journal.md` as the durable run-memory artifact for the follow-up turns.
+- [x] Preserve the minimum workspace state needed for later turns without rebuilding the whole transcript by hand.
+- [x] Keep any additional loop-state artifact workspace-local and reviewable if one is introduced.
+- [x] Verify that a resumed session still has access to the same workspace-relative files the initial run used.
+
+<!--- Human note: journal.md is actually secondary. It's the: responses of agents to particular questions like "You've failed, analyze yourself - what could you do better next time" that counts more. I've found that yet at least, journal.md doesn't generate meaningful data. This is likely because we never say how or what to write in there; the agents just output a minimal safe contract, which we can't use.-->
 
 ### Skill-output staging
 
@@ -149,7 +151,7 @@ Use this checklist to track the implementation from backend wiring through runti
 
 ### Runner decomposition
 
-- [ ] Split `evals/logic/runner.py` into smaller reusable modules without changing the public `dataset/evals/run_evals.py` shim.
+- [x] Split `evals/logic/runner.py` into smaller reusable modules without changing the public `dataset/evals/run_evals.py` shim.
 
 ### Validation and rollout
 

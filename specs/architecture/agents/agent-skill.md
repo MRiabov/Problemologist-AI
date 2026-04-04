@@ -55,6 +55,7 @@ The first follow-up turn performs self-analysis. A later follow-up turn drafts o
 Follow-up output is written to `suggested_skills/` first. Promotion into the checked-in `skills/` tree remains a separate reviewable step.
 
 The loop stays asynchronous relative to the main eval or task run, and it uses durable workspace artifacts such as `journal.md`, review YAML, validation/simulation results, render bundles, and `events.jsonl` to preserve the minimum state needed for later turns.
+Codex skill-loop runs also retain a workspace-local, reviewable snapshot under `logs/skill_loop/` so the follow-up turns can reuse the journal state without reconstructing the transcript by hand.
 
 The retained artifacts are also downstream training data. A dedicated `train_skills.py`-style CLI may reopen those artifacts later to produce skill deltas without requiring a separate journalling or skill graph stage.
 

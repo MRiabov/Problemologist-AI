@@ -243,7 +243,7 @@ We decided on persisting a local `events.jsonl` file with all events for deeper 
 
 Codex skill-loop runs should emit self-reflection and skill-update records into a local `events.jsonl` sidecar under the run workspace, and the same records may later be promoted into the controller DB event stream when an episode-backed integration path exists. The full self-reflection text is intentionally retained for diagnostics and postmortem debugging.
 
-The retained episode bundle should also preserve the workspace inputs and outputs that influenced the run, including `prompt.md`, `plan.md`, `todo.md`, `journal.md`, review YAML, validation/simulation outputs, `plan_refusal.md` when present, and render bundles so later training can reconstruct the failure context without relying on a separate journalling agent or lossy summary pass. A standalone training CLI such as `train_skills.py` or equivalent can consume that bundle later.
+The retained episode bundle should also preserve the workspace inputs and outputs that influenced the run, including `prompt.md`, `plan.md`, `todo.md`, `journal.md`, `logs/skill_loop/journal.md`, `logs/skill_loop/context_snapshot.md`, review YAML, validation/simulation outputs, `plan_refusal.md` when present, and render bundles so later training can reconstruct the failure context without relying on a separate journalling agent or lossy summary pass. A standalone training CLI such as `train_skills.py` or equivalent can consume that bundle later.
 
 ## Best practice: Give LLMs a way to complain
 

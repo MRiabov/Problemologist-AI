@@ -164,7 +164,7 @@ The harness does not own the skill improvement loop, the skill catalog shape, or
 ## Agent memory and review artifacts
 
 Agents keep structured runtime memory in `journal.md`, task progress in `todo.md`, and reviewer outputs in `reviews/**`.
-Those same artifacts are retained as downstream training material, together with prompt snapshots, validation/simulation outputs, render bundles, and the local `logs/skill_loop/events.jsonl` sidecar.
+Those same artifacts are retained as downstream training material, together with prompt snapshots, validation/simulation outputs, render bundles, the local `logs/skill_loop/events.jsonl` sidecar, and the workspace-local skill-loop snapshot files under `logs/skill_loop/`.
 
 Rules:
 

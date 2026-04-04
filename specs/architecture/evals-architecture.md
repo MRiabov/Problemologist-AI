@@ -154,7 +154,7 @@ The skill-training path is a standalone replay/training loop over retained episo
 3. **Non-duplication**: Generated skills do not duplicate existing skills (upon inspecting git changes after 30 turns- the skill rows aren't churned) (long-term) (not exactly an eval, but a tracking logic).
 4. **No overwrite**: Skills aren't overwritten from scratch in 100% of cases.
    - Skills can not be overwritten for more than 5 lines, to prevent catastrophic overwriting.
-5. **Retained bundle completeness**: The training bundle keeps `journal.md`, prompt snapshots, review YAML, validation/simulation outputs, render bundles, and `events.jsonl` long enough for `train_skills.py` or equivalent to replay the episode without reconstructing the transcript by hand.
+5. **Retained bundle completeness**: The training bundle keeps `journal.md`, `logs/skill_loop/journal.md`, `logs/skill_loop/context_snapshot.md`, prompt snapshots, review YAML, validation/simulation outputs, render bundles, and `events.jsonl` long enough for `train_skills.py` or equivalent to replay the episode without reconstructing the transcript by hand.
 
 #### Artifact retention and journaling
 
