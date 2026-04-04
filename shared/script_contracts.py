@@ -9,7 +9,9 @@ BENCHMARK_PLAN_EVIDENCE_SCRIPT_PATH = "benchmark_plan_evidence_script.py"
 BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH = (
     "benchmark_plan_technical_drawing_script.py"
 )
-PRECISE_PATH_DEFINITION_PATH = "precise_path_definition.yaml"
+PAYLOAD_TRAJECTORY_DEFINITION_PATH = "payload_trajectory_definition.yaml"
+# Compatibility alias for older imports during the rename rollout.
+PRECISE_PATH_DEFINITION_PATH = PAYLOAD_TRAJECTORY_DEFINITION_PATH
 SOLUTION_SCRIPT_PATH = "solution_script.py"
 SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH = "solution_plan_evidence_script.py"
 SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH = (

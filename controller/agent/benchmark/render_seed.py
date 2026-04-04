@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import base64
 from pathlib import Path
 
 import structlog
@@ -13,12 +12,6 @@ from shared.rendering import build_render_manifest
 from shared.workers.schema import RenderArtifactMetadata, RenderSiblingPaths
 
 logger = structlog.get_logger(__name__)
-
-_TINY_PNG = base64.b64decode(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W8FcAAAAASUVORK5CYII="
-)
-_TINY_SVG = b"<svg xmlns='http://www.w3.org/2000/svg' width='1' height='1'></svg>"
-_TINY_DXF = b"0\nSECTION\n2\nENTITIES\n0\nENDSEC\n0\nEOF\n"
 
 
 def _normalize_render_path(path: str) -> str:
@@ -48,12 +41,11 @@ async def seed_benchmark_review_preview_bundle(
     render_paths: list[str],
 ) -> None:
     """
-    Ensure the benchmark review preview bundle exists in the worker workspace.
+    Fail closed if the benchmark review preview bundle is missing.
 
-    The benchmark review path intentionally relies on a small canonical preview
-    bundle during startup. The bundle must include a render manifest at the same
-    time as the preview images so the downstream handoff gate sees one complete
-    source bundle rather than a partial, image-only workspace.
+    The benchmark review path relies on a canonical preview bundle during
+    startup. The bundle must already include the preview images, sidecars, and
+    render manifest. This helper does not synthesize any fallback assets.
     """
 
     canonical_render_paths = sorted(
@@ -64,19 +56,16 @@ async def seed_benchmark_review_preview_bundle(
         )
     )
     if not canonical_render_paths:
-        return
+        raise FileNotFoundError("benchmark review preview bundle has no render paths")
 
-    existing_render_paths: set[str] = set()
+    existing_paths: set[str] = set()
     try:
         render_entries = await asyncio.wait_for(
             worker_client.list_files("/renders/"),
             timeout=5.0,
         )
-        existing_render_paths = {
-            str(entry.path).lstrip("/")
-            for entry in render_entries
-            if not entry.is_dir
-            and str(entry.path).lower().endswith((".png", ".jpg", ".jpeg"))
+        existing_paths = {
+            str(entry.path).lstrip("/") for entry in render_entries if not entry.is_dir
         }
     except Exception as exc:
         logger.warning(
@@ -85,64 +74,19 @@ async def seed_benchmark_review_preview_bundle(
             error=str(exc),
         )
 
+    missing_paths: list[str] = []
     for render_path in canonical_render_paths:
-        svg_path = Path(render_path).with_suffix(".svg")
-        dxf_path = Path(render_path).with_suffix(".dxf")
-        if render_path not in existing_render_paths:
-            try:
-                await asyncio.wait_for(
-                    worker_client.upload_file(render_path, _TINY_PNG),
-                    timeout=5.0,
-                )
-            except Exception as exc:
-                logger.warning(
-                    "benchmark_review_render_seed_upload_failed",
-                    session_id=session_id,
-                    path=render_path,
-                    error=str(exc),
-                )
-                continue
-            try:
-                await asyncio.wait_for(
-                    broadcast_file_update(str(session_id), render_path, ""),
-                    timeout=2.0,
-                )
-            except Exception as exc:
-                logger.warning(
-                    "benchmark_review_render_seed_broadcast_failed",
-                    session_id=session_id,
-                    path=render_path,
-                    error=str(exc),
-                )
-        for sibling_path, sibling_bytes in (
-            (svg_path, _TINY_SVG),
-            (dxf_path, _TINY_DXF),
-        ):
-            try:
-                await asyncio.wait_for(
-                    worker_client.upload_file(str(sibling_path), sibling_bytes),
-                    timeout=5.0,
-                )
-            except Exception as exc:
-                logger.warning(
-                    "benchmark_review_render_seed_sidecar_upload_failed",
-                    session_id=session_id,
-                    path=str(sibling_path),
-                    error=str(exc),
-                )
-                continue
-            try:
-                await asyncio.wait_for(
-                    broadcast_file_update(str(session_id), str(sibling_path), ""),
-                    timeout=2.0,
-                )
-            except Exception as exc:
-                logger.warning(
-                    "benchmark_review_render_seed_sidecar_broadcast_failed",
-                    session_id=session_id,
-                    path=str(sibling_path),
-                    error=str(exc),
-                )
+        svg_path = str(Path(render_path).with_suffix(".svg"))
+        dxf_path = str(Path(render_path).with_suffix(".dxf"))
+        for candidate in (render_path, svg_path, dxf_path):
+            if candidate not in existing_paths:
+                missing_paths.append(candidate)
+
+    if missing_paths:
+        raise FileNotFoundError(
+            "benchmark review preview bundle is missing required paths: "
+            f"{sorted(set(missing_paths))}"
+        )
 
     manifest_artifacts = {
         render_path: RenderArtifactMetadata(
@@ -166,6 +110,7 @@ async def seed_benchmark_review_preview_bundle(
     bundle_manifest_path = (
         Path(canonical_render_paths[0]).parent / "render_manifest.json"
     )
+
     await asyncio.wait_for(
         worker_client.write_file(
             str(bundle_manifest_path),

@@ -35,8 +35,8 @@ from shared.models.schemas import (
     ManufacturedPartEstimate,
     MotionForecast,
     PartConfig,
+    PayloadTrajectoryDefinition,
     PlanRefusalFrontmatter,
-    PrecisePathDefinition,
     ReviewFrontmatter,
     SubassemblyEstimate,
 )
@@ -1143,32 +1143,32 @@ def _validate_motion_path_contract(
     return errors
 
 
-def validate_precise_path_definition_yaml(
+def validate_payload_trajectory_definition_yaml(
     content: str,
     *,
     benchmark_definition: BenchmarkDefinition | None = None,
     coarse_motion_forecast: MotionForecast | None = None,
     expected_moving_part_names: list[str] | None = None,
     session_id: str | None = None,
-) -> tuple[bool, PrecisePathDefinition | list[str]]:
+) -> tuple[bool, PayloadTrajectoryDefinition | list[str]]:
     try:
         data = yaml.safe_load(content)
         if data is None:
             return False, ["Empty or invalid YAML content"]
 
         found_placeholders = _find_template_placeholders(
-            "precise_path_definition.yaml", content
+            "payload_trajectory_definition.yaml", content
         )
         if found_placeholders:
             return False, [
-                "precise_path_definition.yaml still contains template placeholders: "
+                "payload_trajectory_definition.yaml still contains template placeholders: "
                 f"{found_placeholders}"
             ]
 
-        precise_path = PrecisePathDefinition(**data)
+        precise_path = PayloadTrajectoryDefinition(**data)
     except yaml.YAMLError as e:
         logger.error(
-            "precise_path_definition_yaml_parse_error",
+            "payload_trajectory_definition_yaml_parse_error",
             error=str(e),
             session_id=session_id,
         )
@@ -1176,7 +1176,7 @@ def validate_precise_path_definition_yaml(
     except ValidationError as e:
         errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
         logger.error(
-            "precise_path_definition_yaml_validation_error",
+            "payload_trajectory_definition_yaml_validation_error",
             errors=errors,
             session_id=session_id,
         )
@@ -1201,11 +1201,11 @@ def validate_precise_path_definition_yaml(
         )
     except Exception as exc:
         return False, [
-            f"precise_path_definition.yaml: unable to load motion forecast policy: {exc}"
+            f"payload_trajectory_definition.yaml: unable to load motion forecast policy: {exc}"
         ]
 
     errors: list[str] = _validate_motion_path_contract(
-        artifact_name="precise_path_definition.yaml",
+        artifact_name="payload_trajectory_definition.yaml",
         benchmark_definition=benchmark_definition,
         moving_part_names=precise_path.moving_part_names,
         sample_stride_s=precise_path.sample_stride_s,
@@ -1220,14 +1220,14 @@ def validate_precise_path_definition_yaml(
         and precise_path.sample_stride_s - coarse_stride > 1e-9
     ):
         errors.append(
-            "precise_path_definition.yaml: sample_stride_s "
+            "payload_trajectory_definition.yaml: sample_stride_s "
             f"({precise_path.sample_stride_s:.3f}s) must be less than or equal to "
             "the coarse motion forecast sample_stride_s "
             f"({coarse_stride:.3f}s)"
         )
     if precise_path.sample_stride_s - coder_budget.sample_stride_s > 1e-9:
         errors.append(
-            "precise_path_definition.yaml: sample_stride_s "
+            "payload_trajectory_definition.yaml: sample_stride_s "
             f"({precise_path.sample_stride_s:.3f}s) exceeds the engineer_coder "
             f"budget ({coder_budget.sample_stride_s:.3f}s)"
         )
@@ -1243,14 +1243,17 @@ def validate_precise_path_definition_yaml(
         }
         if precise_set != coarse_set:
             errors.append(
-                "precise_path_definition.yaml: moving_part_names must match the "
+                "payload_trajectory_definition.yaml: moving_part_names must match the "
                 "approved coarse motion forecast"
             )
 
     if errors:
         return False, errors
-    logger.info("precise_path_definition_yaml_valid", session_id=session_id)
+    logger.info("payload_trajectory_definition_yaml_valid", session_id=session_id)
     return True, precise_path
+
+
+validate_precise_path_definition_yaml = validate_payload_trajectory_definition_yaml
 
 
 def validate_benchmark_definition_yaml(
@@ -2306,7 +2309,7 @@ def validate_node_output(
     errors = []
     benchmark_definition_model: BenchmarkDefinition | None = None
     assembly_definition_models: dict[str, AssemblyDefinition] = {}
-    precise_path_definition_content: str | None = None
+    payload_trajectory_definition_content: str | None = None
     effective_config = manufacturing_config
     try:
         node_enum = (
@@ -2508,8 +2511,8 @@ def validate_node_output(
                     )
                     if motion_errors:
                         errors.extend([f"{filename}: {e}" for e in motion_errors])
-        elif filename == "precise_path_definition.yaml":
-            precise_path_definition_content = content
+        elif filename == "payload_trajectory_definition.yaml":
+            payload_trajectory_definition_content = content
         elif drafting_required and filename.endswith("_technical_drawing_script.py"):
             errors.extend(
                 _technical_drawing_script_imports_and_calls_technical_drawing(
@@ -2572,9 +2575,9 @@ def validate_node_output(
     engineering_assembly_definition_model = assembly_definition_models.get(
         "assembly_definition.yaml"
     )
-    if precise_path_definition_content is not None:
-        is_valid, precise_result = validate_precise_path_definition_yaml(
-            precise_path_definition_content,
+    if payload_trajectory_definition_content is not None:
+        is_valid, precise_result = validate_payload_trajectory_definition_yaml(
+            payload_trajectory_definition_content,
             benchmark_definition=benchmark_definition_model,
             coarse_motion_forecast=(
                 engineering_assembly_definition_model.motion_forecast

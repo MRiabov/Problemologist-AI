@@ -438,8 +438,8 @@ class MotionForecast(StrictContractModel):
         return self
 
 
-class PrecisePathPose(StrictContractModel):
-    """Backend-specific initial pose for the engineer-owned precise path."""
+class PayloadTrajectoryPose(StrictContractModel):
+    """Backend-specific initial pose for the engineer-owned payload trajectory."""
 
     reference_point: str
     pos_mm: CoercedTuple3D
@@ -454,12 +454,12 @@ class PrecisePathPose(StrictContractModel):
         return text
 
 
-class PrecisePathDefinition(StrictContractModel):
+class PayloadTrajectoryDefinition(StrictContractModel):
     """Engineer-owned higher-resolution path/contact proof."""
 
     backend: SimulatorBackendType
     moving_part_names: list[str] = Field(default_factory=list)
-    initial_pose: PrecisePathPose
+    initial_pose: PayloadTrajectoryPose
     sample_stride_s: float = Field(gt=0)
     anchors: list[MotionForecastAnchor] = Field(default_factory=list)
     terminal_event: MotionForecastTerminalEvent | None = None
@@ -470,19 +470,26 @@ class PrecisePathDefinition(StrictContractModel):
         cleaned = [part_name.strip() for part_name in value if str(part_name).strip()]
         if not cleaned:
             raise ValueError(
-                "precise_path_definition must name at least one moving part"
+                "payload_trajectory_definition must name at least one moving part"
             )
         if len(set(cleaned)) != len(cleaned):
             raise ValueError(
-                "precise_path_definition must not repeat moving part names"
+                "payload_trajectory_definition must not repeat moving part names"
             )
         return cleaned
 
     @model_validator(mode="after")
-    def validate_contract(self) -> "PrecisePathDefinition":
+    def validate_contract(self) -> "PayloadTrajectoryDefinition":
         if len(self.anchors) < 1:
-            raise ValueError("precise_path_definition must contain at least one anchor")
+            raise ValueError(
+                "payload_trajectory_definition must contain at least one anchor"
+            )
         return self
+
+
+# Compatibility aliases while callers migrate to the payload-trajectory names.
+PrecisePathPose = PayloadTrajectoryPose
+PrecisePathDefinition = PayloadTrajectoryDefinition
 
 
 class Constraints(StrictContractModel):

@@ -15,9 +15,6 @@ from langgraph.types import Command
 from opentelemetry import trace
 from sqlalchemy import select
 
-from controller.agent.benchmark.render_seed import (
-    seed_benchmark_review_preview_bundle,
-)
 from controller.agent.benchmark_handover_validation import (
     extract_benchmark_refusal_reason,
     validate_benchmark_planner_handoff_artifacts,
@@ -95,10 +92,6 @@ from .state import BenchmarkGeneratorState
 from .storage import BenchmarkStorage
 
 logger = structlog.get_logger(__name__)
-_BENCHMARK_REVIEW_RENDER_PATHS = (
-    "renders/cad_preview.png",
-    "renders/simulation_preview.png",
-)
 _REPEATED_FAILURE_FINGERPRINT_THRESHOLD = 2
 _UUID_PATTERN = re.compile(
     r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
@@ -1611,15 +1604,6 @@ async def run_generation_session(
             )
             await seed_manufacturing_config(backend, overwrite=True)
 
-            # Seed the canonical benchmark preview bundle before the review
-            # stage starts. The render manifest is written in the same pass so
-            # the downstream handoff gate sees a complete bundle, not images
-            # without metadata.
-            await seed_benchmark_review_preview_bundle(
-                worker_client,
-                session_id=str(session_id),
-                render_paths=list(_BENCHMARK_REVIEW_RENDER_PATHS),
-            )
         finally:
             await worker_client.aclose()
     except Exception as e:

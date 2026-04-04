@@ -76,10 +76,10 @@ from worker_heavy.utils.file_validation import (
     validate_assembly_definition_yaml,
     validate_benchmark_assembly_motion_contract,
     validate_benchmark_definition_yaml,
+    validate_payload_trajectory_definition_yaml,
     validate_plan_md_structure,
     validate_plan_refusal,
     validate_planner_handoff_cross_contract,
-    validate_precise_path_definition_yaml,
 )
 
 REASON_OK = "ok"
@@ -1108,8 +1108,8 @@ async def validate_seeded_workspace_handoff_artifacts(
                     assembly_definition_model = assembly_result
             continue
 
-        if rel_path == "precise_path_definition.yaml":
-            is_valid, precise_result = validate_precise_path_definition_yaml(
+        if rel_path == "payload_trajectory_definition.yaml":
+            is_valid, precise_result = validate_payload_trajectory_definition_yaml(
                 content,
                 benchmark_definition=benchmark_definition_model,
                 coarse_motion_forecast=(
@@ -1253,7 +1253,14 @@ async def validate_seeded_workspace_handoff_artifacts(
                         )
                     )
 
-    render_error = await validate_render_images_non_black(worker_client)
+    render_error = await validate_render_images_non_black(
+        worker_client,
+        require_images=target_node
+        in {
+            AgentName.BENCHMARK_PLAN_REVIEWER,
+            AgentName.BENCHMARK_REVIEWER,
+        },
+    )
     if render_error is not None:
         errors.append(
             _seeded_schema_error(

@@ -54,16 +54,11 @@ from ..review_handover import (
     collect_plan_reviewer_handover_evidence,
     validate_reviewer_handover,
 )
-from .render_seed import seed_benchmark_review_preview_bundle
 from .state import BenchmarkGeneratorState
 from .tools import get_benchmark_planner_tools, get_benchmark_tools
 
 logger = structlog.get_logger(__name__)
 _NATIVE_TOOL_COMPLETION_MAX_TOKENS = 1024
-_BENCHMARK_REVIEW_RENDER_PATHS = (
-    "renders/cad_preview.png",
-    "renders/simulation_preview.png",
-)
 _SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER = "SYSTEM_TOOL_RETRY_EXHAUSTED"
 
 BENCHMARK_DEFINITION_FILE = "benchmark_definition.yaml"
@@ -1133,7 +1128,56 @@ class BenchmarkPlanReviewerNode(BaseNode):
 
         render_paths = self._normalize_render_paths(evidence.render_paths)
         if not render_paths:
-            return review
+            fixes = list(review.required_fixes or [])
+            fixes.append(
+                "Generate current-revision render image(s) at or above 640x480 "
+                "before requesting benchmark plan approval."
+            )
+            checklist = dict(review.checklist or {})
+            checklist.update(
+                {
+                    "latest_revision_verified": bool(evidence.latest_revision_verified),
+                    "review_manifest_revision": evidence.review_manifest_revision or "",
+                    "benchmark_attachment_policy_count": float(
+                        len(evidence.attachment_policy_summary)
+                    ),
+                    "benchmark_attachment_policy_summary": json.dumps(
+                        [
+                            summary.model_dump(mode="json")
+                            for summary in evidence.attachment_policy_summary
+                        ],
+                        sort_keys=True,
+                    ),
+                    "render_count": 0.0,
+                    "render_paths": "",
+                    "inspected_render_count": 0.0,
+                    "visual_inspection_min_images": float(policy.min_images),
+                    "visual_inspection_satisfied": False,
+                    "deterministic_error_count": float(
+                        len(evidence.deterministic_errors)
+                    ),
+                    "deterministic_refusal_reason": (
+                        evidence.refusal_reason.value
+                        if evidence.refusal_reason is not None
+                        else "none"
+                    ),
+                }
+            )
+            if evidence.solvability_summary:
+                checklist.setdefault(
+                    "solvability_summary", evidence.solvability_summary
+                )
+            return review.model_copy(
+                update={
+                    "decision": ReviewDecision.REJECT_PLAN,
+                    "reason": (
+                        "Approval blocked: current-revision benchmark render "
+                        "media is missing."
+                    ),
+                    "required_fixes": fixes,
+                    "checklist": checklist,
+                }
+            )
 
         inspected_render_paths = [
             path for path in render_paths if path in set(self._inspected_media_paths)
@@ -1239,29 +1283,6 @@ class BenchmarkPlanReviewerNode(BaseNode):
             return state
         assert evidence is not None
         solvability_evidence = evidence
-
-        # Ensure the reviewer can actually inspect the render paths surfaced in
-        # the handover evidence. The canonical seed path writes both the preview
-        # images and render manifest in one pass so the bundle stays complete.
-        render_paths = [
-            path for path in (solvability_evidence.render_paths or []) if path
-        ]
-        render_seed_paths = list(render_paths)
-        for render_path in _BENCHMARK_REVIEW_RENDER_PATHS:
-            if render_path not in render_seed_paths:
-                render_seed_paths.append(render_path)
-        try:
-            await seed_benchmark_review_preview_bundle(
-                self.ctx.worker_client,
-                session_id=str(state.episode_id),
-                render_paths=render_seed_paths,
-            )
-        except Exception as exc:
-            logger.warning(
-                "benchmark_plan_reviewer_render_seed_failed",
-                episode_id=str(state.episode_id),
-                error=str(exc),
-            )
 
         inputs = {
             "prompt": state.session.prompt,
