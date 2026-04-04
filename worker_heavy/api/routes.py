@@ -36,17 +36,14 @@ from shared.workers.schema import (
     SimulationArtifacts,
     VerificationRequest,
 )
-from shared.workers.validation_artifacts import build_validation_response
 from shared.workers.workbench_models import WorkbenchResult
 from worker_heavy.config import settings
 from worker_heavy.runtime.simulation_runner import (
     cleanup_simulation_executor,
     run_simulation_in_isolated_process,
-    run_validation_in_isolated_process,
 )
 from worker_heavy.simulation.factory import close_all_session_backends
 from worker_heavy.utils import renderer_client, submit_for_review
-from worker_heavy.utils.file_validation import validate_benchmark_definition_yaml
 from worker_heavy.utils.topology import analyze_component
 from worker_heavy.utils.verification import run_verification_job
 
@@ -77,21 +74,6 @@ def _collect_events(
     """Read and delete events.jsonl from the workspace."""
     search_root = root or fs_router.local_backend.root
     return collect_and_cleanup_events(search_root, session_id=session_id)
-
-
-def _load_workspace_benchmark_definition(root: Path, *, session_id: str | None = None):
-    benchmark_path = root / "benchmark_definition.yaml"
-    if not benchmark_path.exists():
-        return None
-
-    raw = benchmark_path.read_text(encoding="utf-8")
-    is_valid, objectives_or_errors = validate_benchmark_definition_yaml(
-        raw,
-        session_id=session_id,
-    )
-    if not is_valid:
-        raise ValueError("; ".join(objectives_or_errors))
-    return objectives_or_errors
 
 
 def _normalize_render_paths(root: Path, render_paths: list[str]) -> list[str]:
@@ -422,55 +404,6 @@ async def api_simulate(
             artifacts=SimulationArtifacts(
                 failure=SimulationFailure(
                     reason=FailureReason.PHYSICS_INSTABILITY, detail=str(e)
-                )
-            ),
-        )
-
-
-@heavy_router.post("/benchmark/validate", response_model=BenchmarkToolResponse)
-async def api_validate(
-    request: BenchmarkToolRequest,
-    x_session_id: str = Header(...),
-    fs_router=Depends(get_router),
-):
-    """Geometric validity check in isolated session."""
-    try:
-        async with heavy_operation_admission("validate", x_session_id):
-            with bundle_context(
-                request.bundle_base64, fs_router.local_backend.root
-            ) as root:
-                is_valid, message = await run_validation_in_isolated_process(
-                    script_path=(
-                        str(root / request.script_path)
-                        if request.bundle_base64
-                        else fs_router.local_backend._resolve(request.script_path)
-                    ),
-                    session_root=root,
-                    script_content=request.script_content,
-                    output_dir=root,
-                    smoke_test_mode=request.smoke_test_mode,
-                    session_id=x_session_id,
-                    particle_budget=request.particle_budget,
-                )
-
-                return build_validation_response(
-                    root=root,
-                    is_valid=is_valid,
-                    message=message,
-                    script_path=request.script_path,
-                    session_id=x_session_id,
-                )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.warning("api_benchmark_validate_failed", error=str(e))
-        return BenchmarkToolResponse(
-            success=False,
-            message=str(e),
-            artifacts=SimulationArtifacts(
-                failure=SimulationFailure(
-                    reason=FailureReason.VALIDATION_FAILED, detail=str(e)
                 )
             ),
         )

@@ -4,6 +4,8 @@ from pathlib import Path
 import structlog
 from git import Repo
 
+from shared.git_utils import commit_submission_attempt as _commit_submission_attempt
+
 logger = structlog.get_logger(__name__)
 
 
@@ -43,6 +45,13 @@ def commit_all(path: Path, message: str) -> str | None:
     except Exception as e:
         logger.warning("git_commit_failed", error=str(e), session_id="system")
         return None
+
+
+def commit_submission_attempt(path: Path, message: str) -> str | None:
+    """
+    Snapshot a submission attempt, even when the workspace is clean.
+    """
+    return _commit_submission_attempt(path, message)
 
 
 def repo_head_state(path: Path) -> dict[str, str | None]:

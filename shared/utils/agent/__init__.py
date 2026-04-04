@@ -528,14 +528,6 @@ def validate(compound: Compound, **kwargs) -> tuple[bool, str | None]:
     )
     if not matches:
         return False, mismatch_message
-    if os.getenv("IS_HEAVY_WORKER"):
-        from worker_heavy.utils.validation import validate as real_validate
-
-        if "output_dir" in kwargs and kwargs["output_dir"] is not None:
-            kwargs = {**kwargs, "output_dir": Path(kwargs["output_dir"])}
-        kwargs = {**kwargs, "script_path": script_path}
-        return real_validate(compound, **kwargs)
-
     controller_payload = {
         "script_path": str(script_path),
         "agent_role": _script_agent_role(),

@@ -18,7 +18,6 @@ from controller.workflows.heavy import (
     HeavyPreviewWorkflow,
     HeavySimulationWorkflow,
     HeavySubmitWorkflow,
-    HeavyValidationWorkflow,
     HeavyVerifyWorkflow,
 )
 from controller.workflows.preview import PreviewWorkflow
@@ -61,7 +60,6 @@ async def main():
             ScriptExecutionWorkflow,
             PreviewWorkflow,
             HeavySimulationWorkflow,
-            HeavyValidationWorkflow,
             HeavyVerifyWorkflow,
             HeavyPreviewWorkflow,
             HeavySubmitWorkflow,

@@ -131,7 +131,7 @@
     "/benchmark/validate": {
       "post": {
         "tags": [
-          "worker-heavy"
+          "worker-light"
         ],
         "summary": "Api Validate",
         "description": "Geometric validity check in isolated session.",

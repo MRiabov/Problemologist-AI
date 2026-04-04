@@ -6,6 +6,13 @@ from git import Repo
 
 logger = structlog.get_logger(__name__)
 
+_SUBMISSION_COMMIT_IGNORE_PATTERNS = (
+    "logs/**",
+    ".codex-cache/**",
+    ".codex-config/**",
+    ".codex-tmp/**",
+)
+
 
 def init_workspace_repo(path: Path) -> Repo:
     """
@@ -42,6 +49,51 @@ def commit_all(path: Path, message: str) -> str | None:
         return commit.hexsha
     except Exception as e:
         logger.warning("git_commit_failed", error=str(e))
+        return None
+
+
+def commit_submission_attempt(path: Path, message: str) -> str | None:
+    """
+    Snapshot a submission attempt when it changed substantive workspace files.
+
+    Runtime scratch files such as submission logs and local cache dirs are
+    ignored for the purpose of deciding whether the attempt is commit-worthy.
+    """
+    try:
+        repo = Repo(path)
+        candidate_paths: set[str] = set()
+
+        for diff_item in repo.index.diff(None):
+            candidate_paths.add(diff_item.a_path or diff_item.b_path)
+        for diff_item in repo.index.diff("HEAD"):
+            candidate_paths.add(diff_item.a_path or diff_item.b_path)
+        candidate_paths.update(repo.untracked_files)
+
+        def _is_ignored(rel_path: str) -> bool:
+            rel_path = Path(rel_path).as_posix()
+            return any(
+                Path(rel_path).match(pattern)
+                for pattern in _SUBMISSION_COMMIT_IGNORE_PATTERNS
+            )
+
+        commit_worthy_paths = sorted(
+            path for path in candidate_paths if path and not _is_ignored(path)
+        )
+        if not commit_worthy_paths:
+            logger.info("git_no_submission_changes_to_commit", path=str(path))
+            return None
+
+        logger.info(
+            "git_submission_committing",
+            path=str(path),
+            message=message,
+            commit_worthy_paths=commit_worthy_paths,
+        )
+        repo.git.add(A=True)
+        commit = repo.index.commit(message)
+        return commit.hexsha
+    except Exception as e:
+        logger.warning("git_submission_commit_failed", path=str(path), error=str(e))
         return None
 
 

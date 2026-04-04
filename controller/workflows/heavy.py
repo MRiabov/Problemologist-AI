@@ -8,8 +8,6 @@ from shared.workers.schema import (
     HeavyPreviewResponse,
     HeavySimulationParams,
     HeavySubmitParams,
-    HeavyValidationParams,
-    HeavyValidationResponse,
     HeavyVerifyParams,
 )
 
@@ -24,19 +22,6 @@ class HeavySimulationWorkflow:
             params,
             start_to_close_timeout=timedelta(minutes=10),
             # This ensures the activity runs on the heavy worker queue
-            task_queue="heavy-tasks-queue",
-        )
-
-
-@workflow.defn
-class HeavyValidationWorkflow:
-    @workflow.run
-    async def run(self, params: HeavyValidationParams) -> HeavyValidationResponse:
-        """Run geometric validation on a heavy worker."""
-        return await workflow.execute_activity(
-            "worker_validate_design",
-            params,
-            start_to_close_timeout=timedelta(minutes=5),
             task_queue="heavy-tasks-queue",
         )
 

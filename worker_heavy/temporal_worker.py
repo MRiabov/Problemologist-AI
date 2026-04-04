@@ -10,7 +10,6 @@ from worker_heavy.activities.heavy_tasks import (
     preview_design_activity,
     run_simulation_activity,
     submit_for_review_activity,
-    validate_design_activity,
     verify_design_activity,
 )
 
@@ -50,7 +49,6 @@ async def main() -> None:
         task_queue="heavy-tasks-queue",
         activities=[
             run_simulation_activity,
-            validate_design_activity,
             verify_design_activity,
             preview_design_activity,
             submit_for_review_activity,

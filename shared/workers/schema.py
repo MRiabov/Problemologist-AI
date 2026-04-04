@@ -788,15 +788,6 @@ class HeavySimulationParams(BaseModel):
     stream_render_frames: bool = False
 
 
-class HeavyValidationParams(BaseModel):
-    """Parameters for worker_validate_design activity."""
-
-    bundle_base64: StrictStr
-    script_path: str
-    session_id: str
-    smoke_test_mode: bool | None = None
-
-
 class HeavyVerifyParams(VerificationRequest):
     """Parameters for worker_verify_design activity."""
 
@@ -860,14 +851,6 @@ class HeavySubmitParams(BaseModel):
     reviewer_stage: ReviewerStage
     session_id: str
     episode_id: str | None = None
-
-
-class HeavyValidationResponse(BaseModel):
-    """Response from worker_validate_design activity."""
-
-    success: bool
-    message: str | None = None
-    artifacts: SimulationArtifacts | None = None
 
 
 class HeavyPreviewResponse(BaseModel):
