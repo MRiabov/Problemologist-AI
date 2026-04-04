@@ -4,8 +4,11 @@ Test lateral transfer over 1 meter distance. The benchmark should move a 40 mm r
 
 ## 2. Geometry
 
-- Ground plane at Z=0 made from HDPE.
-- Left and right support platforms centered near X=-0.5 m and X=+0.5 m.
+- `ground_plane`: fixed base plane at Z=0 made from HDPE, spanning the full build-zone footprint.
+- `floor_plate`: fixed aluminum plate centered near X=0, providing a rigid base for the mechanism.
+- `support_tower`: vertical aluminum tower centered near X=0.
+- `raised_goal_shelf`: aluminum goal shelf positioned on the support tower near X=+0.5 m.
+- `lift_carriage`: HDPE carriage plate that slides along the Z axis, providing lateral guidance.
 - Two guide rails along the X axis around Y=+/-0.06 m to contain the sphere.
 - Build zone limited to X=[-0.58, 0.58], Y=[-0.1, 0.1], Z=[0, 0.18].
 
