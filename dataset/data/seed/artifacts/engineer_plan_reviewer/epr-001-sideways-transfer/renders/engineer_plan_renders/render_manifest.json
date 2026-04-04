@@ -2,30 +2,30 @@
   "version": "1.0",
   "bundle_id": "1ed26dfd-bbb3-56e1-b9fa-572b58693e2c",
   "created_at": "2026-04-03T00:00:00+00:00",
-  "episode_id": "e05a693f-9274-56cf-bfb1-8a24b4545abe",
-  "worker_session_id": "seed-epr-001-drawing-full",
+  "episode_id": "093ab229-e504-599a-ba95-f016053d987f",
+  "worker_session_id": "seed-epr-001-sideways-transfer",
   "revision": "30e2ea2e3eefabb156ace5197ff1673bdf77b1b2",
   "scene_hash": "9be0218209a24490cdf530710d75cce12107712324409e309a669b23231474e1",
-  "bundle_path": "renders/engineer_renders",
+  "bundle_path": "renders/engineer_plan_renders",
   "environment_version": "1.0",
   "drafting": false,
   "source_script_sha256": null,
   "preview_evidence_paths": [
-    "renders/engineer_renders/preview.png"
+    "renders/engineer_plan_renders/preview.png"
   ],
   "artifacts": {
-    "renders/engineer_renders/preview.png": {
+    "renders/engineer_plan_renders/preview.png": {
       "modality": "rgb",
       "group_key": null,
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_renders/preview.png",
+        "rgb": "renders/engineer_plan_renders/preview.png",
         "depth": null,
         "segmentation": null,
-        "svg": "renders/engineer_renders/preview.svg",
-        "dxf": "renders/engineer_renders/preview.dxf"
+        "svg": "renders/engineer_plan_renders/preview.svg",
+        "dxf": "renders/engineer_plan_renders/preview.dxf"
       },
       "depth_min_m": null,
       "depth_max_m": null,
