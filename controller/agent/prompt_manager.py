@@ -79,7 +79,6 @@ class PromptManager:
             self._agents_config = load_agents_config()
         except Exception:
             self._agents_config = None
-        self._skill_catalog = "\n".join(build_skill_catalog_lines()).strip()
 
     def _technical_drawing_mode_active(self, role_key: str) -> bool:
         if self._agents_config is None:
@@ -144,8 +143,10 @@ class PromptManager:
             prompt_sections.append(runtime_context.strip())
         # CLI-backed Codex runs already get the skill files through the workspace
         # contract, so they do not need the extra catalog text in the prompt.
-        if self._skill_catalog and backend_key != PromptBackendFamily.CLI_BASED.value:
-            prompt_sections.append(self._skill_catalog)
+        if backend_key != PromptBackendFamily.CLI_BASED.value:
+            skill_catalog = "\n".join(build_skill_catalog_lines()).strip()
+            if skill_catalog:
+                prompt_sections.append(skill_catalog)
         return (
             "\n\n".join(section for section in prompt_sections if section).rstrip()
             + "\n"
