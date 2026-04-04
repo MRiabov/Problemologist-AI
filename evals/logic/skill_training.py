@@ -16,18 +16,20 @@ from evals.logic.codex_session_trace import (
 )
 from evals.logic.codex_workspace import (
     WorkspaceVerificationResult,
-    resolve_codex_home_root,
-    resume_codex_exec,
+    resolve_cli_home_root,
+    resume_cli_exec,
     verify_workspace_for_agent,
 )
 from evals.logic.models import EvalDatasetItem
 from evals.logic.runner_reporting import RunnerLogContext, _sanitize_readable_text
 from evals.logic.runner_skill_loop import (
-    CodexSkillLoopSummary,
-    _codex_skill_loop_events_path,
-    _codex_skill_loop_needed,
+    CodexSkillLoopSummary as SkillLoopSummary,
+)
+from evals.logic.runner_skill_loop import (
     _load_workspace_simulation_result,
-    _run_codex_skill_loop,
+    _run_skill_loop,
+    _skill_loop_events_path,
+    _skill_loop_needed,
 )
 from shared.enums import AgentName
 from shared.logging import configure_logging, get_logger
@@ -63,7 +65,7 @@ class SkillTrainingSession(BaseModel):
     agent_name: AgentName
     task_id: str
     session_id: str
-    codex_runtime_root: Path
+    cli_runtime_root: Path
     launch_return_code: int | None = None
     verification_result: WorkspaceVerificationResult
     simulation_result: SimulationResult | None = None
@@ -75,7 +77,7 @@ class SkillTrainingSession(BaseModel):
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Replay a retained Codex episode bundle and resume the same session "
+            "Replay a retained CLI-provider episode bundle and resume the same session "
             "for bounded skill training."
         )
     )
@@ -111,7 +113,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--session-id",
         default=None,
-        help="Override the Codex session id from session metadata.",
+        help="Override the retained session id from session metadata.",
     )
     parser.add_argument(
         "--task-id",
@@ -128,7 +130,7 @@ def _parse_args() -> argparse.Namespace:
         type=Path,
         default=None,
         help=(
-            "Override the Codex runtime root. Defaults to the parent of the "
+            "Override the CLI runtime root. Defaults to the parent of the "
             "retained session log root."
         ),
     )
@@ -281,7 +283,7 @@ async def load_skill_training_session(
         eval_log_key=eval_log_key,
         session_id=session_id,
     )
-    codex_runtime_root = (
+    cli_runtime_root = (
         args.codex_runtime_root.expanduser().resolve()
         if args.codex_runtime_root is not None
         else session_log_root.parent.resolve()
@@ -313,7 +315,7 @@ async def load_skill_training_session(
         agent_name=agent_name,
         task_id=task_id,
         session_id=session_id,
-        codex_runtime_root=codex_runtime_root,
+        cli_runtime_root=cli_runtime_root,
         launch_return_code=_resolve_launch_return_code(metadata=metadata),
         verification_result=verification_result,
         simulation_result=simulation_result,
@@ -330,16 +332,16 @@ async def run_skill_training_session(
     *,
     session: SkillTrainingSession,
     log,
-) -> tuple[CodexSkillLoopSummary, CodexSessionTraceArtifact | None]:
+) -> tuple[SkillLoopSummary, CodexSessionTraceArtifact | None]:
     log_context = RunnerLogContext(root=ROOT, session_log_root=session.session_log_root)
-    should_run, trigger_reason = _codex_skill_loop_needed(
+    should_run, trigger_reason = _skill_loop_needed(
         agent_name=session.agent_name,
         launch_return_code=session.launch_return_code,
         verification_result=session.verification_result,
         simulation_result=session.simulation_result,
     )
     if not should_run:
-        summary = CodexSkillLoopSummary(
+        summary = SkillLoopSummary(
             enabled=True,
             triggered=False,
             trigger_reason=trigger_reason,
@@ -348,7 +350,7 @@ async def run_skill_training_session(
                 if session.simulation_result is not None
                 else None
             ),
-            events_path=_codex_skill_loop_events_path(session.workspace_dir).as_posix(),
+            events_path=_skill_loop_events_path(session.workspace_dir).as_posix(),
             primary_turn=None,
         )
         return summary, None
@@ -360,10 +362,10 @@ async def run_skill_training_session(
         artifact_root=session.session_log_root / session.eval_log_key / "codex",
         baseline_snapshot=baseline_snapshot,
         launched_after_ns=None,
-        sessions_root=resolve_codex_home_root(
+        sessions_root=resolve_cli_home_root(
             task_id=session.task_id,
             session_id=session.session_id,
-            runtime_root=session.codex_runtime_root,
+            runtime_root=session.cli_runtime_root,
         )
         / ".codex"
         / "sessions",
@@ -373,11 +375,11 @@ async def run_skill_training_session(
             "missing Codex session trace for the retained episode bundle"
         )
 
-    summary, updated_trace = await _run_codex_skill_loop(
+    summary, updated_trace = await _run_skill_loop(
         item=session.item,
         agent_name=session.agent_name,
         workspace_dir=session.workspace_dir,
-        codex_runtime_root=session.codex_runtime_root,
+        cli_runtime_root=session.cli_runtime_root,
         log_context=log_context,
         baseline_snapshot=baseline_snapshot,
         codex_trace_artifacts=codex_trace_artifacts,
@@ -387,8 +389,8 @@ async def run_skill_training_session(
         log=log,
         deps={
             "capture_latest_codex_session_artifacts": capture_latest_codex_session_artifacts,
-            "resume_codex_exec": resume_codex_exec,
-            "resolve_codex_home_root": resolve_codex_home_root,
+            "resume_cli_exec": resume_cli_exec,
+            "resolve_cli_home_root": resolve_cli_home_root,
             "eval_log_key": session.eval_log_key,
         },
     )

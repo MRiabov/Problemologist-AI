@@ -712,7 +712,7 @@ def _append_readable_log_line(
             handle.write(line.rstrip() + "\n")
 
 
-def _mirror_codex_session_trace_to_readable_logs(
+def _mirror_session_trace_to_readable_logs(
     trace_artifacts: CodexSessionTraceArtifact,
     *,
     log_context: RunnerLogContext,
@@ -752,6 +752,9 @@ def _mirror_codex_session_trace_to_readable_logs(
             _append_readable_log_line(
                 line, log_context=log_context, eval_log_key=eval_log_key
             )
+
+
+_mirror_codex_session_trace_to_readable_logs = _mirror_session_trace_to_readable_logs
 
 
 def _write_eval_session_metadata(

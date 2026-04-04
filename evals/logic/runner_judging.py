@@ -18,14 +18,12 @@ from controller.clients.worker import WorkerClient
 from evals.logic.codex_workspace import (
     copy_workspace_contents as _copy_workspace_contents,
 )
+from evals.logic.codex_workspace import launch_cli_exec as _launch_cli_exec
 from evals.logic.codex_workspace import (
-    launch_codex_exec as _launch_codex_exec,
+    materialize_seed_workspace as _materialize_workspace,
 )
 from evals.logic.codex_workspace import (
-    materialize_seed_workspace as _materialize_codex_workspace,
-)
-from evals.logic.codex_workspace import (
-    verify_workspace_for_agent as _verify_codex_workspace_for_agent,
+    verify_workspace_for_agent as _verify_workspace_for_agent,
 )
 from evals.logic.models import AgentEvalSpec, EvalDatasetItem
 from evals.logic.review_checks import (
@@ -353,7 +351,7 @@ def _decision_value_to_enum(value: Any) -> ReviewDecision | None:
     return None
 
 
-def _codex_reviewer_metrics_from_verification(
+def _reviewer_metrics_from_verification(
     *,
     verification_result: Any,
     expected_decision: ReviewDecision | None,
@@ -392,7 +390,7 @@ def _codex_reviewer_metrics_from_verification(
     return metrics
 
 
-async def _run_codex_reviewer_chain_for_judge(
+async def _run_reviewer_chain_for_judge(
     *,
     item: EvalDatasetItem,
     agent_name: AgentName,
@@ -415,7 +413,7 @@ async def _run_codex_reviewer_chain_for_judge(
         reviewer_workspace_dir = codex_workspace_root / (
             f"{reviewer_agent.value}-{item.id}-{uuid.uuid4().hex[:8]}"
         )
-        materialized = _materialize_codex_workspace(
+        materialized = _materialize_workspace(
             item=item,
             agent_name=reviewer_agent,
             workspace_dir=reviewer_workspace_dir,
@@ -433,7 +431,7 @@ async def _run_codex_reviewer_chain_for_judge(
         )
 
         launch_return_code = await asyncio.to_thread(
-            _launch_codex_exec,
+            _launch_cli_exec,
             materialized.workspace_dir,
             materialized.prompt_text,
             task_id=item.id,
@@ -443,7 +441,7 @@ async def _run_codex_reviewer_chain_for_judge(
             yolo=False,
         )
 
-        verification_result = await _verify_codex_workspace_for_agent(
+        verification_result = await _verify_workspace_for_agent(
             workspace_dir=materialized.workspace_dir,
             agent_name=reviewer_agent,
             session_id=reviewer_session_id,
@@ -472,6 +470,10 @@ async def _run_codex_reviewer_chain_for_judge(
         )
 
     return reviewer_results
+
+
+_codex_reviewer_metrics_from_verification = _reviewer_metrics_from_verification
+_run_codex_reviewer_chain_for_judge = _run_reviewer_chain_for_judge
 
 
 async def _completion_contract_error(

@@ -36,7 +36,7 @@ from evals.logic.codex_workspace import (  # noqa: E402
     open_cli_ui,
 )
 from evals.logic.codex_workspace import (
-    materialize_seed_workspace as materialize_codex_workspace,
+    materialize_seed_workspace as materialize_workspace,
 )
 from evals.logic.models import EvalDatasetItem  # noqa: E402
 from evals.logic.startup_checks import fail_closed_if_integration_test_setup
@@ -247,7 +247,7 @@ def main() -> None:
     row = EvalDatasetItem.model_validate({**row_raw, "seed_dataset": seed_dataset})
 
     workspace_dir = _ensure_destination(args.output_dir, agent=agent, task_id=row.id)
-    materialized = materialize_codex_workspace(
+    materialized = materialize_workspace(
         item=row,
         agent_name=agent,
         workspace_dir=workspace_dir,

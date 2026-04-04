@@ -339,7 +339,7 @@ def _load_simulation_result(workspace_dir: Path) -> SimulationResult | None:
     return None
 
 
-def _codex_workspace_metrics(
+def _workspace_metrics(
     *,
     workspace_dir: Path,
     success: bool,
@@ -417,6 +417,9 @@ def _codex_workspace_metrics(
                 metrics["review_comments"] = details.get("review_comments")
 
     return metrics
+
+
+_codex_workspace_metrics = _workspace_metrics
 
 
 async def _collect_metrics_for_checks(

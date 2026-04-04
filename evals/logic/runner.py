@@ -31,20 +31,14 @@ from evals.logic.codex_session_trace import (
 from evals.logic.codex_workspace import (
     WorkspaceVerificationResult,
 )
+from evals.logic.codex_workspace import launch_cli_exec as _launch_cli_exec
 from evals.logic.codex_workspace import (
-    launch_codex_exec as _launch_codex_exec,
+    materialize_seed_workspace as _materialize_workspace,
 )
+from evals.logic.codex_workspace import resolve_cli_home_root as _resolve_cli_home_root
+from evals.logic.codex_workspace import resume_cli_exec as _resume_cli_exec
 from evals.logic.codex_workspace import (
-    materialize_seed_workspace as _materialize_codex_workspace,
-)
-from evals.logic.codex_workspace import (
-    resolve_codex_home_root as _resolve_codex_home_root,
-)
-from evals.logic.codex_workspace import (
-    resume_codex_exec as _resume_codex_exec,
-)
-from evals.logic.codex_workspace import (
-    verify_workspace_for_agent as _verify_codex_workspace_for_agent,
+    verify_workspace_for_agent as _verify_workspace_for_agent,
 )
 from evals.logic.dataset_selection import (
     filter_rows_by_technical_drawing_mode as _filter_dataset_rows_by_technical_drawing_mode_impl,
@@ -65,9 +59,7 @@ from evals.logic.review_checks import (
 from evals.logic.runner_execution import (
     _apply_default_non_frontend_integration_marker,
 )
-from evals.logic.runner_execution import (
-    _run_codex_eval as _run_codex_eval_impl,
-)
+from evals.logic.runner_execution import _run_cli_eval as _run_cli_eval_impl
 from evals.logic.runner_execution import (
     _run_git_eval as _run_git_eval_impl,
 )
@@ -75,18 +67,18 @@ from evals.logic.runner_execution import (
     run_single_eval as _run_single_eval_impl,
 )
 from evals.logic.runner_judging import (
-    _codex_reviewer_metrics_from_verification,
-    _run_codex_reviewer_chain_for_judge,
+    _reviewer_metrics_from_verification,
+    _run_reviewer_chain_for_judge,
     _validate_unit_eval_allowlist,
     _wait_for_controller_ready,
     _wait_for_worker_ready,
 )
 from evals.logic.runner_metrics import (
     METRIC_HANDLERS,
-    _codex_workspace_metrics,
     _load_agent_reward_configs,
     _record_hard_check_outcomes,
     _record_judge_outcomes,
+    _workspace_metrics,
 )
 from evals.logic.runner_reporting import (
     RunnerLogContext,
@@ -100,14 +92,14 @@ from evals.logic.runner_reporting import (
     _write_eval_session_metadata,
 )
 from evals.logic.runner_reporting import (
-    _mirror_codex_session_trace_to_readable_logs as _mirror_codex_session_trace_to_readable_logs_impl,
+    _mirror_session_trace_to_readable_logs as _mirror_session_trace_to_readable_logs_impl,
 )
 from evals.logic.runner_skill_loop import (
     CodexSkillLoopSummary,
-    _record_codex_skill_loop_event,
+    _record_skill_loop_event,
 )
 from evals.logic.runner_skill_loop import (
-    _run_codex_skill_loop as _run_codex_skill_loop_module,
+    _run_skill_loop as _run_skill_loop_module,
 )
 from evals.logic.specs import (
     AGENT_SPECS,
@@ -204,24 +196,24 @@ def _filter_dataset_rows_by_technical_drawing_mode(
     ]
 
 
-def _mirror_codex_session_trace_to_readable_logs(
+def _mirror_session_trace_to_readable_logs(
     trace_artifacts: CodexSessionTraceArtifact,
     *,
     eval_log_key: str | None,
 ) -> None:
-    return _mirror_codex_session_trace_to_readable_logs_impl(
+    return _mirror_session_trace_to_readable_logs_impl(
         trace_artifacts,
         log_context=_build_log_context(),
         eval_log_key=eval_log_key,
     )
 
 
-async def _run_codex_skill_loop(
+async def _run_skill_loop(
     *,
     item: EvalDatasetItem,
     agent_name: AgentName,
     workspace_dir: Path,
-    codex_runtime_root: Path,
+    cli_runtime_root: Path,
     eval_log_key: str | None,
     baseline_snapshot,
     codex_trace_artifacts: CodexSessionTraceArtifact | None,
@@ -230,11 +222,11 @@ async def _run_codex_skill_loop(
     verification_result: WorkspaceVerificationResult | None,
     log,
 ) -> tuple[CodexSkillLoopSummary, CodexSessionTraceArtifact | None]:
-    return await _run_codex_skill_loop_module(
+    return await _run_skill_loop_module(
         item=item,
         agent_name=agent_name,
         workspace_dir=workspace_dir,
-        codex_runtime_root=codex_runtime_root,
+        codex_runtime_root=cli_runtime_root,
         log_context=_build_log_context(),
         baseline_snapshot=baseline_snapshot,
         codex_trace_artifacts=codex_trace_artifacts,
@@ -245,9 +237,9 @@ async def _run_codex_skill_loop(
         deps={
             "append_readable_log_line": _append_readable_log_line,
             "capture_latest_codex_session_artifacts": _capture_latest_codex_session_artifacts,
-            "resume_codex_exec": _resume_codex_exec,
-            "resolve_codex_home_root": _resolve_codex_home_root,
-            "record_codex_skill_loop_event": _record_codex_skill_loop_event,
+            "resume_cli_exec": _resume_cli_exec,
+            "resolve_cli_home_root": _resolve_cli_home_root,
+            "record_skill_loop_event": _record_skill_loop_event,
             "eval_log_key": eval_log_key,
         },
     )
@@ -278,7 +270,7 @@ async def _run_git_eval(
     )
 
 
-async def _run_codex_eval(
+async def _run_cli_eval(
     *,
     item: EvalDatasetItem,
     stats: dict[AgentName, Any],
@@ -287,9 +279,12 @@ async def _run_codex_eval(
     case_label: str,
     run_judge: bool = False,
     run_reviewers_with_judge: bool = False,
-    enable_codex_skill_loop: bool = False,
+    enable_skill_loop: bool = False,
+    enable_codex_skill_loop: bool | None = None,
 ) -> bool:
-    return await _run_codex_eval_impl(
+    if enable_codex_skill_loop is not None:
+        enable_skill_loop = enable_codex_skill_loop
+    return await _run_cli_eval_impl(
         item=item,
         stats=stats,
         agent_name=agent_name,
@@ -301,22 +296,22 @@ async def _run_codex_eval(
         log_context=_build_log_context(),
         run_judge=run_judge,
         run_reviewers_with_judge=run_reviewers_with_judge,
-        enable_codex_skill_loop=enable_codex_skill_loop,
+        enable_skill_loop=enable_skill_loop,
         deps={
-            "materialize_workspace": _materialize_codex_workspace,
-            "launch_codex_exec": _launch_codex_exec,
-            "verify_workspace_for_agent": _verify_codex_workspace_for_agent,
+            "materialize_workspace": _materialize_workspace,
+            "launch_cli_exec": _launch_cli_exec,
+            "verify_workspace_for_agent": _verify_workspace_for_agent,
             "capture_latest_codex_session_artifacts": _capture_latest_codex_session_artifacts,
             "snapshot_workspace_state": _snapshot_workspace_state,
-            "resolve_codex_home_root": _resolve_codex_home_root,
+            "resolve_cli_home_root": _resolve_cli_home_root,
             "append_readable_log_line": _append_readable_log_line,
             "write_eval_session_metadata": _write_eval_session_metadata,
             "record_hard_check_outcomes": _record_hard_check_outcomes,
             "record_judge_outcomes": _record_judge_outcomes,
-            "run_codex_skill_loop": _run_codex_skill_loop,
-            "run_codex_reviewer_chain_for_judge": _run_codex_reviewer_chain_for_judge,
-            "codex_workspace_metrics": _codex_workspace_metrics,
-            "codex_reviewer_metrics_from_verification": _codex_reviewer_metrics_from_verification,
+            "run_skill_loop": _run_skill_loop,
+            "run_reviewer_chain_for_judge": _run_reviewer_chain_for_judge,
+            "workspace_metrics": _workspace_metrics,
+            "reviewer_metrics_from_verification": _reviewer_metrics_from_verification,
             "eval_log_key": _resolve_eval_log_key(
                 task_id=item.id, session_id=f"codex-{item.id}"
             ),
@@ -334,8 +329,11 @@ async def run_single_eval(
     run_reviewers_with_judge: bool = False,
     runner_backend: EvalRunnerBackend = EvalRunnerBackend.CONTROLLER,
     update_manifests: bool = True,
-    enable_codex_skill_loop: bool = False,
+    enable_skill_loop: bool = False,
+    enable_codex_skill_loop: bool | None = None,
 ):
+    if enable_codex_skill_loop is not None:
+        enable_skill_loop = enable_codex_skill_loop
     spec = AGENT_SPECS[agent_name]
     _validate_unit_eval_allowlist(agent_name, spec)
     case_label = _eval_case_label(item, agent_name, spec.mode)
@@ -355,7 +353,7 @@ async def run_single_eval(
         return
 
     if runner_backend == EvalRunnerBackend.CODEX:
-        await _run_codex_eval(
+        await _run_cli_eval(
             item=item,
             stats=stats,
             agent_name=agent_name,
@@ -363,7 +361,7 @@ async def run_single_eval(
             case_label=case_label,
             run_judge=run_judge,
             run_reviewers_with_judge=run_reviewers_with_judge,
-            enable_codex_skill_loop=enable_codex_skill_loop,
+            enable_skill_loop=enable_skill_loop,
         )
         return
 
@@ -377,16 +375,21 @@ async def run_single_eval(
         run_reviewers_with_judge=run_reviewers_with_judge,
         runner_backend=runner_backend,
         update_manifests=update_manifests,
-        enable_codex_skill_loop=enable_codex_skill_loop,
+        enable_skill_loop=enable_skill_loop,
         worker_light_url=WORKER_LIGHT_URL,
         controller_url=CONTROLLER_URL,
         root=ROOT,
         log_context=_build_log_context(),
         deps={
             "_run_git_eval": _run_git_eval,
-            "_run_codex_eval": _run_codex_eval,
+            "_run_cli_eval": _run_cli_eval,
         },
     )
+
+
+_mirror_codex_session_trace_to_readable_logs = _mirror_session_trace_to_readable_logs
+_run_codex_skill_loop = _run_skill_loop
+_run_codex_eval = _run_cli_eval
 
 
 async def _preflight_selected_seeded_tasks(
@@ -982,7 +985,7 @@ async def main():
                     run_reviewers_with_judge=args.run_reviewers_with_judge,
                     runner_backend=runner_backend,
                     update_manifests=args.update_manifests,
-                    enable_codex_skill_loop=args.codex_skill_loop,
+                    enable_skill_loop=args.codex_skill_loop,
                 )
 
         await asyncio.gather(*(_guarded(item, agent) for item, agent in tasks))

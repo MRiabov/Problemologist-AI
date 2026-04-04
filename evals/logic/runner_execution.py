@@ -17,20 +17,14 @@ from evals.logic.codex_session_trace import (
 from evals.logic.codex_session_trace import (
     snapshot_workspace_state as _snapshot_workspace_state,
 )
+from evals.logic.codex_workspace import launch_cli_exec as _launch_cli_exec
 from evals.logic.codex_workspace import (
-    launch_codex_exec as _launch_codex_exec,
+    materialize_seed_workspace as _materialize_workspace,
 )
+from evals.logic.codex_workspace import resolve_cli_home_root as _resolve_cli_home_root
+from evals.logic.codex_workspace import resume_cli_exec as _resume_cli_exec
 from evals.logic.codex_workspace import (
-    materialize_seed_workspace as _materialize_codex_workspace,
-)
-from evals.logic.codex_workspace import (
-    resolve_codex_home_root as _resolve_codex_home_root,
-)
-from evals.logic.codex_workspace import (
-    resume_codex_exec as _resume_codex_exec,
-)
-from evals.logic.codex_workspace import (
-    verify_workspace_for_agent as _verify_codex_workspace_for_agent,
+    verify_workspace_for_agent as _verify_workspace_for_agent,
 )
 from evals.logic.models import (
     EvalDatasetItem,
@@ -47,23 +41,22 @@ from evals.logic.review_checks import (
     review_expectation_error as _review_expectation_error,
 )
 from evals.logic.runner_judging import (
-    _codex_reviewer_metrics_from_verification,
     _completion_contract_error,
     _fetch_episode,
     _missing_required_traces,
     _planned_counts_as_success,
     _request_episode_interrupt,
-    _run_codex_reviewer_chain_for_judge,
+    _reviewer_metrics_from_verification,
     _run_reviewer_chain_for_judge,
     _validate_unit_eval_allowlist,
 )
 from evals.logic.runner_metrics import (
     METRIC_HANDLERS,
-    _codex_workspace_metrics,
     _extract_episode_cost_usd,
     _extract_episode_failure_reason,
     _record_hard_check_outcomes,
     _record_judge_outcomes,
+    _workspace_metrics,
 )
 from evals.logic.runner_reporting import (
     RunnerLogContext,
@@ -71,7 +64,7 @@ from evals.logic.runner_reporting import (
     _console_message,
     _eval_case_label,
     _format_readable_trace_line,
-    _mirror_codex_session_trace_to_readable_logs,
+    _mirror_session_trace_to_readable_logs,
     _resolve_eval_log_key,
     _sanitize_readable_text,
     _truncate_text,
@@ -80,8 +73,8 @@ from evals.logic.runner_reporting import (
 from evals.logic.runner_skill_loop import (
     CodexSkillLoopSummary,
     _load_workspace_simulation_result,
-    _record_codex_skill_loop_event,
-    _run_codex_skill_loop,
+    _record_skill_loop_event,
+    _run_skill_loop,
 )
 from evals.logic.specs import AGENT_SPECS, JUDGE_REVIEWER_CHAIN
 from evals.logic.workspace import (
@@ -393,7 +386,7 @@ async def _run_git_eval(
     return success
 
 
-async def _run_codex_eval(
+async def _run_cli_eval(
     *,
     item: EvalDatasetItem,
     stats: dict[AgentName, Any],
@@ -406,16 +399,17 @@ async def _run_codex_eval(
     log_context: RunnerLogContext,
     run_judge: bool = False,
     run_reviewers_with_judge: bool = False,
-    enable_codex_skill_loop: bool = False,
+    enable_skill_loop: bool = False,
+    enable_codex_skill_loop: bool | None = None,
     deps: dict[str, Any] | None = None,
 ) -> bool:
     deps = deps or {}
-    materialize_workspace = _dep(
-        deps, "materialize_workspace", _materialize_codex_workspace
-    )
-    launch_codex_exec = _dep(deps, "launch_codex_exec", _launch_codex_exec)
+    if enable_codex_skill_loop is not None:
+        enable_skill_loop = enable_codex_skill_loop
+    materialize_workspace = _dep(deps, "materialize_workspace", _materialize_workspace)
+    launch_cli_exec = _dep(deps, "launch_cli_exec", _launch_cli_exec)
     verify_workspace_for_agent = _dep(
-        deps, "verify_workspace_for_agent", _verify_codex_workspace_for_agent
+        deps, "verify_workspace_for_agent", _verify_workspace_for_agent
     )
     capture_latest_codex_session_artifacts = _dep(
         deps,
@@ -425,9 +419,7 @@ async def _run_codex_eval(
     snapshot_workspace_state = _dep(
         deps, "snapshot_workspace_state", _snapshot_workspace_state
     )
-    resolve_codex_home_root = _dep(
-        deps, "resolve_codex_home_root", _resolve_codex_home_root
-    )
+    resolve_cli_home_root = _dep(deps, "resolve_cli_home_root", _resolve_cli_home_root)
     append_readable_log_line = _dep(
         deps, "append_readable_log_line", _append_readable_log_line
     )
@@ -438,31 +430,29 @@ async def _run_codex_eval(
         deps, "record_hard_check_outcomes", _record_hard_check_outcomes
     )
     record_judge_outcomes = _dep(deps, "record_judge_outcomes", _record_judge_outcomes)
-    run_codex_skill_loop = _dep(deps, "run_codex_skill_loop", _run_codex_skill_loop)
-    run_codex_reviewer_chain_for_judge = _dep(
-        deps, "run_codex_reviewer_chain_for_judge", _run_codex_reviewer_chain_for_judge
+    run_skill_loop = _dep(deps, "run_skill_loop", _run_skill_loop)
+    run_reviewer_chain_for_judge = _dep(
+        deps, "run_reviewer_chain_for_judge", _run_reviewer_chain_for_judge
     )
-    codex_workspace_metrics = _dep(
-        deps, "codex_workspace_metrics", _codex_workspace_metrics
-    )
-    codex_reviewer_metrics_from_verification = _dep(
+    workspace_metrics = _dep(deps, "workspace_metrics", _workspace_metrics)
+    reviewer_metrics_from_verification = _dep(
         deps,
-        "codex_reviewer_metrics_from_verification",
-        _codex_reviewer_metrics_from_verification,
+        "reviewer_metrics_from_verification",
+        _reviewer_metrics_from_verification,
     )
 
     task_id = item.id
     spec = AGENT_SPECS[agent_name]
     session_id = f"codex-{task_id}-{uuid.uuid4().hex[:8]}"
     eval_log_key = _resolve_eval_log_key(task_id=task_id, session_id=session_id)
-    codex_workspace_root = (
+    cli_workspace_root = (
         log_context.session_log_root.parent
         if log_context.session_log_root is not None
         else root
     ) / "codex-workspaces"
-    codex_runtime_root = codex_workspace_root.parent
-    codex_workspace_root.mkdir(parents=True, exist_ok=True)
-    workspace_dir = codex_workspace_root / (
+    cli_runtime_root = cli_workspace_root.parent
+    cli_workspace_root.mkdir(parents=True, exist_ok=True)
+    workspace_dir = cli_workspace_root / (
         f"{agent_name.value}-{task_id}-{uuid.uuid4().hex[:8]}"
     )
 
@@ -479,7 +469,7 @@ async def _run_codex_eval(
     launch_return_code: int | None = None
     verification_result = None
     codex_trace_artifacts = None
-    codex_skill_loop_summary = CodexSkillLoopSummary(enabled=enable_codex_skill_loop)
+    skill_loop_summary = CodexSkillLoopSummary(enabled=enable_skill_loop)
     hard_checks_passed: bool | None = None
     codex_reviewer_results: list[dict[str, Any]] = []
 
@@ -533,13 +523,13 @@ async def _run_codex_eval(
             load_agents_config().execution.agents[agent_name].timeout_seconds
         )
         launch_return_code = await asyncio.to_thread(
-            launch_codex_exec,
+            launch_cli_exec,
             materialized.workspace_dir,
             materialized.prompt_text,
             task_id=task_id,
             agent_name=agent_name,
             session_id=session_id,
-            runtime_root=codex_runtime_root,
+            runtime_root=cli_runtime_root,
             yolo=False,
             timeout_seconds=primary_timeout_seconds,
         )
@@ -554,10 +544,10 @@ async def _run_codex_eval(
                     artifact_root=log_context.session_log_root / eval_log_key / "codex",
                     baseline_snapshot=baseline_snapshot,
                     launched_after_ns=launch_started_at_ns,
-                    sessions_root=resolve_codex_home_root(
+                    sessions_root=resolve_cli_home_root(
                         task_id=task_id,
                         session_id=session_id,
-                        runtime_root=codex_runtime_root,
+                        runtime_root=cli_runtime_root,
                     )
                     / ".codex"
                     / "sessions",
@@ -577,7 +567,7 @@ async def _run_codex_eval(
                 workspace_dir=str(materialized.workspace_dir),
             )
         else:
-            _mirror_codex_session_trace_to_readable_logs(
+            _mirror_session_trace_to_readable_logs(
                 codex_trace_artifacts,
                 log_context=log_context,
                 eval_log_key=eval_log_key,
@@ -632,15 +622,15 @@ async def _run_codex_eval(
             else:
                 failure_reason = verification_failure
 
-        if enable_codex_skill_loop:
+        if enable_skill_loop:
             (
-                codex_skill_loop_summary,
+                skill_loop_summary,
                 codex_trace_artifacts,
-            ) = await run_codex_skill_loop(
+            ) = await run_skill_loop(
                 item=item,
                 agent_name=agent_name,
                 workspace_dir=materialized.workspace_dir,
-                codex_runtime_root=codex_runtime_root,
+                codex_runtime_root=cli_runtime_root,
                 log_context=log_context,
                 baseline_snapshot=baseline_snapshot,
                 codex_trace_artifacts=codex_trace_artifacts,
@@ -651,14 +641,14 @@ async def _run_codex_eval(
                 deps={
                     "append_readable_log_line": append_readable_log_line,
                     "capture_latest_codex_session_artifacts": capture_latest_codex_session_artifacts,
-                    "resume_codex_exec": _resume_codex_exec,
-                    "resolve_codex_home_root": resolve_codex_home_root,
-                    "record_codex_skill_loop_event": _record_codex_skill_loop_event,
+                    "resume_cli_exec": _resume_cli_exec,
+                    "resolve_cli_home_root": resolve_cli_home_root,
+                    "record_skill_loop_event": _record_skill_loop_event,
                     "eval_log_key": eval_log_key,
                 },
             )
 
-        codex_metrics = codex_workspace_metrics(
+        codex_metrics = workspace_metrics(
             workspace_dir=materialized.workspace_dir,
             success=success,
             verification_result=verification_result,
@@ -693,14 +683,14 @@ async def _run_codex_eval(
             and hard_checks_passed is True
             and JUDGE_REVIEWER_CHAIN.get(agent_name)
         ):
-            codex_reviewer_results = await run_codex_reviewer_chain_for_judge(
+            codex_reviewer_results = await run_reviewer_chain_for_judge(
                 item=item,
                 agent_name=agent_name,
                 source_workspace_dir=materialized.workspace_dir,
                 task_description=item.task,
                 session_id=session_id,
-                codex_workspace_root=codex_workspace_root,
-                codex_runtime_root=codex_runtime_root,
+                codex_workspace_root=cli_workspace_root,
+                codex_runtime_root=cli_runtime_root,
                 log=log,
             )
 
@@ -708,7 +698,7 @@ async def _run_codex_eval(
             judge_metrics = dict(codex_metrics)
             if codex_reviewer_results:
                 judge_metrics.update(
-                    codex_reviewer_metrics_from_verification(
+                    reviewer_metrics_from_verification(
                         verification_result=codex_reviewer_results[0],
                         expected_decision=item.expected_decision,
                     )
@@ -764,25 +754,25 @@ async def _run_codex_eval(
             "verification_details": (
                 verification_result.details if verification_result is not None else {}
             ),
-            "codex_skill_loop": codex_skill_loop_summary.model_dump(mode="json"),
+            "codex_skill_loop": skill_loop_summary.model_dump(mode="json"),
             "skill_loop_journal_path": (
-                codex_skill_loop_summary.skill_update_turn.journal_path
-                if codex_skill_loop_summary.skill_update_turn is not None
-                and codex_skill_loop_summary.skill_update_turn.journal_path is not None
+                skill_loop_summary.skill_update_turn.journal_path
+                if skill_loop_summary.skill_update_turn is not None
+                and skill_loop_summary.skill_update_turn.journal_path is not None
                 else (
-                    codex_skill_loop_summary.self_analysis_turn.journal_path
-                    if codex_skill_loop_summary.self_analysis_turn is not None
+                    skill_loop_summary.self_analysis_turn.journal_path
+                    if skill_loop_summary.self_analysis_turn is not None
                     else None
                 )
             ),
             "skill_loop_context_snapshot_path": (
-                codex_skill_loop_summary.skill_update_turn.context_snapshot_path
-                if codex_skill_loop_summary.skill_update_turn is not None
-                and codex_skill_loop_summary.skill_update_turn.context_snapshot_path
+                skill_loop_summary.skill_update_turn.context_snapshot_path
+                if skill_loop_summary.skill_update_turn is not None
+                and skill_loop_summary.skill_update_turn.context_snapshot_path
                 is not None
                 else (
-                    codex_skill_loop_summary.self_analysis_turn.context_snapshot_path
-                    if codex_skill_loop_summary.self_analysis_turn is not None
+                    skill_loop_summary.self_analysis_turn.context_snapshot_path
+                    if skill_loop_summary.self_analysis_turn is not None
                     else None
                 )
             ),
@@ -852,7 +842,8 @@ async def run_single_eval(
     run_reviewers_with_judge: bool = False,
     runner_backend: EvalRunnerBackend = EvalRunnerBackend.CONTROLLER,
     update_manifests: bool = True,
-    enable_codex_skill_loop: bool = False,
+    enable_skill_loop: bool = False,
+    enable_codex_skill_loop: bool | None = None,
     deps: dict[str, Any] | None = None,
 ):
     spec = AGENT_SPECS[agent_name]
@@ -861,6 +852,8 @@ async def run_single_eval(
     _console_message(f"eval case started: {case_label}")
 
     deps = deps or {}
+    if enable_codex_skill_loop is not None:
+        enable_skill_loop = enable_codex_skill_loop
 
     if spec.mode == EvalMode.GIT:
         success = await _run_git_eval(
@@ -880,7 +873,7 @@ async def run_single_eval(
         return
 
     if runner_backend == EvalRunnerBackend.CODEX:
-        await _run_codex_eval(
+        await _run_cli_eval(
             item=item,
             stats=stats,
             agent_name=agent_name,
@@ -892,7 +885,7 @@ async def run_single_eval(
             log_context=log_context,
             run_judge=run_judge,
             run_reviewers_with_judge=run_reviewers_with_judge,
-            enable_codex_skill_loop=enable_codex_skill_loop,
+            enable_skill_loop=enable_skill_loop,
             deps=deps,
         )
         return
@@ -1524,3 +1517,6 @@ async def run_single_eval(
             f"eval case finished: {case_label} - {'success' if success else 'failed'}"
             + (f" session_id={session_id}" if session_id else "")
         )
+
+
+_run_codex_eval = _run_cli_eval

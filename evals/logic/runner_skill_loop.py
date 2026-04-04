@@ -14,10 +14,10 @@ from evals.logic.codex_workspace import (
     is_coder_agent,
 )
 from evals.logic.codex_workspace import (
-    resolve_codex_home_root as _resolve_codex_home_root,
+    resolve_cli_home_root as _resolve_cli_home_root,
 )
 from evals.logic.codex_workspace import (
-    resume_codex_exec as _resume_codex_exec,
+    resume_cli_exec as _resume_cli_exec,
 )
 from evals.logic.models import EvalDatasetItem
 from evals.logic.runner_reporting import (
@@ -59,7 +59,7 @@ class CodexSkillLoopSummary(BaseModel):
     skill_update_turn: CodexSkillLoopTurn | None = None
 
 
-def _load_codex_skill_loop_prompt(prompt_key: str) -> str:
+def _load_skill_loop_prompt(prompt_key: str) -> str:
     codex_prompts = load_prompts().get("codex", {})
     skill_loop_prompts = codex_prompts.get("skill_loop", {})
     prompt = skill_loop_prompts.get(prompt_key)
@@ -86,7 +86,7 @@ def _load_codex_skill_loop_prompt(prompt_key: str) -> str:
             "canonical `skills/`. If no skill update is warranted, record that in\n"
             "`journal.md` and stop."
         )
-    raise KeyError(f"Unknown Codex skill loop prompt: {prompt_key}")
+        raise KeyError(f"Unknown skill loop prompt: {prompt_key}")
 
 
 def _load_workspace_simulation_result(workspace_dir: Path) -> SimulationResult | None:
@@ -101,7 +101,7 @@ def _load_workspace_simulation_result(workspace_dir: Path) -> SimulationResult |
         return None
 
 
-def _codex_skill_loop_timeout_seconds(agent_name: AgentName) -> int:
+def _skill_loop_timeout_seconds(agent_name: AgentName) -> int:
     agent_config = load_agents_config().execution.agents.get(agent_name.value)
     if agent_config is None:
         return 120
@@ -109,7 +109,7 @@ def _codex_skill_loop_timeout_seconds(agent_name: AgentName) -> int:
     return max(90, min(300, primary_timeout // 4))
 
 
-def _codex_skill_loop_needed(
+def _skill_loop_needed(
     *,
     agent_name: AgentName,
     launch_return_code: int | None,
@@ -142,7 +142,7 @@ def _codex_skill_loop_needed(
     return False, "simulation already reported success"
 
 
-def _codex_skill_loop_prompt_context(
+def _skill_loop_prompt_context(
     *,
     item: EvalDatasetItem,
     agent_name: AgentName,
@@ -196,7 +196,7 @@ def _codex_skill_loop_prompt_context(
     )
 
 
-def _build_codex_skill_loop_prompt(
+def _build_skill_loop_prompt(
     *,
     stage: str,
     item: EvalDatasetItem,
@@ -206,8 +206,8 @@ def _build_codex_skill_loop_prompt(
     verification_result: WorkspaceVerificationResult | None,
     simulation_result: SimulationResult | None,
 ) -> str:
-    base_prompt = _load_codex_skill_loop_prompt(stage)
-    runtime_context = _codex_skill_loop_prompt_context(
+    base_prompt = _load_skill_loop_prompt(stage)
+    runtime_context = _skill_loop_prompt_context(
         item=item,
         agent_name=agent_name,
         codex_session_id=codex_session_id,
@@ -218,7 +218,7 @@ def _build_codex_skill_loop_prompt(
     return f"{base_prompt}\n\n{runtime_context}\n"
 
 
-def _write_codex_skill_loop_prompt(
+def _write_skill_loop_prompt(
     *,
     workspace_dir: Path,
     stage: str,
@@ -231,15 +231,15 @@ def _write_codex_skill_loop_prompt(
     return prompt_path
 
 
-def _codex_skill_loop_events_path(workspace_dir: Path) -> Path:
+def _skill_loop_events_path(workspace_dir: Path) -> Path:
     return workspace_dir / "logs" / "skill_loop" / "events.jsonl"
 
 
-def _codex_skill_loop_journal_snapshot_path(workspace_dir: Path) -> Path:
+def _skill_loop_journal_snapshot_path(workspace_dir: Path) -> Path:
     return workspace_dir / "logs" / "skill_loop" / "journal.md"
 
 
-def _codex_skill_loop_context_snapshot_path(workspace_dir: Path) -> Path:
+def _skill_loop_context_snapshot_path(workspace_dir: Path) -> Path:
     return workspace_dir / "logs" / "skill_loop" / "context_snapshot.md"
 
 
@@ -252,18 +252,18 @@ def _read_optional_text(path: Path | None) -> str:
         return ""
 
 
-def _record_codex_skill_loop_event(
+def _record_skill_loop_event(
     *,
     workspace_dir: Path,
     event: SkillSelfReflectionEvent | SkillUpdateEvent,
 ) -> None:
     _append_jsonl_record(
-        _codex_skill_loop_events_path(workspace_dir),
+        _skill_loop_events_path(workspace_dir),
         event.model_dump(mode="json"),
     )
 
 
-def _verify_codex_skill_loop_workspace_files(workspace_dir: Path) -> None:
+def _verify_skill_loop_workspace_files(workspace_dir: Path) -> None:
     required_files = [
         workspace_dir / "journal.md",
         workspace_dir / "prompt.md",
@@ -280,7 +280,7 @@ def _verify_codex_skill_loop_workspace_files(workspace_dir: Path) -> None:
         )
 
 
-def _write_codex_skill_loop_state_snapshot(
+def _write_skill_loop_state_snapshot(
     *,
     workspace_dir: Path,
     stage: str,
@@ -294,7 +294,7 @@ def _write_codex_skill_loop_state_snapshot(
     loop_root.mkdir(parents=True, exist_ok=True)
 
     journal_source_path = workspace_dir / "journal.md"
-    journal_snapshot_path = _codex_skill_loop_journal_snapshot_path(workspace_dir)
+    journal_snapshot_path = _skill_loop_journal_snapshot_path(workspace_dir)
     journal_text = _read_optional_text(journal_source_path)
     if journal_text.strip():
         journal_snapshot_path.write_text(journal_text, encoding="utf-8")
@@ -304,7 +304,7 @@ def _write_codex_skill_loop_state_snapshot(
             encoding="utf-8",
         )
 
-    context_snapshot_path = _codex_skill_loop_context_snapshot_path(workspace_dir)
+    context_snapshot_path = _skill_loop_context_snapshot_path(workspace_dir)
     verification_success = (
         verification_result.success if verification_result is not None else False
     )
@@ -349,7 +349,7 @@ def _write_codex_skill_loop_state_snapshot(
     return journal_snapshot_path, context_snapshot_path
 
 
-def _codex_skill_loop_capture_root(
+def _skill_loop_capture_root(
     *,
     log_context: RunnerLogContext,
     eval_log_key: str | None,
@@ -360,7 +360,7 @@ def _codex_skill_loop_capture_root(
     return workspace_dir / "logs" / "codex"
 
 
-def _codex_result_failure_reason(
+def _result_failure_reason(
     result: CodexExecRunResult | None,
     *,
     stage: str,
@@ -445,11 +445,11 @@ def _skill_update_event(
     )
 
 
-def _codex_resume_output_path(loop_root: Path, stage: str) -> Path:
+def _resume_output_path(loop_root: Path, stage: str) -> Path:
     return loop_root / f"{stage}_last_message.md"
 
 
-async def _run_codex_skill_loop(
+async def _run_skill_loop(
     *,
     item: EvalDatasetItem,
     agent_name: AgentName,
@@ -475,12 +475,10 @@ async def _run_codex_skill_loop(
         from evals.logic.codex_session_trace import (
             capture_latest_codex_session_artifacts as capture_latest_codex_session_artifacts,
         )
-    resume_codex_exec = deps.get("resume_codex_exec", _resume_codex_exec)
-    resolve_codex_home_root = deps.get(
-        "resolve_codex_home_root", _resolve_codex_home_root
-    )
-    record_codex_skill_loop_event = deps.get(
-        "record_codex_skill_loop_event", _record_codex_skill_loop_event
+    resume_cli_exec = deps.get("resume_cli_exec", _resume_cli_exec)
+    resolve_cli_home_root = deps.get("resolve_cli_home_root", _resolve_cli_home_root)
+    record_skill_loop_event = deps.get(
+        "record_skill_loop_event", _record_skill_loop_event
     )
     eval_log_key = deps.get("eval_log_key")
 
@@ -507,7 +505,7 @@ async def _run_codex_skill_loop(
         failure_reason=None,
     )
 
-    should_run, trigger_reason = _codex_skill_loop_needed(
+    should_run, trigger_reason = _skill_loop_needed(
         agent_name=agent_name,
         launch_return_code=launch_return_code,
         verification_result=verification_result,
@@ -535,14 +533,14 @@ async def _run_codex_skill_loop(
         return summary, codex_trace_artifacts
 
     codex_session_id = codex_trace_artifacts.session_id
-    loop_timeout_seconds = _codex_skill_loop_timeout_seconds(agent_name)
+    loop_timeout_seconds = _skill_loop_timeout_seconds(agent_name)
     loop_root = workspace_dir / "logs" / "skill_loop"
     loop_root.mkdir(parents=True, exist_ok=True)
-    events_path = _codex_skill_loop_events_path(workspace_dir)
+    events_path = _skill_loop_events_path(workspace_dir)
     summary.events_path = events_path.as_posix()
-    _verify_codex_skill_loop_workspace_files(workspace_dir)
+    _verify_skill_loop_workspace_files(workspace_dir)
 
-    self_analysis_prompt_text = _build_codex_skill_loop_prompt(
+    self_analysis_prompt_text = _build_skill_loop_prompt(
         stage="self_analysis",
         item=item,
         agent_name=agent_name,
@@ -551,7 +549,7 @@ async def _run_codex_skill_loop(
         verification_result=verification_result,
         simulation_result=simulation_result,
     )
-    self_analysis_prompt_path = _write_codex_skill_loop_prompt(
+    self_analysis_prompt_path = _write_skill_loop_prompt(
         workspace_dir=workspace_dir,
         stage="self_analysis",
         prompt_text=self_analysis_prompt_text,
@@ -563,12 +561,12 @@ async def _run_codex_skill_loop(
         log_context=log_context,
         eval_log_key=eval_log_key,
     )
-    self_analysis_output_path = _codex_resume_output_path(loop_root, "self_analysis")
+    self_analysis_output_path = _resume_output_path(loop_root, "self_analysis")
     self_analysis_result: CodexExecRunResult | None = None
     self_analysis_exception_text: str | None = None
     try:
         self_analysis_result = await asyncio.to_thread(
-            resume_codex_exec,
+            resume_cli_exec,
             workspace_dir,
             self_analysis_prompt_text,
             task_id=item.id,
@@ -584,7 +582,7 @@ async def _run_codex_skill_loop(
     except Exception as exc:
         self_analysis_exception_text = _sanitize_readable_text(exc)
 
-    self_analysis_failure_reason = _codex_result_failure_reason(
+    self_analysis_failure_reason = _result_failure_reason(
         self_analysis_result,
         stage="self-analysis",
         exception_text=self_analysis_exception_text,
@@ -594,14 +592,14 @@ async def _run_codex_skill_loop(
             codex_trace_artifacts = await asyncio.to_thread(
                 capture_latest_codex_session_artifacts,
                 workspace_dir=workspace_dir,
-                artifact_root=_codex_skill_loop_capture_root(
+                artifact_root=_skill_loop_capture_root(
                     log_context=log_context,
                     eval_log_key=eval_log_key,
                     workspace_dir=workspace_dir,
                 ),
                 baseline_snapshot=baseline_snapshot,
                 launched_after_ns=None,
-                sessions_root=resolve_codex_home_root(
+                sessions_root=resolve_cli_home_root(
                     task_id=item.id,
                     session_id=codex_session_id,
                     runtime_root=codex_runtime_root,
@@ -620,23 +618,21 @@ async def _run_codex_skill_loop(
         if codex_trace_artifacts is not None and codex_trace_artifacts.session_id:
             codex_session_id = codex_trace_artifacts.session_id
 
-    journal_snapshot_path, context_snapshot_path = (
-        _write_codex_skill_loop_state_snapshot(
-            workspace_dir=workspace_dir,
-            stage="self_analysis",
-            codex_session_id=codex_session_id,
-            trigger_reason=trigger_reason,
-            verification_result=verification_result,
-            simulation_result=simulation_result,
-            primary_session_id=primary_session_id,
-        )
+    journal_snapshot_path, context_snapshot_path = _write_skill_loop_state_snapshot(
+        workspace_dir=workspace_dir,
+        stage="self_analysis",
+        codex_session_id=codex_session_id,
+        trigger_reason=trigger_reason,
+        verification_result=verification_result,
+        simulation_result=simulation_result,
+        primary_session_id=primary_session_id,
     )
     self_reflection_text = _read_optional_text(
         self_analysis_result.output_last_message_path
         if self_analysis_result is not None
         else self_analysis_output_path
     )
-    record_codex_skill_loop_event(
+    record_skill_loop_event(
         workspace_dir=workspace_dir,
         event=_skill_self_reflection_event(
             codex_session_id=codex_session_id,
@@ -707,8 +703,8 @@ async def _run_codex_skill_loop(
         )
         return summary, codex_trace_artifacts
 
-    _verify_codex_skill_loop_workspace_files(workspace_dir)
-    skill_update_prompt_text = _build_codex_skill_loop_prompt(
+    _verify_skill_loop_workspace_files(workspace_dir)
+    skill_update_prompt_text = _build_skill_loop_prompt(
         stage="skill_update",
         item=item,
         agent_name=agent_name,
@@ -717,7 +713,7 @@ async def _run_codex_skill_loop(
         verification_result=verification_result,
         simulation_result=simulation_result,
     )
-    skill_update_prompt_path = _write_codex_skill_loop_prompt(
+    skill_update_prompt_path = _write_skill_loop_prompt(
         workspace_dir=workspace_dir,
         stage="skill_update",
         prompt_text=skill_update_prompt_text,
@@ -729,12 +725,12 @@ async def _run_codex_skill_loop(
         log_context=log_context,
         eval_log_key=eval_log_key,
     )
-    skill_update_output_path = _codex_resume_output_path(loop_root, "skill_update")
+    skill_update_output_path = _resume_output_path(loop_root, "skill_update")
     skill_update_result: CodexExecRunResult | None = None
     skill_update_exception_text: str | None = None
     try:
         skill_update_result = await asyncio.to_thread(
-            resume_codex_exec,
+            resume_cli_exec,
             workspace_dir,
             skill_update_prompt_text,
             task_id=item.id,
@@ -750,7 +746,7 @@ async def _run_codex_skill_loop(
     except Exception as exc:
         skill_update_exception_text = _sanitize_readable_text(exc)
 
-    skill_update_failure_reason = _codex_result_failure_reason(
+    skill_update_failure_reason = _result_failure_reason(
         skill_update_result,
         stage="skill update",
         exception_text=skill_update_exception_text,
@@ -760,14 +756,14 @@ async def _run_codex_skill_loop(
             codex_trace_artifacts = await asyncio.to_thread(
                 capture_latest_codex_session_artifacts,
                 workspace_dir=workspace_dir,
-                artifact_root=_codex_skill_loop_capture_root(
+                artifact_root=_skill_loop_capture_root(
                     log_context=log_context,
                     eval_log_key=eval_log_key,
                     workspace_dir=workspace_dir,
                 ),
                 baseline_snapshot=baseline_snapshot,
                 launched_after_ns=None,
-                sessions_root=resolve_codex_home_root(
+                sessions_root=resolve_cli_home_root(
                     task_id=item.id,
                     session_id=codex_session_id,
                     runtime_root=codex_runtime_root,
@@ -809,7 +805,7 @@ async def _run_codex_skill_loop(
             for path in codex_trace_artifacts.workspace_diff.changed_paths
             if path.startswith("suggested_skills/")
         ]
-    record_codex_skill_loop_event(
+    record_skill_loop_event(
         workspace_dir=workspace_dir,
         event=_skill_update_event(
             codex_session_id=codex_session_id,
@@ -891,3 +887,21 @@ async def _run_codex_skill_loop(
         simulation_success=summary.simulation_success,
     )
     return summary, codex_trace_artifacts
+
+
+_load_codex_skill_loop_prompt = _load_skill_loop_prompt
+_codex_skill_loop_timeout_seconds = _skill_loop_timeout_seconds
+_codex_skill_loop_needed = _skill_loop_needed
+_codex_skill_loop_prompt_context = _skill_loop_prompt_context
+_build_codex_skill_loop_prompt = _build_skill_loop_prompt
+_write_codex_skill_loop_prompt = _write_skill_loop_prompt
+_codex_skill_loop_events_path = _skill_loop_events_path
+_codex_skill_loop_journal_snapshot_path = _skill_loop_journal_snapshot_path
+_codex_skill_loop_context_snapshot_path = _skill_loop_context_snapshot_path
+_record_codex_skill_loop_event = _record_skill_loop_event
+_verify_codex_skill_loop_workspace_files = _verify_skill_loop_workspace_files
+_write_codex_skill_loop_state_snapshot = _write_skill_loop_state_snapshot
+_codex_skill_loop_capture_root = _skill_loop_capture_root
+_codex_result_failure_reason = _result_failure_reason
+_codex_resume_output_path = _resume_output_path
+_run_codex_skill_loop = _run_skill_loop
