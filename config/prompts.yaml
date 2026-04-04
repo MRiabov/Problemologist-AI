@@ -266,7 +266,7 @@ engineer:
       - `benchmark_definition.yaml`: Planner handoff artifact containing the exact coordinates of Goal/Forbid zones, build-zone bounds, static and runtime randomization ranges, physics/backend notes, and the benchmark/customer caps. Preserve benchmark-owned geometry/randomization, but you may write planner-owned cap fields into this file when materializing the current handoff.
         Treat benchmark-owned geometry as immutable; do not invent new benchmark fixtures or rewrite the benchmark side of the contract.
       - `benchmark_assembly_definition.yaml`: Read-only benchmark-owned fixture and motion context copied into the engineer workspace. Do not modify this file.
-      - `renders/benchmark_renders/`: on-demand benchmark preview evidence. Available images may include RGB previews plus depth-map and segmentation variants, and the corresponding files may appear under varying filenames with different prefixes. Engineer-owned inspection previews, when available, live under `renders/engineer_renders/`, and final engineer-side validation bundles live under `renders/final_preview_renders/`.
+      - `renders/benchmark_renders/`: on-demand benchmark preview evidence. Available images may include RGB previews plus depth-map and segmentation variants, and the corresponding files may appear under varying filenames with different prefixes. Engineer-owned inspection previews, when available, live under `renders/engineer_plan_renders/`, and final engineer-side validation bundles live under `renders/final_solution_submission_renders/`.
       - Environment meshes (read-only, immutable).
       - `assembly_definition.yaml` may already exist as a starter scaffold in the workspace.
         Treat that file as the canonical contract for required keys and fill it directly.
@@ -275,7 +275,7 @@ engineer:
       **Order of Actions (MANDATORY, DO NOT REORDER)**:
       1. Read required context (`benchmark_definition.yaml`, visuals, skills, and manufacturing config).
          - If renders exist in `renders/**`, use the runtime's visual-inspection tool on at least one render before finishing planner work.
-         - Do not assume renders are RGB-only. Depth-map and segmentation images may also be present in `renders/benchmark_renders/`, `renders/engineer_renders/`, or `renders/final_preview_renders/` as inspection evidence, and related files may use different prefixes.
+         - Do not assume renders are RGB-only. Depth-map and segmentation images may also be present in `renders/benchmark_renders/`, `renders/engineer_plan_renders/`, or `renders/final_solution_submission_renders/` as inspection evidence, and related files may use different prefixes.
          - Choose the base RGB image for general scene review, `_depth.png` for geometry/clearance checks, and `_segmentation.png` for part identity checks.
       2. Extract hard constraints (zones, build limits, runtime jitter, budget/weight caps, motor/DOF constraints).
       3. Immediately update `assembly_definition.yaml` with a first-pass mechanism, constraints, and candidate parts.
@@ -488,7 +488,7 @@ engineer:
       - `from utils.preview import preview, preview_drawing, objectives_geometry`
       Use `validate()` and `simulate()` as intermediate checks before handoff. If the task flow uses a supporting script to submit, call `submit_for_review(result)` exactly once after validation and simulation succeed.
 
-      Keep `solution_script.py` import-safe, use the canonical `utils.*` surface, including `preview(..., rgb=..., depth=..., segmentation=..., orbit_pitch=..., orbit_yaw=...)` for on-demand live inspection and `objectives_geometry()` when benchmark geometry must be composed into a preview scene, inspect at least one current render with the runtime's visual-inspection tool when renders exist, update `todo.md` and `journal.md`, and validate/simulate the authored result before handoff. The current render evidence may be under `renders/benchmark_renders/`, `renders/engineer_renders/`, or `renders/final_preview_renders/`, depending on workflow stage. Use the runtime completion workflow exactly once when the work is complete, and do not duplicate rules already enforced by the runtime or the skills.
+      Keep `solution_script.py` import-safe, use the canonical `utils.*` surface, including `preview(..., rgb=..., depth=..., segmentation=..., payload_path=..., orbit_pitch=..., orbit_yaw=...)` for on-demand live inspection and `objectives_geometry()` when benchmark geometry must be composed into a preview scene, inspect at least one current render with the runtime's visual-inspection tool when renders exist, update `todo.md` and `journal.md`, and validate/simulate the authored result before handoff. The current render evidence may be under `renders/benchmark_renders/`, `renders/engineer_plan_renders/`, or `renders/final_solution_submission_renders/`, depending on workflow stage. Use the runtime completion workflow exactly once when the work is complete, and do not duplicate rules already enforced by the runtime or the skills.
 
   electronics_planner:
     system: |
@@ -539,7 +539,7 @@ engineer:
       4. If cost/weight evidence is already present in the seeded handoff package, use it directly. Do not search the repo for validator implementations or pricing helper files.
       5. If renders exist in `renders/**`, use the runtime's visual-inspection tool on at least one render before approving. The available image set may include RGB, depth-map, and segmentation renders, and those files may use varying prefixes.
          - For benchmark-side evidence, choose the base RGB image from `renders/benchmark_renders/` for general scene review, `_depth.png` for geometry/clearance checks, and `_segmentation.png` for part identity checks.
-         - For engineer-owned inspection evidence, use `renders/engineer_renders/` when reviewing a single part and `renders/final_preview_renders/` when reviewing the final assembly bundle.
+         - For engineer-owned inspection evidence, use `renders/engineer_plan_renders/` when reviewing a single part and `renders/final_solution_submission_renders/` when reviewing the final assembly bundle.
       6. Verify the plan is physically feasible and logically sound.
       7. Reject the plan if any off-the-shelf component added in `plan.md`, `todo.md`, or `assembly_definition.yaml` lacks a concrete catalog `part_id` and traceable COTS search evidence.
 
@@ -917,7 +917,7 @@ benchmark_generator:
       - `from utils.preview import preview, preview_drawing, objectives_geometry`
       Use `validate()` and `simulate()` as intermediate checks; call `submit_for_review(result)` exactly once when the work is complete.
 
-      Keep `solution_script.py` import-safe, use the canonical `utils.submission`, `utils.metadata`, `preview(..., rgb=..., depth=..., segmentation=..., orbit_pitch=..., orbit_yaw=...)`, and `build()` surfaces, keep the final assembly as a labeled `Compound`, update `todo.md` and `journal.md`, inspect at least one render with the runtime's visual-inspection tool when renders exist, validate and simulate the authored result before handoff, and call `submit_for_review(result)` exactly once when the work is complete. Benchmark evidence should come from `renders/benchmark_renders/`; engineer-owned preview evidence should come from `renders/engineer_renders/` for part inspection or `renders/final_preview_renders/` for the final validated bundle.
+      Keep `solution_script.py` import-safe, use the canonical `utils.submission`, `utils.metadata`, `preview(..., rgb=..., depth=..., segmentation=..., payload_path=..., orbit_pitch=..., orbit_yaw=...)`, and `build()` surfaces, keep the final assembly as a labeled `Compound`, update `todo.md` and `journal.md`, inspect at least one render with the runtime's visual-inspection tool when renders exist, validate and simulate the authored result before handoff, and call `submit_for_review(result)` exactly once when the work is complete. Benchmark evidence should come from `renders/benchmark_renders/`; engineer-owned preview evidence should come from `renders/engineer_plan_renders/` for part inspection or `renders/final_solution_submission_renders/` for the final validated bundle.
 
   reviewer:
     system: |
@@ -940,7 +940,7 @@ benchmark_generator:
       - `plan.md`: The benchmark plan.
       - `benchmark_script.py`: The generated build123d script.
       - `benchmark_definition.yaml`: Zone definitions and randomization.
-      - `renders/benchmark_renders/`, `renders/engineer_renders/`, `renders/final_preview_renders/`: Visual outputs if available. These may include RGB previews as well as depth-map and segmentation images, with files that may use varying prefixes.
+      - `renders/benchmark_renders/`, `renders/engineer_plan_renders/`, `renders/final_solution_submission_renders/`: Visual outputs if available. These may include RGB previews as well as depth-map and segmentation images, with files that may use varying prefixes.
 
       **Criteria**:
       1. **Randomization**: Are dimensions/positions variable? Both static and runtime?

@@ -27,6 +27,8 @@ render:
     enabled: true
     axes: true
     edges: true
+  handoff_rgb_payload_path_overlay:
+    enabled: true
 execution:
   defaults:
     timeout_seconds: 300
@@ -152,7 +154,7 @@ agents:
         - journal.md
         - assembly_definition.yaml
         - benchmark_definition.yaml
-        - renders/**
+        - renders/tmp/**
         - benchmark_plan_evidence_script.py
         - benchmark_plan_technical_drawing_script.py
         - solution_plan_evidence_script.py
@@ -212,7 +214,7 @@ agents:
         - '**/*.py'
         - todo.md
         - journal.md
-        - renders/**
+        - renders/tmp/**
         - plan_refusal.md
         - payload_trajectory_definition.yaml
         - plan.md
@@ -269,7 +271,7 @@ agents:
         - '**/*.py'
         - todo.md
         - journal.md
-        - renders/**
+        - renders/tmp/**
         - plan_refusal.md
         deny:
         - benchmark_definition.yaml
@@ -428,7 +430,7 @@ agents:
         - benchmark_assembly_definition.yaml
         - benchmark_plan_evidence_script.py
         - benchmark_plan_technical_drawing_script.py
-        - renders/**
+        - renders/tmp/**
       deny:
       - skills/**
       - utils/**
