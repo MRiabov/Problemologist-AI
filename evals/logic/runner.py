@@ -222,6 +222,7 @@ async def _run_skill_loop(
     launch_return_code: int | None,
     verification_result: WorkspaceVerificationResult | None,
     log,
+    provider_name: str | None = None,
 ) -> tuple[CodexSkillLoopSummary, CodexSessionTraceArtifact | None]:
     return await _run_skill_loop_module(
         item=item,
@@ -235,6 +236,7 @@ async def _run_skill_loop(
         launch_return_code=launch_return_code,
         verification_result=verification_result,
         log=log,
+        provider_name=provider_name,
         deps={
             "append_readable_log_line": _append_readable_log_line,
             "capture_latest_codex_session_artifacts": _capture_latest_codex_session_artifacts,
@@ -286,9 +288,7 @@ async def _run_cli_eval(
 ) -> bool:
     if enable_codex_skill_loop is not None:
         enable_skill_loop = enable_codex_skill_loop
-    provider_label = (
-        provider_name or os.getenv("PROBLEMOLOGIST_CLI_PROVIDER", "codex")
-    ).strip() or "codex"
+    provider_label = (provider_name or "codex").strip() or "codex"
     return await _run_cli_eval_impl(
         item=item,
         stats=stats,
@@ -592,7 +592,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--provider",
         type=str,
-        default=os.getenv("PROBLEMOLOGIST_CLI_PROVIDER", "codex"),
+        default="codex",
         choices=available_cli_providers(),
         help=(
             "CLI provider to use for local backend runs (default: codex). "

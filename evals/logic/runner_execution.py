@@ -658,6 +658,7 @@ async def _run_cli_eval(
                 launch_return_code=launch_return_code,
                 verification_result=verification_result,
                 log=log,
+                provider_name=provider.provider_name,
                 deps={
                     "append_readable_log_line": append_readable_log_line,
                     "capture_latest_codex_session_artifacts": capture_latest_codex_session_artifacts,

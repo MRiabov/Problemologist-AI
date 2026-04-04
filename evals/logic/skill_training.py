@@ -544,6 +544,7 @@ async def run_skill_training_session(
         launch_return_code=session.launch_return_code,
         verification_result=session.verification_result,
         log=log,
+        provider_name=session.provider_name,
         deps={
             "capture_latest_codex_session_artifacts": (
                 capture_latest_codex_session_artifacts

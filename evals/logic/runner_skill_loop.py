@@ -363,8 +363,9 @@ def _skill_loop_capture_root(
     log_context: RunnerLogContext,
     eval_log_key: str | None,
     workspace_dir: Path,
+    provider_name: str | None = None,
 ) -> Path:
-    provider = get_cli_provider()
+    provider = get_cli_provider(provider_name)
     if log_context.session_log_root is not None and eval_log_key:
         return log_context.session_log_root / eval_log_key / provider.provider_name
     return workspace_dir / "logs" / provider.provider_name
@@ -472,6 +473,7 @@ async def _run_skill_loop(
     launch_return_code: int | None,
     verification_result: WorkspaceVerificationResult | None,
     log,
+    provider_name: str | None = None,
     deps: dict[str, Any] | None = None,
 ) -> tuple[CodexSkillLoopSummary, CodexSessionTraceArtifact | None]:
     deps = deps or {}
@@ -491,7 +493,7 @@ async def _run_skill_loop(
         "record_skill_loop_event", _record_skill_loop_event
     )
     eval_log_key = deps.get("eval_log_key")
-    provider = get_cli_provider()
+    provider = get_cli_provider(provider_name)
 
     summary = CodexSkillLoopSummary(enabled=is_coder_agent(agent_name))
     simulation_result = _load_workspace_simulation_result(workspace_dir)
@@ -607,6 +609,7 @@ async def _run_skill_loop(
                     log_context=log_context,
                     eval_log_key=eval_log_key,
                     workspace_dir=workspace_dir,
+                    provider_name=provider_name,
                 ),
                 baseline_snapshot=baseline_snapshot,
                 launched_after_ns=None,
@@ -771,6 +774,7 @@ async def _run_skill_loop(
                     log_context=log_context,
                     eval_log_key=eval_log_key,
                     workspace_dir=workspace_dir,
+                    provider_name=provider_name,
                 ),
                 baseline_snapshot=baseline_snapshot,
                 launched_after_ns=None,

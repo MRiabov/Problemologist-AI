@@ -531,11 +531,7 @@ def available_cli_providers() -> list[str]:
 
 
 def _resolve_provider_name(provider_name: str | None) -> str:
-    resolved = (
-        (provider_name or os.getenv("PROBLEMOLOGIST_CLI_PROVIDER") or "codex")
-        .strip()
-        .lower()
-    )
+    resolved = (provider_name or "codex").strip().lower()
     if resolved not in _CLI_PROVIDER_REGISTRY:
         raise SystemExit(
             "Unknown CLI provider '{provider}'. Available: {available}".format(

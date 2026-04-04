@@ -789,8 +789,6 @@ def test_skill_training_preserves_legacy_provider_metadata(
         + "\n",
         encoding="utf-8",
     )
-    monkeypatch.setenv("PROBLEMOLOGIST_CLI_PROVIDER", "qwen")
-
     provider_calls: list[str | None] = []
 
     def fake_get_cli_provider(provider_name=None):
