@@ -4,7 +4,7 @@
   "created_at": "2026-04-03T00:00:00+00:00",
   "episode_id": "1b03be24-8e5a-5665-9885-6f56492080d9",
   "worker_session_id": "seed-ec-002-drawing-minimal",
-  "revision": "f3cc741abfa9b55901d21d3ac0cafe42374c9a83",
+  "revision": "c3842d25ae0e808c7c72d51dd5a7a663464dc005",
   "scene_hash": "3c79f5366531c62e9dca8cacf6851431aefc64a596c77a1d1fdb707aa022ef48",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",
