@@ -145,18 +145,22 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
 
 All visual-inspection evals above are config-driven rather than prompt-only. The source of truth for required roles and image-count thresholds is `config/agents_config.yaml` (`visual_inspection.required`, `visual_inspection.min_images`, `visual_inspection.reminder_interval`), and the requirement is conditional on actual render-image availability for the current node/revision.
 
-#### Medium evals - Skill Learning Agent (Async)
+#### Medium evals - Skill Training Loop (Standalone)
+
+The skill-training path is a standalone replay/training loop over retained episode bundles, not a dedicated agent-graph stage. A capable Codex session can still author the deltas, but the architecture measures the training loop by persisted artifacts and later reuse rather than by a separate journalling agent. The reusable resume/orchestration helpers should be factored out of `evals/logic/runner.py` so both the eval launcher and the training CLI can share them. Compatibility shims are allowed only as migration bridges; the long-term architecture should not preserve a shim-over-shim chain when a direct owning CLI or helper import can replace it.
 
 1. **Validity**: Generated skills (`SKILL.md`) are valid markdown/YAML and adhere to the skill schema in 100% of cases. (fast)
 2. **Utility**: Generated skills are referenced/used by other agents in subsequent similar tasks (requires long-term tracking). (long-term)
 3. **Non-duplication**: Generated skills do not duplicate existing skills (upon inspecting git changes after 30 turns- the skill rows aren't churned) (long-term) (not exactly an eval, but a tracking logic).
-4. No overwrite: Skills aren't overwritten from scratch in 100% of cases
+4. **No overwrite**: Skills aren't overwritten from scratch in 100% of cases.
    - Skills can not be overwritten for more than 5 lines, to prevent catastrophic overwriting.
+5. **Retained bundle completeness**: The training bundle keeps `journal.md`, prompt snapshots, review YAML, validation/simulation outputs, render bundles, and `events.jsonl` long enough for `train_skills.py` or equivalent to replay the episode without reconstructing the transcript by hand.
 
-#### Journaling
+#### Artifact retention and journaling
 
 1. Struggle detection: The agent detects and logs entries for 90% of "struggles" (failed tool calls > 4) detected in the logs.
 2. **Linkage**: 97% journal entries are correctly linked to a unique problem/observation ID.
+3. Retained episode bundles preserve the short outputs that downstream training needs: reviewer summary text, reviewer critique, self-analysis notes, and refusal artifacts.
 
 ### Slow (essentially, production tasks)
 

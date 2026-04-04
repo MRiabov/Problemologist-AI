@@ -40,6 +40,7 @@ Role prompts and handoff artifacts should identify required skill dependencies w
 Skill updates are explicit and reviewable, not an implicit side effect of normal agent runs.
 
 The skill-learning loop runs asynchronously from the main execution flow.
+The desired architecture does not require a dedicated journalling, compression, or skill agent to summarize the run before training; the retained episode bundle and the active Codex-capable session are sufficient inputs for a standalone training loop.
 
 Skill revisions should be versioned so observability can correlate a skill version with later task outcomes.
 
@@ -47,13 +48,15 @@ Skill revisions should be versioned so observability can correlate a skill versi
 
 Codex-backed skill learning may run as a bounded recursive loop.
 
-The loop keeps the same Codex session alive across follow-up turns instead of rebuilding conversation context from scratch.
+The loop keeps the same Codex session alive across follow-up turns instead of rebuilding conversation context from scratch, but the loop is owned by a standalone training entrypoint rather than by the eval launcher.
 
 The first follow-up turn performs self-analysis. A later follow-up turn drafts or repairs the skill content.
 
 Follow-up output is written to `suggested_skills/` first. Promotion into the checked-in `skills/` tree remains a separate reviewable step.
 
-The loop stays asynchronous relative to the main eval or task run, and it uses durable workspace artifacts such as `journal.md` to preserve the minimum state needed for later turns.
+The loop stays asynchronous relative to the main eval or task run, and it uses durable workspace artifacts such as `journal.md`, review YAML, validation/simulation results, render bundles, and `events.jsonl` to preserve the minimum state needed for later turns.
+
+The retained artifacts are also downstream training data. A dedicated `train_skills.py`-style CLI may reopen those artifacts later to produce skill deltas without requiring a separate journalling or skill graph stage.
 
 ## Authoring and change policy
 

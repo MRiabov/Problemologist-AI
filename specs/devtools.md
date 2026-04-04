@@ -10,7 +10,8 @@
 ## Tooling principles
 
 - Devtools are agent-facing by default. Keep default verbosity low, but when tools emit logs or summaries they should be dense and informative. Avoid chatty traces and large dumps; aim for roughly a few hundred tokens per invocation when practical, and treat a tool that routinely produces hundreds of lines as a smell because it wastes context and token budget.
-- Devtools integrate with application logic where possible instead of reimplementing it in wrapper code. The preferred shape is a thin maintainer-facing utility that reuses shared runtime, validation, or seed logic, as in `scripts/validate_eval_seed.py`, `dataset/evals/run_evals.py`, and `scripts/validate_integration_mock_response_preflight.py`.
+- Devtools integrate with application logic where possible instead of reimplementing it in wrapper code. The preferred shape is a thin maintainer-facing utility that reuses shared runtime, validation, or seed logic, as in `scripts/validate_eval_seed.py`, `dataset/evals/run_evals.py`, and `scripts/validate_integration_mock_response_preflight.py`; the shared eval core lives in `evals/logic/runner.py` and should be split into smaller reusable modules rather than wrapped again.
+- Compatibility shims are migration scaffolding, not a permanent layer. Do not stack a shim over another shim when a direct helper import or a single owning CLI module would do, and remove redundant wrappers once the call sites are updated.
 - Before adding a new devtool, check for shared utilities and existing dependencies in the application code. Prefer extending those primitives over creating parallel scaffolding; the repo should maintain the application code, not a second code path around it, and fewer duplicated concepts reduce confusion for both developers and agents.
 
 ## Ownership model
@@ -21,7 +22,7 @@ The developer instrumentation layer is split into a small set of canonical entry
 | -- | -- | -- | -- |
 | Local bootstrap | `scripts/env_up.sh`, `scripts/env_down.sh` | Bring the selected local stack profile up and down, including infra, app processes, and profile-scoped cleanup | Public and stable |
 | Integration orchestration | `scripts/run_integration_tests.sh`, `scripts/internal/integration_runner.py` | Run the canonical integration suite through the real stack and the real HTTP/system boundaries | Public wrapper, internal implementation |
-| Eval orchestration | `dataset/evals/run_evals.py`, `evals/logic/runner.py`, `dataset/evals/materialize_seed_workspace.py` | Run evals, materialize seeded workspaces, and expose the Codex-debug path | Public wrapper plus internal implementation |
+| Eval orchestration | `dataset/evals/run_evals.py`, `evals/logic/runner.py` (split into reusable helpers under `evals/logic/`), `dataset/evals/materialize_seed_workspace.py` | Run evals, materialize seeded workspaces, and expose the Codex-debug path | Public wrapper plus internal implementation |
 | Eval coordination | `scripts/internal/eval_run_lock.py`, `scripts/internal/eval_seed_renders.py` | Serialize eval runs and regenerate deterministic seed render bundles | Internal helper modules |
 | Seed and fixture validation | `scripts/validate_eval_seed.py`, `scripts/validate_integration_mock_response_preflight.py`, `scripts/normalize_integration_mock_responses.py` | Validate seeded eval rows against the current seeded-entry contract, including planner inventory exactness and plan grounding; validate integration mock-response scenarios; repair deterministic fixture drift | Public maintenance utilities |
 | Derived artifact regeneration | `scripts/generate_openapi.py`, `scripts/persist_test_results.py` | Regenerate API schemas and persist test-history outputs | Public utilities |
@@ -111,6 +112,7 @@ The eval tooling mirrors the integration tooling, but it owns a separate lock, a
 ### `evals/logic/runner.py`
 
 - `evals/logic/runner.py` is the real eval runner.
+- It is the orchestration core that should be decomposed into smaller reusable modules under `evals/logic/` rather than expanding further as a single file.
 - It owns backend selection, task filtering, complexity-level filtering, concurrency, rate limiting, and run logging.
 - It uses the eval run lock to protect the stack while bootstrapping and then runs as a shared consumer of the eval lock during execution.
 - Controller-backed runs bootstrap exclusively only while `scripts/env_up.sh` is running, then downgrade to the shared lock for the actual eval loop.

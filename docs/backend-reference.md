@@ -13,8 +13,9 @@ This is the backend-first reference for the repository. It covers the controller
 | Benchmarks | Randomized physics problems that can be handed to the engineer graph |
 | Reasoning traces | Tool calls, planner and reviewer reasoning, execution summaries, and refusal evidence |
 | Solutions | CAD scripts, simulation artifacts, MJCF, renders, and review manifests |
-| Skills | Learned `SKILL.md` artifacts and supporting files |
-| Journals | Scannable execution summaries and decision logs |
+| Skills | Learned `SKILL.md` artifacts, staged skill deltas, and supporting files |
+| Journals | Scannable execution summaries, postmortems, and decision logs |
+| Training corpus | Persisted episode bundles, traces, review artifacts, and render evidence used by downstream skill training |
 | Optimization notes | Improvements that were found but not applied |
 | Framework | Reusable backend platform for benchmark generation and mechanical problem solving |
 
@@ -164,6 +165,7 @@ Runtime conversations use four message roles: `system`, `user`, `assistant`, and
 | Planner submission | Must call `submit_plan()` and receive `ok=true` before handoff |
 | Reviewer completion | Must use the stage-correct manifest and review persistence files |
 | Visual inspection | If renders exist for a required role, the role must call `inspect_media(...)` before approval or finish |
+| Skill training | `train_skills.py` or equivalent owns the standalone replay/training loop over retained bundles; `run_evals.py` stays a thin eval launcher |
 | Fail closed | Missing artifacts, invalid schema, or stale manifests block progress rather than being auto-healed |
 
 ## 10. Observability and Lineage

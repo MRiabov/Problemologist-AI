@@ -164,6 +164,7 @@ The harness does not own the skill improvement loop, the skill catalog shape, or
 ## Agent memory and review artifacts
 
 Agents keep structured runtime memory in `journal.md`, task progress in `todo.md`, and reviewer outputs in `reviews/**`.
+Those same artifacts are retained as downstream training material, together with prompt snapshots, validation/simulation outputs, render bundles, and the local `logs/skill_loop/events.jsonl` sidecar.
 
 Rules:
 
@@ -174,6 +175,7 @@ Rules:
 5. Token compression is configured by `config/agents_config.yaml` and keeps canonical context telemetry available for compaction.
 6. Feedback from simulation, cost checks, and manufacturability checks is recorded in markdown for downstream debugging and skill learning.
 7. Codex self-improvement runs persist a local `logs/skill_loop/events.jsonl` sidecar so self-reflection text and follow-up skill-update output remain available for later diagnostics, and the runner promotes those structured records into DB traces when an episode-backed path exists.
+8. The eval launcher should stay thin; the shared orchestration core in `evals/logic/runner.py` should be split into smaller reusable modules, and a separate `train_skills.py`-style CLI owns the standalone replay/training loop over the retained bundle when skill training is enabled.
 
 ## Runner behavior
 
@@ -190,6 +192,7 @@ The runner behavior for Codex mode is:
 
 The runner does not require controller/worker orchestration for the agent loop in Codex mode.
 The controller-backed preflight and health checks remain part of the paid-provider/controller path only.
+The standalone skill-training replay is not the eval launcher’s job; it consumes the retained episode bundle through a separate training entrypoint and may reuse the same Codex session id when one is present.
 
 ## Observability
 
