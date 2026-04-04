@@ -23,7 +23,7 @@ catalog: `INT-032`, `INT-033`, `INT-034`, `INT-039`, `INT-040`, `INT-074`,
 `INT-075`, `INT-181`, `INT-182`, `INT-183`, `INT-185`, `INT-186`,
 `INT-188`, `INT-189`, `INT-190`, `INT-203`, `INT-204`, `INT-205`,
 `INT-207`, `INT-208`, `INT-209`, `INT-212`, `INT-213`, `INT-214`, and
-`INT-215`.
+`INT-215`, `INT-216`, `INT-217`.
 
 ### P0: Architecture parity baseline
 
@@ -143,6 +143,9 @@ This section is the smallest must-pass set. Keep it narrowly scoped, determinist
 | INT-060 | Langfuse feedback forwarding contract | `POST /episodes/{episode_id}/traces/{trace_id}/feedback` forwards score/comment to Langfuse and persists local feedback fields; missing Langfuse client returns `503`, missing `langfuse_trace_id` returns `400`. |
 | INT-064 | COTS reproducibility metadata persistence | COTS queries/selection persist reproducibility metadata (`catalog_version`, `bd_warehouse_commit`, `generated_at`, `catalog_snapshot_id`) plus normalized query snapshot, ordered candidates, and final selected `part_id`s; all are exposed in downstream artifacts/events used for replayable evaluation, and handoff is invalid when selected parts exist without this metadata. |
 | INT-065 | Skill safety toggle enforcement | Skill-writer flow blocks or reverts sessions that overwrite/delete more than configured threshold lines (15), records safety event, and preserves prior skill content when guard trips. |
+| INT-218 | Skill catalog overlay precedence | `suggested_skills/` entries shadow canonical `skills/` entries when resolving skill reads and catalog entries, with overlay duplicates taking precedence over the approved tree. |
+| INT-219 | Skill overlay promotion publication contract | The promotion arbiter publishes the session overlay into canonical `skills/`, records the approved base commit and resulting promotion commit, and persists a traceable promotion record. |
+| INT-220 | Skill overlay promotion conflict gate | Dirty canonical repo state or unresolved overlay conflicts fail closed, do not publish a commit, and still emit a promotion record with the conflict reason. |
 | INT-066 | Fluid-on-electronics failure coupling | In electromechanical simulations with fluids enabled, fluid contact with powered electrical components triggers electrical failure state and benchmark failure/penalty path. |
 | INT-067 | Steerability exact-pointing + mention payload contract | Face/edge/vertex/part/subassembly selections and `@`-mentions are accepted over API/UI boundary, preserved in prompt payload, and observable in run traces/events used by the agent. |
 | INT-068 | Line-targeted steering contract | `@path/file.py:start-end` style references resolve and provide the exact requested code span to the agent context in the majority path; invalid ranges fail with explicit user-visible validation errors. |
@@ -158,6 +161,7 @@ This section is the smallest must-pass set. Keep it narrowly scoped, determinist
 | INT-139 | Fluid data storage policy | Raw particle data stays on worker `/tmp`; only MP4 video, JSON summary metrics, and stress summaries uploaded to S3; raw cache wiped after upload. |
 | INT-140 | Wire and electrical component costing | `validate_and_price()` includes wire cost (per-meter × length) and COTS electrical component costs in total. |
 | INT-141 | Circuit transient simulation | `simulate_circuit_transient()` produces motor ON/OFF states over time; results match expected switching sequence from netlist. |
+| INT-217 | Solution motor backend parity | A solution-authored moving part declared once in `assembly_definition.yaml` materializes as a validated controllable actuator on both MuJoCo and Genesis; unresolved or unsupported motor mappings fail closed before simulation can report success; `get_all_actuator_names()` and `get_actuator_state()` expose the same solution motor identity and force limits used by power gating and overload monitoring. |
 
 ### P1 negative integration tests (`INT-NEG-###`)
 
@@ -339,6 +343,9 @@ benchmark geometry is exposed via `benchmark_script.py`, engineer code lives in
 | INT-062 | Generate/fetch worker OpenAPI artifact(s) in CI/integration environment and assert light+heavy endpoint coverage is present. | Linting a stale committed schema file without runtime generation. |
 | INT-063 | Attempt writes to mounted paths and writes to workspace root via live file APIs; assert read-only mounts and writable workspace behavior across worker surfaces. | Asserting config constants for mount paths without exercising container mounts. |
 | INT-064 | Execute COTS lookup and artifact handoff via APIs; assert persisted `catalog_version`, `bd_warehouse_commit`, `generated_at`, `catalog_snapshot_id`, normalized query snapshot, ordered candidates, and selected `part_id`s in events/records/artifacts. | Unit-testing metadata dataclass construction only. |
+| INT-218 | Resolve skill reads against an overlay-first session worktree and assert overlay duplicates win over canonical entries. | Unit testing catalog helper ordering without the session overlay contract. |
+| INT-219 | Promote a session overlay into canonical `skills/` and verify the resulting commit and promotion record are persisted. | Direct helper-only commit generation without promotion-record validation. |
+| INT-220 | Feed the arbiter a dirty canonical repo and assert fail-closed conflict handling with no published commit. | Direct helper-only conflict simulation without record persistence. |
 | INT-129 | Exercise `ServoMotor.from_catalog_id("ServoMotor_DS3218")` through the live worker runtime, assert the proxy keeps the catalog identity/label/frame contract, assert unknown motor IDs fail closed, and run the real validation path to prove declared-but-unused COTS parts are rejected. | Importing the geometry class and testing the constructor in-process without worker HTTP, or asserting only the catalog row without the authored-geometry validation gate. |
 | INT-070 | Attempt mounted-path traversal via live file APIs (e.g., `/utils/../...`); assert deterministic `403` and no cross-boundary access. | Path-normalization unit checks without exercising worker HTTP/file boundary. |
 | INT-071 | Execute per-agent file operations via live file APIs and assert `agents_config.yaml` precedence (`deny` > `allow`, unmatched deny, agent override), strict deny of `.manifests/**` to all agent roles, and reviewer-only stage-specific write scopes for the review decision/comments YAML pairs. | In-process path policy matcher and precedence helpers only. |
@@ -440,7 +447,7 @@ benchmark geometry is exposed via `benchmark_script.py`, engineer code lives in
 
 - `tests/integration/smoke/`: INT-001..INT-004 (fast baseline).
 - `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-070..INT-075, INT-101..INT-114, INT-120..INT-128, INT-184, INT-187, INT-188, INT-189, INT-200, INT-201, INT-202, INT-203, INT-204, INT-205, INT-209.
-- `tests/integration/architecture_p1/`: INT-034, INT-160..INT-179, INT-190, INT-192, INT-206, INT-207, INT-208, INT-210, INT-211, INT-212, INT-213, INT-214, INT-215.
+- `tests/integration/architecture_p1/`: INT-034, INT-160..INT-179, INT-190, INT-192, INT-206, INT-207, INT-208, INT-210, INT-211, INT-212, INT-213, INT-214, INT-215, INT-216, INT-217, INT-218, INT-219, INT-220.
 - `tests/integration/architecture_p2/`: (TODO: find tests here)
 
 <!--- `tests/integration/evals_p2/`: INT-046..INT-052, INT-151..INT-156. 

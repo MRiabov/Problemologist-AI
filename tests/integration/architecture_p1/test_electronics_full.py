@@ -12,14 +12,19 @@ from shared.enums import ElectronicComponentType, FailureReason
 from shared.models.schemas import (
     AssemblyConstraints,
     AssemblyDefinition,
+    AssemblyPartConfig,
     BenchmarkDefinition,
     CostTotals,
+    CotsPartEstimate,
     ElectronicComponent,
     ElectronicsSection,
+    MotorControl,
+    PartConfig,
     PowerSupplyConfig,
     WireConfig,
     WireTerminal,
 )
+from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
     BenchmarkToolRequest,
     BenchmarkToolResponse,
@@ -88,10 +93,13 @@ async def _write_file(
     assert resp.status_code == 200, resp.text
 
 
-def _base_benchmark_definition_yaml() -> str:
+def _base_benchmark_definition_yaml(
+    backend: SimulatorBackendType | None = None,
+) -> str:
+    backend_value = (backend or selected_backend()).value
     objectives = BenchmarkDefinition.model_validate(
         {
-            "physics": {"backend": selected_backend().value},
+            "physics": {"backend": backend_value},
             "objectives": {
                 "goal_zone": {"min": [20, -10, 0], "max": [40, 10, 20]},
                 "build_zone": {"min": [-100, -100, -10], "max": [100, 100, 100]},
@@ -127,6 +135,68 @@ def build():
 
     return Compound(children=[motor_1, rail], label="electromech")
 """
+
+
+def _solution_motor_script() -> str:
+    return """
+from build123d import *
+from shared.models.schemas import PartMetadata
+
+def build():
+    drive_motor = Box(8, 8, 8).move(Pos(-20, 0, 20))
+    drive_motor.label = "drive_motor"
+    drive_motor.metadata = PartMetadata(
+        material_id="aluminum_6061",
+        cots_id="ServoMotor_DS3218",
+    )
+
+    guide_rail = Box(80, 8, 8).move(Pos(0, 0, 4))
+    guide_rail.label = "guide_rail"
+    guide_rail.metadata = PartMetadata(material_id="aluminum_6061")
+
+    return Compound(children=[drive_motor, guide_rail], label="solution_motor")
+"""
+
+
+def _solution_motor_assembly_definition_yaml() -> str:
+    assembly = AssemblyDefinition(
+        constraints=AssemblyConstraints(
+            benchmark_max_unit_cost_usd=1000,
+            benchmark_max_weight_g=5000,
+            planner_target_max_unit_cost_usd=900,
+            planner_target_max_weight_g=4500,
+        ),
+        cots_parts=[
+            CotsPartEstimate(
+                part_id="ServoMotor_DS3218",
+                manufacturer="pololu",
+                unit_cost_usd=18.0,
+                weight_g=60.0,
+                quantity=1,
+                source="catalog",
+            )
+        ],
+        manufactured_parts=[],
+        final_assembly=[
+            PartConfig(
+                name="drive_motor",
+                config=AssemblyPartConfig(
+                    dofs=["rotate_z"],
+                    control=MotorControl(mode="CONSTANT", speed=1.0),
+                ),
+            ),
+            PartConfig(
+                name="guide_rail",
+                config=AssemblyPartConfig(dofs=[]),
+            ),
+        ],
+        totals=CostTotals(
+            estimated_unit_cost_usd=18.0,
+            estimated_weight_g=60.0,
+            estimate_confidence="high",
+        ),
+    )
+    return yaml.dump(assembly.model_dump(mode="json"))
 
 
 @pytest.mark.integration_p1
@@ -263,6 +333,84 @@ async def test_int_132_full_electromechanical_path():
         assert verify_data.artifacts is not None
         assert verify_data.artifacts.verification_result is not None
         assert verify_data.artifacts.verification_result.num_scenes >= 1
+
+
+@pytest.mark.int_id("INT-217")
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_int_217_solution_motor_backend_parity():
+    """
+    INT-217: A solution-authored moving part should materialize as a validated
+    controllable actuator on both supported backends, and unresolved mappings
+    should fail closed before simulation can claim success.
+    """
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        await _require_services(client)
+        session_id = f"INT-217-{uuid.uuid4().hex[:8]}"
+
+        await _write_file(
+            client,
+            session_id,
+            "script.py",
+            _solution_motor_script(),
+        )
+
+        for backend in (SimulatorBackendType.GENESIS, SimulatorBackendType.MUJOCO):
+            await _write_file(
+                client,
+                session_id,
+                "benchmark_definition.yaml",
+                _base_benchmark_definition_yaml(backend=backend),
+            )
+            await _write_file(
+                client,
+                session_id,
+                "assembly_definition.yaml",
+                _solution_motor_assembly_definition_yaml(),
+            )
+
+            validate_resp = await client.post(
+                f"{WORKER_HEAVY_URL}/benchmark/validate",
+                json=BenchmarkToolRequest(script_path="script.py").model_dump(
+                    mode="json"
+                ),
+                headers={"X-Session-ID": session_id},
+                timeout=300.0,
+            )
+            assert validate_resp.status_code == 200, validate_resp.text
+            validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
+            assert validate_data.success, validate_data.message
+
+            simulate_resp = await client.post(
+                f"{WORKER_HEAVY_URL}/benchmark/simulate",
+                json=BenchmarkToolRequest(
+                    script_path="script.py", smoke_test_mode=True
+                ).model_dump(mode="json"),
+                headers={"X-Session-ID": session_id},
+                timeout=300.0,
+            )
+            assert simulate_resp.status_code == 200, simulate_resp.text
+            simulate_data = BenchmarkToolResponse.model_validate(simulate_resp.json())
+            assert simulate_data.success, simulate_data.message
+
+        await _write_file(
+            client,
+            session_id,
+            "assembly_definition.yaml",
+            _solution_motor_assembly_definition_yaml().replace(
+                "ServoMotor_DS3218", "ServoMotor_DOES_NOT_EXIST"
+            ),
+        )
+        fail_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=300.0,
+        )
+        assert fail_resp.status_code == 200, fail_resp.text
+        fail_data = BenchmarkToolResponse.model_validate(fail_resp.json())
+        assert not fail_data.success
+        assert "supported COTS motor" in (fail_data.message or "")
 
 
 @pytest.mark.integration_p1
