@@ -23,6 +23,8 @@ wheels/
 
 /workspaces/
 /workspace/
+/qwen-runtime/
+/codex-runtime/
 /tests/output/
 /test_output/
 /test_datasets/
