@@ -90,9 +90,26 @@ manufactured_parts:
   estimated_unit_cost_usd: 9.75
 cots_parts: []
 final_assembly:
-- name: routed_transfer
-  config:
-    dofs: []
+- subassembly_id: routed_transfer
+  parts:
+  - name: route_base
+    config:
+      dofs: []
+  - name: entry_catcher
+    config:
+      dofs: []
+  - name: outer_rail
+    config:
+      dofs: []
+  - name: inner_rail
+    config:
+      dofs: []
+  - name: blocker_skirt
+    config:
+      dofs: []
+  - name: goal_tray
+    config:
+      dofs: []
 totals:
   estimated_unit_cost_usd: 48.5
   estimated_weight_g: 445.7

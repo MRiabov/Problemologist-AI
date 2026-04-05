@@ -93,6 +93,10 @@ def build():
     children[4] = children[4].moved(Location((0.0, 0.0, 10.0)))
     children[5] = children[5].moved(Location((0.0, 110.0, 160.0)))
 
-    assembly = Compound(label="routed_transfer", children=children)
+    subassembly = Compound(label="routed_transfer", children=children)
+    subassembly.metadata = CompoundMetadata()
+    # Wrap in an unlabeled root so the subassembly label is counted by the
+    # identity-pair validator.
+    assembly = Compound(children=[subassembly])
     assembly.metadata = CompoundMetadata()
     return assembly
