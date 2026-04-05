@@ -1,0 +1,52 @@
+---
+name: engineer-execution-reviewer
+description: Engineer-side execution-review skill for validating the latest solution revision after validation and simulation. Use when reviewing `solution_script.py`, helper modules, `validation_results.json`, `simulation_result.json`, `scene.json`, render or video evidence, sampled frame-indexed `objects.parquet` pose-history sidecars, or stage-specific execution review artifacts; when applying the execution review checklist for exact inventory grounding, plan fidelity, robustness, manufacturability, cost/weight compliance, and motion plausibility; or when writing the stage-scoped execution review YAML pair and submitting through the review gate.
+---
+
+# Engineer Execution Reviewer
+
+Use this skill for the engineering execution gate after the coder has produced a concrete revision. Keep the review read-only, evidence-based, and tied to the latest revision.
+
+## Canonical Preview Helpers
+
+When execution evidence needs visual checking, use the shared preview helpers explicitly:
+
+- `preview(...)` for live scene or engineer preview inspection
+- `preview_drawing()` for drafting-package review evidence
+- `objectives_geometry()` when a preview scene needs benchmark objective overlays reconstructed
+- `list_render_bundles()` when exact bundle identity matters
+- `query_render_bundle()` when you need bundle metadata or frame/object slices without the full media payload
+- `pick_preview_pixel()` / `pick_preview_pixels()` when a preview bundle needs click-to-world evidence
+- Prefer `utils.preview` for new code paths; `utils.visualize` is compatibility-only
+
+## Motion Review
+
+- Use `references/motion-trajectory-review.md` for any motion or payload trajectory claim.
+- Require motion to be described and justified with formulas; reject prose-only trajectories.
+- If simulation evidence exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata only.
+
+## Review Checklist
+
+- [ ] Confirm the latest revision and matching stage manifest.
+- [ ] Treat planner and coder artifacts as read-only.
+- [ ] Read `solution_script.py`, helper modules, `validation_results.json`, `simulation_result.json`, `scene.json`, and the active plan context.
+- [ ] Inspect render or simulation media with `inspect_media(...)` whenever they exist.
+- [ ] If simulation evidence exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together before approval.
+- [ ] If bundle identity or a pixel-to-world question matters, resolve the exact bundle with `list_render_bundles()` and query that bundle-local snapshot before making the review call.
+- [ ] Verify plan fidelity, exact inventory grounding, robustness, manufacturability, cost/weight compliance, and motion plausibility against the approved contract and evidence.
+- [ ] Reject flaky runtime-jitter behavior, excessive or unjustified DOFs, or any render/video evidence that was not inspected.
+- [ ] Write only the stage-scoped execution review decision and comments YAML pair.
+- [ ] Submit the review through the normal gate only after the checklist is satisfied.
+
+## Comment Checklist
+
+- [ ] Record the stage evidence fields needed by the reviewer schema, including `latest_revision_verified`, `validation_success`, `simulation_success`, `visual_evidence_checked`, `dynamic_evidence_checked`, `plan_fidelity`, `robustness`, `cost_weight_compliance`, `manufacturability_compliance`, and `dof_deviation_justified` as applicable.
+- [ ] Keep the summary factual and the required fixes concrete.
+
+## References
+
+- `../engineer-coder/SKILL.md`
+- `../engineer-plan-reviewer/SKILL.md`
+- `../benchmark-reviewer/SKILL.md`
+- `../render-evidence/SKILL.md`
+- `specs/architecture/agents/handover-contracts.md`

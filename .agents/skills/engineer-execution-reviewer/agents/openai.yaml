@@ -1,0 +1,4 @@
+interface:
+  display_name: "Engineer Execution Reviewer"
+  short_description: "Review engineering execution revisions with simulation evidence and frame-indexed pose-history sidecars."
+  default_prompt: "Use this skill to review the latest engineering execution handoff after validation and simulation. Read `solution_script.py`, helper modules, `validation_results.json`, `simulation_result.json`, `scene.json`, the active plan context, and any render or video evidence; inspect media with `inspect_media(...)` when present, use `list_render_bundles()`, `query_render_bundle()`, or `pick_preview_pixel()` when exact bundle identity or click-to-world evidence matters, and inspect the simulation MP4 together with any frame-indexed `objects.parquet` sidecar before approval; verify plan fidelity, exact inventory grounding, robustness, manufacturability, cost/weight compliance, and motion plausibility, then write the stage-scoped review decision/comments YAML pair."
