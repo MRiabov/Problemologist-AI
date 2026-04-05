@@ -205,6 +205,8 @@ Worker-specific logic stays in:
 
 Validation now lives in `worker-light`; the static preview part of validation is still executed by `worker-renderer`. The point of the split is to keep validation on the worker-light geometry path while isolating the graphics stack from simulation state and keeping the fast geometry gate off the heavy worker.
 
+<!-- Note: any remaining `worker-heavy` validation-like checks are legacy residual preflight / handover guards reused by simulation and submit paths; `worker-heavy` does not own the authoritative `/benchmark/validate` gate. -->
+
 Note: we want to offload work from `worker_heavy` as much as possible because:
 
 - Network communication
