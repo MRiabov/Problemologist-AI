@@ -27,6 +27,14 @@ class FilesystemPolicy:
         elif normalized.startswith("workspace/"):
             normalized = normalized[len("workspace/") :]
 
+        # Treat the worker-facing skill mount as an alias for the canonical
+        # checked-in tree. This avoids requiring a repo-local `skills/`
+        # directory while keeping the read policy stable.
+        if normalized == "skills":
+            normalized = ".agents/skills"
+        elif normalized.startswith("skills/"):
+            normalized = ".agents/skills/" + normalized[len("skills/") :]
+
         parts: list[str] = []
         escaped_root = False
         for part in normalized.lstrip("/").split("/"):

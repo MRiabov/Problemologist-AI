@@ -17,7 +17,7 @@ def test_int_190_benchmark_coder_filesystem_scope_matches_workspace_contract():
     assert "**/*.py" in write_allow
 
     for required in {
-        "skills/**",
+        ".agents/skills/**",
         "utils/**",
         "plan.md",
         "todo.md",

@@ -65,7 +65,7 @@ from worker_heavy.workbenches.config import load_config, load_merged_config
 
 ROOT = Path(__file__).resolve().parents[2]
 SKILL_SOURCE_ROOT = ROOT / ".agents" / "skills"
-CODEX_SKILL_TREE_ROOT = Path(".agents") / "skills"
+SKILL_TREE_ROOT = Path(".agents") / "skills"
 
 _TEXT_SUFFIXES = {
     ".cfg",
@@ -353,8 +353,8 @@ def _copy_skills_tree(dst_root: Path) -> list[str]:
     if not SKILL_SOURCE_ROOT.exists():
         raise FileNotFoundError(f"Skill repository not found: {SKILL_SOURCE_ROOT}")
     return [
-        f"{CODEX_SKILL_TREE_ROOT.as_posix()}/{path}"
-        for path in _copy_tree(SKILL_SOURCE_ROOT, dst_root / CODEX_SKILL_TREE_ROOT)
+        f"{SKILL_TREE_ROOT.as_posix()}/{path}"
+        for path in _copy_tree(SKILL_SOURCE_ROOT, dst_root / SKILL_TREE_ROOT)
     ]
 
 

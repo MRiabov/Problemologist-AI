@@ -41,13 +41,13 @@ class WorkerSettings(BaseSettings):
         if self.is_integration_test:
             return Path(tempfile.gettempdir()) / "problemologist_skills"
 
-        app_skills = Path("/app/skills")
+        app_skills = Path("/app/.agents/skills")
         try:
             if app_skills.exists():
                 return app_skills
-            return Path("./skills").absolute()
+            return Path("./.agents/skills").absolute()
         except Exception:
-            return Path("./skills").absolute()
+            return Path("./.agents/skills").absolute()
 
     model_config = SettingsConfigDict(
         env_file=".env",

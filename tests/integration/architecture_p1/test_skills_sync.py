@@ -15,7 +15,9 @@ from controller.api.schemas import (
 )
 from shared.enums import AgentName, EpisodeStatus
 from shared.skills import build_skill_catalog_lines
-from shared.skills.catalog import iter_skill_catalog_entries
+from shared.skills.catalog import (
+    iter_skill_catalog_entries,
+)
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.schema import ListFilesRequest, ReadFileRequest, ReadFileResponse
 from tests.integration.agent.helpers import (
@@ -58,8 +60,8 @@ def _snapshot_tree(root: Path) -> tuple[set[str], dict[str, bytes]]:
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
-async def test_int_045_skills_sync_lifecycle():
-    """INT-045: Verify skills sync lifecycle."""
+async def test_int_045_skills_mount_lifecycle():
+    """INT-045: Verify skills mount lifecycle."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         # 1. Trigger Agent Run
         task = "Write a script that uses a skill"
@@ -95,8 +97,7 @@ async def test_int_045_skills_sync_lifecycle():
                     break
             await asyncio.sleep(1)
 
-        # 3. Verify skills are present on the worker
-        # Agent initialization copies skills to /skills directory on worker
+        # 3. Verify skills are present on the worker mount.
         fs_ls_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/ls",
             json=ListFilesRequest(path="/skills").model_dump(),
@@ -149,10 +150,6 @@ async def test_int_045_skills_sync_lifecycle():
             assert "Available skills you can read:" in prompt_text
             assert _catalog_paths(prompt_text) == expected_catalog_paths
 
-        # 7. Verify the checked-in skill mirrors stay equal to the canonical tree.
-        canonical_tree = _snapshot_tree(ROOT / ".agents" / "skills")
-        for mirror_root in (
-            ROOT / "skills",
-            ROOT / ".codex" / "skills",
-        ):
-            assert _snapshot_tree(mirror_root) == canonical_tree
+        # 7. Verify the repository does not retain a workspace mirror tree.
+        assert not (ROOT / "skills").exists()
+        assert not (ROOT / ".codex" / "skills").exists()

@@ -339,13 +339,8 @@ def _seed_skill_overlay_state(
     )
 
     skill_snapshot_root = workspace_dir / ".agents" / "skills"
-    legacy_skill_snapshot_root = workspace_dir / "skills"
     if skill_snapshot_root.exists() and not _overlay_has_skill_content(overlay_dir):
         copy_tree(skill_snapshot_root, overlay_dir)
-    elif legacy_skill_snapshot_root.exists() and not _overlay_has_skill_content(
-        overlay_dir
-    ):
-        copy_tree(legacy_skill_snapshot_root, overlay_dir)
     init_workspace_repo(overlay_dir)
     return overlay_dir, repo_root, base_commit, branch
 

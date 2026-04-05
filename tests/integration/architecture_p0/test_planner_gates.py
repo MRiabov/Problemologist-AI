@@ -2058,7 +2058,7 @@ async def test_int_010_validate_and_price_adds_benchmark_drilling_cost(
                 code=(
                     "python "
                     "/home/maksym/Work/proj/Problemologist/Problemologist-AI/"
-                    "skills/manufacturing-knowledge/scripts/validate_and_price.py"
+                    ".agents/skills/manufacturing-knowledge/scripts/validate_and_price.py"
                 ),
                 timeout=60,
             ).model_dump(mode="json"),
@@ -2182,7 +2182,7 @@ def build():
                 code=(
                     "python "
                     "/home/maksym/Work/proj/Problemologist/Problemologist-AI/"
-                    "skills/manufacturing-knowledge/scripts/validate_and_price.py"
+                    ".agents/skills/manufacturing-knowledge/scripts/validate_and_price.py"
                 ),
                 timeout=60,
             ).model_dump(mode="json"),

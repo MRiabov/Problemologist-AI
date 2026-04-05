@@ -462,7 +462,7 @@ async def test_validate_and_price_round_trips_cots_provenance():
                 code=(
                     "python "
                     "/home/maksym/Work/proj/Problemologist/Problemologist-AI/"
-                    "skills/manufacturing-knowledge/scripts/validate_and_price.py"
+                    ".agents/skills/manufacturing-knowledge/scripts/validate_and_price.py"
                 ),
                 timeout=120,
             ).model_dump(mode="json"),
@@ -566,7 +566,7 @@ async def test_validate_and_price_recomputes_manufactured_weight():
                 code=(
                     "python "
                     "/home/maksym/Work/proj/Problemologist/Problemologist-AI/"
-                    "skills/manufacturing-knowledge/scripts/validate_and_price.py"
+                    ".agents/skills/manufacturing-knowledge/scripts/validate_and_price.py"
                 ),
                 timeout=120,
             ).model_dump(mode="json"),
@@ -658,7 +658,7 @@ totals:
                 code=(
                     "python "
                     "/home/maksym/Work/proj/Problemologist/Problemologist-AI/"
-                    "skills/manufacturing-knowledge/scripts/validate_and_price.py"
+                    ".agents/skills/manufacturing-knowledge/scripts/validate_and_price.py"
                 ),
                 timeout=60,
             ).model_dump(mode="json"),

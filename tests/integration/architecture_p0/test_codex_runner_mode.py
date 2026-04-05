@@ -85,6 +85,8 @@ def _load_submission_result(stdout: str) -> PlannerSubmissionResult:
 def _workspace_snapshot(workspace_dir: Path) -> dict[str, str]:
     snapshot: dict[str, str] = {}
     for path in sorted(p for p in workspace_dir.rglob("*") if p.is_file()):
+        if any(part == ".git" for part in path.parts):
+            continue
         rel_path = path.relative_to(workspace_dir).as_posix()
         snapshot[rel_path] = hashlib.sha256(path.read_bytes()).hexdigest()
     return snapshot
