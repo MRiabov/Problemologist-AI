@@ -355,8 +355,8 @@ If a benchmark or solution handoff declares a COTS component as part of the
 intended design, the authored geometry must actually instantiate that
 component. Matching is by declared inventory, not by approximate geometry: the
 realized COTS set must preserve the declared `part_id`s, labels, and quantities
-as a multiset. A declared-but-unimported, extra, or relabeled COTS part is not
-considered used.
+as a multiset. A declared-but-unimported, extra, relabeled, or pair-swapped
+COTS part is not considered used.
 
 That check is separate from pricing. A part can be valid in YAML and still be a
 contract failure if the authored geometry never instantiates it. The existing

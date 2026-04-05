@@ -10,7 +10,10 @@ Every planner-declared label and selected COTS `part_id` must appear in
 required for validity. The planner-authored evidence and technical-drawing
 scripts must preserve the same labels, repeated quantities, and COTS
 identities as the approved inventory, and downstream coder/reviewer gates must
-enforce the same contract.
+enforce the same contract. For COTS-bearing rows, the authored label and
+COTS identity are a joint identity-bearing pair; a pair-swap that preserves the
+independent label and COTS-ID counts but assigns them to different rows is a
+contract failure.
 
 Engineering planner handoffs also require a source-backed planning proof
 layer: `plan.md` must carry an Assumption Register, Detailed Calculations, and

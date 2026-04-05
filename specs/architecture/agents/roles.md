@@ -153,7 +153,7 @@ The benchmark loop has two reviewer stages with different responsibilities.
 `Benchmark Plan Reviewer` responsibilities:
 
 01. Reject plans that mention benchmark objects, moving parts, joints, or objective markers that are not declared consistently across `plan.md`, `benchmark_definition.yaml`, and benchmark-owned `benchmark_assembly_definition.yaml`.
-02. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml`, including label/quantity/COTS-identity exactness in `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py`, a structural build123d `TechnicalDrawing` import-and-call check, plus exact identifier mention coverage in `plan.md`.
+02. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml`, including label/quantity/COTS-identity exactness in `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py`, a structural build123d `TechnicalDrawing` import-and-call check, plus exact identifier mention coverage in `plan.md`. COTS-bearing rows must preserve the authored label/COTS-ID pairing; independent label counts and COTS-ID counts are not enough if the pairings are swapped across rows.
 03. Reject plans that rely on free-form XYZ placement as the primary positioning mechanism; require selector-driven placement, explicit mates/joints, or clearly bounded absolute anchors.
 04. Validate feasibility of the planned benchmark geometry before implementation starts, including objective clearance, randomization sanity, and that the moved object/runtime jitter contract stays inside benchmark bounds.
 05. Validate non-ambiguity and completeness of planner handoff artifacts.
@@ -166,7 +166,7 @@ The benchmark loop has two reviewer stages with different responsibilities.
 
 `Benchmark Reviewer` responsibilities:
 
-1. Verify the implemented benchmark follows the approved plan or has justified, reviewable deviations, including the approved benchmark inventory labels, repeated quantities, and COTS identities.
+1. Verify the implemented benchmark follows the approved plan or has justified, reviewable deviations, including the approved benchmark inventory labels, repeated quantities, and COTS identities. Reject pair-swapped COTS rows even when the separate label and COTS-ID counts happen to match.
 2. Verify the implemented environment is geometrically valid and simulation-valid for the latest revision.
 3. Verify the benchmark remains solvable, properly randomized, and consistent with the declared motion contract and observed simulation behavior after implementation.
 4. Reject implementations that rely on free-form XYZ placement instead of selector-driven placement, explicit mates/joints, or the few absolute anchors already fixed by the approved plan.
@@ -310,7 +310,7 @@ Notably, if the plan is higher than the max_unit_cost, it can't proceed and need
 At this point, the planner can handoff the documents to the Engineering Coder. Before handoff, the planner runs a standalone script from `.agents/skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `assembly_definition.yaml` and compute assembly totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
 
 The Engineering Planner also self-validates that `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` preserve the same labels, repeated quantities, and COTS identities as `assembly_definition.yaml`, and that `solution_plan_evidence_script.py` passes the 3D self-intersection and overlap gate before `submit_plan()`. Binding numeric claims should have a trace from `Assumption Register` through `Detailed Calculations` into `Critical Constraints / Operating Envelope`, with the calculation table rows and `CALC-*` subsections remaining one-to-one.
-The Engineering Planner also ensures every planner-declared inventory label and selected COTS `part_id` appears at least once in `plan.md` as an exact identifier mention; backticks are preferred for the first mention.
+The Engineering Planner also ensures every planner-declared inventory label and selected COTS `part_id` appears at least once in `plan.md` as an exact identifier mention; backticks are preferred for the first mention. For COTS-bearing rows, the authored label and COTS identity are a single identity-bearing pair, so pair-swaps across rows are invalid even if the separate counts still look right.
 
 ### Unified implementation ownership
 
@@ -357,7 +357,7 @@ The engineering loop has two reviewer stages with different responsibilities.
 
 `Engineering Execution Reviewer` responsibilities:
 
-1. Verify implementation follows the approved plan at the inventory level, including labels, repeated quantities, COTS parts/identities, and any drafting package required by the approved plan. Justified, reviewable deviations are allowed only when they do not change the approved inventory contract.
+1. Verify implementation follows the approved plan at the inventory level, including labels, repeated quantities, COTS parts/identities, and any drafting package required by the approved plan. Justified, reviewable deviations are allowed only when they do not change the approved inventory contract. COTS pair-swaps are failures even when the label and COTS-ID multisets match separately.
 2. Verify robustness and non-flakiness of the successful solution, using simulation evidence across runtime randomization.
 3. Execute only after successful validation/simulation handoff artifacts are present (`validation_results.json`, `simulation_result.json`, and the coder-written `.manifests/engineering_execution_handoff_manifest.json` for the latest revision). This stage is post-success auditing, not initial simulation pass/fail gating.
 4. Reject execution-time evidence of free-form XYZ placement that was not grounded in the approved datum/joint chain, even when the layout happens to pass on one run.

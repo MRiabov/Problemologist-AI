@@ -22,6 +22,11 @@ from shared.workers.schema import (
     WriteFileRequest,
 )
 from tests.integration.backend_utils import selected_backend
+from worker_heavy.utils.file_validation import (
+    _assembly_script_expected_tokens,
+    _benchmark_script_expected_tokens,
+    _validate_assembly_inventory_parity,
+)
 
 WORKER_LIGHT_URL = "http://127.0.0.1:18001"
 WORKER_HEAVY_URL = "http://127.0.0.1:18002"
@@ -459,3 +464,180 @@ The plan needs a traceable calculation instead of a freeform claim.
         assert "observed identities: label=wrong_motor, cots_id=ServoMotor_DS3218" in (
             submit_data.message
         )
+
+
+def test_int_130_inventory_expected_tokens_do_not_double_count_final_assembly():
+    benchmark_definition = BenchmarkDefinition.model_validate(
+        {
+            "objectives": {
+                "goal_zone": {"min": [20.0, -10.0, 0.0], "max": [40.0, 10.0, 20.0]},
+                "forbid_zones": [],
+                "build_zone": {
+                    "min": [-140.0, -140.0, -20.0],
+                    "max": [140.0, 140.0, 140.0],
+                },
+            },
+            "benchmark_parts": [
+                {
+                    "part_id": "fixture_a",
+                    "label": "fixture_a",
+                    "metadata": {"fixed": True, "material_id": "aluminum_6061"},
+                },
+                {
+                    "part_id": "fixture_b",
+                    "label": "fixture_b",
+                    "metadata": {"fixed": True, "material_id": "hdpe"},
+                },
+            ],
+            "physics": {"backend": "GENESIS"},
+            "fluids": [],
+            "simulation_bounds": {
+                "min": [-200.0, -200.0, -50.0],
+                "max": [200.0, 200.0, 200.0],
+            },
+            "moved_object": {
+                "label": "target_ball",
+                "shape": "sphere",
+                "material_id": "abs",
+                "start_position": [0.0, 0.0, 50.0],
+                "runtime_jitter": [0.0, 0.0, 0.0],
+            },
+            "constraints": {"max_unit_cost": 100.0, "max_weight_g": 1000.0},
+        }
+    )
+    benchmark_assembly = AssemblyDefinition.model_validate(
+        {
+            "constraints": {
+                "planner_target_max_unit_cost_usd": 90.0,
+                "planner_target_max_weight_g": 900.0,
+            },
+            "manufactured_parts": [
+                {
+                    "part_name": "fixture_a",
+                    "part_id": "fixture_a",
+                    "manufacturing_method": "CNC",
+                    "material_id": "aluminum_6061",
+                    "quantity": 1,
+                    "part_volume_mm3": 1000.0,
+                    "stock_bbox_mm": {"x": 10.0, "y": 10.0, "z": 10.0},
+                    "stock_volume_mm3": 1000.0,
+                    "removed_volume_mm3": 0.0,
+                    "estimated_unit_cost_usd": 5.0,
+                },
+                {
+                    "part_name": "fixture_b",
+                    "part_id": "fixture_b",
+                    "manufacturing_method": "CNC",
+                    "material_id": "hdpe",
+                    "quantity": 1,
+                    "part_volume_mm3": 1000.0,
+                    "stock_bbox_mm": {"x": 10.0, "y": 10.0, "z": 10.0},
+                    "stock_volume_mm3": 1000.0,
+                    "removed_volume_mm3": 0.0,
+                    "estimated_unit_cost_usd": 5.0,
+                },
+            ],
+            "cots_parts": [],
+            "final_assembly": [
+                {"name": "fixture_a", "config": {"dofs": []}},
+                {"name": "fixture_b", "config": {"dofs": []}},
+            ],
+            "totals": {
+                "estimated_unit_cost_usd": 5.0,
+                "estimated_weight_g": 10.0,
+                "estimate_confidence": "high",
+            },
+        }
+    )
+    assert _validate_assembly_inventory_parity(benchmark_assembly) == []
+    benchmark_tokens = _benchmark_script_expected_tokens(
+        benchmark_definition=benchmark_definition,
+        assembly_definition=benchmark_assembly,
+    )
+    assert benchmark_tokens["fixture_a"] == 1
+    assert benchmark_tokens["fixture_b"] == 1
+
+    benchmark_assembly_mismatch = AssemblyDefinition.model_validate(
+        {
+            "constraints": {
+                "planner_target_max_unit_cost_usd": 90.0,
+                "planner_target_max_weight_g": 900.0,
+            },
+            "manufactured_parts": [
+                {
+                    "part_name": "fixture_a",
+                    "part_id": "fixture_a",
+                    "manufacturing_method": "CNC",
+                    "material_id": "aluminum_6061",
+                    "quantity": 1,
+                    "part_volume_mm3": 1000.0,
+                    "stock_bbox_mm": {"x": 10.0, "y": 10.0, "z": 10.0},
+                    "stock_volume_mm3": 1000.0,
+                    "removed_volume_mm3": 0.0,
+                    "estimated_unit_cost_usd": 5.0,
+                }
+            ],
+            "cots_parts": [],
+            "final_assembly": [
+                {"name": "fixture_a", "config": {"dofs": []}},
+                {"name": "fixture_a", "config": {"dofs": []}},
+            ],
+            "totals": {
+                "estimated_unit_cost_usd": 5.0,
+                "estimated_weight_g": 10.0,
+                "estimate_confidence": "high",
+            },
+        }
+    )
+    parity_errors = _validate_assembly_inventory_parity(benchmark_assembly_mismatch)
+    assert any(
+        "final_assembly parity mismatch for 'fixture_a'" in error
+        for error in parity_errors
+    )
+
+    engineer_assembly = AssemblyDefinition.model_validate(
+        {
+            "constraints": {
+                "planner_target_max_unit_cost_usd": 90.0,
+                "planner_target_max_weight_g": 900.0,
+            },
+            "manufactured_parts": [
+                {
+                    "part_name": "base_plate",
+                    "part_id": "base_plate",
+                    "manufacturing_method": "CNC",
+                    "material_id": "aluminum_6061",
+                    "quantity": 1,
+                    "part_volume_mm3": 1000.0,
+                    "stock_bbox_mm": {"x": 10.0, "y": 10.0, "z": 10.0},
+                    "stock_volume_mm3": 1000.0,
+                    "removed_volume_mm3": 0.0,
+                    "estimated_unit_cost_usd": 5.0,
+                }
+            ],
+            "cots_parts": [
+                {
+                    "part_id": "ServoMotor_DS3218",
+                    "manufacturer": "pololu",
+                    "unit_cost_usd": 18.0,
+                    "weight_g": 60.0,
+                    "quantity": 2,
+                    "source": "catalog",
+                }
+            ],
+            "final_assembly": [
+                {"name": "base_plate", "config": {"dofs": []}},
+                {"name": "drive_motor", "config": {"dofs": []}},
+                {"name": "drive_motor", "config": {"dofs": []}},
+            ],
+            "totals": {
+                "estimated_unit_cost_usd": 41.0,
+                "estimated_weight_g": 130.0,
+                "estimate_confidence": "high",
+            },
+        }
+    )
+    engineer_tokens = _assembly_script_expected_tokens(engineer_assembly)
+    assert engineer_tokens["base_plate"] == 1
+    assert engineer_tokens["drive_motor"] == 2
+    assert engineer_tokens["ServoMotor_DS3218"] == 2

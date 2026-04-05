@@ -102,7 +102,7 @@ Planner handoff packages are binding inventories, not loose geometry hints.
 Rules:
 
 01. The planner-authored evidence script and technical-drawing script must preserve the same multiset of authored labels and quantities as the associated plan/YAML inventory.
-02. Inventory equality is checked by label and COTS-identity multiplicity, not by ordering.
+02. Inventory equality is checked by label and COTS-identity multiplicity, not by ordering. For COTS-bearing rows, the label and COTS identity travel together as one identity-bearing pair; validators must reject pair-swaps that preserve the separate label and COTS-ID counts but assign them to different rows.
 03. Repeated references in `final_assembly` count as quantity and must survive into the planner drafting scripts and downstream implementation.
 04. The planner must self-validate this exactness before `submit_plan()`; if the evidence or drawing script drifts, the handoff is invalid.
 05. The coder and reviewer must compare the implemented model against the approved inventory and reject missing, extra, or relabeled items.
@@ -505,7 +505,7 @@ Expected flow:
 06. If the solution requires drilling into benchmark-owned fixtures, planner must declare each intended drilled fastener hole under `environment_drill_operations`; undeclared drilling is invalid handoff.
 07. Each declared benchmark drilling operation contributes non-zero static drilling cost. For now that cost is defined centrally in `manufacturing_config.yaml` and must be included in planner pricing totals.
 08. The approved planner handoff is a binding inventory for the implemented solution. The Engineering Coder must realize the same planner-declared manufactured-part and COTS inventory as a multiset: labels and quantities must match, including repeated references in `final_assembly`.
-09. Declared COTS components are not advisory. Declared COTS `part_id`s, labels, and quantities must be instantiated in authored geometry with the same counts; missing, extra, or relabeled COTS parts are handoff failures, even if the solution still solves the task.
+09. Declared COTS components are not advisory. Declared COTS `part_id`s, labels, and quantities must be instantiated in authored geometry with the same counts; missing, extra, relabeled, or pair-swapped COTS parts are handoff failures, even if the solution still solves the task.
 10. Internal construction details may change only when the approved inventory, motion contract, and drawing intent remain unchanged.
 
 Minimum motion metadata fields inside `final_assembly.parts` entries:

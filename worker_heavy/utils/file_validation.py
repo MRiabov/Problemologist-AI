@@ -142,25 +142,73 @@ def _planner_plan_grounding_tokens_from_benchmark(
     return tokens
 
 
-def _planner_plan_grounding_tokens_from_assembly(
+def _validate_assembly_inventory_parity(
     assembly_definition: AssemblyDefinition,
-) -> Counter[str]:
-    tokens: Counter[str] = Counter()
+) -> list[str]:
+    """Require manufactured-part labels to match their final_assembly counts."""
+    declared_tokens: Counter[str] = Counter()
     for part in assembly_definition.manufactured_parts:
         if part.part_name.strip():
-            tokens[part.part_name.strip()] += 1
-    for cots_part in assembly_definition.cots_parts:
-        if cots_part.part_id.strip():
-            tokens[cots_part.part_id.strip()] += 1
+            declared_tokens[part.part_name.strip()] += part.quantity
+
+    final_assembly_tokens: Counter[str] = Counter()
     for item in assembly_definition.final_assembly:
         if isinstance(item, SubassemblyEstimate):
             if item.subassembly_id.strip():
-                tokens[item.subassembly_id.strip()] += 1
+                final_assembly_tokens[item.subassembly_id.strip()] += 1
             for part in item.parts:
                 if part.name.strip():
-                    tokens[part.name.strip()] += 1
+                    final_assembly_tokens[part.name.strip()] += 1
         elif isinstance(item, PartConfig) and item.name.strip():
-            tokens[item.name.strip()] += 1
+            final_assembly_tokens[item.name.strip()] += 1
+
+    errors: list[str] = []
+    for token in sorted(set(declared_tokens) & set(final_assembly_tokens)):
+        declared_count = declared_tokens.get(token, 0)
+        final_assembly_count = final_assembly_tokens.get(token, 0)
+        if declared_count != final_assembly_count:
+            errors.append(
+                "assembly_definition.yaml: final_assembly parity mismatch for "
+                f"'{token}' (declared {declared_count}, final_assembly "
+                f"{final_assembly_count}; final_assembly must match the "
+                "declared inventory exactly)"
+            )
+    return errors
+
+
+def _planner_plan_grounding_tokens_from_assembly(
+    assembly_definition: AssemblyDefinition,
+) -> Counter[str]:
+    # Grounding tokens come from the authored declaration and the final_assembly
+    # labels. Overlapping manufactured-part labels are parity-checked separately
+    # so the merge here does not become a silent fallback for mismatches.
+    declared_tokens: Counter[str] = Counter()
+    for part in assembly_definition.manufactured_parts:
+        if part.part_name.strip():
+            declared_tokens[part.part_name.strip()] += part.quantity
+    for cots_part in assembly_definition.cots_parts:
+        if cots_part.part_id.strip():
+            declared_tokens[cots_part.part_id.strip()] += cots_part.quantity
+
+    final_assembly_tokens: Counter[str] = Counter()
+    for item in assembly_definition.final_assembly:
+        if isinstance(item, SubassemblyEstimate):
+            if item.subassembly_id.strip():
+                final_assembly_tokens[item.subassembly_id.strip()] += 1
+            for part in item.parts:
+                if part.name.strip():
+                    final_assembly_tokens[part.name.strip()] += 1
+        elif isinstance(item, PartConfig) and item.name.strip():
+            final_assembly_tokens[item.name.strip()] += 1
+
+    if not final_assembly_tokens:
+        return declared_tokens
+
+    tokens = Counter(declared_tokens)
+    for token in set(declared_tokens) | set(final_assembly_tokens):
+        tokens[token] = max(
+            declared_tokens.get(token, 0), final_assembly_tokens.get(token, 0)
+        )
     return tokens
 
 
@@ -185,13 +233,36 @@ def _benchmark_script_expected_tokens(
 def _assembly_script_expected_tokens(
     assembly_definition: AssemblyDefinition,
 ) -> Counter[str]:
-    expected: Counter[str] = Counter()
+    # Mirror the planner-side contract: labels from the declared inventory and
+    # final_assembly are both grounded, while overlapping manufactured-part
+    # labels are parity-checked separately.
+    declared_tokens: Counter[str] = Counter()
     for part in assembly_definition.manufactured_parts:
         if part.part_name.strip():
-            expected[part.part_name.strip()] += part.quantity
+            declared_tokens[part.part_name.strip()] += part.quantity
     for cots_part in assembly_definition.cots_parts:
         if cots_part.part_id.strip():
-            expected[cots_part.part_id.strip()] += cots_part.quantity
+            declared_tokens[cots_part.part_id.strip()] += cots_part.quantity
+
+    final_assembly_tokens: Counter[str] = Counter()
+    for item in assembly_definition.final_assembly:
+        if isinstance(item, SubassemblyEstimate):
+            if item.subassembly_id.strip():
+                final_assembly_tokens[item.subassembly_id.strip()] += 1
+            for part in item.parts:
+                if part.name.strip():
+                    final_assembly_tokens[part.name.strip()] += 1
+        elif isinstance(item, PartConfig) and item.name.strip():
+            final_assembly_tokens[item.name.strip()] += 1
+
+    if not final_assembly_tokens:
+        return declared_tokens
+
+    expected = Counter(declared_tokens)
+    for token in set(declared_tokens) | set(final_assembly_tokens):
+        expected[token] = max(
+            declared_tokens.get(token, 0), final_assembly_tokens.get(token, 0)
+        )
     return expected
 
 
@@ -1980,6 +2051,8 @@ def validate_planner_handoff_cross_contract(
         AgentName.ELECTRONICS_PLANNER.value,
         AgentName.ELECTRONICS_REVIEWER.value,
     }
+
+    errors.extend(_validate_assembly_inventory_parity(assembly_definition))
 
     if plan_text is not None:
         if is_benchmark_planner:
