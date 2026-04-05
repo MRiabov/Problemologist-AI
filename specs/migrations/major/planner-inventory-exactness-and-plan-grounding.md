@@ -91,7 +91,7 @@ enforcement is still fragmented.
 | `controller/agent/node_entry_validation.py` | Validates node entry and some handoff constraints. | It needs fail-closed exactness gates for planner handoff packages. |
 | `worker_heavy/utils/file_validation.py` | Validates schema and placeholder hygiene. | It must also participate in exact-mention and inventory-multiset checks where planner artifacts are validated. |
 | `worker_heavy/utils/handover.py` | Collects and packages handoff artifacts. | It must reject mismatched inventory before a coder or reviewer sees it. |
-| `skills/manufacturing-knowledge/scripts/validate_and_price.py`, `shared/models/schemas.py`, `worker_heavy/utils/dfm.py`, `controller/agent/benchmark/tools.py` | Define and enforce the current cost/weight contract. | They normalize cost but still leave weight as a planner-authored ceiling/estimate instead of a deterministic total. |
+| `.agents/skills/manufacturing-knowledge/scripts/validate_and_price.py`, `shared/models/schemas.py`, `worker_heavy/utils/dfm.py`, `controller/agent/benchmark/tools.py` | Define and enforce the current cost/weight contract. | They normalize cost but still leave weight as a planner-authored ceiling/estimate instead of a deterministic total. |
 | `worker_heavy/utils/file_validation.py`, `controller/agent/node_entry_validation.py`, `worker_heavy/utils/validation.py` | Validate planner-authored evidence and technical-drawing scripts. | They still need to make physical self-intersection/overlap a first-class handoff failure instead of a follow-up note. |
 | `shared/utils/agent/__init__.py` | Loads scripts and render evidence. | It needs to participate in the exactness contract for planner-authored evidence scripts. |
 | `config/prompts.yaml`, `controller/agent/prompt_manager.py` | Planner prompt assembly does not yet teach exact-mention and inventory-exactness self-checks explicitly enough. | The planner needs the exactness contract in its guidance path so it can self-validate before handoff. |
@@ -342,7 +342,7 @@ The implementation should touch the smallest set of files that enforce the
 new contract:
 
 - `controller/agent/node_entry_validation.py`
-- `skills/manufacturing-knowledge/scripts/validate_and_price.py`
+- `.agents/skills/manufacturing-knowledge/scripts/validate_and_price.py`
 - `shared/assets/template_repos/engineer/plan.md`
 - `shared/workers/markdown_validator.py`
 - `controller/api/routes/episodes.py`

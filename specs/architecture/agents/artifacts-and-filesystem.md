@@ -25,7 +25,7 @@ The shared starter set includes `.admin/clear_env.py`, which resets the current
 seeded workspace in place without changing the conversation context.
 The shared starter set also includes `shared/agent_templates/common/.gitignore`, which is copied into each materialized workspace as read-only workspace metadata so the ignore policy stays inspectable without being agent-writable. That ignore file ignores the workspace `renders/` tree while re-including `*.json` files, so render parquet and other binary artifacts stay out of git history but JSON manifests remain visible.
 PromptManager consumes these prompt-context inputs when it materializes the runtime prompt.
-For CLI-provider-backed sessions, the runtime materializes the checked-in `.agents/skills/` tree into `.agents/skills/` in the workspace. That copy is read-only runtime context, not canonical source. All CLI-provider implementations follow this same workspace-materialization contract. See [agent-skill.md](./agent-skill.md) for the source-tree and promotion contract.
+For CLI-provider-backed sessions, the runtime reads the checked-in `.agents/skills/` tree directly from the workspace checkout. That content is read-only runtime context, not canonical source. Controller-backed runtime surfaces may also expose it through the `/skills` mount. See [agent-skill.md](./agent-skill.md) for the source-tree and promotion contract.
 
 Skill-training sessions may additionally materialize `suggested_skills/` as a writable session-local worktree/checkpoint seeded from the approved `.agents/skills/` tree. That overlay is session-scoped, not canonical source, and the training loop should read it first when it exists. Publication back into canonical `.agents/skills/` happens through a separate promotion flow.
 

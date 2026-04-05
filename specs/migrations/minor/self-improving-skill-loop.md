@@ -28,7 +28,7 @@ That workflow works, but it is repetitive and it fragments conversation context 
 
 The architecture already has the right storage boundaries:
 
-1. canonical `skills/`
+1. canonical `.agents/skills/`
 2. workspace copies in `.agents/skills/`
 3. writable `suggested_skills/`
 4. durable run memory in `journal.md`
@@ -45,7 +45,7 @@ What is missing is a dedicated training primitive that can reopen the same sessi
 5. The first follow-up turn performs self-analysis.
 6. The second follow-up turn drafts or repairs the skill content.
 7. Generated skill output is written to `suggested_skills/` first.
-8. Promotion into the checked-in `skills/` tree remains a separate reviewable step.
+8. Promotion into the checked-in `.agents/skills/` tree remains a separate reviewable step.
 9. The loop is bounded and stays asynchronous relative to the main task, eval run, or training pass.
 
 ## Required Work
@@ -69,7 +69,7 @@ What is missing is a dedicated training primitive that can reopen the same sessi
 ### 3. Preserve staged skill output
 
 - Write the skill draft into `suggested_skills/`.
-- Keep canonical `skills/` as the reviewed source of truth.
+- Keep canonical `.agents/skills/` as the reviewed source of truth.
 - Preserve the current contract that skill updates are explicit and versioned.
 
 ### 4. Wire the orchestration into the eval backend
@@ -83,7 +83,7 @@ What is missing is a dedicated training primitive that can reopen the same sessi
 
 - Do not replace the CLI provider with a new transport.
 - Do not create a new canonical skill source.
-- Do not auto-promote generated skills into `skills/`.
+- Do not auto-promote generated skills into `.agents/skills/`.
 - Do not make the loop unbounded.
 - Do not collapse the training loop back into the eval orchestration core or `dataset/evals/run_evals.py`.
 - Do not introduce a dedicated journalling agent or skill agent as a required architecture stage.
@@ -106,7 +106,7 @@ The safe order is:
 3. Skill-draft output lands in `suggested_skills/` before any promotion step.
 4. The retained episode bundle preserves the short outputs and artifacts needed for downstream training.
 5. The loop does not require manual copy/paste of prior context.
-6. The canonical skill source remains the checked-in `skills/` tree.
+6. The canonical skill source remains the checked-in `.agents/skills/` tree.
 
 ## Migration Checklist
 
@@ -142,9 +142,9 @@ Use this checklist to track the implementation from backend wiring through runti
 
 - [x] Write the self-analysis output into the follow-up flow before generating skill changes.
 - [x] Write generated skill content into `suggested_skills/` first.
-- [x] Keep canonical `skills/` as the reviewed source of truth.
+- [x] Keep canonical `.agents/skills/` as the reviewed source of truth.
 - [x] Preserve the existing rule that skill updates are explicit, versioned, and reviewable.
-- [x] Keep promotion into `skills/` as a separate step, not an automatic side effect of the loop.
+- [x] Keep promotion into `.agents/skills/` as a separate step, not an automatic side effect of the loop.
 
 ### Prompt and artifact wiring
 
@@ -188,4 +188,4 @@ The implementation should touch the smallest set of files that actually enforce 
 
 ## Follow-on Refinement
 
-The skill-output staging contract is refined further in [skill-worktree-promotion-arbiter.md](./skill-worktree-promotion-arbiter.md). That follow-on migration treats `suggested_skills/` as a session-local worktree/checkpoint and routes publication into canonical `skills/` through a separate promotion arbiter.
+The skill-output staging contract is refined further in [skill-worktree-promotion-arbiter.md](./skill-worktree-promotion-arbiter.md). That follow-on migration treats `suggested_skills/` as a session-local worktree/checkpoint and routes publication into canonical `.agents/skills/` through a separate promotion arbiter.

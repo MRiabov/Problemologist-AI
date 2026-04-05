@@ -22,8 +22,8 @@ The checked-in `.agents/skills/` tree is the canonical skill source.
 
 Runtime copies are read-only inputs:
 
-1. CLI-provider workspaces materialize the tree into `.agents/skills/`.
-2. Controller-backed runtime surfaces expose the same content through `/skills`.
+1. CLI-provider workspaces read the checked-in `.agents/skills/` tree directly from the workspace checkout.
+2. Controller-backed runtime surfaces expose the same content through the `/skills` mount.
 3. `suggested_skills/` is the active session-local worktree/checkpoint for a training run, seeded from an approved `.agents/skills/` snapshot, and is not canonical source.
 4. Any compact generated skill index is a discoverability aid only, not a second source of truth.
 
@@ -35,7 +35,7 @@ Skill-training and replay loops resolve the active session overlay first when `s
 New training runs start from the approved canonical snapshot or locked commit, not from another run's mutable overlay.
 Runtime surfaces may advertise the active overlay explicitly through `PROBLEMOLOGIST_SKILL_OVERLAY_ROOT` so prompt assembly and catalog helpers can prefer the session-local worktree without guessing.
 
-Skill sync is startup-configurable, and integration tests may use deterministic local skill paths.
+Skill discovery is deterministic, and integration tests may point at the checked-in `.agents/skills/` tree or the `/skills` mount.
 
 Role prompts and handoff artifacts should identify required skill dependencies when the task depends on them. Common examples include CAD drafting, manufacturing knowledge, and task-specific helper skills.
 

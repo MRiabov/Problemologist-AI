@@ -136,7 +136,7 @@ This section is the smallest must-pass set. Keep it narrowly scoped, determinist
 | INT-042 | Async callbacks/webhook completion path | Long-running simulation/manufacturing checks complete via async callback path with durable state transitions. |
 | INT-043 | Batch-first execution path | Batch job submission across multiple episodes executes asynchronously with correct per-episode isolation. |
 | INT-044 | Schemathesis fuzzing integration | Fuzz critical endpoints for strict API behavior; no schema drift/crashers on core paths. |
-| INT-045 | Skills sync lifecycle | Worker pulls expected skills at run start; skill read events captured; skill version metadata recorded. |
+| INT-045 | Skills mount lifecycle | Worker exposes expected skills through the runtime mount at run start; skill read events captured; skill version metadata recorded. |
 | INT-057 | Backup-to-S3 logging flow | Backup endpoint writes expected snapshot/object(s) to S3 and persists backup status metadata (size, duration, key). |
 | INT-058 | Cross-system correlation IDs | A single episode/trace can be correlated across controller logs/events, Temporal records, and S3 asset metadata. |
 | INT-059 | Langfuse trace linkage in live runs | With valid `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY`, live episode execution emits trace records linked by non-empty `langfuse_trace_id`; tool/LLM/event traces are correlated to the same run-level trace identity. |

@@ -298,7 +298,7 @@ Read/write split:
 
 Mount paths must be defined explicitly for split workers (light/heavy/shared) and tested to avoid dead mounts after refactors.
 
-Skills sync is startup-configurable; in integration tests we can use local deterministic skills paths.
+Skills are read from the checked-in `.agents/skills/` tree directly; integration tests can use that deterministic checkout path without a repo-local mirror.
 
 For videos and other renderer-produced files, we will use a `CompositeBackend`-style handoff. The `/render/` folder is routed to S3 so renderer output can be materialized through object keys rather than relayed as controller bytes; the proxy hop can update the local workspace after the S3 write.
 

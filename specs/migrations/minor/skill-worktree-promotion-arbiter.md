@@ -17,7 +17,7 @@ The previous migration taught the runtime how to resume the same session, write 
 
 1. `suggested_skills/` becomes the active per-run skill worktree/checkpoint for a training session.
 2. Later turns read the session overlay first instead of treating it as a dead-end copy.
-3. Publication back into the checked-in `skills/` tree is handled by a separate promotion arbiter.
+3. Publication back into the checked-in `.agents/skills/` tree is handled by a separate promotion arbiter.
 
 The target architecture is described in [agent-skill.md](../../architecture/agents/agent-skill.md), [agent-harness.md](../../architecture/agents/agent-harness.md), [prompt-management.md](../../architecture/agents/prompt-management.md), [evals-architecture.md](../../architecture/evals-architecture.md), and [observability.md](../../architecture/observability.md).
 
@@ -25,7 +25,7 @@ The target architecture is described in [agent-skill.md](../../architecture/agen
 
 The current training story still has two implicit copies of the skill tree:
 
-1. canonical `skills/`, which is approved and published,
+1. canonical `.agents/skills/`, which is approved and published,
 2. `suggested_skills/`, which currently behaves like staging.
 
 That staging model is too weak for recursive improvement. It makes later turns behave as if they must rediscover their own draft state, and it leaves conflict resolution underspecified when multiple training runs produce updates for the same skill.
@@ -36,14 +36,14 @@ The desired model is closer to a session-local worktree:
 2. the overlay is derived from an approved canonical base commit,
 3. later turns see their own prior skill edits immediately,
 4. independent runs do not share mutable draft state,
-5. a separate arbiter decides whether and how the resulting diff gets published into canonical `skills/`.
+5. a separate arbiter decides whether and how the resulting diff gets published into canonical `.agents/skills/`.
 
 This separates learning from publication and keeps the training loop from becoming a git/publishing workflow itself.
 
 ## Target State
 
 1. `suggested_skills/` is the active skill worktree/checkpoint for one training session.
-2. The training CLI resolves the session overlay first, then the approved canonical `skills/` tree.
+2. The training CLI resolves the session overlay first, then the approved canonical `.agents/skills/` tree.
 3. New training runs start from the approved canonical skill snapshot or locked commit, not from another run's in-flight overlay.
 4. The training loop may write into `suggested_skills/`, but it does not publish canonical changes directly.
 5. A separate promotion arbiter branches the skills repository, applies the session diff, resolves or escalates conflicts, and opens or updates a PR.
@@ -55,13 +55,13 @@ This separates learning from publication and keeps the training loop from becomi
 ### 1. Define overlay-first loading
 
 - Resolve skill reads against the active session overlay when `suggested_skills/` is present.
-- Fall back to the approved canonical `skills/` tree only when the overlay does not contain the requested file.
+- Fall back to the approved canonical `.agents/skills/` tree only when the overlay does not contain the requested file.
 - Keep the overlay session-scoped so parallel runs do not share mutable draft state.
 
 ### 2. Separate learning from publication
 
 - Keep the training loop responsible for writing deltas into the session overlay.
-- Add or formalize a promotion arbiter that takes the session diff and publishes it into canonical `skills/`.
+- Add or formalize a promotion arbiter that takes the session diff and publishes it into canonical `.agents/skills/`.
 - Keep the arbiter out of the normal training prompt path so the loop does not need to reason about git branching mechanics on every turn.
 
 ### 3. Handle merge conflicts explicitly
@@ -86,7 +86,7 @@ This separates learning from publication and keeps the training loop from becomi
 - Do not make the training loop itself manage canonical branch publication.
 - Do not chain unrelated training runs off each other's mutable overlays.
 - Do not introduce a dedicated long-lived skill-learner stage.
-- Do not auto-merge every draft into canonical `skills/`.
+- Do not auto-merge every draft into canonical `.agents/skills/`.
 - Do not require the arbiter to be the same runtime component as the learning loop.
 - Do not keep legacy skill-learning or git-sync helper paths around after the arbiter has taken over their responsibility.
 
@@ -105,10 +105,10 @@ The safe order is:
 
 1. A resumed skill-training session sees its own prior edits through the session overlay without copying them back into memory by hand.
 2. New training runs start from the approved canonical base, not from another run's mutable overlay.
-3. A promotion arbiter can publish a session diff into canonical `skills/` and record the resulting commit or PR state.
+3. A promotion arbiter can publish a session diff into canonical `.agents/skills/` and record the resulting commit or PR state.
 4. Conflicting skill updates are either merged deliberately or escalated with traceable evidence; they are not silently dropped.
 5. The observability trail can attribute a published skill version to the originating session and base commit.
-6. The canonical `skills/` tree remains the reviewed source of truth.
+6. The canonical `.agents/skills/` tree remains the reviewed source of truth.
 
 ## Migration Checklist
 

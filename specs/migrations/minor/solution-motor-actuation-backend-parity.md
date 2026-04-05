@@ -294,9 +294,9 @@ enforce the new contract:
 - `tests/worker_heavy/simulation/test_motor_overload.py`
 - `tests/worker_heavy/simulation/test_genesis_builder_electronics.py`
 - `tests/integration/architecture_p1/test_electronics_full.py`
-- `.codex/skills/electromechanics-syntax/SKILL.md`
 - `.agents/skills/electromechanics-syntax/SKILL.md`
-- `.codex/skills/runtime-script-contract/SKILL.md`
+- `.agents/skills/electromechanics-syntax/SKILL.md`
+- `.agents/skills/runtime-script-contract/SKILL.md`
 - `.agents/skills/runtime-script-contract/SKILL.md`
 - `specs/architecture/simulation-and-rendering.md`
 - `specs/architecture/electronics-and-electromechanics.md`

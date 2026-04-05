@@ -328,8 +328,8 @@ enforce the new contract:
 - `specs/architecture/agents/agent-skill.md`
 - `specs/architecture/agents/auxiliary-agent-tools.md`
 - `specs/architecture/observability.md`
-- `skills/benchmark-coder/SKILL.md`
-- `skills/engineer-coder/SKILL.md`
+- `.agents/skills/benchmark-coder/SKILL.md`
+- `.agents/skills/engineer-coder/SKILL.md`
 - `config/prompts.yaml` if the refusal command needs to be visible in the
   workspace prompt
 - integration tests that exercise refusal submission, validation, manifest
