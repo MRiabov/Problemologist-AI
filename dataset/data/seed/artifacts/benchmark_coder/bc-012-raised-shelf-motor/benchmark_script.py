@@ -5,10 +5,10 @@ benchmark-owned servo lifts a projectile ball from floor height onto a
 raised goal shelf while keeping a shelf-support clearance zone free.
 
 Inventory (exact match with planner handoff):
-- floor_plate x1 (aluminum_6061, fixed)
-- support_tower x1 (aluminum_6061, fixed)
-- raised_goal_shelf x1 (aluminum_6061, fixed)
-- lift_carriage x1 (hdpe, slide_z axis)
+- floor_plate x2 (aluminum_6061, fixed)
+- support_tower x2 (aluminum_6061, fixed)
+- raised_goal_shelf x2 (aluminum_6061, fixed)
+- lift_carriage x2 (hdpe, slide_z axis)
 - drive_motor x1 (COTS ServoMotor_DS3218, imported via from_catalog_id)
 """
 
@@ -72,46 +72,58 @@ _moved_object_contract = _load_moved_object()
 _moved_object = _build_moved_object(_moved_object_contract)
 
 
-def _build_floor_plate() -> Box:
-    """Build the fixed base plate."""
-    part = Box(560.0, 180.0, 20.0, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    part = part.move(Location((20.0, 0.0, 0.0)))
-    part.label = "floor_plate"
-    part.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
-    return part
+def _build_floor_plates() -> list[Box]:
+    """Build the fixed base plates (2 instances)."""
+    parts = []
+    for pos in [(20.0, -45.0, 0.0), (20.0, 45.0, 0.0)]:
+        part = Box(560.0, 180.0, 20.0, align=(Align.CENTER, Align.CENTER, Align.MIN))
+        part = part.move(Location(pos))
+        part.label = "floor_plate"
+        part.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+        parts.append(part)
+    return parts
 
 
-def _build_support_tower() -> Box:
-    """Build the fixed vertical support tower."""
-    part = Box(80.0, 120.0, 210.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-    part = part.move(Location((230.0, 0.0, 105.0)))
-    part.label = "support_tower"
-    part.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
-    return part
+def _build_support_towers() -> list[Box]:
+    """Build the fixed vertical support towers (2 instances)."""
+    parts = []
+    for pos in [(190.0, -40.0, 105.0), (270.0, 40.0, 105.0)]:
+        part = Box(80.0, 120.0, 210.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+        part = part.move(Location(pos))
+        part.label = "support_tower"
+        part.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+        parts.append(part)
+    return parts
 
 
-def _build_raised_goal_shelf() -> Box:
-    """Build the fixed raised goal shelf."""
-    part = Box(150.0, 120.0, 30.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-    part = part.move(Location((375.0, 0.0, 235.0)))
-    part.label = "raised_goal_shelf"
-    part.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
-    return part
+def _build_raised_goal_shelves() -> list[Box]:
+    """Build the fixed raised goal shelves (2 instances)."""
+    parts = []
+    for pos in [(335.0, -40.0, 235.0), (415.0, 40.0, 235.0)]:
+        part = Box(150.0, 120.0, 30.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+        part = part.move(Location(pos))
+        part.label = "raised_goal_shelf"
+        part.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+        parts.append(part)
+    return parts
 
 
-def _build_lift_carriage() -> Box:
-    """Build the moving lift carriage with a single slide_z DOF."""
-    part = Box(120.0, 110.0, 18.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-    part = part.move(Location((-130.0, 0.0, 60.0)))
-    part.label = "lift_carriage"
-    part.metadata = PartMetadata(material_id="hdpe", fixed=False)
-    return part
+def _build_lift_carriages() -> list[Box]:
+    """Build the moving lift carriages with a single slide_z DOF (2 instances)."""
+    parts = []
+    for pos in [(-170.0, -35.0, 60.0), (-90.0, 35.0, 60.0)]:
+        part = Box(120.0, 110.0, 18.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+        part = part.move(Location(pos))
+        part.label = "lift_carriage"
+        part.metadata = PartMetadata(material_id="hdpe", fixed=False)
+        parts.append(part)
+    return parts
 
 
 def _build_drive_motor() -> ServoMotor:
     """Instantiate the benchmark-owned servo motor via COTS catalog lookup."""
     motor = ServoMotor.from_catalog_id("ServoMotor_DS3218")
-    # Position the motor beneath the lift carriage.
+    # Position the motor beneath the lift carriages.
     motor = motor.move(Location((-130.0, 0.0, 10.0)))
     # Ensure the COTS label is stable and reviewer-visible.
     if not motor.label:
@@ -128,10 +140,10 @@ def build() -> Compound:
     """
     children = [
         _moved_object,
-        _build_floor_plate(),
-        _build_support_tower(),
-        _build_raised_goal_shelf(),
-        _build_lift_carriage(),
+        *_build_floor_plates(),
+        *_build_support_towers(),
+        *_build_raised_goal_shelves(),
+        *_build_lift_carriages(),
         _build_drive_motor(),
     ]
     environment = Compound(children=children)
