@@ -43,7 +43,7 @@ The repository is organized around a controller-led runtime with split worker se
 | `dataset/` | Seed data and eval scaffolding | `data/`, `evals/` |
 | `_bmad-output/planning-artifacts/` | BMAD planning artifacts such as PRDs, epics, stories, and supporting research notes | `prd.md`, `epics.md`, `*.md` |
 | `docs/` | Self-contained project documentation bundle | `index.md`, `project-overview.md`, `source-tree-analysis.md`, `backend-reference.md`, `architecture.md`, `api-contracts.md`, `data-models.md`, `component-inventory.md`, `deployment-guide.md`, `development-guide.md`, `spec-coverage.md` |
-| `.agents/skills/` | Runtime skill repository mounted into agent sessions | `build123d-cad-drafting-skill`, `electronics-engineering`, `manufacturing-knowledge`, `mechanical-engineering`, `runtime-script-contract`, `skill-creator`, `spec-editing-style-guide` |
+| `.agents/skills/` | Canonical skill repository consumed by agent workflows | `build123d-cad-drafting-skill`, `electronics-engineering`, `manufacturing-knowledge`, `mechanical-engineering`, `runtime-script-contract`, `skill-creator`, `spec-editing-style-guide` |
 | `website/` | Standalone static mirror of the marketing site | Asset mirror and published site files |
 
 ## Entry Points

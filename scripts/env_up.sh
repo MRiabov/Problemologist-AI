@@ -83,9 +83,6 @@ if [ -f .env ]; then
   done < .env
 fi
 
-echo "Syncing skill mirrors from canonical .agents/skills/..."
-python3 scripts/sync_skill_mirrors.py
-
 eval "$(python3 -m evals.logic.stack_profiles --profile "$STACK_PROFILE" --root "$(pwd)" --format shell)"
 
 export LOG_DIR="${LOG_DIR:-$STACK_DEFAULT_LOG_DIR}"

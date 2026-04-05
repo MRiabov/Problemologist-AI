@@ -87,6 +87,25 @@ _VIDEO_MEDIA_TYPES = {
 }
 
 
+def _skill_read_event_name(path_str: str) -> str | None:
+    normalized = path_str.lstrip("/")
+    if normalized.startswith(".agents/skills/"):
+        parts = normalized.split("/")
+        return parts[2] if len(parts) > 2 else parts[-1]
+    return None
+
+
+def _library_usage_name(path_str: str) -> str | None:
+    normalized = path_str.lstrip("/")
+    if normalized.startswith(".agents/skills/"):
+        parts = normalized.split("/")
+        return parts[2] if len(parts) > 2 else parts[-1]
+    if normalized.startswith("utils/"):
+        parts = normalized.split("/")
+        return parts[1] if len(parts) > 1 else parts[0]
+    return None
+
+
 def _bundle_workflow_id(prefix: str, session_id: str, bundle: bytes) -> str:
     """Derive a deterministic workflow id from the exact workspace bundle."""
     return f"{prefix}-{session_id}-{sha256(bundle).hexdigest()}"
@@ -402,9 +421,8 @@ class RemoteFilesystemMiddleware:
             raise ValueError(msg)
         p_str = str(path).lstrip("/")
         events = [ReadFileToolEvent(path=p_str)]
-        if p_str.startswith(("skills/", ".agents/skills/")):
-            parts = p_str.split("/")
-            skill_name = parts[1] if parts[0] == "skills" else parts[2]
+        skill_name = _skill_read_event_name(p_str)
+        if skill_name is not None:
             # Simple heuristic for skill name
             events.append(SkillReadEvent(skill_path=path, skill_name=skill_name))
 
@@ -413,14 +431,8 @@ class RemoteFilesystemMiddleware:
             events=events,
         )
 
-        if p_str.startswith(("skills/", ".agents/skills/", "utils/")):
-            parts = p_str.split("/")
-            if parts[0] == "skills":
-                module_name = parts[1]
-            elif parts[0] == ".agents" and len(parts) > 2:
-                module_name = parts[2]
-            else:
-                module_name = parts[1] if len(parts) > 1 else parts[0]
+        module_name = _library_usage_name(p_str)
+        if module_name is not None:
             await record_events(
                 episode_id=self.episode_id,
                 events=[
@@ -458,9 +470,8 @@ class RemoteFilesystemMiddleware:
 
         p_str = str(path).lstrip("/")
         events = [ReadFileToolEvent(path=p_str)]
-        if p_str.startswith(("skills/", ".agents/skills/")):
-            parts = p_str.split("/")
-            skill_name = parts[1] if parts[0] == "skills" else parts[2]
+        skill_name = _skill_read_event_name(p_str)
+        if skill_name is not None:
             events.append(SkillReadEvent(skill_path=path, skill_name=skill_name))
 
         await record_events(
@@ -468,14 +479,8 @@ class RemoteFilesystemMiddleware:
             events=events,
         )
 
-        if p_str.startswith(("skills/", ".agents/skills/", "utils/")):
-            parts = p_str.split("/")
-            if parts[0] == "skills":
-                module_name = parts[1]
-            elif parts[0] == ".agents" and len(parts) > 2:
-                module_name = parts[2]
-            else:
-                module_name = parts[1] if len(parts) > 1 else parts[0]
+        module_name = _library_usage_name(p_str)
+        if module_name is not None:
             await record_events(
                 episode_id=self.episode_id,
                 events=[
@@ -694,14 +699,8 @@ class RemoteFilesystemMiddleware:
         if success:
             # Track library usage (new)
             p_str = path.lstrip("/")
-            if p_str.startswith(("skills/", ".agents/skills/", "utils/")):
-                parts = p_str.split("/")
-                if parts[0] == "skills":
-                    module_name = parts[1]
-                elif parts[0] == ".agents" and len(parts) > 2:
-                    module_name = parts[2]
-                else:
-                    module_name = parts[1] if len(parts) > 1 else parts[0]
+            module_name = _library_usage_name(p_str)
+            if module_name is not None:
                 from shared.observability.schemas import LibraryUsageEvent
 
                 await record_events(

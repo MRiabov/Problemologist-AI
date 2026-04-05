@@ -1,7 +1,6 @@
 import asyncio
 import os
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 import structlog
 from fastapi import FastAPI, Request
@@ -12,7 +11,6 @@ from shared.logging import configure_logging, log_marker_middleware
 from worker_heavy.api.routes import heavy_router
 from worker_light.api.routes import light_router
 from worker_light.config import settings
-from worker_light.utils.git import sync_skills
 
 # Configure structured logging
 configure_logging("worker-light")
@@ -20,49 +18,9 @@ configure_logging("worker-light")
 logger = structlog.get_logger(__name__)
 
 
-def _seed_integration_skills() -> None:
-    """Populate worker skills mount for integration tests."""
-    skills_dir = settings.skills_dir
-    skills_dir.mkdir(parents=True, exist_ok=True)
-
-    copied = 0
-    repo_skill_root = Path(__file__).resolve().parents[1] / ".agents" / "skills"
-    if repo_skill_root.exists():
-        sync_skills(
-            repo_url=None,
-            pat=None,
-            skills_dir=skills_dir,
-            session_id="system",
-            source_root=repo_skill_root,
-        )
-        copied = len([entry for entry in skills_dir.iterdir() if entry.is_dir()])
-
-    if copied == 0:
-        placeholder = skills_dir / "build123d-cad-drafting-skill" / "SKILL.md"
-        placeholder.parent.mkdir(parents=True, exist_ok=True)
-        placeholder.write_text("", encoding="utf-8")
-
-    # Keep deterministic content for integration contract assertions.
-    canonical = skills_dir / "build123d-cad-drafting-skill" / "SKILL.md"
-    canonical.parent.mkdir(parents=True, exist_ok=True)
-    canonical.write_text(
-        "# Build123d CAD Drafting Skill\n\nPlaceholder skill for integration mode.\n",
-        encoding="utf-8",
-    )
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Sync skills (skipped in integration tests for speed/reliability)
-    if settings.is_integration_test:
-        _seed_integration_skills()
-    elif settings.git_repo_url:
-        sync_skills(
-            repo_url=settings.git_repo_url,
-            pat=settings.git_pat,
-            skills_dir=settings.skills_dir,
-            session_id="system",
-        )
+    settings.skills_dir.mkdir(parents=True, exist_ok=True)
 
     # WP11: Support Temporal worker in unified mode
     if os.getenv("WORKER_TYPE") == "unified":

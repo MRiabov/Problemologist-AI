@@ -18,18 +18,6 @@ repos:
           - mdformat-frontmatter==2.0.10
   - repo: local
     hooks:
-      - id: sync-skill-mirrors
-        name: sync-skill-mirrors
-        entry: bash -c "uv run python scripts/sync_skill_mirrors.py --check"
-        language: system
-        pass_filenames: false
-        files: ^(skills/|\.agents/skills/)
-      - id: record-skills-revision
-        name: record-skills-revision
-        entry: bash -c "uv run python scripts/update_skills_lock.py && git add config/skills_repo.lock.json"
-        language: system
-        pass_filenames: false
-        always_run: true
       - id: generate-openapi
         name: generate-openapi
         entry: bash -c "uv run python scripts/generate_openapi.py && git add controller_openapi.json worker_openapi.json"

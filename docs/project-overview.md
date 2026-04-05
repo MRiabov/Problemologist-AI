@@ -88,7 +88,7 @@ The project is brownfield and already has a working integration-test harness. Th
 | `scripts/` | Local environment, cleanup, test runner, and maintenance scripts |
 | `tests/` | Integration and support tests |
 | `docs/` | This self-contained documentation set |
-| `.agents/skills/` | Runtime-mounted skill repository used by the agent workflows |
+| `.agents/skills/` | Canonical skill repository; runtime surfaces read it directly or expose it through the `/skills` mount |
 
 ## Development Snapshot
 
