@@ -3,11 +3,15 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from shared.skills import load_skills_projection_config
 
-ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / ".agents" / "skills"
 TARGETS = [ROOT / "skills", ROOT / ".codex" / "skills"]
 SKILLS_CONFIG_PATH = ROOT / "config" / "skills_config.yaml"

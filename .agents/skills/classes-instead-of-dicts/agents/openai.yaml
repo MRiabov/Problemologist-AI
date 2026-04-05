@@ -1,0 +1,4 @@
+interface:
+  display_name: "Classes Instead Of Dicts"
+  short_description: "Use typed models for class, storage, and API contracts."
+  default_prompt: "Use this skill whenever adding or modifying classes, or when planning/coding storage and API communication logic. Prefer typed classes (Pydantic/SQLAlchemy/Enum/Path) over freeform dicts for structured contracts."
