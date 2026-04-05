@@ -69,6 +69,9 @@ from worker_heavy.simulation.factory import (
     get_simulation_builder,
 )
 from worker_heavy.simulation.naming import MOVED_OBJECT_SCENE_PREFIX
+from worker_heavy.simulation.object_pose import (
+    summarize_payload_position_history,
+)
 from worker_heavy.utils.rendering import prerender_24_views
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
@@ -2038,6 +2041,15 @@ def simulate(
             total_weight_g=weight,
             confidence=metrics.confidence,
         )
+
+        payload_position_summary = None
+        if objectives and final_video_path and final_video_path.exists():
+            payload_position_summary = summarize_payload_position_history(
+                final_video_path.parent / "objects.parquet",
+                payload_label=objectives.moved_object.label,
+            )
+        if payload_position_summary:
+            result.summary = f"{result.summary}\n{payload_position_summary}"
 
         # T023: Generate stress heatmaps and append to render_paths
         if metrics.stress_fields:

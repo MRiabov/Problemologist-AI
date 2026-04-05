@@ -328,3 +328,26 @@ def build():
             position[2] for position in pose_rows["position"].dropna().tolist()
         ]
         assert max(z_positions) > min(z_positions), z_positions
+
+        sample_frame_indices = [
+            frame_indices[int((len(frame_indices) - 1) * fraction)]
+            for fraction in (0.0, 0.25, 0.5, 0.75, 1.0)
+        ]
+        expected_lines = [
+            f"Payload frame count: {len(frame_indices)}",
+            "Payload label: frame_history_box",
+            "Payload positions:",
+        ]
+        for sample_name, frame_index in zip(
+            ("first", "25%", "50%", "75%", "final"), sample_frame_indices
+        ):
+            row = pose_rows[pose_rows["frame_index"] == frame_index].iloc[0]
+            position = row["position"]
+            expected_lines.append(
+                f"- {sample_name} frame (frame_index={frame_index}): "
+                f"[{position[0]:.3f}, {position[1]:.3f}, {position[2]:.3f}]"
+            )
+
+        assert data.message is not None
+        for line in expected_lines:
+            assert line in data.message, data.message

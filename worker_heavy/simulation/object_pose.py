@@ -9,6 +9,114 @@ from shared.workers.schema import RenderBundleObjectPoseRecord
 
 logger = structlog.get_logger(__name__)
 
+_PAYLOAD_SAMPLE_LABELS = ("first", "25%", "50%", "75%", "final")
+_PAYLOAD_SAMPLE_FRACTIONS = (0.0, 0.25, 0.5, 0.75, 1.0)
+
+
+def _format_position(position: tuple[float, float, float] | None) -> str:
+    if position is None:
+        return "n/a"
+    return "[" + ", ".join(f"{coord:.3f}" for coord in position) + "]"
+
+
+def _matches_payload_label(
+    record: RenderBundleObjectPoseRecord, payload_label: str
+) -> bool:
+    candidates = (
+        record.label,
+        record.instance_name,
+        record.semantic_label,
+        record.body_name,
+        record.geom_name,
+    )
+    return any(candidate == payload_label for candidate in candidates if candidate)
+
+
+def summarize_payload_position_history(
+    object_pose_path: Path,
+    *,
+    payload_label: str | None,
+) -> str | None:
+    """Build a compact payload pose summary from a bundle-local parquet sidecar."""
+    if payload_label is None or not str(payload_label).strip():
+        return None
+    if not object_pose_path.exists():
+        return None
+
+    try:
+        import pyarrow.parquet as pq
+    except Exception as exc:
+        logger.warning(
+            "payload_pose_summary_parquet_unavailable",
+            error=str(exc),
+            path=str(object_pose_path),
+        )
+        return None
+
+    try:
+        table = pq.read_table(object_pose_path)
+    except Exception as exc:
+        logger.warning(
+            "payload_pose_summary_parquet_read_failed",
+            error=str(exc),
+            path=str(object_pose_path),
+        )
+        return None
+
+    records: list[RenderBundleObjectPoseRecord] = []
+    for row in table.to_pylist():
+        with contextlib.suppress(Exception):
+            records.append(RenderBundleObjectPoseRecord.model_validate(row))
+
+    if not records:
+        return None
+
+    payload_records = [
+        record for record in records if _matches_payload_label(record, payload_label)
+    ]
+    if not payload_records:
+        return (
+            f"Payload positions unavailable: label {payload_label!r} not found in "
+            f"{object_pose_path.name}."
+        )
+
+    frame_to_record: dict[int, RenderBundleObjectPoseRecord] = {}
+    for record in payload_records:
+        if record.frame_index is None or record.position is None:
+            continue
+        frame_to_record.setdefault(record.frame_index, record)
+
+    frame_indices = sorted(frame_to_record)
+    if not frame_indices:
+        return (
+            f"Payload positions unavailable: no frame-indexed rows found for "
+            f"{payload_label!r} in {object_pose_path.name}."
+        )
+
+    sample_indices = [
+        int((len(frame_indices) - 1) * fraction)
+        for fraction in _PAYLOAD_SAMPLE_FRACTIONS
+    ]
+    sample_lines = [
+        (
+            label,
+            frame_indices[index],
+            frame_to_record[frame_indices[index]].position,
+        )
+        for label, index in zip(_PAYLOAD_SAMPLE_LABELS, sample_indices)
+    ]
+
+    lines = [
+        f"Payload frame count: {len(frame_indices)}",
+        f"Payload label: {payload_label}",
+        "Payload positions:",
+    ]
+    for label, frame_index, position in sample_lines:
+        lines.append(
+            f"- {label} frame (frame_index={frame_index}): {_format_position(position)}"
+        )
+    return "\n".join(lines)
+
 
 def write_object_pose_parquet(
     bundle_root: Path,
