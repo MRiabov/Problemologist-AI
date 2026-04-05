@@ -318,7 +318,8 @@ async def api_preview(
         artifact_path = str(image_path.relative_to(workspace_root))
         target_preview_prefix = str(Path(artifact_path).parent)
         if (
-            source_preview_prefix
+            preview_renders_dir.name != "tmp"
+            and source_preview_prefix
             and response.render_manifest_json
             and source_preview_prefix != target_preview_prefix
         ):

@@ -16,6 +16,40 @@ override `specs/desired_architecture.md` or any file under `specs/architecture/`
   contract-bearing.
 - Keep the filename descriptive and specific to the migration.
 
+## Migration Timeline
+
+Use `uv run specs/migrations/list_migrations_by_date.py` to sort migration docs
+by their last git edit time.
+
+The script prints entries in the form:
+
+```text
+edited:
+01-01-2026 14:15 - specs/migrations/minor/role-scoped-render-buckets.md, agents affected: [benchmark_reviewer, engineer_coder]
+```
+
+The script accepts `--since` and `--until` bounds in ISO date or datetime form
+so you can narrow the list to a specific period.
+
+If a migration changes agent-facing logic, record the blast radius in YAML
+frontmatter at the top of the doc. Use a shape like:
+
+```md
+---
+title: Role-Scoped Render Buckets
+status: investigation
+agents_affected:
+  - benchmark_reviewer
+  - engineer_coder
+added_at: 2026-04-05T14:15:00Z
+---
+```
+
+The script reads `agents_affected` from frontmatter first and falls back to
+legacy body detection only for older docs that have not been updated yet.
+You can also keep an `added_at` field in the same frontmatter when you want the
+creation timestamp recorded directly in the migration doc.
+
 ## Required Shape
 
 Follow this order unless a migration has a strong reason to add a small

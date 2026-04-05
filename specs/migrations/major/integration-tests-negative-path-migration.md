@@ -1,3 +1,10 @@
+---
+title: Integration Test Negative-Path Migration Matrix
+status: migration
+agents_affected: []
+added_at: '2026-03-31T07:10:09Z'
+---
+
 # Integration Test Negative-Path Migration Matrix
 
 This document maps current integration coverage to the negative-path split that

@@ -1,3 +1,10 @@
+---
+title: Evals Logic Runner Decomposition
+status: investigation
+agents_affected: []
+added_at: '2026-04-04T07:56:47Z'
+---
+
 # Evals Logic Runner Decomposition
 
 <!-- Investigation doc. No behavior change yet. -->

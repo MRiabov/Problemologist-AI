@@ -23,12 +23,20 @@ Use top-level `utils` imports in authored scripts:
 ```python
 from utils.submission import validate, simulate, submit_for_review
 from utils.metadata import PartMetadata, CompoundMetadata
-from utils.preview import preview, preview_drawing, objectives_geometry
+from utils.preview import (
+    list_render_bundles,
+    objectives_geometry,
+    pick_preview_pixel,
+    pick_preview_pixels,
+    preview,
+    preview_drawing,
+    query_render_bundle,
+)
 ```
 
 `shared.*` paths are implementation internals. Do not use them in authored agent scripts.
 
-For render evidence and point-pick workflows, prefer the namespaced helpers in `utils.preview`; use `utils.visualize` only as a compatibility alias when older code already references it.
+For render evidence and point-pick workflows, prefer the namespaced helpers in `utils.preview`; use `utils.visualize` only as a compatibility alias when older code already references it. `list_render_bundles()` selects the exact bundle, `query_render_bundle()` returns compact bundle slices, and `pick_preview_pixel()` / `pick_preview_pixels()` resolve pixel-to-world evidence against the bundle-local snapshot.
 
 For ordinary mechanical engineer scripts, keep imports minimal:
 

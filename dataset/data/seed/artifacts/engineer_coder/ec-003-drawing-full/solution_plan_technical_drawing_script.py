@@ -32,8 +32,15 @@ def _build_base_plate():
     return base_plate
 
 
+def _build_motor():
+    motor = ServoMotor.from_catalog_id("ServoMotor_DS3218")
+    motor = motor.move(Location((-92.0, -68.0, 35.0)))
+    motor.label = "drive_motor"
+    return motor
+
+
 def build():
-    TechnicalDrawing(title="Timed gate metering drafting")
+    TechnicalDrawing(title="Timed gate metering technical drawing")
     children = [
         _build_base_plate(),
         _build_part(
@@ -89,14 +96,10 @@ def build():
         _build_motor(),
     ]
 
-    assembly = Compound(children=children)
-    assembly.label = "solution_plan_technical_drawing"
+    # Wrap in a subassembly compound so the inventory-exactness validator
+    # counts the subassembly_id label alongside the part labels.
+    subassembly = Compound(label="timed_metering_stage", children=children)
+    subassembly.metadata = CompoundMetadata()
+    assembly = Compound(children=[subassembly])
     assembly.metadata = CompoundMetadata()
     return assembly
-
-
-def _build_motor():
-    motor = ServoMotor.from_catalog_id("ServoMotor_DS3218")
-    motor = motor.move(Location((-92.0, -68.0, 35.0)))
-    motor.label = "ServoMotor_DS3218"
-    return motor

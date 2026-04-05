@@ -25,13 +25,15 @@ def _build_part(
 def _build_motor():
     motor = ServoMotor.from_catalog_id("ServoMotor_DS3218")
     motor = motor.move(Location((-205.0, -110.0, 20.0)))
-    motor.label = "ServoMotor_DS3218"
-    motor.metadata.cots_id = None
+    motor.label = "drive_motor"
+    # Preserve the COTS identity so the inventory pair (label="drive_motor",
+    # cots_id="ServoMotor_DS3218") matches assembly_definition.yaml.
     return motor
 
 
 def build():
-    children = [
+    # Build the shelf_lift subassembly containing the manufactured parts.
+    shelf_lift_parts = [
         _build_part(
             label="lift_base",
             length=280.0,
@@ -82,10 +84,17 @@ def build():
             z=220.0,
             material_id="hdpe",
         ),
-        _build_motor(),
     ]
 
-    assembly = Compound(children=children)
-    assembly.label = "starter_assembly"
+    shelf_lift = Compound(children=shelf_lift_parts)
+    shelf_lift.label = "shelf_lift"
+    shelf_lift.metadata = CompoundMetadata()
+
+    # Build the drive_motor COTS part.
+    motor = _build_motor()
+
+    # Wrap both in an unlabeled root so the identity-pair validator counts
+    # shelf_lift and drive_motor as top-level inventory items.
+    assembly = Compound(children=[shelf_lift, motor])
     assembly.metadata = CompoundMetadata()
     return assembly

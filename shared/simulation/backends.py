@@ -169,7 +169,12 @@ class PhysicsBackend(Protocol):
     def get_all_site_names(self) -> list[str]: ...
     def get_all_tendon_names(self) -> list[str]: ...
     def get_all_camera_names(self) -> list[str]: ...
-    def export_object_pose_records(self) -> list[RenderBundleObjectPoseRecord]: ...
+    def export_object_pose_records(
+        self,
+        *,
+        body_names: list[str] | None = None,
+        frame_index: int | None = None,
+    ) -> list[RenderBundleObjectPoseRecord]: ...
 
     def check_collision(self, body_name: str, site_name: str) -> bool: ...
     def get_tendon_tension(self, tendon_name: str) -> float: ...
@@ -226,10 +231,15 @@ def _quaternion_wxyz_to_euler_xyz_deg(
 
 def build_render_bundle_object_pose_records(
     backend: PhysicsBackend,
+    *,
+    body_names: list[str] | None = None,
+    frame_index: int | None = None,
 ) -> list[RenderBundleObjectPoseRecord]:
     """Materialize a bundle-local snapshot of backend object poses."""
     records: list[RenderBundleObjectPoseRecord] = []
-    body_names = _normalize_pose_body_names(backend.get_all_body_names())
+    if body_names is None:
+        body_names = backend.get_all_body_names()
+    body_names = _normalize_pose_body_names(body_names)
 
     for object_id, body_name in enumerate(body_names):
         try:
@@ -239,6 +249,7 @@ def build_render_bundle_object_pose_records(
 
         records.append(
             RenderBundleObjectPoseRecord(
+                frame_index=frame_index,
                 object_id=object_id,
                 object_type="body",
                 label=body_name,

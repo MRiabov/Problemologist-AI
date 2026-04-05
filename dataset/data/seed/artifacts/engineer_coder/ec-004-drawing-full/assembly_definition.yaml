@@ -84,7 +84,7 @@ cots_parts:
   source: catalog
 motion_forecast:
   moving_part_names:
-  - shelf_lift
+  - lift_base
   reference_frame: world
   sample_stride_s: 0.5
   anchors:
@@ -157,13 +157,28 @@ motion_forecast:
     - 5.0
     goal_zone_contact: true
 final_assembly:
-- name: shelf_lift
-  config:
-    dofs:
-    - rotate_z
+- subassembly_id: shelf_lift
+  parts:
+  - name: lift_base
+    config:
+      dofs:
+      - rotate_z
+  - name: left_frame
+    config:
+      dofs: []
+  - name: right_frame
+    config:
+      dofs: []
+  - name: belt_bed
+    config:
+      dofs: []
+  - name: upper_tray
+    config:
+      dofs: []
 - name: drive_motor
   config:
     dofs: []
+    cots_id: ServoMotor_DS3218
 totals:
   estimated_unit_cost_usd: 68.5
   estimated_weight_g: 648.01

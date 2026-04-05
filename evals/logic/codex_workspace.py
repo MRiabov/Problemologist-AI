@@ -96,6 +96,16 @@ _SKIP_COPY_DIR_NAMES = {
     ".git",
     "__pycache__",
 }
+
+
+def _is_seed_artifact_path(path: Path) -> bool:
+    if any(part in _SKIP_COPY_DIR_NAMES for part in path.parts):
+        return False
+    if path.suffix.lower() in {".pyc", ".pyo"}:
+        return False
+    return True
+
+
 _ENGINEER_DRAFTING_TARGETS = {
     AgentName.ENGINEER_PLANNER,
     AgentName.ENGINEER_PLAN_REVIEWER,
@@ -200,6 +210,31 @@ class LocalWorkspaceClient:
             return None
         return resolved.read_text(encoding="utf-8")
 
+    async def read_file_binary(
+        self, path: str, *, bypass_agent_permissions: bool = False
+    ) -> bytes:
+        resolved = self._resolve(path)
+        if not resolved.exists():
+            raise FileNotFoundError(f"File not found: {path}")
+        return resolved.read_bytes()
+
+    async def read_files_binary(
+        self,
+        paths: list[str],
+        *,
+        bypass_agent_permissions: bool = False,
+    ) -> dict[str, bytes]:
+        blobs: dict[str, bytes] = {}
+        for path in paths:
+            normalized = str(path).strip()
+            if not normalized:
+                continue
+            blobs[normalized] = await self.read_file_binary(
+                normalized,
+                bypass_agent_permissions=bypass_agent_permissions,
+            )
+        return blobs
+
     async def write_file(
         self,
         path: str,
@@ -282,7 +317,7 @@ def _workspace_files_to_validate(workspace_dir: Path) -> dict[str, str]:
             relative_parts[0] == "skills" or relative_parts[:2] == (".agents", "skills")
         ):
             continue
-        if any(part == "__pycache__" for part in path.parts):
+        if not _is_seed_artifact_path(path):
             continue
         if path.suffix.lower() in _BINARY_SUFFIXES:
             continue
@@ -304,9 +339,7 @@ def _workspace_files_to_validate(workspace_dir: Path) -> dict[str, str]:
 def _copy_tree(src_root: Path, dst_root: Path) -> list[str]:
     copied: list[str] = []
     for src_path in sorted(p for p in src_root.rglob("*") if p.is_file()):
-        if any(
-            part in _SKIP_COPY_DIR_NAMES for part in src_path.parts
-        ) or src_path.suffix in {".pyc", ".pyo"}:
+        if not _is_seed_artifact_path(src_path):
             continue
         rel_path = src_path.relative_to(src_root)
         dst_path = dst_root / rel_path
@@ -686,9 +719,7 @@ def copy_workspace_contents(
             for excluded in exclude_rel_paths
         ):
             continue
-        if any(part in _SKIP_COPY_DIR_NAMES for part in src_path.parts):
-            continue
-        if src_path.suffix in {".pyc", ".pyo"}:
+        if not _is_seed_artifact_path(src_path):
             continue
         dst_path = dst_root / rel_path
         dst_path.parent.mkdir(parents=True, exist_ok=True)

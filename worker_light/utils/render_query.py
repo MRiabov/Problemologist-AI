@@ -402,6 +402,12 @@ def query_render_bundle(
             table = pq.read_table(objects_path)
             for record in table.to_pylist():
                 objects.append(RenderBundleObjectPoseRecord.model_validate(record))
+            objects.sort(
+                key=lambda record: (
+                    record.frame_index if record.frame_index is not None else -1,
+                    record.object_id if record.object_id is not None else -1,
+                )
+            )
         except Exception:
             logger.warning(
                 "render_bundle_objects_parse_failed",

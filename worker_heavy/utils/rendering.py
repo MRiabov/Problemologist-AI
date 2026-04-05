@@ -301,6 +301,7 @@ def prerender_24_views(
     particle_budget: int | None = None,
     revision: str | None = None,
     environment_version: str | None = None,
+    publish_bundle_index: bool = True,
 ) -> list[str]:
     """
     Generates 24 renders (8 angles x 3 elevation levels) of the component.
@@ -444,24 +445,25 @@ def prerender_24_views(
             manifest.model_dump_json(indent=2),
             encoding="utf-8",
         )
-        compat_manifest_path = (
-            resolved_workspace_root / "renders" / "render_manifest.json"
-        )
-        if compat_manifest_path != manifest_path:
-            compat_manifest_path.write_text(
-                manifest.model_dump_json(indent=2),
-                encoding="utf-8",
+        if publish_bundle_index:
+            compat_manifest_path = (
+                resolved_workspace_root / "renders" / "render_manifest.json"
             )
-        append_render_bundle_index(
-            resolved_workspace_root,
-            build_render_bundle_index_entry(
-                manifest,
-                manifest_path=str(
-                    manifest_path.relative_to(resolved_workspace_root)
-                ).replace("\\", "/"),
-                primary_media_paths=list(render_paths),
-            ),
-        )
+            if compat_manifest_path != manifest_path:
+                compat_manifest_path.write_text(
+                    manifest.model_dump_json(indent=2),
+                    encoding="utf-8",
+                )
+            append_render_bundle_index(
+                resolved_workspace_root,
+                build_render_bundle_index_entry(
+                    manifest,
+                    manifest_path=str(
+                        manifest_path.relative_to(resolved_workspace_root)
+                    ).replace("\\", "/"),
+                    primary_media_paths=list(render_paths),
+                ),
+            )
         saved_files = list(render_paths)
 
         emit_event(

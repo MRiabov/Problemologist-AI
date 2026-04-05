@@ -1,3 +1,13 @@
+---
+title: On-Demand Preview Rendering
+status: completed
+agents_affected:
+  - benchmark_planner
+  - benchmark_coder
+  - engineer_coder
+added_at: '2026-03-31T20:20:26Z'
+---
+
 # On-Demand Preview Rendering
 
 <!-- Investigation doc. No behavior change yet. -->

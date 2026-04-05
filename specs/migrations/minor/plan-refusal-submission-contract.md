@@ -1,3 +1,12 @@
+---
+title: Plan Refusal Submission Contract
+status: investigation
+agents_affected:
+  - benchmark_coder
+  - engineer_coder
+added_at: '2026-04-04T09:00:28Z'
+---
+
 # Plan Refusal Submission Contract
 
 <!-- Investigation doc. No behavior change yet. -->

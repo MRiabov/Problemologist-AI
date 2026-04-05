@@ -21,12 +21,24 @@ Use the runtime helpers explicitly in authored benchmark scripts:
 
 ```python
 from utils.submission import validate, simulate, submit_for_review
-from utils.preview import preview, preview_drawing, objectives_geometry
+from utils.preview import (
+    list_render_bundles,
+    objectives_geometry,
+    pick_preview_pixel,
+    pick_preview_pixels,
+    preview,
+    preview_drawing,
+    query_render_bundle,
+)
 ```
 
 - `validate(result)` and `simulate(result)` are the required pre-handoff checks.
 - `submit_for_review(result)` is the final benchmark review handoff helper.
-- `preview(...)` and `preview_drawing()` are the evidence-generation paths; `objectives_geometry()` reconstructs benchmark objective overlays when needed.
+- `preview(...)` is the live scene and objective-overlay path; use `payload_path=True` only when the current workflow needs the live payload-path overlay. `preview_drawing()` is the drafting-package path and keeps the payload overlay off.
+- `objectives_geometry()` reconstructs benchmark objective overlays when needed.
+- `list_render_bundles()` selects the exact current or historical render bundle before you inspect media or point-pick results.
+- `query_render_bundle()` returns compact bundle metadata and frame slices without pulling the full media payload.
+- `pick_preview_pixel()` and `pick_preview_pixels()` resolve screen-space points against the bundle-local snapshot when click-to-world evidence matters.
 - `from utils.visualize import ...` is a compatibility alias, but `utils.preview` is the preferred namespace for new code.
 
 ## Geometry Contract
@@ -105,7 +117,7 @@ Do not invent fallback behavior to paper over contradictions. If the approved pl
 4. Run `python benchmark_script.py` as the canonical execution path.
 5. Fix import, geometry, labeling, or contract failures first.
 6. Run validation and simulation on the latest revision.
-7. Inspect render images or simulation media when they exist or when motion behavior is uncertain.
+7. Inspect render images or simulation media when they exist or when motion behavior is uncertain. If the question depends on bundle identity or pixel-to-world mapping, select the exact bundle with `list_render_bundles()` and query that bundle-local snapshot with `query_render_bundle()` or `pick_preview_pixel()` before changing geometry.
 8. Keep `todo.md` and `journal.md` synchronized with the work actually being done.
 9. Submit for review only when the latest revision is valid, simulated, and ready.
 

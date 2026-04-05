@@ -209,6 +209,19 @@ uv run scripts/validate_eval_seed.py \
   --task-id bc-001-example
 ```
 
+If render regeneration itself is the thing under repair, use the dedicated
+maintenance script directly:
+
+```bash
+uv run scripts/update_eval_seed_renders.py \
+  --agent benchmark_coder \
+  --task-id bc-001-example
+```
+
+`scripts/validate_eval_seed.py --update-renders` remains a deprecated
+compatibility alias, but `scripts/update_eval_seed_renders.py` is the clearer
+entrypoint when seed render updates have significant issues.
+
 Validate an entire agent dataset as a filtering pass:
 
 ```bash

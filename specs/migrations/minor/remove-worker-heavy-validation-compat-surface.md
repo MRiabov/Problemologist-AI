@@ -1,3 +1,10 @@
+---
+title: Remove the worker-heavy validation compatibility surface
+status: migration
+agents_affected: []
+added_at: '2026-04-04T15:29:20Z'
+---
+
 # Remove the worker-heavy validation compatibility surface
 
 ## Purpose

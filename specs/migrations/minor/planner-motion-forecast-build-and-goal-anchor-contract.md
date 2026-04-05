@@ -1,3 +1,13 @@
+---
+title: Planner Motion Forecast Build and Goal Anchor Contract
+status: investigation
+agents_affected:
+  - benchmark_planner
+  - engineer_planner
+  - engineer_coder
+added_at: '2026-04-03T15:11:03Z'
+---
+
 # Planner Motion Forecast Build and Goal Anchor Contract
 
 <!-- Investigation doc. No behavior change yet. -->

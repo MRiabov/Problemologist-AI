@@ -60,6 +60,7 @@ from worker_renderer.utils.build123d_rendering import render_preview_view
 
 ROOT = Path(__file__).resolve().parents[3]
 AGENTS_CONFIG_PATH = Path("config/agents_config.yaml")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 pytestmark = pytest.mark.xdist_group(name="eval_runner")
 
 

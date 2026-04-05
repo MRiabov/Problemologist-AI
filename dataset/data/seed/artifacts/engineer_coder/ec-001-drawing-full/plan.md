@@ -6,8 +6,8 @@ Use a freestanding `base_plate` with a wide `entry_funnel`, a single powered
 `roller_bed`, a passive `idler_guide`, and a shallow `goal_tray` to catch the
 seeded `projectile_ball` and move it laterally into the goal capture volume.
 The benchmark-owned `environment_fixture` stays read-only, the downstream
-contact path stays centered on the single `transfer_lane`, and the only
-powered axis remains the `ServoMotor_DS3218` drive.
+contact path stays centered on the single `sideways_transfer` subassembly, and
+the only powered axis remains the `ServoMotor_DS3218` drive.
 
 ## 2. Parts List
 
@@ -44,9 +44,9 @@ powered axis remains the `ServoMotor_DS3218` drive.
    `entry_funnel`, `roller_bed`, `idler_guide`, `goal_tray`, and the
    `ServoMotor_DS3218` drive, respectively.
 7. Treat the coarse `motion_forecast` in `assembly_definition.yaml` as the
-   reviewable start-to-finish trajectory for `transfer_lane`: it begins in a
-   build-safe parked pose and ends with goal-zone entry.
-8. Narrow that same `transfer_lane` motion again in
+   reviewable start-to-finish trajectory for the `ServoMotor_DS3218`-driven
+   assembly: it begins in a build-safe parked pose and ends with goal-zone entry.
+8. Narrow that same `ServoMotor_DS3218` motion again in
    `payload_trajectory_definition.yaml`, keeping the moving-part set unchanged while
    tightening the cadence and explicit goal-contact proof.
 9. If the current 2° downhill lane geometry is kept, the ball’s ideal rolling

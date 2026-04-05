@@ -124,14 +124,17 @@ class MediaRecorder:
 
         return frame, render_provenance
 
-    def update(self, sim_time_s: float, backend: RendererBackend):
-        """Capture a frame at the configured simulation-time cadence."""
+    def update(self, sim_time_s: float, backend: RendererBackend) -> int | None:
+        """Capture a frame at the configured simulation-time cadence.
+
+        Returns the new frame index when a capture happens.
+        """
         if self._capture_disabled:
-            return
+            return None
         if self.video_path is None and self.frame_stream_publisher is None:
-            return
+            return None
         if sim_time_s + 1e-9 < self._next_capture_time_s:
-            return
+            return None
 
         try:
             frame, render_provenance = self._capture_frame(backend)
@@ -170,6 +173,8 @@ class MediaRecorder:
                 if self.render_provenance is not None:
                     self.render_provenance.render_error = str(e)
                 raise
+
+        return len(self.frames) - 1
 
     def save(self) -> str | None:
         """Finalize and save the video."""

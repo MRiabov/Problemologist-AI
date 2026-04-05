@@ -1,3 +1,20 @@
+---
+title: Prompt Management Unification
+status: investigation
+agents_affected:
+  - benchmark_planner
+  - benchmark_plan_reviewer
+  - benchmark_coder
+  - benchmark_reviewer
+  - engineer_planner
+  - engineer_plan_reviewer
+  - engineer_coder
+  - engineer_execution_reviewer
+  - electronics_planner
+  - electronics_reviewer
+added_at: '2026-04-01T13:35:34Z'
+---
+
 # Prompt Management Unification
 
 <!-- Investigation doc. No behavior change yet. -->

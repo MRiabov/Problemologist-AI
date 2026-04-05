@@ -1,3 +1,12 @@
+---
+title: Solution Motor Actuation and Backend Parity
+status: migration
+agents_affected:
+  - engineer_coder
+  - engineer_execution_reviewer
+added_at: '2026-04-04T08:39:29Z'
+---
+
 # Solution Motor Actuation and Backend Parity
 
 <!-- Migration tracker. Check items conservatively as implementation lands. -->

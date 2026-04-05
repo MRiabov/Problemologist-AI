@@ -882,6 +882,28 @@ async def test_int_213_controller_preview_route_materializes_depth_artifact_via_
         assert manifest.worker_session_id == session_id
         assert preview_data.artifact_path in manifest.artifacts
 
+        root_manifest_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/exists",
+            json=ReadFileRequest(path="renders/render_manifest.json").model_dump(
+                mode="json"
+            ),
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+        assert root_manifest_resp.status_code == 200, root_manifest_resp.text
+        assert root_manifest_resp.json()["exists"] is False
+
+        render_index_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/exists",
+            json=ReadFileRequest(path="renders/render_index.jsonl").model_dump(
+                mode="json"
+            ),
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+        assert render_index_resp.status_code == 200, render_index_resp.text
+        assert render_index_resp.json()["exists"] is False
+
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio

@@ -1,5 +1,8 @@
-# Journal
+# Execution Journal
 
-- Planner handoff approved after confirming the mechanism remains fully freestanding and within the seeded build zone.
-- Preserve the no-drill/no-attachment constraint and keep all geometry referenced from `freestanding_base`.
-- Use the seeded renders when deciding final clearances to nearby environment fixtures.
+## Session Start
+
+- Received reviewed planner handoff for the freestanding no-drill transfer benchmark.
+- Planner contract: `freestanding_transfer` subassembly with no DOFs, passive chute path.
+- Benchmark constraint: no drilling, bolting, or leaning on the `benchmark_environment`.
+- Budget: $42.75 / 504.85 g, well under the $54.00 / 900.0 g caps.

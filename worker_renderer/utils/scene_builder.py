@@ -58,6 +58,33 @@ class CommonAssemblyTraverser:
         return None
 
     @staticmethod
+    def _is_structural_compound(node: Any) -> bool:
+        from shared.models.schemas import CompoundMetadata, PartMetadata
+
+        if not isinstance(node, Compound):
+            return False
+
+        children = list(getattr(node, "children", []) or [])
+        if not children:
+            return False
+
+        metadata = getattr(node, "metadata", None)
+        if isinstance(metadata, PartMetadata):
+            return False
+        if isinstance(metadata, CompoundMetadata):
+            return True
+        if isinstance(metadata, dict):
+            try:
+                PartMetadata(**metadata)
+            except Exception:
+                try:
+                    return isinstance(CompoundMetadata(**metadata), CompoundMetadata)
+                except Exception:
+                    return True
+            return False
+        return True
+
+    @staticmethod
     def traverse(
         assembly: Compound,
         electronics: Any | None = None,
@@ -65,39 +92,50 @@ class CommonAssemblyTraverser:
         allow_unnamed_labels: bool = False,
         unnamed_label_factory: Callable[[], str] | None = None,
     ) -> list[AssemblyPartData]:
-        children = getattr(assembly, "children", [])
-        if not children:
-            children = [assembly]
-
         parts_data = []
-        for i, child in enumerate(children):
-            raw_label = getattr(child, "label", None)
+
+        def _visit(
+            node: Any, node_index: int, parent_location: Any | None = None
+        ) -> None:
+            if CommonAssemblyTraverser._is_structural_compound(node):
+                composed_location = CommonAssemblyTraverser._compose_location(
+                    node, parent_location
+                )
+                for child_index, child in enumerate(
+                    list(getattr(node, "children", []) or [])
+                ):
+                    _visit(child, child_index, composed_location)
+                return
+
+            raw_label = getattr(node, "label", None)
             label = normalize_preview_label(raw_label)
             if not label:
                 if not allow_unnamed_labels:
                     logger.error(
                         "top_level_build123d_label_missing",
-                        part_index=i,
+                        part_index=node_index,
                         raw_label=raw_label,
-                        part_type=type(child).__name__,
+                        part_type=type(node).__name__,
                     )
                     raise ValueError(
                         "Top-level build123d objects must have non-empty labels. "
-                        f"Offending part index: {i}."
+                        f"Offending part index: {node_index}."
                     )
                 if unnamed_label_factory is None:
-                    label = f"unnamed_{i + 1}"
+                    label = f"unnamed_{node_index + 1}"
                 else:
                     label = unnamed_label_factory()
 
-            pos, euler = CommonAssemblyTraverser._resolve_location(child)
-            meta = CommonAssemblyTraverser._resolve_part_metadata(child)
-            zone_info = CommonAssemblyTraverser._detect_zone(child, label)
+            pos, euler = CommonAssemblyTraverser._resolve_location(
+                node, parent_location
+            )
+            meta = CommonAssemblyTraverser._resolve_part_metadata(node)
+            zone_info = CommonAssemblyTraverser._detect_zone(node, label)
             is_electronics = CommonAssemblyTraverser._map_electronics(
                 label, electronics
             )
 
-            constraint = getattr(child, "constraint", None)
+            constraint = getattr(node, "constraint", None)
             weld_target = None
             if constraint and constraint.startswith("weld:"):
                 weld_target = constraint.split(":")[1]
@@ -105,7 +143,7 @@ class CommonAssemblyTraverser:
             parts_data.append(
                 AssemblyPartData(
                     label=label,
-                    part=child,
+                    part=node,
                     pos=pos,
                     euler=euler,
                     is_fixed=meta["is_fixed"],
@@ -122,19 +160,31 @@ class CommonAssemblyTraverser:
                     weld_target=weld_target,
                 )
             )
+
+        _visit(assembly, 0)
         return parts_data
 
     @staticmethod
-    def _resolve_location(child: Any) -> tuple[list[float], list[float]]:
+    def _compose_location(child: Any, parent_location: Any | None = None) -> Any:
+        location = child.location
+        if parent_location is not None:
+            location = parent_location * location
+        return location
+
+    @staticmethod
+    def _resolve_location(
+        child: Any, parent_location: Any | None = None
+    ) -> tuple[list[float], list[float]]:
+        location = CommonAssemblyTraverser._compose_location(child, parent_location)
         pos = [
-            child.location.position.X,
-            child.location.position.Y,
-            child.location.position.Z,
+            location.position.X,
+            location.position.Y,
+            location.position.Z,
         ]
         euler = [
-            child.location.orientation.X,
-            child.location.orientation.Y,
-            child.location.orientation.Z,
+            location.orientation.X,
+            location.orientation.Y,
+            location.orientation.Z,
         ]
         return pos, euler
 

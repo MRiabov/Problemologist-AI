@@ -153,28 +153,28 @@ drafting:
       plan_ref: "plan.md#assembly-strategy"
 motion_forecast:
   moving_part_names:
-  - transfer_lane
+  - ServoMotor_DS3218
   reference_frame: world
   sample_stride_s: 0.5
   anchors:
   - t_s: 0.0
-    reference_point: transfer_lane_tip
-    pos_mm: [258.0, 0.0, 48.0]
+    reference_point: roller_center
+    pos_mm: [0.0, 0.0, 48.0]
     rot_deg: [0.0, 0.0, 0.0]
     position_tolerance_mm: [1.2, 1.2, 1.2]
     rotation_tolerance_deg: [0.1, 0.1, 5.0]
     build_zone_valid: true
     first_contacts: []
   - t_s: 0.6
-    reference_point: transfer_lane_tip
-    pos_mm: [382.0, 0.0, 58.0]
+    reference_point: roller_center
+    pos_mm: [124.0, 0.0, 58.0]
     rot_deg: [45.0, 0.0, 0.0]
     position_tolerance_mm: [1.2, 1.2, 1.2]
     rotation_tolerance_deg: [0.1, 0.1, 5.0]
     first_contacts: []
   - t_s: 1.2
-    reference_point: transfer_lane_tip
-    pos_mm: [468.0, 0.0, 64.0]
+    reference_point: roller_center
+    pos_mm: [480.0, 0.0, 60.0]
     rot_deg: [90.0, 0.0, 0.0]
     position_tolerance_mm: [1.2, 1.2, 1.2]
     rotation_tolerance_deg: [0.1, 0.1, 5.0]
@@ -184,10 +184,27 @@ motion_forecast:
       surface: goal_tray_lip
       first_touch_window_s: [1.05, 1.20]
 final_assembly:
-- name: transfer_lane
-  config:
-    dofs:
-    - rotate_x
+- subassembly_id: sideways_transfer
+  parts:
+  - name: base_plate
+    config:
+      dofs: []
+  - name: entry_funnel
+    config:
+      dofs: []
+  - name: roller_bed
+    config:
+      dofs: []
+  - name: idler_guide
+    config:
+      dofs: []
+  - name: goal_tray
+    config:
+      dofs: []
+  - name: ServoMotor_DS3218
+    config:
+      dofs:
+      - rotate_x
 totals:
   estimated_unit_cost_usd: 62.0
   estimated_weight_g: 608.34

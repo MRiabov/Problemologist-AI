@@ -12,10 +12,10 @@ objectives:
   fluid_objectives: []
   stress_objectives: []
 benchmark_parts:
-  - part_id: environment_fixture
-    label: environment_fixture
+  - part_id: lift_platform
+    label: lift_platform
     metadata:
-      fixed: true
+      fixed: false
       material_id: aluminum_6061
 
 physics:

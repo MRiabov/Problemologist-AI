@@ -7,7 +7,8 @@
 3. [Actuated solutions](#actuated-solutions)
 4. [COTS-backed solutions](#cots-backed-solutions)
 5. [Electronics-backed solutions](#electronics-backed-solutions)
-6. [Convergence heuristics](#convergence-heuristics)
+6. [Render history and point-pick](#render-history-and-point-pick)
+7. [Convergence heuristics](#convergence-heuristics)
 
 ## How to choose
 
@@ -145,6 +146,36 @@ First response:
 
 - Separate netlist issues from routing issues.
 - Fix the logical contract first, then the physical path.
+
+## Render history and point-pick
+
+Use when you need to interpret preview bundles, drafting packages, or screen-space queries.
+
+Common forms:
+
+- Live scene preview via `preview(...)`
+- Drafting package via `preview_drawing()`
+- Bundle history selection via `list_render_bundles()`
+- Compact bundle slices via `query_render_bundle()`
+- Screen-space click-to-world queries via `pick_preview_pixel()` and `pick_preview_pixels()`
+
+Drafting cues:
+
+- Select the exact bundle that matches the revision under test before inspecting media.
+- Use `payload_path=True` only when verifying the live payload-path overlay in a preview bundle.
+- Keep `preview(...)` and `preview_drawing()` separate; they answer different questions.
+- Treat bundle-local history as authoritative; do not infer a world point from image bytes or a stale filename.
+- Use batch point-picks when you need to compare several candidate pixels against the same bundle snapshot.
+
+Typical failure modes:
+
+- The latest visible render is not the bundle you meant to inspect.
+- A click is interpreted against the wrong scene snapshot.
+- A drafting preview is used to answer a live-motion question, or vice versa.
+
+First response:
+
+- Identify the exact bundle, inspect or query that bundle-local snapshot, and only then revise geometry.
 
 ## Convergence heuristics
 

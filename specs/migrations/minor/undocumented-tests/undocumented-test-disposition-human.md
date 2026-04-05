@@ -1,3 +1,10 @@
+---
+title: Undocumented Integration Test Review
+status: migration
+agents_affected: []
+added_at: '2026-03-31T12:24:08Z'
+---
+
 # Undocumented Integration Test Review
 
 This is the readable companion to the action matrix in

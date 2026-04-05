@@ -24,6 +24,7 @@ from shared.simulation.schemas import (
     get_default_simulator_backend,
 )
 from shared.wire_utils import check_wire_clearance, get_awg_properties
+from shared.workers.schema import RenderBundleObjectPoseRecord
 from shared.workers.workbench_models import ManufacturingMethod
 from worker_heavy.simulation.electronics import ElectronicsManager
 from worker_heavy.simulation.evaluator import SuccessEvaluator
@@ -382,6 +383,7 @@ class SimulationLoop:
         """Runs the simulation for the specified duration."""
         if reset_metrics:
             self.reset_metrics()
+        object_pose_records: list[RenderBundleObjectPoseRecord] = []
 
         # 1. Pre-simulation validation
         metrics = self._perform_pre_simulation_validation()
@@ -399,7 +401,14 @@ class SimulationLoop:
 
         # 3. Apply initial controls
         self._apply_gated_controls(control_inputs)
-        media_recorder.update(0.0, self.backend)
+        initial_frame_index = media_recorder.update(0.0, self.backend)
+        if initial_frame_index is not None:
+            object_pose_records.extend(
+                self.backend.export_object_pose_records(
+                    body_names=self.body_names,
+                    frame_index=initial_frame_index,
+                )
+            )
 
         # 4. Determine timestep and steps
         dt = self._get_simulation_timestep()
@@ -426,18 +435,28 @@ class SimulationLoop:
                 break
 
             # Video recording
-            media_recorder.update(current_time, self.backend)
             current_time = self.backend.get_state()["time"]
+            captured_frame_index = media_recorder.update(current_time, self.backend)
+            if captured_frame_index is not None:
+                object_pose_records.extend(
+                    self.backend.export_object_pose_records(
+                        body_names=self.body_names,
+                        frame_index=captured_frame_index,
+                    )
+                )
 
         # 7. Finalization
         self.render_provenance = media_recorder.render_provenance
         self.render_object_store_key = media_recorder.save()
-        if media_recorder.video_path is not None and media_recorder.video_path.exists():
+        if (
+            media_recorder.video_path is not None
+            and media_recorder.video_path.exists()
+            and object_pose_records
+        ):
             try:
-                pose_records = self.backend.export_object_pose_records()
                 write_object_pose_parquet(
                     media_recorder.video_path.parent,
-                    pose_records,
+                    object_pose_records,
                     source_path=media_recorder.video_path.name,
                     session_id=self.session_id,
                 )

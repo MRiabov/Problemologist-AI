@@ -21,7 +21,10 @@ from scripts.internal.eval_run_lock import (  # noqa: E402
     acquire_eval_run_shared_lock,
     release_eval_run_lock,
 )
-from scripts.internal.eval_seed_selection import load_seed_dataset  # noqa: E402
+from scripts.internal.eval_seed_selection import (  # noqa: E402
+    infer_seed_agent_for_task_id,
+    load_seed_dataset,
+)
 from shared.agents.config import TECHNICAL_DRAWING_MODE_ENV, DraftingMode  # noqa: E402
 from shared.enums import AgentName  # noqa: E402
 
@@ -64,11 +67,12 @@ def _parse_args() -> argparse.Namespace:
         "--agent",
         type=str,
         action="append",
-        required=True,
+        required=False,
         help=(
             "Agent dataset(s) to update. Supports a single agent, repeated "
             "flags, comma-separated values, list syntax like [a,b], or 'or' "
-            "separators. Use 'all' to run every configured agent."
+            "separators. Use 'all' to run every configured agent. Omit when "
+            "--task-id is set to infer the matching agent automatically."
         ),
     )
     parser.add_argument(
@@ -146,7 +150,12 @@ def _update_item(
 
 async def _async_main(args: argparse.Namespace) -> int:
     technical_drawing_mode = DraftingMode(args.technical_drawing_mode)
-    agents = resolve_agents(args.agent)
+    if args.agent:
+        agents = resolve_agents(args.agent)
+    elif args.task_id:
+        agents = [infer_seed_agent_for_task_id(args.task_id, root=ROOT)]
+    else:
+        raise SystemExit("Provide --agent or --task-id.")
     levels = parse_level_filters(args.level)
     if args.level and not levels:
         raise SystemExit("No valid --level values were parsed.")

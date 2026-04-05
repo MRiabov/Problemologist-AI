@@ -1,3 +1,10 @@
+---
+title: Integration Mock Refactor TODOs
+status: migration
+agents_affected: []
+added_at: '2026-03-31T07:10:09Z'
+---
+
 # Integration Mock Refactor TODOs
 
 ## Purpose

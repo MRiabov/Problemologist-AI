@@ -175,7 +175,7 @@ result = part
         preview = PreviewDesignResponse.model_validate(resp.json())
         assert preview.success, preview.message
         assert preview.image_path is not None
-        assert preview.image_path.startswith("renders/"), preview
+        assert preview.image_path.startswith("renders/tmp/"), preview
         assert preview.image_path in preview.object_store_keys, preview
         assert preview.object_store_keys[preview.image_path] == preview.image_path
         assert preview.image_bytes_base64 is None
@@ -280,12 +280,34 @@ def build():
         preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
         assert preview_data.success, preview_data.message
         assert preview_data.image_path is not None
-        assert preview_data.image_path.startswith("renders/"), preview_data
+        assert preview_data.image_path.startswith("renders/tmp/"), preview_data
         assert preview_data.manifest_path is not None
-        assert preview_data.manifest_path.startswith("renders/"), preview_data
+        assert preview_data.manifest_path.startswith("renders/tmp/"), preview_data
         assert preview_data.manifest_path.endswith("render_manifest.json"), preview_data
         assert preview_data.render_manifest_json is not None
         assert "artifacts" in preview_data.render_manifest_json
+
+        static_preview_resp = await client.post(
+            f"{WORKER_RENDERER_URL}/benchmark/static-preview",
+            json=BenchmarkToolRequest(
+                script_path="script.py",
+                bundle_base64=bundle64,
+                smoke_test_mode=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=300.0,
+        )
+        assert static_preview_resp.status_code == 200, static_preview_resp.text
+        static_preview_data = BenchmarkToolResponse.model_validate(
+            static_preview_resp.json()
+        )
+        assert static_preview_data.success, static_preview_data.message
+        assert static_preview_data.artifacts is not None
+        assert static_preview_data.artifacts.render_paths, static_preview_data
+        assert all(
+            path.startswith("renders/tmp/")
+            for path in static_preview_data.artifacts.render_paths
+        ), static_preview_data.artifacts.render_paths
 
 
 def _simulation_video_smoke_script() -> str:

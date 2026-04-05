@@ -21,6 +21,9 @@ Use the shared preview helpers whenever the plan needs visual evidence:
 - `preview(...)` for live scene inspection and engineering preview renders
 - `preview_drawing()` for drafting packages and plan evidence
 - `objectives_geometry()` when the preview scene needs benchmark objective overlays reconstructed
+- `list_render_bundles()` when the current or historical render bundle matters
+- `query_render_bundle()` when you need compact bundle metadata without the full media payload
+- `pick_preview_pixel()` / `pick_preview_pixels()` when a preview bundle needs click-to-world evidence
 - Prefer `utils.preview` for new code paths; `utils.visualize` is compatibility-only
 
 ## Geometry Contract
@@ -94,7 +97,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 06. Bind views, datums, dimensions, callouts, and notes to the reviewed mechanism only; do not invent new parts, joints, motions, or geometry beyond the existing handoff.
 07. Keep planner drafting scripts aligned with the same preserved geometry, repeated quantities, and COTS identities when drafting mode is enabled.
 08. Use `validate_costing_and_price()` before submission and fix the source of any pricing or weight mismatch.
-09. Inspect relevant renders or draft drawings with `preview_drawing()` and media inspection when visual evidence exists.
+09. Inspect relevant renders or draft drawings with `preview_drawing()` and media inspection when visual evidence exists. Use `list_render_bundles()` and `query_render_bundle()` first when the question depends on a specific revision, and use `pick_preview_pixel()` / `pick_preview_pixels()` when the question depends on a screen-space point.
 10. Call `submit_plan()` only when the handoff is coherent, physically plausible, and ready for implementation.
 11. When motion proof is required, make `assembly_definition.yaml.motion_forecast` the coarse contract and `payload_trajectory_definition.yaml` the denser refinement; load `references/motion-trajectory-contract.md` for the calculation checklist; keep the same moving parts, preserve the same build-safe first anchor and terminal goal proof, and keep any math in `plan.md` synchronized with the actual waypoint sequence rather than with prose estimates.
 
@@ -111,6 +114,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 - Treat `solution_plan_technical_drawing_script.py` as display-only: it should not re-author a duplicate shape tree or a second copy of the mechanism geometry, only the orthographic drawing/view scaffolding for the same approved contract.
 - Bind dimensions, datums, and notes to the preserved mechanism only.
 - Use `preview(...)` for live scene inspection and `preview_drawing()` for drafting packages; do not substitute one for the other.
+- Use `payload_path=True` on `preview(...)` when the live payload-path overlay is part of the inspection.
 - Avoid over-specifying implementation details that belong in `solution_script.py`.
 - If the plan depends on exact catalog identity, keep provenance explicit rather than substituting anonymous solids.
 - If a placement depends on a real interface, derive it from the joint frame or mating datum instead of a world-space guess.

@@ -615,19 +615,19 @@ async def seed_approved_benchmark_bundle(
     *,
     benchmark_session_id: str,
     benchmark_episode_id: str,
+    int_id: str = "INT-033",
     render_path: str = "renders/render_e45_a45.png",
 ) -> None:
     """Seed a benchmark workspace that already satisfies the approval gate."""
 
-    script_content = _fixture_script_content(
-        "INT-033",
-        preferred_path="benchmark_script.py",
-    )
+    script_content = Path(
+        "shared/assets/template_repos/benchmark_generator/benchmark_script.py"
+    ).read_text(encoding="utf-8")
     benchmark_definition_content = Path(
-        "tests/integration/mock_responses/INT-033/engineer_planner/entry_01/04__benchmark_definition.yaml"
+        f"tests/integration/mock_responses/{int_id}/engineer_planner/entry_01/04__benchmark_definition.yaml"
     ).read_text(encoding="utf-8")
     benchmark_assembly_definition_content = Path(
-        "tests/integration/mock_responses/INT-033/engineer_planner/entry_01/03__assembly_definition.yaml"
+        f"tests/integration/mock_responses/{int_id}/engineer_planner/entry_01/03__assembly_definition.yaml"
     ).read_text(encoding="utf-8")
     script_sha256 = hashlib.sha256(script_content.encode("utf-8")).hexdigest()
     benchmark_definition_sha256 = hashlib.sha256(

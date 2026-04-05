@@ -48,7 +48,7 @@ from shared.rendering import (
     build_render_bundle_index_entry,
     normalize_render_manifest,
     render_stress_heatmap_artifact,
-    select_static_preview_render_subdir,
+    select_scratch_preview_render_subdir,
 )
 from shared.script_contracts import (
     BENCHMARK_SCRIPT_PATH,
@@ -344,6 +344,7 @@ def _prerender_24_views_isolated(
     script_path: Path | str | None = None,
     script_content: str | None = None,
     objectives: BenchmarkDefinition | None = None,
+    publish_bundle_index: bool = False,
 ) -> list[str]:
     """Render previews in a fresh subprocess to avoid GL state contamination.
 
@@ -413,6 +414,9 @@ def _prerender_24_views_isolated(
         particle_budget = int(sys.argv[7]) if sys.argv[7] else None
         script_content_b64 = sys.argv[8] if len(sys.argv) > 8 else ""
         objectives_b64 = sys.argv[9] if len(sys.argv) > 9 else ""
+        publish_bundle_index = (
+            sys.argv[10] == "1" if len(sys.argv) > 10 else False
+        )
 
         script_content = (
             base64.b64decode(script_content_b64).decode("utf-8")
@@ -448,6 +452,7 @@ def _prerender_24_views_isolated(
             smoke_test_mode=smoke_test_mode,
             particle_budget=particle_budget,
             revision=revision,
+            publish_bundle_index=publish_bundle_index,
         )
         render_paths_file.write_text(
             json.dumps(render_paths, indent=2),
@@ -471,6 +476,7 @@ def _prerender_24_views_isolated(
                 str(particle_budget) if particle_budget is not None else "",
                 script_content_b64,
                 objectives_b64,
+                "1" if publish_bundle_index else "0",
             ],
             cwd=working_dir,
             env=child_env,
@@ -1546,7 +1552,7 @@ def simulate(
     renders_dir = (
         working_dir
         / "renders"
-        / select_static_preview_render_subdir(
+        / select_scratch_preview_render_subdir(
             working_dir, agent_role=_preview_agent_role()
         )
     )
@@ -1906,6 +1912,7 @@ def simulate(
                     script_path=script_path,
                     script_content=script_content,
                     objectives=objectives,
+                    publish_bundle_index=False,
                 )
             else:
                 render_paths = prerender_24_views(
@@ -1917,6 +1924,7 @@ def simulate(
                     scene_path=str(scene_path),
                     smoke_test_mode=smoke_test_mode,
                     revision=runtime_revision,
+                    publish_bundle_index=False,
                 )
         except Exception as exc:
             logger.warning(
@@ -1935,6 +1943,9 @@ def simulate(
             )
         if final_video_path and final_video_path.exists():
             render_paths.append(str(final_video_path))
+            object_pose_path = final_video_path.parent / "objects.parquet"
+            if object_pose_path.exists():
+                render_paths.append(str(object_pose_path))
         render_paths = _workspace_relative_render_paths(render_paths, working_dir)
 
         video_render_paths = [

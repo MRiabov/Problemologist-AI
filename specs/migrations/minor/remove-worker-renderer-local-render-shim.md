@@ -1,3 +1,10 @@
+---
+title: Remove the worker-renderer local render shim
+status: migration
+agents_affected: []
+added_at: '2026-03-31T17:16:00Z'
+---
+
 # Remove the worker-renderer local render shim
 
 ## Purpose

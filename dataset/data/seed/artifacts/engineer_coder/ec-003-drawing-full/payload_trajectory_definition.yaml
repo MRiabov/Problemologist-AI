@@ -1,6 +1,6 @@
 backend: GENESIS
 moving_part_names:
-- timed_metering_stage
+- drive_motor
 initial_pose:
   reference_point: build_zone_start
   pos_mm: [-92.0, -68.0, 35.0]

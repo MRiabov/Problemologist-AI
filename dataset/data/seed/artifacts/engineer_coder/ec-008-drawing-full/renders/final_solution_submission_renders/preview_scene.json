@@ -1,17 +1,17 @@
 {
-  "component_label": "projectile_ball_preview",
+  "component_label": "benchmark_environment",
   "entities": [
     {
-      "label": "projectile_ball",
-      "semantic_label": "projectile_ball",
-      "instance_id": "projectile_ball",
-      "instance_name": "projectile_ball",
+      "label": "lift_platform",
+      "semantic_label": "lift_platform",
+      "instance_id": "lift_platform",
+      "instance_name": "lift_platform",
       "object_type": "part",
       "object_id": 0,
       "pos": [
+        40.0,
         0.0,
-        0.0,
-        125.0
+        120.0
       ],
       "euler": [
         -0.0,
@@ -19,17 +19,17 @@
         -0.0
       ],
       "mesh_paths": [
-        "meshes/projectile_ball.obj"
+        "meshes/lift_platform.obj"
       ],
       "box_size": null,
-      "material_id": "abs",
-      "body_name": "projectile_ball",
-      "geom_name": "projectile_ball",
+      "material_id": "aluminum_6061",
+      "body_name": "lift_platform",
+      "geom_name": "lift_platform",
       "zone_type": null,
       "color_rgba": [
-        1.0,
-        1.0,
-        1.0,
+        0.7529411764705882,
+        0.7529411764705882,
+        0.7529411764705882,
         1.0
       ],
       "segmentation_color_rgb": [

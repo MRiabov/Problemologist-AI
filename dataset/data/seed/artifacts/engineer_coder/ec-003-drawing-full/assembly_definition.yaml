@@ -97,7 +97,7 @@ cots_parts:
   source: catalog
 motion_forecast:
   moving_part_names:
-  - timed_metering_stage
+  - drive_motor
   reference_frame: world
   sample_stride_s: 0.5
   anchors:
@@ -126,16 +126,34 @@ motion_forecast:
     rotation_tolerance_deg: [0.1, 0.1, 3.0]
     goal_zone_contact: true
 final_assembly:
-- name: timed_metering_stage
-  config:
-    dofs:
-    - rotate_z
-    control:
-      mode: ON_OFF
-      speed: 0.6
-- name: drive_motor
-  config:
-    dofs: []
+- subassembly_id: timed_metering_stage
+  parts:
+  - name: base_plate
+    config:
+      dofs: []
+  - name: settling_chute
+    config:
+      dofs: []
+  - name: metering_wheel_guard
+    config:
+      dofs: []
+  - name: guide_rail
+    config:
+      dofs: []
+  - name: post_gate_channel
+    config:
+      dofs: []
+  - name: goal_cup
+    config:
+      dofs: []
+  - name: drive_motor
+    config:
+      cots_id: ServoMotor_DS3218
+      dofs:
+      - rotate_z
+      control:
+        mode: ON_OFF
+        speed: 0.6
 drafting:
   sheet_id: sheet_1
   title: Timed gate metering technical drawing

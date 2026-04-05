@@ -12,9 +12,11 @@ from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition
 from shared.models.simulation import SimulationResult
 from shared.script_contracts import (
+    BENCHMARK_SCRIPT_PATH,
     drafting_render_manifest_path_for_agent,
     technical_drawing_script_path_for_agent,
 )
+from shared.workers.loader import load_component_from_script
 from shared.workers.schema import (
     BenchmarkAttachmentPolicySummary,
     RenderManifest,
@@ -96,6 +98,81 @@ def _resolve_workspace_path(cwd: Path, raw_path: str) -> Path:
     if path.is_absolute():
         return path
     return cwd / path
+
+
+def _compose_final_submission_component(
+    cwd: Path,
+    component: Compound,
+    *,
+    normalized_stage: ReviewerStage,
+) -> Compound:
+    if normalized_stage == "benchmark_reviewer":
+        return component
+
+    benchmark_script_path = cwd / BENCHMARK_SCRIPT_PATH
+    if not benchmark_script_path.exists():
+        raise ValueError(
+            f"{BENCHMARK_SCRIPT_PATH} is missing (required for final submission renders)"
+        )
+
+    benchmark_component = load_component_from_script(
+        benchmark_script_path,
+        session_root=cwd,
+    )
+
+    def _leaf_labels(part: Compound) -> set[str]:
+        labels: set[str] = set()
+
+        def _visit(node: Compound) -> None:
+            children = list(getattr(node, "children", []) or [])
+            if not children:
+                label = str(getattr(node, "label", "") or "").strip()
+                if label:
+                    labels.add(label)
+                return
+            for child in children:
+                _visit(child)
+
+        _visit(part)
+        return labels
+
+    def _filter_component(part: Compound, excluded_labels: set[str]) -> Compound | None:
+        children = list(getattr(part, "children", []) or [])
+        if not children:
+            label = str(getattr(part, "label", "") or "").strip()
+            if label and label in excluded_labels:
+                return None
+            return part
+
+        kept_children = []
+        for child in children:
+            filtered = _filter_component(child, excluded_labels)
+            if filtered is not None:
+                kept_children.append(filtered)
+        if not kept_children:
+            return None
+
+        rebuilt = Compound(children=kept_children)
+        rebuilt = rebuilt.located(part.location)
+        label = getattr(part, "label", None)
+        if label:
+            rebuilt.label = str(label)
+        metadata = getattr(part, "metadata", None)
+        if metadata is not None:
+            rebuilt.metadata = metadata
+        return rebuilt
+
+    benchmark_leaves = _filter_component(benchmark_component, _leaf_labels(component))
+    combined_children = [
+        child for child in (benchmark_leaves, component) if child is not None
+    ]
+    combined_component = Compound(children=combined_children)
+    combined_label = getattr(benchmark_component, "label", None) or getattr(
+        component, "label", None
+    )
+    if combined_label:
+        combined_component.label = str(combined_label)
+    return combined_component
 
 
 def _derived_episode_id(session_id: str | None) -> str | None:
@@ -705,8 +782,13 @@ def submit_for_review(
         else "final_solution_submission_renders"
     )
     persistent_bundle_dir = renders_dir / persistent_bundle_subdir
-    persistent_bundle_render_paths = prerender_24_views(
+    render_component = _compose_final_submission_component(
+        cwd,
         component,
+        normalized_stage=normalized_stage,
+    )
+    persistent_bundle_render_paths = prerender_24_views(
+        render_component,
         output_dir=str(persistent_bundle_dir),
         workspace_root=cwd,
         objectives=benchmark_definition,
@@ -718,7 +800,7 @@ def submit_for_review(
     render_paths = persistent_bundle_render_paths
 
     cad_path = persistent_bundle_dir / "model.step"
-    export_step(component, str(cad_path))
+    export_step(render_component, str(cad_path))
     if normalized_stage in {
         "benchmark_reviewer",
         "engineering_execution_reviewer",

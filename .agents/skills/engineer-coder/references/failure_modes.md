@@ -7,7 +7,8 @@
 3. [Manufacturability and cost](#manufacturability-and-cost)
 4. [Simulation and robustness](#simulation-and-robustness)
 5. [Evidence and review](#evidence-and-review)
-6. [Refusal and handoff](#refusal-and-handoff)
+6. [Render history and point-pick](#render-history-and-point-pick)
+7. [Refusal and handoff](#refusal-and-handoff)
 
 ## Geometry and placement
 
@@ -133,6 +134,27 @@ Likely causes:
 First fix:
 
 - Inspect the actual media and separate valid checklist items from noise.
+
+## Render history and point-pick
+
+Signals:
+
+- The render looks plausible, but the issue depends on a different revision or bundle.
+- Click-to-world or ray-pick output is wrong even though the image looks fine.
+- Code keeps using the newest path instead of the bundle for the current revision.
+- Scratch and persistent render evidence are conflated.
+
+Likely causes:
+
+- Wrong bundle selected from history.
+- Query ran against a different scene snapshot than the media under review.
+- A screen-space question is being answered from image bytes or stale filenames.
+
+First fix:
+
+- Use `list_render_bundles()` to select the exact bundle, then `query_render_bundle()` or `pick_preview_pixel()` against that bundle-local snapshot.
+- If visual confirmation is needed, inspect the media for that bundle with `inspect_media(...)`.
+- Do not change geometry until the bundle identity is confirmed.
 
 ## Refusal and handoff
 

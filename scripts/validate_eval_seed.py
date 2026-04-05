@@ -10,6 +10,8 @@ import time
 import uuid
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -26,7 +28,10 @@ from scripts.internal.eval_run_lock import (  # noqa: E402
     downgrade_eval_run_lock_to_shared,
     release_eval_run_lock,
 )
-from scripts.internal.eval_seed_selection import load_seed_dataset  # noqa: E402
+from scripts.internal.eval_seed_selection import (  # noqa: E402
+    infer_seed_agent_for_task_id,
+    load_seed_dataset,
+)
 
 _STACK_PROFILE_NAME = (
     "integration"
@@ -41,6 +46,7 @@ from evals.logic.models import EvalDatasetItem  # noqa: E402
 from evals.logic.specs import AGENT_SPECS  # noqa: E402
 from evals.logic.workspace import (  # noqa: E402
     InMemorySeedWorkspaceClient,
+    SeededEntryContractError,
     materialize_seed_workspace_snapshot,
 )
 from evals.logic.workspace import (
@@ -72,6 +78,30 @@ class _QuietLogger:
 
 
 QUIET_LOGGER = _QuietLogger()
+
+
+def _format_failure_message(
+    agent: str,
+    task_id: str,
+    detail: str | object,
+) -> str:
+    header = [f"FAIL {agent} {task_id}:"]
+    if isinstance(detail, SeededEntryContractError):
+        report = yaml.safe_dump(
+            detail.report.model_dump(mode="json"),
+            sort_keys=False,
+        ).rstrip()
+        return "\n".join(
+            header + ["  report:"] + ["    " + line for line in report.splitlines()]
+        )
+
+    body = yaml.safe_dump(
+        {"detail": str(detail)},
+        sort_keys=False,
+    ).rstrip()
+    return "\n".join(
+        header + ["  report:"] + ["    " + line for line in body.splitlines()]
+    )
 
 
 async def _wait_for_worker_ready(
@@ -121,11 +151,12 @@ def _parse_args() -> argparse.Namespace:
         "--agent",
         type=str,
         action="append",
-        required=True,
+        required=False,
         help=(
             "Agent dataset(s) to validate. Supports a single agent, repeated flags, "
             "comma-separated values, list syntax like [a,b], or 'or' separators. "
-            "Use 'all' to run every configured agent."
+            "Use 'all' to run every configured agent. Omit when --task-id is set "
+            "to infer the matching agent automatically."
         ),
     )
     parser.add_argument(
@@ -284,7 +315,7 @@ async def _validate_item(
     update_manifests: bool,
     update_renders: bool,
     errors_only: bool = False,
-) -> tuple[bool, str]:
+) -> tuple[bool, str | SeededEntryContractError]:
     session_id = _build_session_id(agent, item.id)
     spec = AGENT_SPECS[agent]
     item_logger = QUIET_LOGGER if errors_only else logger
@@ -314,6 +345,8 @@ async def _validate_item(
             logger=item_logger,
             workspace_client=snapshot_client,
         )
+    except SeededEntryContractError as exc:
+        return False, exc
     except Exception as exc:
         return False, str(exc)
 
@@ -342,7 +375,12 @@ async def _async_main(args: argparse.Namespace) -> int:
         raise SystemExit("--concurrency must be >= 1")
 
     technical_drawing_mode = DraftingMode(args.technical_drawing_mode)
-    agents = resolve_agents(args.agent)
+    if args.agent:
+        agents = resolve_agents(args.agent)
+    elif args.task_id:
+        agents = [infer_seed_agent_for_task_id(args.task_id, root=ROOT)]
+    else:
+        raise SystemExit("Provide --agent or --task-id.")
     levels = parse_level_filters(args.level)
     if args.level and not levels:
         raise SystemExit("No valid --level values were parsed.")
@@ -449,7 +487,7 @@ async def _async_main(args: argparse.Namespace) -> int:
                     errors_only=args.errors_only,
                 )
                 if not ok:
-                    print(f"FAIL {agent.value} {item.id}: {detail}")
+                    print(_format_failure_message(agent.value, item.id, detail))
                     failures.append((agent.value, item.id, detail))
                     if args.fail_fast:
                         break
@@ -479,7 +517,7 @@ async def _async_main(args: argparse.Namespace) -> int:
                 agent, item, ok, detail = await completed
                 checked += 1
                 if not ok:
-                    print(f"FAIL {agent.value} {item.id}: {detail}")
+                    print(_format_failure_message(agent.value, item.id, detail))
                     failures.append((agent.value, item.id, detail))
                 elif not args.errors_only:
                     print(f"PASS {agent.value} {item.id}: {detail}")

@@ -1,6 +1,6 @@
 backend: GENESIS
 moving_part_names:
-  - shelf_lift
+  - lift_base
 initial_pose:
   reference_point: shelf_lift_tray_tip
   pos_mm: [0.0, 0.0, 20.0]

@@ -1,3 +1,10 @@
+---
+title: Skill Worktree and Promotion Arbiter
+status: investigation
+agents_affected: []
+added_at: '2026-04-04T09:53:43Z'
+---
+
 # Skill Worktree and Promotion Arbiter
 
 <!-- Investigation doc. No behavior change yet. -->

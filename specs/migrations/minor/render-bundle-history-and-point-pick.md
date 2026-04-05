@@ -1,3 +1,13 @@
+---
+title: Render Bundle History and Point-Pick Queries
+status: investigation
+agents_affected:
+  - benchmark_reviewer
+  - engineer_coder
+  - engineer_execution_reviewer
+added_at: '2026-04-02T08:33:51Z'
+---
+
 # Render Bundle History and Point-Pick Queries
 
 <!-- Investigation doc. No behavior change yet. -->

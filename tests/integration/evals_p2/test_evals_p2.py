@@ -3,12 +3,15 @@ import uuid
 
 import pytest
 from httpx import AsyncClient
+from PIL import Image
 
+from controller.agent.render_validation import validate_render_images_non_black
 from controller.api.schemas import (
     AgentRunRequest,
     AgentRunResponse,
     EpisodeListItem,
 )
+from evals.logic.codex_workspace import LocalWorkspaceClient
 from shared.enums import EpisodeStatus
 from shared.models.schemas import EpisodeMetadata
 
@@ -227,3 +230,32 @@ async def test_skill_effectiveness_tracking_int_052():
             # Not all episodes might have it if they didn't use skills,
             # but the schema must support it.
             assert hasattr(episodes[0], "skill_git_hash")
+
+
+@pytest.mark.integration_p2
+@pytest.mark.asyncio
+async def test_local_workspace_binary_render_batch_read_int_206(tmp_path):
+    """
+    INT-206: Local workspace binary render batch read regression.
+    Assertion: Seed-materialization validation can batch-read render images from a
+    local workspace client without requiring controller-backed file access.
+    """
+    workspace_dir = tmp_path / "workspace"
+    renders_dir = workspace_dir / "renders"
+    renders_dir.mkdir(parents=True, exist_ok=True)
+
+    for idx, color in enumerate(((255, 255, 255), (240, 240, 240)), start=1):
+        image = Image.new("RGB", (640, 480), color=color)
+        image.save(renders_dir / f"render-{idx}.png")
+
+    client = LocalWorkspaceClient(root=workspace_dir, session_id="INT-206-local")
+    try:
+        error = await validate_render_images_non_black(
+            client,
+            render_root="renders",
+            require_images=True,
+        )
+    finally:
+        await client.aclose()
+
+    assert error is None, error

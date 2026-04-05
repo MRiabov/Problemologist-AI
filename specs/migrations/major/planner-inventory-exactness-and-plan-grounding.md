@@ -1,3 +1,12 @@
+---
+title: Planner Inventory Exactness and Plan Grounding Migration
+status: migration
+agents_affected:
+  - benchmark_plan_reviewer
+  - benchmark_coder
+added_at: '2026-04-02T18:35:51Z'
+---
+
 # Planner Inventory Exactness and Plan Grounding Migration
 
 <!-- Major migration. The eval refresh and integration refresh are the long pole. -->

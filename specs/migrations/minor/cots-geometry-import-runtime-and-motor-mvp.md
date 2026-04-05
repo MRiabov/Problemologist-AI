@@ -1,3 +1,14 @@
+---
+title: COTS Geometry Import Runtime and Motor MVP
+status: migration
+agents_affected:
+  - benchmark_coder
+  - benchmark_reviewer
+  - engineer_coder
+  - engineer_execution_reviewer
+added_at: '2026-04-01T18:34:03Z'
+---
+
 # COTS Geometry Import Runtime and Motor MVP
 
 <!-- Migration tracker. Check items conservatively as implementation lands. -->

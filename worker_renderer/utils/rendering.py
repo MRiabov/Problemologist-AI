@@ -368,6 +368,12 @@ def select_single_preview_render_subdir(
     return "tmp"
 
 
+def select_scratch_preview_render_subdir(
+    workspace_root: Path, *, agent_role: str | None = None
+) -> str:
+    return "tmp"
+
+
 def select_static_preview_render_subdir(
     workspace_root: Path, *, agent_role: str | None = None
 ) -> str:

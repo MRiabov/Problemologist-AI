@@ -1,3 +1,13 @@
+---
+title: Undocumented Integration Test Catalog
+status: migration
+agents_affected:
+  - benchmark_planner
+  - benchmark_plan_reviewer
+  - benchmark_coder
+added_at: '2026-03-31T12:24:08Z'
+---
+
 # Undocumented Integration Test Catalog
 
 This file lists every `@pytest.mark.integration_p#` test whose function name does not start with `test_int_`.

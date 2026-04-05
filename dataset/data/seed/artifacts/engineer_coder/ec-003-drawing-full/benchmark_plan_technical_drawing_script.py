@@ -16,10 +16,7 @@ def _build_part(
     part = Box(length, width, height, align=(Align.CENTER, Align.CENTER, Align.MIN))
     part.label = label
     part.metadata = PartMetadata(material_id=material_id, fixed=fixed)
-    wrapper = Compound(children=[part])
-    wrapper.label = label
-    wrapper.metadata = CompoundMetadata(fixed=fixed)
-    return wrapper.moved(Location((x, 0.0, 0.0)))
+    return part.moved(Location((x, 0.0, 0.0)))
 
 
 def build():

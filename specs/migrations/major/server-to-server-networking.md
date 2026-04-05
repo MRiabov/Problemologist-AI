@@ -1,3 +1,10 @@
+---
+title: Server-to-Server Networking
+status: migration
+agents_affected: []
+added_at: '2026-04-03T11:33:12Z'
+---
+
 # Server-to-Server Networking
 
 ## Purpose

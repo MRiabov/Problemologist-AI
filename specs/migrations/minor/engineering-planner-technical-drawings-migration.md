@@ -1,3 +1,19 @@
+---
+title: Engineering Planner Technical Drawings Migration
+status: migration
+agents_affected:
+  - benchmark_planner
+  - benchmark_plan_reviewer
+  - benchmark_coder
+  - benchmark_reviewer
+  - engineer_planner
+  - engineer_plan_reviewer
+  - engineer_coder
+  - engineer_execution_reviewer
+  - electronics_planner
+added_at: '2026-04-02T10:48:34Z'
+---
+
 # Engineering Planner Technical Drawings Migration
 
 <!-- Migration tracker. Check items conservatively as implementation lands. -->

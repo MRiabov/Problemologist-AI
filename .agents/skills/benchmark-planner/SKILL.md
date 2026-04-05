@@ -21,6 +21,9 @@ Use the shared preview helpers when evidence or objective overlays are part of t
 - `preview(...)` for live scene inspection and benchmark preview renders
 - `preview_drawing()` for drafting packages and orthographic plan evidence
 - `objectives_geometry()` when a benchmark preview needs reconstructed objective overlays
+- `list_render_bundles()` when the task depends on the exact bundle revision
+- `query_render_bundle()` when you need compact bundle metadata or frame slices
+- `pick_preview_pixel()` / `pick_preview_pixels()` when a preview bundle needs click-to-world evidence
 - Prefer `utils.preview` for new import paths; `utils.visualize` is compatibility-only
 
 ## Geometry Contract
@@ -79,7 +82,9 @@ Read these before drafting or revising the handoff:
 - Treat `benchmark_plan_technical_drawing_script.py` as display-only: it should not re-author a duplicate shape tree or a second copy of the benchmark geometry, only the orthographic drawing/view scaffolding for the same approved contract.
 - Keep every dimension formula-backed; if the handoff is missing a needed length, thickness, clearance, or placement datum, fix the source rather than guessing.
 - Use `preview(...)` for live scene previews and `preview_drawing()` for drafting packages; they are not interchangeable.
+- Use `payload_path=True` on `preview(...)` when the live payload-path overlay is part of the inspection.
 - When drawings are part of the handoff, inspect the drafted package with `preview_drawing()` before `submit_plan()`.
+- If the review depends on bundle identity or a click-to-world answer, select the exact bundle with `list_render_bundles()` and inspect or query that bundle-local snapshot instead of assuming the newest visible render is the right one.
 - Make the benchmark-owned motion contract explicit if any fixture moves. In this repo, keep each moving fixture to one explicit DOF axis and spell out the controller facts and limits.
 - Keep the moved object inside `build_zone` under static variation plus runtime jitter.
 - Keep goal and forbid zones non-overlapping with the moved object at spawn.

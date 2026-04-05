@@ -1,3 +1,14 @@
+---
+title: 'Rendering Refactor: Scratch Buckets and Backend Selection'
+status: migration
+agents_affected:
+  - benchmark_coder
+  - benchmark_reviewer
+  - engineer_coder
+  - engineer_execution_reviewer
+added_at: '2026-04-04T18:08:23Z'
+---
+
 # Rendering Refactor: Scratch Buckets and Backend Selection
 
 <!-- Migration tracker. No behavior change yet. -->

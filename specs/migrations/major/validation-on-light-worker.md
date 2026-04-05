@@ -1,3 +1,10 @@
+---
+title: Validation on Light Worker
+status: migration
+agents_affected: []
+added_at: '2026-03-31T07:10:09Z'
+---
+
 # Validation on Light Worker
 
 <!-- Completed migration record. Historical checklist retained for traceability. -->

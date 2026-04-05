@@ -1,3 +1,14 @@
+---
+title: Agent CLI Provider Contract
+status: investigation
+agents_affected:
+  - benchmark_coder
+  - benchmark_reviewer
+  - engineer_coder
+  - engineer_execution_reviewer
+added_at: '2026-04-04T08:10:08Z'
+---
+
 # Agent CLI Provider Contract
 
 <!-- Investigation doc. No behavior change yet. -->

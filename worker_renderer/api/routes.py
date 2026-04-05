@@ -65,8 +65,8 @@ from worker_renderer.utils.rendering import (
     build_render_bundle_index_entry,
     build_render_manifest,
     normalize_render_manifest,
+    select_scratch_preview_render_subdir,
     select_single_preview_render_subdir,
-    select_static_preview_render_subdir,
 )
 from worker_renderer.utils.scene_builder import normalize_preview_label
 from worker_renderer.utils.technical_drawing import render_technical_drawing_preview
@@ -813,6 +813,7 @@ def _build_preview_manifest(
     depth_ranges_by_path: dict[str, tuple[float, float]] | None,
     view_metadata_by_path: dict[str, PreviewViewSpec] | None,
     session_id: str | None,
+    publish_bundle_index: bool = True,
 ) -> Path:
     artifacts: dict[str, RenderArtifactMetadata] = {}
     preview_evidence_paths: list[str] = []
@@ -907,12 +908,13 @@ def _build_preview_manifest(
     )
     manifest_path = bundle_root / "render_manifest.json"
     _write_text_atomic(manifest_path, manifest.model_dump_json(indent=2))
-    index_entry = build_render_bundle_index_entry(
-        manifest,
-        manifest_path=str(manifest_path.relative_to(root)).replace("\\", "/"),
-        primary_media_paths=list(preview_evidence_paths),
-    )
-    append_render_bundle_index(root, index_entry)
+    if publish_bundle_index:
+        index_entry = build_render_bundle_index_entry(
+            manifest,
+            manifest_path=str(manifest_path.relative_to(root)).replace("\\", "/"),
+            primary_media_paths=list(preview_evidence_paths),
+        )
+        append_render_bundle_index(root, index_entry)
     return manifest_path
 
 
@@ -1196,6 +1198,7 @@ async def api_preview(
                     depth_ranges_by_path=depth_ranges_by_path or None,
                     view_metadata_by_path=view_metadata_by_path,
                     session_id=x_session_id,
+                    publish_bundle_index=False,
                 )
                 manifest_json = preview_manifest.read_text(encoding="utf-8")
 
@@ -1312,7 +1315,7 @@ async def api_static_preview(
                     renders_dir = (
                         root
                         / "renders"
-                        / select_static_preview_render_subdir(
+                        / select_scratch_preview_render_subdir(
                             root, agent_role=x_agent_role
                         )
                     )
@@ -1354,6 +1357,7 @@ async def api_static_preview(
                             depth_ranges_by_path=render_result.depth_ranges_by_path,
                             view_metadata_by_path=None,
                             session_id=x_session_id,
+                            publish_bundle_index=False,
                         )
                     else:
                         component = load_component_from_script(
@@ -1405,6 +1409,7 @@ async def api_static_preview(
                             depth_ranges_by_path=render_result.depth_ranges_by_path,
                             view_metadata_by_path=None,
                             session_id=x_session_id,
+                            publish_bundle_index=False,
                         )
 
                 events = collect_and_cleanup_events(root, session_id=x_session_id)

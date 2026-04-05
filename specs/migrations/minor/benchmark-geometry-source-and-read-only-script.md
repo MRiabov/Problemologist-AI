@@ -1,3 +1,17 @@
+---
+title: Benchmark Geometry Source, Split Authored Scripts, and Node Entry Validation
+status: investigation
+agents_affected:
+  - benchmark_planner
+  - benchmark_coder
+  - benchmark_reviewer
+  - engineer_planner
+  - engineer_coder
+  - engineer_execution_reviewer
+  - electronics_reviewer
+added_at: '2026-03-31T20:20:26Z'
+---
+
 # Benchmark Geometry Source, Split Authored Scripts, and Node Entry Validation
 
 <!-- Investigation doc. No behavior change yet. -->

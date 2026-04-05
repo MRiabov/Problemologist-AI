@@ -14,6 +14,9 @@ When plan or execution evidence needs visual checking, use the shared preview he
 - `preview(...)` for live scene or engineer preview inspection
 - `preview_drawing()` for drafting-package review evidence
 - `objectives_geometry()` when a preview scene needs benchmark objective overlays reconstructed
+- `list_render_bundles()` when exact bundle identity matters
+- `query_render_bundle()` when you need bundle metadata without the full media payload
+- `pick_preview_pixel()` / `pick_preview_pixels()` when a preview bundle needs click-to-world evidence
 - Prefer `utils.preview` for new code paths; `utils.visualize` is compatibility-only
 
 ## Motion Review
@@ -27,6 +30,7 @@ When plan or execution evidence needs visual checking, use the shared preview he
 - [ ] Confirm the latest revision and matching stage manifest.
 - [ ] Treat planner and coder artifacts as read-only.
 - [ ] Inspect render or simulation media with `inspect_media(...)` whenever they exist.
+- [ ] If bundle identity or a pixel-to-world question matters, resolve the exact bundle with `list_render_bundles()` and query that bundle-local snapshot before making the review call.
 - [ ] Write only the stage-scoped review decision and comments YAML pair.
 - [ ] Route invalid refusals back to coding unless the refusal proves infeasibility.
 - [ ] For any motion or payload trajectory claim, verify the claim is described and formula-justified; see `references/motion-trajectory-review.md`.
@@ -35,6 +39,7 @@ When plan or execution evidence needs visual checking, use the shared preview he
 
 - [ ] Read `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, and `solution_plan_technical_drawing_script.py`.
 - [ ] Treat `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` as the inspectable source of the approved plan, and inspect preview evidence with `inspect_media(...)` when present.
+- [ ] When preview evidence is bundle-scoped, use `list_render_bundles()` or `query_render_bundle()` to select the exact bundle before judging it.
 - [ ] Verify exact inventory grounding, exact identifier mentions, budget realism, and operating-envelope clarity.
 - [ ] Reject invented materials, unsupported mechanisms, hidden DOFs, or a technical-drawing script without a real `TechnicalDrawing` construction path.
 - [ ] Reject plans that exceed benchmark caps or leave the solution mechanically ambiguous.

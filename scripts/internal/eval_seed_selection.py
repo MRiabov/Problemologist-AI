@@ -16,6 +16,47 @@ from shared.agents.config import DraftingMode  # noqa: E402
 from shared.enums import AgentName  # noqa: E402
 
 
+def _seed_dataset_roots(root: Path) -> tuple[Path, Path]:
+    return (
+        root / "dataset" / "evals" / "datasets",
+        root / "dataset" / "data" / "seed" / "role_based",
+    )
+
+
+def infer_seed_agent_for_task_id(task_id: str, *, root: Path = ROOT) -> AgentName:
+    matches: dict[AgentName, Path] = {}
+    dataset_roots = _seed_dataset_roots(root)
+    for dataset_root in dataset_roots:
+        if not dataset_root.exists():
+            continue
+        for json_path in sorted(dataset_root.glob("*.json")):
+            try:
+                agent = AgentName(json_path.stem)
+            except ValueError:
+                continue
+            with json_path.open(encoding="utf-8") as handle:
+                rows = json.load(handle)
+            if any(row.get("id") == task_id for row in rows):
+                matches.setdefault(agent, json_path)
+
+    if not matches:
+        searched = ", ".join(str(path) for path in dataset_roots)
+        raise SystemExit(
+            f"Task id '{task_id}' was not found in any seed dataset. Searched: {searched}"
+        )
+
+    if len(matches) > 1:
+        match_list = ", ".join(
+            f"{agent.value}={path.relative_to(root)}"
+            for agent, path in sorted(matches.items(), key=lambda item: item[0].value)
+        )
+        raise SystemExit(
+            f"Task id '{task_id}' is ambiguous across seed datasets: {match_list}"
+        )
+
+    return next(iter(matches))
+
+
 def load_seed_dataset(
     agent: AgentName,
     *,
@@ -25,10 +66,7 @@ def load_seed_dataset(
     technical_drawing_mode: DraftingMode,
     root: Path = ROOT,
 ) -> list[EvalDatasetItem]:
-    dataset_roots = [
-        root / "dataset" / "evals" / "datasets",
-        root / "dataset" / "data" / "seed" / "role_based",
-    ]
+    dataset_roots = _seed_dataset_roots(root)
     json_path = next(
         (
             dataset_root / f"{agent.value}.json"

@@ -14,6 +14,9 @@ When preview evidence or objective overlays are present, use the shared preview 
 - `preview(...)` for live scene previews or benchmark evidence inspection
 - `preview_drawing()` for drafting-package review evidence
 - `objectives_geometry()` when a benchmark preview needs reconstructed objective overlays
+- `list_render_bundles()` when exact bundle identity matters
+- `query_render_bundle()` when you need bundle metadata without the full media payload
+- `pick_preview_pixel()` / `pick_preview_pixels()` when a preview bundle needs click-to-world evidence
 - Prefer `utils.preview` for new code paths; `utils.visualize` is a compatibility alias
 
 ## Review Checklist
@@ -22,6 +25,7 @@ When preview evidence or objective overlays are present, use the shared preview 
 - [ ] Read `benchmark_script.py`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `plan.md`, `todo.md`, `validation_results.json`, `simulation_result.json`, `scene.json`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, and any `renders/benchmark_renders/**` as read-only context.
 - [ ] Require validation and simulation success for the latest revision, and confirm `goal_reached` in the manifest/result.
 - [ ] Inspect render images with `inspect_media(...)` whenever they exist; if moving benchmark fixtures exist, inspect the latest dynamic simulation evidence before approval.
+- [ ] If bundle identity or a pixel-to-world question matters, resolve the exact bundle with `list_render_bundles()` and query that bundle-local snapshot before approval.
 - [ ] Treat `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as the inspectable source of the approved benchmark contract.
 - [ ] Verify geometric validity, solvability, runtime randomization, exact inventory grounding, and benchmark-side motion against the approved contract and observed evidence. See `references/review_contracts.md`.
 - [ ] Reject implementations that rely on free-form XYZ placement instead of selector-driven placement, explicit mates/joints, or the few absolute anchors already fixed by the approved plan.

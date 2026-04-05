@@ -122,7 +122,7 @@ Bundle-local sidecars are allowed when they help agent tooling resolve the exact
 
 1. `preview_scene.json` stores the exact scene snapshot used for preview rendering.
 2. `frames.jsonl` stores sparse frame metadata for video evidence.
-3. `objects.parquet` stores dense object pose tables for query helpers. The active `PhysicsBackend` export path produces this file, so both MuJoCo and Genesis can emit it.
+3. `objects.parquet` stores dense, frame-indexed object pose tables for query helpers. The active `PhysicsBackend` export path samples poses at the video-capture cadence and produces this file without per-step logging overhead, so both MuJoCo and Genesis can emit it.
 
 The worker-light render-query helper family resolves against these bundle-local artifacts when it needs a point coordinate from a render. It does not infer coordinates from the video bytes alone.
 

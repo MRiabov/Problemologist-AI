@@ -12,6 +12,9 @@ When planner drafts or evidence need visual checking, use the shared preview hel
 - `preview(...)` for live scene or preview-bundle inspection
 - `preview_drawing()` for drafted plan packages and orthographic evidence
 - `objectives_geometry()` when a preview scene needs benchmark objective overlays reconstructed
+- `list_render_bundles()` when exact bundle identity matters
+- `query_render_bundle()` when you need bundle metadata without the full media payload
+- `pick_preview_pixel()` / `pick_preview_pixels()` when a preview bundle needs click-to-world evidence
 - Prefer `utils.preview` for new code paths; `utils.visualize` is compatibility-only
 
 ## Precise Path Review
@@ -37,6 +40,7 @@ Treat `payload_trajectory_definition.yaml` as binding path-contract evidence whe
 - [ ] Strong reject plans that cannot state the payload trajectory clearly or that fail to derive it rigorously in `plan.md`; a missing trajectory estimate usually means downstream machinery is not grounded either.
 - [ ] Confirm `plan.md`'s detailed calculation section fully explains the numbers used to justify the precise path, including intermediate derivations for distances, timing, speeds, and clearances.
 - [ ] If render or drawing evidence exists, inspect it with `inspect_media(...)`. If drafting evidence must be materialized first, call `preview_drawing()` and inspect the persisted output.
+- [ ] If bundle identity or a pixel-to-world question matters, resolve the exact bundle with `list_render_bundles()` and query that bundle-local snapshot before deciding.
 - [ ] Treat `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as the inspectable source of the approved benchmark solution, not just helper files.
 - [ ] Verify cross-artifact consistency for labels, repeated quantities, COTS identities, zone geometry, randomization, bounds, runtime jitter, and motion facts. See `references/review_contracts.md`.
 - [ ] Verify `moved_object.material_id` resolves to a known material and `benchmark_assembly_definition.yaml` is a schema-valid full `AssemblyDefinition`.

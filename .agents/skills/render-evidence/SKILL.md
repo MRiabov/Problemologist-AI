@@ -1,6 +1,6 @@
 ---
 name: render-evidence
-description: Shared render-evidence workflow for Problemologist agents. Use when previewing scenes with `preview(...)` for live scene inspection or `preview_drawing()` for drafting packages, inspecting render or video media through the runtime's visual-inspection path, selecting benchmark/engineer/final render bundles, or resolving a screen-space pixel to a world-space hit with bundle-local render-query helpers such as `pick_preview_pixel(...)`, `pick_preview_pixels(...)`, and `query_render_bundle(...)`.
+description: Shared render-evidence workflow for Problemologist agents. Use when previewing scenes with `preview(...)` for live scene inspection or `preview_drawing()` for drafting packages, inspecting render or video media through the runtime's visual-inspection path, selecting benchmark/engineer/final render bundles, or resolving a screen-space pixel to a world-space hit with bundle-local render-query helpers such as `list_render_bundles(...)`, `pick_preview_pixel(...)`, `pick_preview_pixels(...)`, and `query_render_bundle(...)`.
 ---
 
 # Render Evidence
@@ -16,8 +16,14 @@ The concrete media-inspection tool name depends on the backend. In controller/AP
 Prefer the dedicated namespace module for preview and render-query helpers:
 
 ```python
-from utils.preview import preview, preview_drawing, pick_preview_pixel
-from utils.visualize import query_render_bundle
+from utils.preview import (
+    list_render_bundles,
+    pick_preview_pixel,
+    pick_preview_pixels,
+    preview,
+    preview_drawing,
+    query_render_bundle,
+)
 ```
 
 `from utils import preview_drawing` still works for compatibility, but the namespaced module is the clearer surface for new code.
@@ -32,7 +38,7 @@ from utils.visualize import query_render_bundle
 ## Core Workflow
 
 1. Decide whether you need a fresh render, existing evidence inspection, or a point-pick query.
-2. Select a single bundle and revision for the judgment. Do not mix benchmark, engineer, and final bundles in one decision.
+2. Select a single bundle and revision for the judgment. Do not mix benchmark, engineer, and final bundles in one decision. Use `list_render_bundles()` when you need to resolve the exact bundle from history.
 3. If the view or modality does not exist yet, call `preview(...)` for scene previews or `preview_drawing()` for drafting packages to materialize it.
 4. If media already exists, inspect the artifact path itself with the runtime's media-inspection tool.
 5. If the task asks what is under a pixel or how a click maps into world space, call `pick_preview_pixel(...)` with the bundle path, `pixel_x`, `pixel_y`, `image_width`, `image_height`, and the matching `view_index` for that preview. If you already have a structured request, pass `RenderBundlePointPickRequest` directly. Use `pick_preview_pixels(...)` for multiple clicks.
@@ -59,6 +65,7 @@ from utils.visualize import query_render_bundle
 - Inspect the actual image or video path, not a directory listing or text summary.
 - For motion evidence, inspect the first useful frames before changing geometry.
 - If the view could be front or rear, confirm camera orientation before assuming a mirror flip.
+- If the task depends on exact bundle identity or revision history, resolve the bundle first and then inspect or query that bundle-local snapshot.
 
 ## Point-Pick Rules
 

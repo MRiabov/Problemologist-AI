@@ -154,6 +154,7 @@ agents:
         - journal.md
         - assembly_definition.yaml
         - benchmark_definition.yaml
+        - renders/engineer_plan_renders/**
         - renders/tmp/**
         - benchmark_plan_evidence_script.py
         - benchmark_plan_technical_drawing_script.py
@@ -430,6 +431,7 @@ agents:
         - benchmark_assembly_definition.yaml
         - benchmark_plan_evidence_script.py
         - benchmark_plan_technical_drawing_script.py
+        - renders/benchmark_renders/**
         - renders/tmp/**
       deny:
       - .agents/skills/**

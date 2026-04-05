@@ -1,4 +1,5 @@
 import hashlib
+import json
 import uuid
 from pathlib import Path
 
@@ -544,6 +545,32 @@ async def test_engineering_full_loop():
         assert {
             _asset_path(path) for path in execution_manifest.preview_evidence_paths
         } == {_asset_path(path) for path in render_manifest.preview_evidence_paths}
+
+        final_preview_scene_path = next(
+            path
+            for path in artifact_paths
+            if path
+            == Path("renders/final_solution_submission_renders/preview_scene.json")
+        )
+        final_preview_scene = json.loads(
+            await _read_episode_asset_text(
+                client, engineer_episode_id, final_preview_scene_path
+            )
+        )
+        assert final_preview_scene["component_label"] == "benchmark_environment"
+        final_preview_labels = {
+            entity["label"] for entity in final_preview_scene["entities"]
+        }
+        assert len(final_preview_scene["entities"]) == len(final_preview_labels), (
+            final_preview_scene["entities"]
+        )
+        assert {
+            "left_start_deck",
+            "right_goal_deck",
+            "bridge_reference_table",
+            "gap_floor_guard",
+            "projectile_ball",
+        } <= final_preview_labels
 
         execution_comments = yaml.safe_load(
             await _read_episode_asset_text(

@@ -1,0 +1,11 @@
+{
+  "artifact_hashes": {
+    "assembly_definition.yaml": "8d6ba56d2ab57a4c6c4cfaa51a6212fc9b77a9fe7c87a214734d9d383b565567",
+    "plan.md": "c0c4fd2eb34577325aa976f8335735f8a33891b09a70d1358f4cf95dc7730273",
+    "todo.md": "f7242aee322150328a76ee05fd0a2b4e5c1d39716a5d0e9f7deeada4a3eef0f6"
+  },
+  "planner_node_type": "engineer_planner",
+  "reviewer_stage": "engineer_plan_reviewer",
+  "session_id": "seed-ec-004-drawing-full",
+  "status": "ready_for_review"
+}

@@ -346,7 +346,7 @@ async def api_simulate(
                     if not render_path.exists() or not render_path.is_file():
                         continue
                     suffix = render_path.suffix.lower()
-                    if suffix not in {".png", ".jpg", ".jpeg", ".mp4"}:
+                    if suffix not in {".png", ".jpg", ".jpeg", ".mp4", ".parquet"}:
                         continue
                     if rel_path in artifacts.object_store_keys and suffix == ".mp4":
                         continue

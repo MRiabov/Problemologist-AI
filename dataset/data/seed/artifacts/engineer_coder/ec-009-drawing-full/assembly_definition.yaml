@@ -15,13 +15,13 @@ manufactured_parts:
   manufacturing_method: CNC
   material_id: aluminum_6061
   quantity: 1
-  part_volume_mm3: 128000.0
+  part_volume_mm3: 105000.0
   stock_bbox_mm:
-    x: 720.0
+    x: 700.0
     y: 150.0
     z: 10.0
-  stock_volume_mm3: 1080000.0
-  removed_volume_mm3: 952000.0
+  stock_volume_mm3: 1050000.0
+  removed_volume_mm3: 945000.0
   estimated_unit_cost_usd: 15.5
 - part_name: wide_entry
   part_id: wide_entry
@@ -90,10 +90,103 @@ manufactured_parts:
   estimated_unit_cost_usd: 8.5
 cots_parts: []
 final_assembly:
-- name: precision_funnel
-  config:
-    dofs: []
+- subassembly_id: precision_funnel
+  parts:
+  - name: funnel_base
+    config:
+      dofs: []
+  - name: wide_entry
+    config:
+      dofs: []
+  - name: taper_left
+    config:
+      dofs: []
+  - name: taper_right
+    config:
+      dofs: []
+  - name: throat_insert
+    config:
+      dofs: []
+  - name: goal_pocket
+    config:
+      dofs: []
+drafting:
+  sheet_id: sheet_1
+  title: Narrow goal funnel technical drawing
+  units: mm
+  projection_standard: orthographic
+  views:
+  - view_id: front_funnel_overview
+    target: funnel_base
+    projection: front
+    scale: 1.0
+    datums: [A, B]
+    dimensions:
+    - dimension_id: d_front_base_length
+      kind: linear
+      target: funnel_base
+      value: 720.0
+      tolerance: nominal
+      binding: true
+      note: Funnel base spans the full capture footprint.
+      plan_ref: plan.md#parts-list
+    - dimension_id: d_front_entry_width
+      kind: linear
+      target: wide_entry
+      value: 170.0
+      tolerance: nominal
+      binding: true
+      note: Wide entry mouth covers the spawn jitter envelope.
+      plan_ref: plan.md#assembly-strategy
+  - view_id: top_taper_path
+    target: taper_left
+    projection: top
+    scale: 1.0
+    datums: [A, C]
+    dimensions:
+    - dimension_id: d_top_taper_left_length
+      kind: linear
+      target: taper_left
+      value: 470.0
+      tolerance: nominal
+      binding: true
+      note: Left taper length narrows the flow toward the throat.
+      plan_ref: plan.md#assembly-strategy
+    - dimension_id: d_top_throat_length
+      kind: linear
+      target: throat_insert
+      value: 120.0
+      tolerance: nominal
+      binding: true
+      note: Throat insert sets the narrow goal width.
+      plan_ref: plan.md#parts-list
+  - view_id: side_goal_capture
+    target: goal_pocket
+    projection: side
+    scale: 1.0
+    datums: [B, C]
+    dimensions:
+    - dimension_id: d_side_goal_pocket_height
+      kind: linear
+      target: goal_pocket
+      value: 28.0
+      tolerance: nominal
+      binding: true
+      note: Goal pocket depth retains the ball after entry.
+      plan_ref: plan.md#parts-list
+    - dimension_id: d_side_base_thickness
+      kind: linear
+      target: funnel_base
+      value: 10.0
+      tolerance: nominal
+      binding: true
+      note: Base plate thickness provides a stiff mounting surface.
+      plan_ref: plan.md#assembly-strategy
+  notes: []
 totals:
   estimated_unit_cost_usd: 46.25
-  estimated_weight_g: 519.0
+  estimated_weight_g: 363.3
   estimate_confidence: high
+dfm_suggestions:
+- Machine the funnel base as a single plate with pocketing for the entry zone.
+- Cut the taper walls from one HDPE blank each to keep setup simple.

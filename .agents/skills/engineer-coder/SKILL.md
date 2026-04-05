@@ -1,6 +1,6 @@
 ---
 name: engineer-coder
-description: Problemologist engineering implementation role. Use when turning approved engineering handoffs into solution_script.py, solving engineering evals with bounded retries, selecting mechanism patterns, validating and simulating revisions, inspecting render evidence, preserving planner inventory exactness, grounding work in proof-backed plan.md contracts, or refusing an infeasible plan with plan_refusal.md.
+description: Problemologist engineering implementation role. Use when turning approved engineering handoffs into solution_script.py, solving engineering evals with bounded retries, selecting mechanism patterns, validating and simulating revisions, inspecting render evidence, querying render-bundle history or point-pick results, preserving planner inventory exactness, grounding work in proof-backed plan.md contracts, or refusing an infeasible plan with plan_refusal.md.
 ---
 
 # Engineer Coder
@@ -34,19 +34,31 @@ Use the runtime helpers explicitly in authored engineer scripts:
 
 ```python
 from utils.submission import validate, simulate
-from utils.preview import preview, preview_drawing, objectives_geometry
+from utils.preview import (
+    list_render_bundles,
+    objectives_geometry,
+    pick_preview_pixel,
+    pick_preview_pixels,
+    preview,
+    preview_drawing,
+    query_render_bundle,
+)
 ```
 
 - `validate(result)` and `simulate(result)` are the required pre-handoff checks.
 - `submit_for_review(result)` is available for supporting scripts that own the final handoff step.
-- `preview(...)` and `preview_drawing()` are the evidence-generation paths; `objectives_geometry()` reconstructs benchmark objective overlays when needed.
+- `preview(...)` is the live scene and objective-overlay path; use `payload_path=True` only when the current workflow needs the live payload-path overlay. `preview_drawing()` is the drafting-package path and keeps the payload overlay off.
+- `objectives_geometry()` reconstructs benchmark objective overlays when needed.
+- `list_render_bundles()` locates the exact current or historical render bundle instead of assuming the latest file on disk is the right snapshot.
+- `query_render_bundle()` returns compact frame/object slices when you need bundle metadata without the full media payload.
+- `pick_preview_pixel()` and `pick_preview_pixels()` resolve screen-space points against the bundle-local snapshot when you need click-to-world or batch point-pick evidence.
 - `from utils.visualize import ...` is a compatibility alias, but `utils.preview` is the preferred namespace for new code.
 
 ## What This Skill Owns
 
 - Implementation strategy for the engineer-coder role.
 - File-level execution discipline for `solution_script.py`, `todo.md`, and `journal.md`.
-- Validation, simulation, media inspection, and review-submission behavior.
+- Validation, simulation, media inspection, render-history lookup, point-pick queries, and review-submission behavior.
 - The decision rules for when to load specialist skills and when to refuse a plan.
 
 ## What This Skill Does Not Own
@@ -111,7 +123,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 04. Draft the smallest physically credible solution that can survive the declared runtime variation.
 05. Keep `solution_script.py` import-safe and bind the final object as `result`.
 06. Run a cheap syntax/import check, then a real validation probe, then simulation.
-07. Inspect render or video evidence as soon as motion is uncertain. Do not spend extra geometry effort before checking the first failing dynamic result.
+07. Inspect render or video evidence as soon as motion is uncertain. When the question depends on bundle identity or pixel-to-world mapping, use `list_render_bundles()`, `query_render_bundle()`, or `pick_preview_pixel()` against the exact bundle before spending extra geometry effort.
 08. Fix the narrowest failure mode and repeat.
 09. Submit for review only when the latest revision is actually ready.
 10. Anchor any binding numeric claim to the tightened `plan.md` proof structure; do not implement against prose-only assumptions when `ASSUMP-*` and `CALC-*` scaffolding is expected.
@@ -156,6 +168,8 @@ This role should behave like a high-confidence solver, not a wandering explorer.
 - Simulation success is necessary but not sufficient.
 - A passing validator does not excuse skipping the simulation video or frame evidence. Use the first dynamic result to confirm direction, capture, and stability.
 - If `preview(...)` evidence exists for the current revision, inspect the corresponding render bundle before finishing.
+- If render history matters, use `list_render_bundles()` and `query_render_bundle()` to select the exact bundle snapshot instead of assuming the newest visible render is the right one.
+- If a question depends on screen-space picking, use `pick_preview_pixel()` or `pick_preview_pixels()` against that bundle-local snapshot before changing geometry.
 - If render images exist for the current revision, inspect them with `inspect_media(...)` before finishing.
 - If the solution has moving behavior and simulation video exists, inspect the dynamic evidence before approval.
 - Treat `validation_results.json`, `simulation_result.json`, and render manifests as evidence inputs, not as substitutes for reasoning.
@@ -170,6 +184,7 @@ This role should behave like a high-confidence solver, not a wandering explorer.
 5. Robustness failure: widen tolerances to runtime jitter and remove exact-seed dependence.
 6. Directional motion failure: verify slope sign, handedness, and capture path from the actual simulation media before changing more geometry. Also check whether the preview is a front or rear view: preview yaw is clockwise from front, so rear views naturally swap left/right on screen and are not automatically an X-axis mirror.
 7. Reviewer failure: resolve the valid checklist items directly and ignore non-applicable demands.
+8. Render-history or point-pick failure: identify the exact bundle first, then inspect or query that bundle-local snapshot; do not infer coordinates from stale filenames or the latest artifact by default.
 
 If the same blocker persists after one targeted fix, record it in `journal.md` and stop widening the search.
 

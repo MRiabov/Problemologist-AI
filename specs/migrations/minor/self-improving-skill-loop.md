@@ -1,3 +1,10 @@
+---
+title: Self-Improving Skill Loop
+status: investigation
+agents_affected: []
+added_at: '2026-04-04T09:53:22Z'
+---
+
 # Self-Improving Skill Loop
 
 <!-- Investigation doc. No behavior change yet. -->

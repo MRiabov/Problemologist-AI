@@ -1,3 +1,13 @@
+---
+title: Role-Scoped Render Buckets
+status: investigation
+agents_affected:
+  - benchmark_reviewer
+  - engineer_coder
+  - engineer_execution_reviewer
+added_at: '2026-03-31T20:20:26Z'
+---
+
 # Role-Scoped Render Buckets
 
 <!-- Investigation doc. No behavior change yet. -->

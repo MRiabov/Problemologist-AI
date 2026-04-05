@@ -1,3 +1,11 @@
+---
+title: Undocumented Integration Test Disposition
+status: migration
+agents_affected:
+  - benchmark_planner
+added_at: '2026-03-31T12:24:08Z'
+---
+
 # Undocumented Integration Test Disposition
 
 This document is the execution plan for the `UNDOC-###` inventory in

@@ -1,3 +1,10 @@
+---
+title: Splitting Into Renderer Worker
+status: migration
+agents_affected: []
+added_at: '2026-03-31T07:10:09Z'
+---
+
 # Splitting Into Renderer Worker
 
 ## Purpose

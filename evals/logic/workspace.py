@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from pydantic import BaseModel, Field
 
 from controller.agent.node_entry_validation import (
     BENCHMARK_CODER_HANDOVER_CHECK,
@@ -11,6 +12,8 @@ from controller.agent.node_entry_validation import (
     ENGINEER_BENCHMARK_HANDOVER_CHECK,
     ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
     ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
+    NodeEntryValidationError,
+    NodeEntryValidationResult,
     ValidationGraph,
     benchmark_coder_handover_custom_check_from_session_id,
     benchmark_plan_reviewer_handover_custom_check_from_session_id,
@@ -41,6 +44,33 @@ from shared.models.schemas import (
     DraftingView,
     PartConfig,
 )
+
+
+class SeededEntryContractFailure(BaseModel):
+    session_id: str
+    agent_name: AgentName
+    target_node: AgentName
+    missing_seed_paths: list[str] = Field(default_factory=list)
+    entry_validation_result: NodeEntryValidationResult | None = None
+    supplemental_validation_errors: list[NodeEntryValidationError] = Field(
+        default_factory=list
+    )
+    supplemental_messages: list[str] = Field(default_factory=list)
+
+
+class SeededEntryContractError(RuntimeError):
+    def __init__(self, report: SeededEntryContractFailure):
+        self.report = report
+        super().__init__(self._format_message())
+
+    def _format_message(self) -> str:
+        parts = [f"Seeded entry contract invalid for {self.report.target_node.value}"]
+        if self.report.supplemental_messages:
+            parts.append("; ".join(self.report.supplemental_messages))
+        return ": ".join(parts)
+
+    def __str__(self) -> str:
+        return self._format_message()
 
 
 def resolve_seed_artifact_dir(item: EvalDatasetItem, *, root: Path) -> Path | None:
@@ -80,6 +110,12 @@ def collect_seed_workspace_artifact_paths(
 
     if artifact_dir is not None and artifact_dir.exists():
         for path in sorted(p for p in artifact_dir.rglob("*") if p.is_file()):
+            if (
+                path.name == "prompt.md"
+                or any(part in {"__pycache__"} for part in path.parts)
+                or path.suffix.lower() in {".pyc", ".pyo"}
+            ):
+                continue
             expected_paths.add(path.relative_to(artifact_dir).as_posix())
 
     expected_paths.update((item.seed_files or {}).keys())
@@ -930,13 +966,15 @@ async def preflight_seeded_entry_contract(
         base_url=worker_light_url, session_id=session_id
     )
     owns_worker = workspace_client is None
-    errors: list[str] = []
+    missing_seed_paths: list[str] = []
+    supplemental_validation_errors: list[object] = []
+    supplemental_messages: list[str] = []
     result = None
 
-    def add_error(message: str) -> None:
+    def add_message(message: str) -> None:
         normalized = str(message).strip()
-        if normalized and normalized not in errors:
-            errors.append(normalized)
+        if normalized and normalized not in supplemental_messages:
+            supplemental_messages.append(normalized)
 
     try:
         expected_seed_paths = collect_seed_workspace_artifact_paths(item, root=root)
@@ -946,7 +984,7 @@ async def preflight_seeded_entry_contract(
         )
 
         if missing_seed_paths:
-            add_error(
+            supplemental_messages.append(
                 "Seeded workspace is missing copied seed artifact(s): "
                 + ", ".join(missing_seed_paths)
             )
@@ -969,13 +1007,12 @@ async def preflight_seeded_entry_contract(
                 integration_mode=True,
             )
         except Exception as exc:
-            add_error(
+            add_message(
                 f"Seeded entry contract evaluation failed for {target_node.value}: {exc}"
             )
         else:
             if not result.ok:
-                for error in result.errors:
-                    add_error(f"{error.code}: {error.message}")
+                supplemental_validation_errors.extend(result.errors)
 
         try:
             supplemental_errors = await validate_seeded_workspace_handoff_artifacts(
@@ -983,18 +1020,23 @@ async def preflight_seeded_entry_contract(
                 target_node=target_node,
             )
         except Exception as exc:
-            add_error(
+            add_message(
                 "Seeded workspace supplemental handoff validation failed for "
                 f"{target_node.value}: {exc}"
             )
         else:
-            for error in supplemental_errors:
-                add_error(f"{error.code}: {error.message}")
+            supplemental_validation_errors.extend(supplemental_errors)
     finally:
         if owns_worker:
             await worker.aclose()
 
-    if not errors and result is not None and result.ok:
+    if (
+        not missing_seed_paths
+        and not supplemental_validation_errors
+        and not supplemental_messages
+        and result is not None
+        and result.ok
+    ):
         logger.info(
             "eval_seed_entry_preflight_passed",
             session_id=session_id,
@@ -1003,6 +1045,14 @@ async def preflight_seeded_entry_contract(
         )
         return
 
-    raise ValueError(
-        f"Seeded entry contract invalid for {target_node.value}: " + "; ".join(errors)
+    raise SeededEntryContractError(
+        SeededEntryContractFailure(
+            session_id=session_id,
+            agent_name=agent_name,
+            target_node=target_node,
+            missing_seed_paths=missing_seed_paths,
+            entry_validation_result=result,
+            supplemental_validation_errors=supplemental_validation_errors,
+            supplemental_messages=supplemental_messages,
+        )
     )
