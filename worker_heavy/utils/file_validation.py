@@ -119,6 +119,20 @@ def _token_counts_to_list(tokens: Counter[str]) -> list[tuple[str, int]]:
     return sorted(tokens.items(), key=lambda item: item[0])
 
 
+def _format_identity_pair(
+    label: str | None,
+    cots_id: str | None,
+) -> str:
+    pieces: list[str] = []
+    if label is not None:
+        pieces.append(f"label={label}")
+    if cots_id is not None:
+        pieces.append(f"cots_id={cots_id}")
+    if not pieces:
+        return "<unlabeled>"
+    return ", ".join(pieces)
+
+
 def _merge_token_count_maps(*maps: Counter[str]) -> Counter[str]:
     merged: Counter[str] = Counter()
     for mapping in maps:
@@ -140,6 +154,46 @@ def _planner_plan_grounding_tokens_from_benchmark(
         if cots_id:
             tokens[cots_id] += 1
     return tokens
+
+
+def _planner_plan_grounding_identity_pairs_from_benchmark(
+    benchmark_definition: BenchmarkDefinition,
+) -> Counter[tuple[str | None, str | None]]:
+    pairs: Counter[tuple[str | None, str | None]] = Counter()
+    for benchmark_part in benchmark_definition.benchmark_parts:
+        label = benchmark_part.label.strip() or None
+        cots_id = (benchmark_part.metadata.cots_id or "").strip() or None
+        if label is not None or cots_id is not None:
+            pairs[(label, cots_id)] += 1
+    return pairs
+
+
+def _planner_plan_grounding_identity_pairs_from_assembly(
+    assembly_definition: AssemblyDefinition,
+) -> Counter[tuple[str | None, str | None]]:
+    pairs: Counter[tuple[str | None, str | None]] = Counter()
+
+    def _visit(item: object) -> None:
+        if isinstance(item, SubassemblyEstimate):
+            subassembly_id = item.subassembly_id.strip() or None
+            if subassembly_id is not None:
+                pairs[(subassembly_id, None)] += 1
+            for part in item.parts:
+                _visit(part)
+        elif isinstance(item, PartConfig):
+            label = item.name.strip() or None
+            cots_id = getattr(item.config, "cots_id", None)
+            normalized_cots_id = (
+                cots_id.strip()
+                if isinstance(cots_id, str) and cots_id.strip()
+                else None
+            )
+            if label is not None or normalized_cots_id is not None:
+                pairs[(label, normalized_cots_id)] += 1
+
+    for item in assembly_definition.final_assembly:
+        _visit(item)
+    return pairs
 
 
 def _validate_assembly_inventory_parity(
@@ -210,6 +264,27 @@ def _planner_plan_grounding_tokens_from_assembly(
             declared_tokens.get(token, 0), final_assembly_tokens.get(token, 0)
         )
     return tokens
+
+
+def _benchmark_script_expected_identity_pairs(
+    *,
+    benchmark_definition: BenchmarkDefinition,
+    assembly_definition: AssemblyDefinition | None = None,
+) -> Counter[tuple[str | None, str | None]]:
+    expected = _planner_plan_grounding_identity_pairs_from_benchmark(
+        benchmark_definition
+    )
+    if assembly_definition is None:
+        return expected
+    return expected + _planner_plan_grounding_identity_pairs_from_assembly(
+        assembly_definition
+    )
+
+
+def _assembly_script_expected_identity_pairs(
+    assembly_definition: AssemblyDefinition,
+) -> Counter[tuple[str | None, str | None]]:
+    return _planner_plan_grounding_identity_pairs_from_assembly(assembly_definition)
 
 
 def _benchmark_script_expected_tokens(
@@ -317,6 +392,7 @@ def _validate_drafting_artifact_inventory_exactness(
     artifact_name: str,
     content: str,
     expected_tokens: Counter[str],
+    expected_identity_pairs: Counter[tuple[str | None, str | None]] | None = None,
 ) -> list[str]:
     from shared.workers.loader import load_component_from_script
 
@@ -342,6 +418,7 @@ def _validate_drafting_artifact_inventory_exactness(
         component=component,
         expected_tokens=expected_tokens,
         artifact_name=artifact_name,
+        expected_identity_pairs=expected_identity_pairs,
     )
 
 
@@ -402,6 +479,37 @@ def _collect_component_identity_counts(
     return counts, identity_entries
 
 
+def _collect_component_identity_pairs(
+    component: Any,
+) -> tuple[Counter[tuple[str | None, str | None]], list[tuple[str | None, str | None]]]:
+    pairs: Counter[tuple[str | None, str | None]] = Counter()
+    identity_entries: list[tuple[str | None, str | None]] = []
+
+    def _visit(node: Any, *, is_root: bool) -> None:
+        children = getattr(node, "children", ()) or ()
+        label = getattr(node, "label", None)
+        metadata = getattr(node, "metadata", None)
+
+        if not (is_root and children):
+            normalized_label = (
+                label.strip() if isinstance(label, str) and label.strip() else None
+            )
+            normalized_cots_id = None
+            cots_id = getattr(metadata, "cots_id", None)
+            if isinstance(cots_id, str) and cots_id.strip():
+                normalized_cots_id = cots_id.strip()
+            if normalized_label is not None or normalized_cots_id is not None:
+                pair = (normalized_label, normalized_cots_id)
+                pairs[pair] += 1
+                identity_entries.append(pair)
+
+        for child in children:
+            _visit(child, is_root=False)
+
+    _visit(component, is_root=True)
+    return pairs, identity_entries
+
+
 def _format_component_identity_entries(
     identity_entries: list[tuple[str | None, str | None]],
     *,
@@ -431,8 +539,10 @@ def validate_component_inventory_exactness(
     component: Any,
     expected_tokens: Counter[str],
     artifact_name: str,
+    expected_identity_pairs: Counter[tuple[str | None, str | None]] | None = None,
 ) -> list[str]:
     observed_tokens, identity_entries = _collect_component_identity_counts(component)
+    observed_pairs, pair_entries = _collect_component_identity_pairs(component)
     errors: list[str] = []
     identity_summary = _format_component_identity_entries(identity_entries)
     for token in sorted(set(observed_tokens) | set(expected_tokens)):
@@ -444,6 +554,24 @@ def validate_component_inventory_exactness(
                 f"(expected {expected_count}, found {observed_count}; "
                 f"observed identities: {identity_summary})"
             )
+    if expected_identity_pairs is not None:
+        pair_summary = _format_component_identity_entries(pair_entries)
+        for label, cots_id in sorted(
+            set(observed_pairs) | set(expected_identity_pairs),
+            key=lambda item: (
+                "" if item[0] is None else item[0],
+                "" if item[1] is None else item[1],
+            ),
+        ):
+            expected_count = expected_identity_pairs.get((label, cots_id), 0)
+            observed_count = observed_pairs.get((label, cots_id), 0)
+            if observed_count != expected_count:
+                errors.append(
+                    f"{artifact_name}: exact inventory pair mismatch for "
+                    f"({_format_identity_pair(label, cots_id)}) "
+                    f"(expected {expected_count}, found {observed_count}; "
+                    f"observed identities: {pair_summary})"
+                )
     return errors
 
 
@@ -2093,10 +2221,15 @@ def validate_planner_handoff_cross_contract(
                 benchmark_definition=benchmark_definition,
                 assembly_definition=assembly_definition,
             )
+            script_identity_pairs = None
         elif is_engineer_planner:
             script_tokens = _assembly_script_expected_tokens(assembly_definition)
+            script_identity_pairs = _assembly_script_expected_identity_pairs(
+                assembly_definition
+            )
         else:
             script_tokens = Counter()
+            script_identity_pairs = None
 
         for artifact_name, content in sorted(drafting_artifacts.items()):
             if not content.strip():
@@ -2113,6 +2246,7 @@ def validate_planner_handoff_cross_contract(
                     artifact_name=artifact_name,
                     content=content,
                     expected_tokens=script_tokens,
+                    expected_identity_pairs=script_identity_pairs,
                 )
             )
 
