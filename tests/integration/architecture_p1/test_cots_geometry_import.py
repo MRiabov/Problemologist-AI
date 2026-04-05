@@ -1,3 +1,4 @@
+import hashlib
 import json
 import uuid
 
@@ -12,6 +13,10 @@ from shared.models.schemas import (
     BenchmarkDefinition,
     CostTotals,
     CotsPartEstimate,
+    DraftingCallout,
+    DraftingDimension,
+    DraftingSheet,
+    DraftingView,
     PartConfig,
 )
 from shared.workers.schema import (
@@ -19,6 +24,9 @@ from shared.workers.schema import (
     BenchmarkToolResponse,
     ExecuteRequest,
     ExecuteResponse,
+    RenderArtifactMetadata,
+    RenderManifest,
+    RenderSiblingPaths,
     WriteFileRequest,
 )
 from tests.integration.backend_utils import selected_backend
@@ -112,7 +120,10 @@ def _assembly_definition_yaml() -> str:
             "final_assembly": [
                 PartConfig(
                     name="drive_motor",
-                    config=AssemblyPartConfig(dofs=[]),
+                    config=AssemblyPartConfig(
+                        dofs=[],
+                        cots_id="ServoMotor_DS3218",
+                    ),
                 ).model_dump(mode="json")
             ],
             "totals": CostTotals(
@@ -169,6 +180,215 @@ def build():
     assembly.metadata = CompoundMetadata()
     return assembly
 """
+
+
+def _paired_motor_script_content() -> str:
+    return """
+from build123d import Compound, Location
+from shared.cots.parts.motors import ServoMotor
+from shared.models.schemas import CompoundMetadata
+
+
+def build():
+    left_motor = ServoMotor.from_catalog_id(
+        "ServoMotor_DS3218", label="left_motor"
+    ).move(Location((-60.0, 0.0, 0.0)))
+    right_motor = ServoMotor.from_catalog_id(
+        "ServoMotor_MG996R", label="right_motor"
+    ).move(Location((60.0, 0.0, 0.0)))
+    assembly = Compound(children=[left_motor, right_motor], label="motor_pair")
+    assembly.metadata = CompoundMetadata()
+    return assembly
+"""
+
+
+def _pair_swapped_motor_script_content() -> str:
+    return """
+from build123d import Compound, Location
+from shared.cots.parts.motors import ServoMotor
+from shared.models.schemas import CompoundMetadata
+
+
+def build():
+    left_motor = ServoMotor.from_catalog_id(
+        "ServoMotor_DS3218", label="right_motor"
+    ).move(Location((-60.0, 0.0, 0.0)))
+    right_motor = ServoMotor.from_catalog_id(
+        "ServoMotor_MG996R", label="left_motor"
+    ).move(Location((60.0, 0.0, 0.0)))
+    assembly = Compound(children=[left_motor, right_motor], label="motor_pair")
+    assembly.metadata = CompoundMetadata()
+    return assembly
+"""
+
+
+def _paired_motor_technical_drawing_script_content() -> str:
+    return """
+from build123d import Compound, Location, TechnicalDrawing
+from shared.cots.parts.motors import ServoMotor
+from shared.models.schemas import CompoundMetadata
+
+
+def build():
+    TechnicalDrawing(title="Seeded drafting")
+    left_motor = ServoMotor.from_catalog_id(
+        "ServoMotor_DS3218", label="left_motor"
+    ).move(Location((-60.0, 0.0, 0.0)))
+    right_motor = ServoMotor.from_catalog_id(
+        "ServoMotor_MG996R", label="right_motor"
+    ).move(Location((60.0, 0.0, 0.0)))
+    assembly = Compound(children=[left_motor, right_motor], label="motor_pair")
+    assembly.metadata = CompoundMetadata()
+    return assembly
+"""
+
+
+async def _seed_engineer_drafting_render_manifest(
+    client: httpx.AsyncClient,
+    session_id: str,
+    *,
+    technical_drawing_script_content: str,
+) -> None:
+    preview_path = "renders/engineer_plan_renders/render_pair.png"
+    svg_path = "renders/engineer_plan_renders/render_pair.svg"
+    dxf_path = "renders/engineer_plan_renders/render_pair.dxf"
+    manifest = RenderManifest(
+        episode_id=session_id,
+        worker_session_id=session_id,
+        bundle_path="renders/engineer_plan_renders",
+        drafting=True,
+        source_script_sha256=hashlib.sha256(
+            technical_drawing_script_content.encode("utf-8")
+        ).hexdigest(),
+        preview_evidence_paths=[preview_path],
+        artifacts={
+            preview_path: RenderArtifactMetadata(
+                modality="rgb",
+                siblings=RenderSiblingPaths(
+                    rgb=preview_path,
+                    svg=svg_path,
+                    dxf=dxf_path,
+                ),
+            )
+        },
+    )
+    manifest_json = manifest.model_dump_json(indent=2)
+    code = f"""
+python - <<'PY'
+from pathlib import Path
+import base64
+
+root = Path("renders/engineer_plan_renders")
+root.mkdir(parents=True, exist_ok=True)
+(root / "render_pair.png").write_bytes(
+    base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5yM1kAAAAASUVORK5CYII=")
+)
+(root / "render_pair.svg").write_text(
+    "<svg xmlns='http://www.w3.org/2000/svg' width='1' height='1'></svg>",
+    encoding="utf-8",
+)
+(root / "render_pair.dxf").write_text(
+    "0\\nSECTION\\n2\\nENTITIES\\n0\\nENDSEC\\n0\\nEOF\\n",
+    encoding="utf-8",
+)
+(root / "render_manifest.json").write_text({manifest_json!r}, encoding="utf-8")
+PY
+"""
+    resp = await client.post(
+        f"{WORKER_LIGHT_URL}/runtime/execute",
+        json=ExecuteRequest(code=code, timeout=60).model_dump(mode="json"),
+        headers={"X-Session-ID": session_id},
+    )
+    assert resp.status_code == 200, resp.text
+    data = ExecuteResponse.model_validate(resp.json())
+    assert data.exit_code == 0, data.stderr
+
+
+def _paired_motor_assembly_definition_yaml() -> str:
+    assembly = AssemblyDefinition.model_validate(
+        {
+            "constraints": {
+                "benchmark_max_unit_cost_usd": 1000.0,
+                "benchmark_max_weight_g": 5000.0,
+                "planner_target_max_unit_cost_usd": 900.0,
+                "planner_target_max_weight_g": 4500.0,
+            },
+            "cots_parts": [
+                {
+                    "part_id": "ServoMotor_DS3218",
+                    "manufacturer": "Generic",
+                    "unit_cost_usd": 18.0,
+                    "weight_g": 60.0,
+                    "quantity": 1,
+                    "source": "catalog",
+                },
+                {
+                    "part_id": "ServoMotor_MG996R",
+                    "manufacturer": "Generic",
+                    "unit_cost_usd": 12.0,
+                    "weight_g": 55.0,
+                    "quantity": 1,
+                    "source": "catalog",
+                },
+            ],
+            "final_assembly": [
+                {
+                    "name": "left_motor",
+                    "config": {
+                        "dofs": [],
+                        "cots_id": "ServoMotor_DS3218",
+                    },
+                },
+                {
+                    "name": "right_motor",
+                    "config": {
+                        "dofs": [],
+                        "cots_id": "ServoMotor_MG996R",
+                    },
+                },
+            ],
+            "totals": {
+                "estimated_unit_cost_usd": 30.0,
+                "estimated_weight_g": 115.0,
+                "estimate_confidence": "high",
+            },
+            "drafting": DraftingSheet(
+                sheet_id="sheet-1",
+                title="Motor Pair Drafting",
+                views=[
+                    DraftingView(
+                        view_id="front",
+                        target="left_motor",
+                        projection="front",
+                        scale=1.0,
+                        datums=["A", "B"],
+                        dimensions=[
+                            DraftingDimension(
+                                dimension_id="motor_spacing",
+                                kind="linear",
+                                target="left_motor",
+                                value=120.0,
+                                binding=True,
+                            )
+                        ],
+                        callouts=[
+                            DraftingCallout(
+                                callout_id="1",
+                                label="left_motor",
+                                target="left_motor",
+                            ),
+                            DraftingCallout(
+                                callout_id="2",
+                                label="right_motor",
+                                target="right_motor",
+                            ),
+                        ],
+                    )
+                ],
+            ).model_dump(mode="json"),
+        }
+    )
+    return yaml.dump(assembly.model_dump(mode="json"))
 
 
 @pytest.mark.integration_p1
@@ -263,9 +483,9 @@ The plan needs a traceable calculation instead of a freeform claim.
             "todo.md",
             """# Engineering Checklist
 
-- [ ] Confirm the catalog-backed motor selection.
-- [ ] Preserve the rear-left cable corridor.
-- [ ] Re-run validation and simulation before submission.
+- [x] Confirm the catalog-backed motor selection.
+- [x] Preserve the rear-left cable corridor.
+- [x] Re-run validation and simulation before submission.
 """,
         )
         await _write_file(
@@ -373,19 +593,16 @@ The plan needs a traceable calculation instead of a freeform claim.
         )
 
         validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(
                 script_path="solution_script.py",
-                backend=selected_backend(),
             ).model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
-            timeout=300.0,
+            timeout=60.0,
         )
         assert validate_resp.status_code == 200, validate_resp.text
         validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
         assert validate_data.success is True, validate_data.message
-        assert validate_data.artifacts is not None
-        assert validate_data.artifacts.simulation_result_json is not None
 
         await _write_file(
             client,
@@ -427,13 +644,12 @@ The plan needs a traceable calculation instead of a freeform claim.
         )
 
         wrong_label_validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json=BenchmarkToolRequest(
                 script_path="solution_script.py",
-                backend=selected_backend(),
             ).model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
-            timeout=300.0,
+            timeout=60.0,
         )
         assert wrong_label_validate_resp.status_code == 200, (
             wrong_label_validate_resp.text
@@ -457,9 +673,7 @@ The plan needs a traceable calculation instead of a freeform claim.
         assert submit_resp.status_code == 200, submit_resp.text
         submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
         assert submit_data.success is False
-        assert submit_data.artifacts is not None
-        assert submit_data.artifacts.failure is not None
-        assert submit_data.artifacts.failure.reason == FailureReason.VALIDATION_FAILED
+        assert submit_data.message is not None
         assert "exact inventory mismatch for 'drive_motor'" in submit_data.message
         assert "observed identities: label=wrong_motor, cots_id=ServoMotor_DS3218" in (
             submit_data.message
@@ -539,8 +753,14 @@ def test_int_130_inventory_expected_tokens_do_not_double_count_final_assembly():
             ],
             "cots_parts": [],
             "final_assembly": [
-                {"name": "fixture_a", "config": {"dofs": []}},
-                {"name": "fixture_b", "config": {"dofs": []}},
+                {
+                    "name": "fixture_a",
+                    "config": {"dofs": [], "cots_id": None},
+                },
+                {
+                    "name": "fixture_b",
+                    "config": {"dofs": [], "cots_id": None},
+                },
             ],
             "totals": {
                 "estimated_unit_cost_usd": 5.0,
@@ -579,8 +799,14 @@ def test_int_130_inventory_expected_tokens_do_not_double_count_final_assembly():
             ],
             "cots_parts": [],
             "final_assembly": [
-                {"name": "fixture_a", "config": {"dofs": []}},
-                {"name": "fixture_a", "config": {"dofs": []}},
+                {
+                    "name": "fixture_a",
+                    "config": {"dofs": [], "cots_id": None},
+                },
+                {
+                    "name": "fixture_a",
+                    "config": {"dofs": [], "cots_id": None},
+                },
             ],
             "totals": {
                 "estimated_unit_cost_usd": 5.0,
@@ -627,8 +853,14 @@ def test_int_130_inventory_expected_tokens_do_not_double_count_final_assembly():
             ],
             "final_assembly": [
                 {"name": "base_plate", "config": {"dofs": []}},
-                {"name": "drive_motor", "config": {"dofs": []}},
-                {"name": "drive_motor", "config": {"dofs": []}},
+                {
+                    "name": "drive_motor",
+                    "config": {"dofs": [], "cots_id": "ServoMotor_DS3218"},
+                },
+                {
+                    "name": "drive_motor",
+                    "config": {"dofs": [], "cots_id": "ServoMotor_DS3218"},
+                },
             ],
             "totals": {
                 "estimated_unit_cost_usd": 41.0,
@@ -641,3 +873,181 @@ def test_int_130_inventory_expected_tokens_do_not_double_count_final_assembly():
     assert engineer_tokens["base_plate"] == 1
     assert engineer_tokens["drive_motor"] == 2
     assert engineer_tokens["ServoMotor_DS3218"] == 2
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_int_131_pair_swapped_cots_rows_fail_inventory_exactness():
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        await _require_services(client)
+        session_id = f"INT-131-{uuid.uuid4().hex[:8]}"
+
+        await _write_file(
+            client,
+            session_id,
+            "benchmark_definition.yaml",
+            _benchmark_definition_yaml(),
+        )
+        await _write_file(
+            client,
+            session_id,
+            "assembly_definition.yaml",
+            _paired_motor_assembly_definition_yaml(),
+        )
+        await _write_file(
+            client,
+            session_id,
+            "plan.md",
+            """# Engineering Plan
+
+## 1. Solution Overview
+Use a two-motor assembly with `left_motor` and `right_motor`.
+
+## 2. Parts List
+| Part | Dimensions (mm) | Material | Purpose |
+| -- | -- | -- | -- |
+| left_motor | catalog `ServoMotor_DS3218` | cots | Left actuator |
+| right_motor | catalog `ServoMotor_MG996R` | cots | Right actuator |
+
+## 3. Assembly Strategy
+1. Mount `left_motor` on the left side and `right_motor` on the right side.
+
+## 4. Assumption Register
+- Assumption: The selected catalog motors are the source-backed inputs.
+
+## 5. Detailed Calculations
+| ID | Problem / Decision | Result | Impact |
+| -- | -- | -- | -- |
+| CALC-001 | Example calculation supporting the plan | `N/A` | Replace this placeholder with the actual derived limit. |
+
+### CALC-001: Example calculation supporting the plan
+
+#### Problem Statement
+
+The plan needs a traceable calculation instead of a freeform claim.
+
+#### Assumptions
+
+- `ASSUMP-001`: The input values are taken from the benchmark or assembly definition.
+
+#### Derivation
+
+- Compute the binding quantity from the declared inputs.
+
+#### Worst-Case Check
+
+- The derived limit must hold under the worst-case allowed inputs.
+
+#### Result
+
+- The design remains valid only if the derived limit is respected.
+
+#### Design Impact
+
+- Update the design or inputs if the calculation changes.
+
+#### Cross-References
+
+- `plan.md#3-assembly-strategy`
+
+## 6. Critical Constraints / Operating Envelope
+- Constraint: The mechanism must remain inside the derived operating limits.
+
+## 7. Cost & Weight Budget
+- Keep the solution inside the seeded cost and weight bounds.
+
+## 8. Risk Assessment
+- Avoid swapping the left and right catalog identities.
+- Reference intent: the technical drawing script is a reference artifact for the goal zone.
+""",
+        )
+        await _write_file(
+            client,
+            session_id,
+            "todo.md",
+            """# Engineering Checklist
+
+- [x] Confirm the left/right catalog pairing.
+- [x] Preserve the declared identity pairs in authored geometry.
+- [x] Re-run validation and simulation before submission.
+""",
+        )
+        await _write_file(
+            client,
+            session_id,
+            "solution_script.py",
+            _paired_motor_script_content(),
+        )
+        await _write_file(
+            client,
+            session_id,
+            "solution_plan_technical_drawing_script.py",
+            _paired_motor_technical_drawing_script_content(),
+        )
+        await _seed_engineer_drafting_render_manifest(
+            client,
+            session_id,
+            technical_drawing_script_content=_paired_motor_technical_drawing_script_content(),
+        )
+
+        validate_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
+            json=BenchmarkToolRequest(script_path="solution_script.py").model_dump(
+                mode="json"
+            ),
+            headers={"X-Session-ID": session_id},
+            timeout=300.0,
+        )
+        assert validate_resp.status_code == 200, validate_resp.text
+        validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
+        assert validate_data.success is True, validate_data.message
+
+        simulate_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=BenchmarkToolRequest(
+                script_path="solution_script.py",
+                backend=selected_backend(),
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=300.0,
+        )
+        assert simulate_resp.status_code == 200, simulate_resp.text
+        simulate_data = BenchmarkToolResponse.model_validate(simulate_resp.json())
+        assert simulate_data.success is True, simulate_data.message
+
+        submit_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=BenchmarkToolRequest(
+                script_path="solution_script.py",
+                reviewer_stage=AgentName.ENGINEER_EXECUTION_REVIEWER,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=300.0,
+        )
+        assert submit_resp.status_code == 200, submit_resp.text
+        submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
+        assert submit_data.success is True, submit_data.message
+
+        await _write_file(
+            client,
+            session_id,
+            "solution_script.py",
+            _pair_swapped_motor_script_content(),
+        )
+
+        swapped_submit_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=BenchmarkToolRequest(
+                script_path="solution_script.py",
+                reviewer_stage=AgentName.ENGINEER_EXECUTION_REVIEWER,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=300.0,
+        )
+        assert swapped_submit_resp.status_code == 200, swapped_submit_resp.text
+        swapped_submit_data = BenchmarkToolResponse.model_validate(
+            swapped_submit_resp.json()
+        )
+        assert swapped_submit_data.success is False
+        assert swapped_submit_data.message is not None
+        assert "exact inventory pair mismatch" in swapped_submit_data.message

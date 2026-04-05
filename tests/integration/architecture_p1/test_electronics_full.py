@@ -183,6 +183,7 @@ def _solution_motor_assembly_definition_yaml() -> str:
                 config=AssemblyPartConfig(
                     dofs=["rotate_z"],
                     control=MotorControl(mode="CONSTANT", speed=1.0),
+                    cots_id="ServoMotor_DS3218",
                 ),
             ),
             PartConfig(

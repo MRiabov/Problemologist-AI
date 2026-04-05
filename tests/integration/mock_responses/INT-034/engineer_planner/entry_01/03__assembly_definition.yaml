@@ -20,3 +20,4 @@ final_assembly:
   - name: drive_motor
     config:
       dofs: []
+      cots_id: ServoMotor_DS3218
