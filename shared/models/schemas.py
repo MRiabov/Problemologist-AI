@@ -1377,6 +1377,17 @@ class AssemblyPartConfig(StrictContractModel):
 
     dofs: list[str] = []
     control: MotorControl | None = None
+    cots_id: str | None = None
+
+    @field_validator("cots_id")
+    @classmethod
+    def validate_cots_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        text = value.strip()
+        if not text:
+            raise ValueError("cots_id must be a non-empty string")
+        return text
 
 
 class PartConfig(StrictContractModel):
