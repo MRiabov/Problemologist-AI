@@ -14,7 +14,7 @@
 - Bundle history and render-file layout are owned by the rendering architecture docs, not by this file.
 - Helper names are not a stability guarantee. If a helper mutates benchmark state, it must say which artifact it mutates and whether the artifact is benchmark-owned, engineer-owned, or derived.
 - Post-simulation helpers must require post-simulation artifacts.
-- Skill-loop helpers must stay inside the active `suggested_skills/` worktree/checkpoint and must not assume the canonical `skills/` tree is mutable.
+- Skill-loop helpers must stay inside the active `suggested_skills/` worktree/checkpoint and must not assume the canonical `.agents/skills/` tree is mutable.
 - Experimental helpers must fail closed when required artifacts are missing and must not create placeholder state.
 - Prompt templates may mention an auxiliary helper, but the runtime contract is still owned by the source file that implements it.
 

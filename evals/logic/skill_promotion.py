@@ -58,7 +58,7 @@ def _default_overlay_root(workspace_dir: Path) -> Path:
 
 
 def _default_canonical_root(workspace_dir: Path) -> Path:
-    return workspace_dir / "skills"
+    return workspace_dir / ".agents" / "skills"
 
 
 def _record_promotion_result(
@@ -387,7 +387,7 @@ async def _record_promotion_event(
         codex_session_id=result.codex_session_id,
         active_overlay_path=result.overlay_root,
         approved_base_commit=result.approved_base_commit,
-        target_repo="skills",
+        target_repo=".agents/skills",
         target_branch=result.target_branch,
         merge_strategy=result.merge_strategy,
         outcome=result.outcome,
@@ -445,7 +445,7 @@ def promote_skill_overlay(
             codex_session_id=session_id,
             overlay_root=overlay_root.as_posix(),
             canonical_root=canonical_root.as_posix(),
-            reason="canonical skills repo not found",
+            reason="canonical .agents/skills repo not found",
         )
         return _finalize_promotion_result(
             workspace_dir=workspace_dir, result=result, session_id=session_id
@@ -462,7 +462,7 @@ def promote_skill_overlay(
             target_branch=state.get("branch"),
             merge_strategy="blocked-by-dirty-repo",
             conflicting_skill_paths=[],
-            reason="canonical skills repo has uncommitted changes",
+            reason="canonical .agents/skills repo has uncommitted changes",
         )
         return _finalize_promotion_result(
             workspace_dir=workspace_dir, result=result, session_id=session_id
@@ -486,7 +486,7 @@ def promote_skill_overlay(
             target_branch=base_state.get("branch"),
             merge_strategy="base-commit-overlap",
             conflicting_skill_paths=conflicting_skill_paths,
-            reason="canonical skills repo advanced with overlapping skill changes",
+            reason="canonical .agents/skills repo advanced with overlapping skill changes",
         )
         return _finalize_promotion_result(
             workspace_dir=workspace_dir, result=result, session_id=session_id
@@ -562,14 +562,14 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Promote a session-local suggested_skills overlay into the "
-            "canonical skills repo."
+            "canonical .agents/skills repo."
         )
     )
     parser.add_argument(
         "--workspace-dir",
         type=Path,
         default=ROOT,
-        help="Workspace root containing suggested_skills/ and skills/.",
+        help="Workspace root containing suggested_skills/ and .agents/skills/.",
     )
     parser.add_argument(
         "--overlay-root",
@@ -581,7 +581,7 @@ def _parse_args() -> argparse.Namespace:
         "--canonical-root",
         type=Path,
         default=None,
-        help="Override the canonical skills repo root.",
+        help="Override the canonical .agents/skills repo root.",
     )
     parser.add_argument(
         "--session-id",

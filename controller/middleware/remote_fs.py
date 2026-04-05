@@ -402,8 +402,9 @@ class RemoteFilesystemMiddleware:
             raise ValueError(msg)
         p_str = str(path).lstrip("/")
         events = [ReadFileToolEvent(path=p_str)]
-        if p_str.startswith("skills/"):
-            skill_name = p_str.split("/")[1] if "/" in p_str[7:] else p_str[7:]
+        if p_str.startswith(("skills/", ".agents/skills/")):
+            parts = p_str.split("/")
+            skill_name = parts[1] if parts[0] == "skills" else parts[2]
             # Simple heuristic for skill name
             events.append(SkillReadEvent(skill_path=path, skill_name=skill_name))
 
@@ -412,8 +413,14 @@ class RemoteFilesystemMiddleware:
             events=events,
         )
 
-        if p_str.startswith(("skills/", "utils/")):
-            module_name = p_str.split("/")[1] if "/" in p_str[7:] else p_str[7:]
+        if p_str.startswith(("skills/", ".agents/skills/", "utils/")):
+            parts = p_str.split("/")
+            if parts[0] == "skills":
+                module_name = parts[1]
+            elif parts[0] == ".agents" and len(parts) > 2:
+                module_name = parts[2]
+            else:
+                module_name = parts[1] if len(parts) > 1 else parts[0]
             await record_events(
                 episode_id=self.episode_id,
                 events=[
@@ -451,8 +458,9 @@ class RemoteFilesystemMiddleware:
 
         p_str = str(path).lstrip("/")
         events = [ReadFileToolEvent(path=p_str)]
-        if p_str.startswith("skills/"):
-            skill_name = p_str.split("/")[1] if "/" in p_str[7:] else p_str[7:]
+        if p_str.startswith(("skills/", ".agents/skills/")):
+            parts = p_str.split("/")
+            skill_name = parts[1] if parts[0] == "skills" else parts[2]
             events.append(SkillReadEvent(skill_path=path, skill_name=skill_name))
 
         await record_events(
@@ -460,8 +468,14 @@ class RemoteFilesystemMiddleware:
             events=events,
         )
 
-        if p_str.startswith(("skills/", "utils/")):
-            module_name = p_str.split("/")[1] if "/" in p_str[7:] else p_str[7:]
+        if p_str.startswith(("skills/", ".agents/skills/", "utils/")):
+            parts = p_str.split("/")
+            if parts[0] == "skills":
+                module_name = parts[1]
+            elif parts[0] == ".agents" and len(parts) > 2:
+                module_name = parts[2]
+            else:
+                module_name = parts[1] if len(parts) > 1 else parts[0]
             await record_events(
                 episode_id=self.episode_id,
                 events=[
@@ -679,12 +693,15 @@ class RemoteFilesystemMiddleware:
 
         if success:
             # Track library usage (new)
-            if path.lstrip("/").startswith(("skills/", "utils/")):
-                module_name = (
-                    path.lstrip("/").split("/")[1]
-                    if "/" in path.lstrip("/")[7:]
-                    else path.lstrip("/")[7:]
-                )
+            p_str = path.lstrip("/")
+            if p_str.startswith(("skills/", ".agents/skills/", "utils/")):
+                parts = p_str.split("/")
+                if parts[0] == "skills":
+                    module_name = parts[1]
+                elif parts[0] == ".agents" and len(parts) > 2:
+                    module_name = parts[2]
+                else:
+                    module_name = parts[1] if len(parts) > 1 else parts[0]
                 from shared.observability.schemas import LibraryUsageEvent
 
                 await record_events(

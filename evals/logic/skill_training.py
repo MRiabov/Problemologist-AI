@@ -309,9 +309,12 @@ def _read_skill_repo_state(repo_root: Path) -> tuple[str | None, str | None]:
 
 def _resolve_skill_repo_root(workspace_dir: Path) -> Path | None:
     workspace_dir = workspace_dir.expanduser().resolve()
-    nested_skill_root = workspace_dir / "skills"
+    nested_skill_root = workspace_dir / ".agents" / "skills"
+    legacy_skill_root = workspace_dir / "skills"
     if (nested_skill_root / ".git").exists():
         return nested_skill_root
+    if (legacy_skill_root / ".git").exists():
+        return legacy_skill_root
     if (workspace_dir / ".git").exists():
         return workspace_dir
     return None
@@ -335,9 +338,14 @@ def _seed_skill_overlay_state(
         _read_skill_repo_state(repo_root) if repo_root is not None else (None, None)
     )
 
-    skill_snapshot_root = workspace_dir / "skills"
+    skill_snapshot_root = workspace_dir / ".agents" / "skills"
+    legacy_skill_snapshot_root = workspace_dir / "skills"
     if skill_snapshot_root.exists() and not _overlay_has_skill_content(overlay_dir):
         copy_tree(skill_snapshot_root, overlay_dir)
+    elif legacy_skill_snapshot_root.exists() and not _overlay_has_skill_content(
+        overlay_dir
+    ):
+        copy_tree(legacy_skill_snapshot_root, overlay_dir)
     init_workspace_repo(overlay_dir)
     return overlay_dir, repo_root, base_commit, branch
 

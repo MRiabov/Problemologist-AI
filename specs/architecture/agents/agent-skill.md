@@ -18,20 +18,20 @@ The runtime may append a compact generated skill catalog for discoverability whe
 
 ## Canonical sources
 
-The checked-in `skills/` tree is the canonical skill source.
+The checked-in `.agents/skills/` tree is the canonical skill source.
 
 Runtime copies are read-only inputs:
 
 1. CLI-provider workspaces materialize the tree into `.agents/skills/`.
 2. Controller-backed runtime surfaces expose the same content through `/skills`.
-3. `suggested_skills/` is the active session-local worktree/checkpoint for a training run, seeded from an approved `skills/` snapshot, and is not canonical source.
+3. `suggested_skills/` is the active session-local worktree/checkpoint for a training run, seeded from an approved `.agents/skills/` snapshot, and is not canonical source.
 4. Any compact generated skill index is a discoverability aid only, not a second source of truth.
 
 ## Loading and access
 
 The runtime reads the mounted or materialized skill tree when constructing an agent session.
 
-Skill-training and replay loops resolve the active session overlay first when `suggested_skills/` is present, then fall back to the approved canonical tree.
+Skill-training and replay loops resolve the active session overlay first when `suggested_skills/` is present, then fall back to the approved canonical `.agents/skills/` tree.
 New training runs start from the approved canonical snapshot or locked commit, not from another run's mutable overlay.
 Runtime surfaces may advertise the active overlay explicitly through `PROBLEMOLOGIST_SKILL_OVERLAY_ROOT` so prompt assembly and catalog helpers can prefer the session-local worktree without guessing.
 
@@ -42,7 +42,7 @@ Role prompts and handoff artifacts should identify required skill dependencies w
 ## Lifecycle
 
 Skill updates are explicit and reviewable, not an implicit side effect of normal agent runs.
-Publication from a session overlay into canonical `skills/` is handled by a separate promotion arbiter or release flow.
+Publication from a session overlay into canonical `.agents/skills/` is handled by a separate promotion arbiter or release flow.
 
 The skill-learning loop runs asynchronously from the main execution flow.
 The desired architecture does not require a dedicated journalling, compression, or skill agent to summarize the run before training; the retained episode bundle and the active CLI-provider-capable session are sufficient inputs for a standalone training loop.
@@ -57,13 +57,13 @@ The loop keeps the same CLI-provider session alive across follow-up turns instea
 
 The first follow-up turn performs self-analysis. A later follow-up turn drafts or repairs the skill content.
 
-Follow-up output is written into the active `suggested_skills/` worktree/checkpoint first. Later turns reuse that overlay before falling back to canonical `skills/`.
-Promotion into the checked-in `skills/` tree remains a separate reviewable step handled by a promotion arbiter or release flow.
+Follow-up output is written into the active `suggested_skills/` worktree/checkpoint first. Later turns reuse that overlay before falling back to canonical `.agents/skills/`.
+Promotion into the checked-in `.agents/skills/` tree remains a separate reviewable step handled by a promotion arbiter or release flow.
 New training runs start from the approved canonical skill snapshot, not from another run's mutable overlay.
 
 The loop stays asynchronous relative to the main eval or task run, and it uses durable workspace artifacts such as `journal.md`, review YAML, validation/simulation results, render bundles, and `events.jsonl` to preserve the minimum state needed for later turns.
 CLI-provider skill-loop runs also retain a workspace-local, reviewable snapshot under `logs/skill_loop/` so the follow-up turns can reuse the journal state without reconstructing the transcript by hand.
-Retained skill-training bundles also persist the active overlay root and the approved canonical `skills/` base commit in session metadata so a later promotion arbiter can attribute the publication step back to the originating session and seed snapshot.
+Retained skill-training bundles also persist the active overlay root and the approved canonical `.agents/skills/` base commit in session metadata so a later promotion arbiter can attribute the publication step back to the originating session and seed snapshot.
 
 The retained artifacts are also downstream training data. A dedicated `train_skills.py`-style CLI may reopen those artifacts later to produce skill deltas without requiring a separate journalling or skill graph stage.
 

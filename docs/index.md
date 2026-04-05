@@ -35,7 +35,7 @@ This documentation set is intentionally self-contained. It describes the live ba
 | Local automation | [`scripts/`](../scripts) | Environment bootstrap, teardown, and integration-test runner |
 | Integration tests | [`tests/`](../tests) | Primary verification suite for the repository |
 | Evaluation data | [`dataset/`](../dataset) | Seed data and eval artifacts used by benchmark workflows |
-| Skill repository | [`skills/`](../skills) | Runtime-mounted skills used by the agent workflows |
+| Skill repository | [`.agents/skills/`](../.agents/skills) | Runtime-mounted skills used by the agent workflows |
 | Website mirror | [`website/`](../website) | Standalone static mirror of the published marketing site |
 | Planning artifacts | [`_bmad-output/planning-artifacts/`](../_bmad-output/planning-artifacts) | Generated PRD, epics, stories, and supporting planning outputs |
 

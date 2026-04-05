@@ -1,0 +1,38 @@
+benchmark-coder:
+  is_for_worker_agents: true
+benchmark-plan-reviewer:
+  is_for_worker_agents: true
+benchmark-planner:
+  is_for_worker_agents: true
+benchmark-reviewer:
+  is_for_worker_agents: true
+build123d-cad-drafting-skill:
+  is_for_worker_agents: true
+build123d-technical-drawing:
+  is_for_worker_agents: true
+commit-split-workflow:
+  is_for_worker_agents: true
+cots-parts:
+  is_for_worker_agents: true
+electromechanics-syntax:
+  is_for_worker_agents: true
+electronics-engineering:
+  is_for_worker_agents: true
+engineer-coder:
+  is_for_worker_agents: true
+engineer-plan-reviewer:
+  is_for_worker_agents: true
+engineer-planner:
+  is_for_worker_agents: true
+eval-creation-workflow:
+  is_for_worker_agents: true
+manufacturing-knowledge:
+  is_for_worker_agents: true
+mechanical-engineering:
+  is_for_worker_agents: true
+render-evidence:
+  is_for_worker_agents: true
+runtime-script-contract:
+  is_for_worker_agents: true
+skill-creator:
+  is_for_worker_agents: true

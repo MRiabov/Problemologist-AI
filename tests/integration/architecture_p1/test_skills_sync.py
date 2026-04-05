@@ -137,8 +137,8 @@ async def test_int_045_skills_sync_lifecycle():
         # 6. Verify the controller backend prompt builder exposes the skill catalog.
         prompt_manager = PromptManager()
         expected_catalog_paths = sorted(
-            f"/skills/{skill_dir.name}/SKILL.md"
-            for skill_dir in (ROOT / "skills").iterdir()
+            f".agents/skills/{skill_dir.name}/SKILL.md"
+            for skill_dir in (ROOT / ".agents" / "skills").iterdir()
             if skill_dir.is_dir() and (skill_dir / "SKILL.md").is_file()
         )
         catalog_lines = build_skill_catalog_lines()
@@ -150,9 +150,9 @@ async def test_int_045_skills_sync_lifecycle():
             assert _catalog_paths(prompt_text) == expected_catalog_paths
 
         # 7. Verify the checked-in skill mirrors stay equal to the canonical tree.
-        canonical_tree = _snapshot_tree(ROOT / "skills")
+        canonical_tree = _snapshot_tree(ROOT / ".agents" / "skills")
         for mirror_root in (
-            ROOT / ".agents" / "skills",
+            ROOT / "skills",
             ROOT / ".codex" / "skills",
         ):
             assert _snapshot_tree(mirror_root) == canonical_tree

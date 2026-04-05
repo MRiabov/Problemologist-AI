@@ -35,7 +35,7 @@ def _write_skill(root: Path, name: str, description: str) -> None:
 @pytest.mark.integration_p1
 @pytest.mark.int_id("INT-218")
 def test_int_218_skill_catalog_prefers_overlay_before_canonical(tmp_path, monkeypatch):
-    canonical_root = tmp_path / "skills"
+    canonical_root = tmp_path / ".agents" / "skills"
     overlay_root = tmp_path / "suggested_skills"
     _write_skill(canonical_root, "shared-skill", "canonical description")
     _write_skill(canonical_root, "canonical-only", "canonical only")
@@ -60,7 +60,7 @@ def test_int_218_skill_catalog_prefers_overlay_before_canonical(tmp_path, monkey
 @pytest.mark.int_id("INT-219")
 def test_int_219_skill_overlay_promotion_publishes_and_records_result(tmp_path):
     workspace_dir = tmp_path
-    canonical_root = workspace_dir / "skills"
+    canonical_root = workspace_dir / ".agents" / "skills"
     overlay_root = workspace_dir / "suggested_skills"
 
     _write_skill(canonical_root, "shared-skill", "canonical description")
@@ -105,7 +105,7 @@ def test_int_219_skill_overlay_promotion_publishes_and_records_result(tmp_path):
 @pytest.mark.int_id("INT-220")
 def test_int_220_skill_overlay_promotion_fails_closed_on_dirty_repo(tmp_path):
     workspace_dir = tmp_path
-    canonical_root = workspace_dir / "skills"
+    canonical_root = workspace_dir / ".agents" / "skills"
     overlay_root = workspace_dir / "suggested_skills"
 
     _write_skill(canonical_root, "shared-skill", "canonical description")
@@ -145,7 +145,7 @@ def test_int_220_skill_overlay_promotion_fails_closed_on_dirty_repo(tmp_path):
 @pytest.mark.int_id("INT-221")
 def test_int_221_skill_overlay_promotion_detects_base_commit_overlap(tmp_path):
     workspace_dir = tmp_path
-    canonical_root = workspace_dir / "skills"
+    canonical_root = workspace_dir / ".agents" / "skills"
     overlay_root = workspace_dir / "suggested_skills"
 
     _write_skill(canonical_root, "shared-skill", "canonical description")
@@ -188,7 +188,7 @@ def test_int_221_skill_overlay_promotion_detects_base_commit_overlap(tmp_path):
 @pytest.mark.int_id("INT-222")
 def test_int_222_skill_overlay_training_seeds_from_canonical_snapshot(tmp_path):
     workspace_dir = tmp_path
-    canonical_root = workspace_dir / "skills"
+    canonical_root = workspace_dir / ".agents" / "skills"
     overlay_root = workspace_dir / "suggested_skills"
 
     _write_skill(canonical_root, "shared-skill", "canonical description")
@@ -217,7 +217,7 @@ def test_int_222_skill_overlay_training_seeds_from_canonical_snapshot(tmp_path):
 @pytest.mark.int_id("INT-223")
 def test_int_223_skill_overlay_promotion_applies_seeded_overlay_deletions(tmp_path):
     workspace_dir = tmp_path
-    canonical_root = workspace_dir / "skills"
+    canonical_root = workspace_dir / ".agents" / "skills"
     overlay_root = workspace_dir / "suggested_skills"
 
     _write_skill(canonical_root, "shared-skill", "canonical description")

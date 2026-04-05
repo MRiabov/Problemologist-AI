@@ -314,7 +314,7 @@ Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
   - Reject unsupported/invented system components or mechanisms.
   - Reject inconsistent, infeasible, ambiguous, or incomplete plans, including planner drafting scripts that drift from the approved label/quantity/COTS-identity inventory.
   - Reject missing, contradictory, or unsupported motion forecasts; motion must be explicit and reconstructable from the handoff artifacts, not minimized for convenience.
-  - Re-run `skills/manufacturing-knowledge/scripts/validate_and_price.py` (or equivalent wrapped validator tool) and reject on pricing/weight/schema mismatch.
+  - Re-run `.agents/skills/manufacturing-knowledge/scripts/validate_and_price.py` (or equivalent wrapped validator tool) and reject on pricing/weight/schema mismatch.
   - Keep cost/weight target scrutiny as a mandatory realism check.
   - Optional future work: propose weight/cost optimization opportunities.
 
@@ -497,7 +497,7 @@ Expected flow:
 02. Planner defines `final_assembly` (subassemblies, part membership, joints, and per-part motion metadata like `dofs`/`control`); under the hood we:
     - Calculate as much as possible to prevent the planner from needing to think (e.g.: cooling time in injection molding is autocalculated from wall thickness, 3d print time is autocalculated from volume, setup time is autocalculated etc.)
     - Estimate part reuse - if the part/subassembly is reused, unit costs go down as per manufacturing rules (making 2 equal parts is cheaper than making 1 due to economics of scale).
-03. Planner runs `skills/manufacturing-knowledge/scripts/validate_and_price.py`.
+03. Planner runs `.agents/skills/manufacturing-knowledge/scripts/validate_and_price.py`.
     - The script is the canonical calculator for `assembly_definition.yaml`: it validates schema consistency, computes assembly totals to cent precision, and writes normalized numeric totals back into the workspace file.
     - The planner does not hand-author the final aggregate cost/weight values; those values come from the script output.
 04. If totals exceed `max_unit_cost` (or other numeric constraints), or if node-entry revalidation does not reproduce the same cent-precision totals exactly, planner must re-plan before handoff.

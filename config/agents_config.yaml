@@ -130,7 +130,7 @@ agents:
         - /
         - .
         - config/**
-        - skills/**
+        - .agents/skills/**
         - utils/**
         - manufacturing_config.yaml
         - benchmark_definition.yaml
@@ -160,7 +160,7 @@ agents:
         - solution_plan_evidence_script.py
         - solution_plan_technical_drawing_script.py
       deny:
-      - skills/**
+      - .agents/skills/**
       - utils/**
       - reviews/**
       - benchmark_script.py
@@ -192,7 +192,7 @@ agents:
         - /
         - .
         - config/**
-        - skills/**
+        - .agents/skills/**
         - utils/**
         - plan.md
         - todo.md
@@ -222,7 +222,7 @@ agents:
         - reviews/engineering-plan-review-decision-round-*.yaml
         - reviews/engineering-plan-review-comments-round-*.yaml
       deny:
-        - skills/**
+        - .agents/skills/**
         - utils/**
         - benchmark_script.py
         - reviews/**/*.py
@@ -247,7 +247,7 @@ agents:
         allow:
         - /
         - .
-        - skills/**
+        - .agents/skills/**
         - utils/**
         - plan.md
         - todo.md
@@ -277,7 +277,7 @@ agents:
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
         - plan.md
-        - skills/**
+        - .agents/skills/**
         - utils/**
         - reviews/**
         - .manifests/**
@@ -306,7 +306,7 @@ agents:
         - /
         - .
         - config/**
-        - skills/**
+        - .agents/skills/**
         - utils/**
         - plan.md
         - todo.md
@@ -356,7 +356,7 @@ agents:
         - /
         - .
         - config/**
-        - skills/**
+        - .agents/skills/**
         - utils/**
         - plan.md
         - todo.md
@@ -406,7 +406,7 @@ agents:
         - /
         - .
         - config/**
-        - skills/**
+        - .agents/skills/**
         - utils/**
         - manufacturing_config.yaml
         - benchmark_definition.yaml
@@ -432,7 +432,7 @@ agents:
         - benchmark_plan_technical_drawing_script.py
         - renders/tmp/**
       deny:
-      - skills/**
+      - .agents/skills/**
       - utils/**
       - reviews/**
       - solution_script.py
@@ -459,7 +459,7 @@ agents:
         - /
         - .
         - config/**
-        - skills/**
+        - .agents/skills/**
         - utils/**
         - plan.md
         - todo.md
@@ -499,7 +499,7 @@ agents:
         - /
         - .
         - config/**
-        - skills/**
+        - .agents/skills/**
         - utils/**
         - plan.md
         - todo.md
@@ -543,7 +543,7 @@ agents:
         - /
         - .
         - config/**
-        - skills/**
+        - .agents/skills/**
         - utils/**
         - manufacturing_config.yaml
         - benchmark_definition.yaml
@@ -564,7 +564,7 @@ agents:
         - assembly_definition.yaml
         - benchmark_definition.yaml
         deny:
-        - skills/**
+        - .agents/skills/**
         - utils/**
         - reviews/**
         - renders/**
@@ -591,7 +591,7 @@ agents:
         - /
         - .
         - config/**
-        - skills/**
+        - .agents/skills/**
         - utils/**
         - plan.md
         - todo.md
@@ -632,7 +632,7 @@ agents:
         - /
         - .
         - config/**
-        - skills/**
+        - .agents/skills/**
         - utils/**
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml

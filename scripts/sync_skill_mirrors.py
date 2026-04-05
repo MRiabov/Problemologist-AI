@@ -5,23 +5,37 @@ import os
 import shutil
 from pathlib import Path
 
+from shared.skills import load_skills_projection_config
+
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "skills"
-TARGETS = [ROOT / ".agents" / "skills", ROOT / ".codex" / "skills"]
+SOURCE = ROOT / ".agents" / "skills"
+TARGETS = [ROOT / "skills", ROOT / ".codex" / "skills"]
+SKILLS_CONFIG_PATH = ROOT / "config" / "skills_config.yaml"
 
 
 def _iter_source_paths(root: Path) -> tuple[set[str], set[str]]:
     files: set[str] = set()
     dirs: set[str] = set()
+    projection = load_skills_projection_config(config_path=SKILLS_CONFIG_PATH)
+    projected_skill_names = {
+        skill_name
+        for skill_name, policy in projection.items()
+        if policy.get("is_for_worker_agents", False)
+    }
     for dirpath, dirnames, filenames in os.walk(root):
         rel_dir = Path(dirpath).relative_to(root).as_posix()
-        if rel_dir != ".":
-            dirs.add(rel_dir)
         dirnames[:] = [name for name in dirnames if name != ".git"]
+        if rel_dir != ".":
+            parts = Path(rel_dir).parts
+            if len(parts) > 0 and parts[0] in projected_skill_names:
+                dirs.add(rel_dir)
         for name in filenames:
             if name == ".git":
                 continue
             rel_path = Path(dirpath, name).relative_to(root).as_posix()
+            parts = Path(rel_path).parts
+            if len(parts) > 1 and parts[0] not in projected_skill_names:
+                continue
             files.add(rel_path)
     return files, dirs
 
@@ -66,23 +80,34 @@ def _snapshot(root: Path) -> tuple[set[str], dict[str, bytes]]:
     snapshot: dict[str, bytes] = {}
     if not root.exists():
         return dirs, snapshot
+    projection = load_skills_projection_config(config_path=SKILLS_CONFIG_PATH)
+    projected_skill_names = {
+        skill_name
+        for skill_name, policy in projection.items()
+        if policy.get("is_for_worker_agents", False)
+    }
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [name for name in dirnames if name != ".git"]
         rel_dir = Path(dirpath).relative_to(root).as_posix()
         if rel_dir != ".":
-            dirs.add(rel_dir)
+            parts = Path(rel_dir).parts
+            if len(parts) > 0 and parts[0] in projected_skill_names:
+                dirs.add(rel_dir)
         for filename in filenames:
             if filename == ".git":
                 continue
             path = Path(dirpath, filename)
             rel = path.relative_to(root).as_posix()
+            parts = Path(rel).parts
+            if len(parts) > 1 and parts[0] not in projected_skill_names:
+                continue
             snapshot[rel] = path.read_bytes()
     return dirs, snapshot
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Mirror canonical skills into runtime copies."
+        description="Mirror canonical .agents/skills into runtime copies."
     )
     parser.add_argument(
         "--check",
@@ -100,7 +125,7 @@ def main() -> int:
         if args.check:
             target_snapshot = _snapshot(target)
             if target_snapshot != source_snapshot:
-                print(f"{target.relative_to(ROOT)} is out of sync with skills/")
+                print(f"{target.relative_to(ROOT)} is out of sync with .agents/skills")
                 exit_code = 1
             continue
 
@@ -108,7 +133,7 @@ def main() -> int:
         print(f"Synced {len(copied)} files into {target.relative_to(ROOT)}")
 
     if args.check and exit_code == 0:
-        print("Skills mirrors are in sync.")
+        print("Skill mirrors are in sync.")
     return exit_code
 
 

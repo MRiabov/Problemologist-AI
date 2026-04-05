@@ -165,7 +165,7 @@ Runtime conversations use four message roles: `system`, `user`, `assistant`, and
 | Planner submission | Must call `submit_plan()` and receive `ok=true` before handoff |
 | Reviewer completion | Must use the stage-correct manifest and review persistence files |
 | Visual inspection | If renders exist for a required role, the role must call `inspect_media(...)` before approval or finish |
-| Skill training | `train_skills.py` or equivalent owns the standalone replay/training loop over retained bundles and session-local skill overlays; a separate promotion arbiter publishes approved diffs into canonical `skills/`; `run_evals.py` stays a thin eval launcher |
+| Skill training | `train_skills.py` or equivalent owns the standalone replay/training loop over retained bundles and session-local skill overlays; a separate promotion arbiter publishes approved diffs into canonical `.agents/skills/`; `run_evals.py` stays a thin eval launcher |
 | Fail closed | Missing artifacts, invalid schema, or stale manifests block progress rather than being auto-healed |
 
 ## 10. Observability and Lineage

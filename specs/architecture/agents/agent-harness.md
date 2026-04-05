@@ -154,11 +154,11 @@ The skill-tree contract is owned by [agent-skill.md](./agent-skill.md).
 
 The harness only needs the runtime-facing summary:
 
-1. The checked-in `skills/` tree is the canonical skill source.
+1. The checked-in `.agents/skills/` tree is the canonical skill source.
 2. CLI-provider workspaces materialize that tree into `.agents/skills/` inside the run-local workspace.
 3. Controller-backed runtime surfaces expose the same content through the `/skills` mount.
-4. `suggested_skills/` may be materialized as a writable session-local worktree/checkpoint seeded from the approved `skills/` tree for skill-training runs.
-5. The training loop resolves that overlay first when it exists; canonical `skills/` remains the published source of truth.
+4. `suggested_skills/` may be materialized as a writable session-local worktree/checkpoint seeded from the approved `.agents/skills/` tree for skill-training runs.
+5. The training loop resolves that overlay first when it exists; canonical `.agents/skills/` remains the published source of truth.
 6. Workspace skill copies are read-only runtime inputs from the agent's perspective.
 
 The harness does not own the skill improvement loop, the skill catalog shape, or the promotion policy.

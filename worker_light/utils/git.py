@@ -5,8 +5,12 @@ import structlog
 from git import Repo
 
 from shared.git_utils import commit_submission_attempt as _commit_submission_attempt
+from shared.skills import load_skills_projection_config
 
 logger = structlog.get_logger(__name__)
+ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_SKILL_REPO_ROOT = ROOT / ".agents" / "skills"
+DEFAULT_SKILL_PROJECTION_CONFIG = ROOT / "config" / "skills_config.yaml"
 
 
 def init_workspace_repo(path: Path) -> Repo:
@@ -306,22 +310,113 @@ def _get_auth_url(repo_url: str, pat: str | None) -> str:
     return repo_url
 
 
+def _projected_skill_names(
+    source_root: Path, *, config_path: Path | None = None
+) -> set[str]:
+    policy = load_skills_projection_config(config_path=config_path)
+    names: set[str] = set()
+    for skill_dir in sorted(source_root.iterdir(), key=lambda path: path.name):
+        if not skill_dir.is_dir():
+            continue
+        if not (skill_dir / "SKILL.md").is_file():
+            continue
+        if policy.get(skill_dir.name, {}).get("is_for_worker_agents", False):
+            names.add(skill_dir.name)
+    return names
+
+
+def _projected_rel_paths(
+    source_root: Path, *, config_path: Path | None = None
+) -> set[str]:
+    projected_skill_names = _projected_skill_names(source_root, config_path=config_path)
+    projected_paths: set[str] = set()
+    for src_path in sorted(p for p in source_root.rglob("*") if p.is_file()):
+        if any(part == ".git" for part in src_path.parts) or src_path.suffix in {
+            ".pyc",
+            ".pyo",
+        }:
+            continue
+        rel_path = src_path.relative_to(source_root).as_posix()
+        parts = Path(rel_path).parts
+        if not parts:
+            continue
+        if len(parts) == 1:
+            projected_paths.add(rel_path)
+            continue
+        if parts[0] in projected_skill_names:
+            projected_paths.add(rel_path)
+    return projected_paths
+
+
+def _sync_projected_tree(
+    source_root: Path,
+    destination_root: Path,
+    *,
+    config_path: Path | None = None,
+) -> list[str]:
+    projected_rel_paths = _projected_rel_paths(source_root, config_path=config_path)
+    destination_root.mkdir(parents=True, exist_ok=True)
+
+    existing_rel_paths = {
+        path.relative_to(destination_root).as_posix()
+        for path in destination_root.rglob("*")
+        if path.is_file() and ".git" not in path.parts
+    }
+    for rel_path in sorted(existing_rel_paths - projected_rel_paths):
+        (destination_root / rel_path).unlink()
+
+    copied: list[str] = []
+    for rel_path in sorted(projected_rel_paths):
+        src_path = source_root / rel_path
+        dst_path = destination_root / rel_path
+        dst_path.parent.mkdir(parents=True, exist_ok=True)
+        if not src_path.exists():
+            continue
+        dst_path.write_bytes(src_path.read_bytes())
+        copied.append(rel_path)
+    return copied
+
+
 def sync_skills(
     repo_url: str | None,
     pat: str | None,
     skills_dir: Path,
     session_id: str | None = None,
+    source_root: Path | None = None,
 ):
-    """Clone or pull skills from git repo."""
+    """Project worker-visible skills from the canonical repo into the mount."""
+
+    canonical_root = (source_root or DEFAULT_SKILL_REPO_ROOT).expanduser().resolve()
+    if canonical_root.exists():
+        try:
+            copied = _sync_projected_tree(
+                canonical_root,
+                skills_dir.expanduser().resolve(),
+                config_path=DEFAULT_SKILL_PROJECTION_CONFIG,
+            )
+            logger.info(
+                "skills_projected_successfully",
+                source=str(canonical_root),
+                destination=str(skills_dir),
+                copied=len(copied),
+            )
+            return
+        except Exception as e:
+            logger.warning(
+                "failed_to_project_skills",
+                error=str(e),
+                session_id=session_id,
+                source=str(canonical_root),
+            )
+
     if not repo_url:
-        logger.info("GIT_REPO_URL not set, skipping skills sync.")
+        logger.info(
+            "canonical_skill_repo_missing_and_no_remote_source",
+        )
         return
 
-    # Ensure directory exists
     skills_dir.mkdir(parents=True, exist_ok=True)
-
     auth_url = _get_auth_url(repo_url, pat)
-
     try:
         if (skills_dir / ".git").exists():
             logger.info("pulling_latest_skills", path=str(skills_dir))

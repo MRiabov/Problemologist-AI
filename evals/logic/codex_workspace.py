@@ -64,7 +64,7 @@ from worker_heavy.utils.file_validation import (
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
 ROOT = Path(__file__).resolve().parents[2]
-SKILL_SOURCE_ROOT = ROOT / "skills"
+SKILL_SOURCE_ROOT = ROOT / ".agents" / "skills"
 CODEX_SKILL_TREE_ROOT = Path(".agents") / "skills"
 
 _TEXT_SUFFIXES = {

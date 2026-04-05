@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Any
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-SKILL_ROOT = ROOT / "skills"
+SKILL_ROOT = ROOT / ".agents" / "skills"
+SKILLS_CONFIG_PATH = ROOT / "config" / "skills_config.yaml"
 SKILL_OVERLAY_ENV = "PROBLEMOLOGIST_SKILL_OVERLAY_ROOT"
 
 
@@ -28,6 +30,46 @@ def _skill_description(skill_path: Path) -> str:
     if not description:
         raise ValueError(f"Skill file missing description: {skill_path}")
     return description
+
+
+def load_skills_projection_config(
+    *, config_path: Path | None = None
+) -> dict[str, dict[str, Any]]:
+    """Load worker projection policy keyed by skill directory name."""
+
+    path = (config_path or SKILLS_CONFIG_PATH).expanduser().resolve()
+    if not path.exists():
+        return {}
+
+    raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(raw, dict):
+        raise ValueError(f"Skill projection config must be a mapping: {path}")
+
+    policies: dict[str, dict[str, Any]] = {}
+    for skill_name, policy in raw.items():
+        if not isinstance(skill_name, str) or not skill_name.strip():
+            raise ValueError(f"Invalid skill projection key in {path}: {skill_name!r}")
+        normalized_name = skill_name.strip()
+        if policy is None:
+            policies[normalized_name] = {}
+        elif isinstance(policy, dict):
+            policies[normalized_name] = dict(policy)
+        elif isinstance(policy, bool):
+            policies[normalized_name] = {"is_for_worker_agents": policy}
+        else:
+            raise ValueError(
+                f"Invalid skill projection policy for {normalized_name} in {path}"
+            )
+    return policies
+
+
+def skill_is_for_worker_agents(
+    skill_name: str, *, config_path: Path | None = None
+) -> bool:
+    """Return whether a skill should be projected into worker-facing runtimes."""
+
+    policy = load_skills_projection_config(config_path=config_path).get(skill_name, {})
+    return bool(policy.get("is_for_worker_agents", False))
 
 
 def _iter_skill_catalog_entries_from_roots(
@@ -148,6 +190,6 @@ def build_skill_catalog_lines(
         overlay_root=active_overlay_root,
         canonical_root=canonical_root,
     ):
-        display_path = f"/skills/{skill_name}/SKILL.md"
+        display_path = f".agents/skills/{skill_name}/SKILL.md"
         lines.append(f"- `{display_path}`: {description}")
     return tuple(lines)

@@ -207,7 +207,7 @@ We define (a growing list of) (aggregate) metrics:
 15. On-demand preview latency by modality, purpose, and requested view count: median preview time split by requested modality, render purpose, and requested view count.
 16. Visual-evidence usage rate: % of review attempts with available renders that actually called the media-inspection tool and attached media to the model.
 17. Visual-policy compliance rate by role: % of runs where roles configured with `visual_inspection.required=true` satisfied their current `min_images` requirement when render images were available.
-18. Skill publication latency: elapsed time from a `skill_update` event or overlay completion to successful promotion into canonical `skills/`.
+18. Skill publication latency: elapsed time from a `skill_update` event or overlay completion to successful promotion into canonical `.agents/skills/`.
 19. Skill promotion conflict rate: % of promotion attempts that required conflict resolution or human escalation.
 20. Skill overlay provenance: whether the retained session metadata captures the overlay root, approved base commit, and promotion outcome for later replay.
 

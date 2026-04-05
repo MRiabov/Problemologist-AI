@@ -1,6 +1,5 @@
 import asyncio
 import os
-import shutil
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -27,18 +26,16 @@ def _seed_integration_skills() -> None:
     skills_dir.mkdir(parents=True, exist_ok=True)
 
     copied = 0
-    repo_skill_root = Path(__file__).resolve().parents[1] / "skills"
+    repo_skill_root = Path(__file__).resolve().parents[1] / ".agents" / "skills"
     if repo_skill_root.exists():
-        for skill_dir in sorted(repo_skill_root.iterdir(), key=lambda p: p.name):
-            if not skill_dir.is_dir():
-                continue
-            skill_md = skill_dir / "SKILL.md"
-            if not skill_md.exists():
-                continue
-            target = skills_dir / skill_dir.name / "SKILL.md"
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(skill_md, target)
-            copied += 1
+        sync_skills(
+            repo_url=None,
+            pat=None,
+            skills_dir=skills_dir,
+            session_id="system",
+            source_root=repo_skill_root,
+        )
+        copied = len([entry for entry in skills_dir.iterdir() if entry.is_dir()])
 
     if copied == 0:
         placeholder = skills_dir / "build123d-cad-drafting-skill" / "SKILL.md"

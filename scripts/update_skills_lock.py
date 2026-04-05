@@ -8,8 +8,14 @@ from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
 ROOT = Path(__file__).resolve().parents[1]
-SKILLS_DIR = ROOT / "skills"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from shared.skills import load_skills_projection_config
+
+SKILLS_DIR = ROOT / ".agents" / "skills"
 LOCK_PATH = ROOT / "config" / "skills_repo.lock.json"
+SKILLS_CONFIG_PATH = ROOT / "config" / "skills_config.yaml"
 
 
 def _run_git(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -43,10 +49,33 @@ def _write_lock_file(payload: dict[str, str]) -> None:
     LOCK_PATH.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
 
+def _skill_names(repo_root: Path) -> list[str]:
+    names: list[str] = []
+    for child in sorted(repo_root.iterdir(), key=lambda path: path.name):
+        if not child.is_dir():
+            continue
+        if not (child / "SKILL.md").is_file():
+            continue
+        names.append(child.name)
+    return names
+
+
+def _warn_missing_projection_entries() -> list[str]:
+    policies = load_skills_projection_config(config_path=SKILLS_CONFIG_PATH)
+    missing = [name for name in _skill_names(SKILLS_DIR) if name not in policies]
+    if missing:
+        print(
+            "warning: skills missing from config/skills_config.yaml: "
+            + ", ".join(missing),
+            file=sys.stderr,
+        )
+    return missing
+
+
 def main() -> int:
     if not (SKILLS_DIR / ".git").exists():
         print(
-            "No git-managed skills repo found at skills/; skipping skills lock update."
+            "No git-managed skills repo found at .agents/skills; skipping skills lock update."
         )
         return 0
 
@@ -58,19 +87,23 @@ def main() -> int:
     dirty_output = status.stdout.strip()
     if dirty_output:
         print(
-            "skills/ has uncommitted changes. Commit or stash them in the skills repo "
+            ".agents/skills/ has uncommitted changes. Commit or stash them in the skills repo "
             "before committing the main repo.",
             file=sys.stderr,
         )
         print(dirty_output, file=sys.stderr)
         return 1
 
+    missing_projection_entries = _warn_missing_projection_entries()
+    if missing_projection_entries:
+        return 0
+
     head_commit = _run_git("rev-parse", "HEAD").stdout.strip()
     branch = _run_git("rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
     remote = _run_git("remote", "get-url", "origin", check=False).stdout.strip()
 
     payload = {
-        "skills_repo_path": "skills",
+        "skills_repo_path": ".agents/skills",
         "branch": branch,
         "head_commit": head_commit,
         "origin_url": _sanitize_remote_url(remote),
