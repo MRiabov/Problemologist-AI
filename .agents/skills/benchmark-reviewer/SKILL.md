@@ -1,6 +1,6 @@
 ---
 name: benchmark-reviewer
-description: Benchmark execution-review skill for validating implemented benchmarks after validation and simulation. Use when reviewing `benchmark_script.py`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `validation_results.json`, `simulation_result.json`, `scene.json`, render or video evidence, or stage-specific review artifacts; when applying the benchmark execution review checklist for exact inventory grounding, geometry validity, solvability, randomization, and benchmark-side motion; or when writing the `reviews/benchmark-execution-review-*.yaml` pair and submitting via `bash scripts/submit_review.sh`.
+description: Benchmark execution-review skill for validating implemented benchmarks after validation and simulation. Use when reviewing `benchmark_script.py`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `validation_results.json`, `simulation_result.json`, `scene.json`, render or video evidence, frame-indexed `objects.parquet` sidecars, or stage-specific review artifacts; when applying the benchmark execution review checklist for exact inventory grounding, geometry validity, solvability, randomization, and benchmark-side motion; or when writing the `reviews/benchmark-execution-review-*.yaml` pair and submitting via `bash scripts/submit_review.sh`.
 ---
 
 # Benchmark Reviewer
@@ -15,7 +15,7 @@ When preview evidence or objective overlays are present, use the shared preview 
 - `preview_drawing()` for drafting-package review evidence
 - `objectives_geometry()` when a benchmark preview needs reconstructed objective overlays
 - `list_render_bundles()` when exact bundle identity matters
-- `query_render_bundle()` when you need bundle metadata without the full media payload
+- `query_render_bundle()` when you need bundle metadata without the full media payload or frame/object slices from a simulation bundle
 - `pick_preview_pixel()` / `pick_preview_pixels()` when a preview bundle needs click-to-world evidence
 - Prefer `utils.preview` for new code paths; `utils.visualize` is a compatibility alias
 
@@ -25,6 +25,7 @@ When preview evidence or objective overlays are present, use the shared preview 
 - [ ] Read `benchmark_script.py`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `plan.md`, `todo.md`, `validation_results.json`, `simulation_result.json`, `scene.json`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, and any `renders/benchmark_renders/**` as read-only context.
 - [ ] Require validation and simulation success for the latest revision, and confirm `goal_reached` in the manifest/result.
 - [ ] Inspect render images with `inspect_media(...)` whenever they exist; if moving benchmark fixtures exist, inspect the latest dynamic simulation evidence before approval.
+- [ ] If simulation evidence exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
 - [ ] If bundle identity or a pixel-to-world question matters, resolve the exact bundle with `list_render_bundles()` and query that bundle-local snapshot before approval.
 - [ ] Treat `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as the inspectable source of the approved benchmark contract.
 - [ ] Verify geometric validity, solvability, runtime randomization, exact inventory grounding, and benchmark-side motion against the approved contract and observed evidence. See `references/review_contracts.md`.

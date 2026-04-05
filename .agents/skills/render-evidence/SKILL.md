@@ -1,6 +1,6 @@
 ---
 name: render-evidence
-description: Shared render-evidence workflow for Problemologist agents. Use when previewing scenes with `preview(...)` for live scene inspection or `preview_drawing()` for drafting packages, inspecting render or video media through the runtime's visual-inspection path, selecting benchmark/engineer/final render bundles, or resolving a screen-space pixel to a world-space hit with bundle-local render-query helpers such as `list_render_bundles(...)`, `pick_preview_pixel(...)`, `pick_preview_pixels(...)`, and `query_render_bundle(...)`.
+description: Shared render-evidence workflow for Problemologist agents. Use when previewing scenes with `preview(...)` for live scene inspection or `preview_drawing()` for drafting packages, inspecting render or video media through the runtime's visual-inspection path, selecting benchmark/engineer/final render bundles, resolving a screen-space pixel to a world-space hit with bundle-local render-query helpers such as `list_render_bundles(...)`, `pick_preview_pixel(...)`, `pick_preview_pixels(...)`, and `query_render_bundle(...)`, or inspecting frame-indexed `objects.parquet` pose-history sidecars.
 ---
 
 # Render Evidence
@@ -55,6 +55,7 @@ from utils.preview import (
 - Prefer the latest revision only when the task is revision-scoped.
 - For history or replay, resolve the bundle from the append-only render index and then read its bundle-local manifest.
 - Treat `renders/render_manifest.json` as compatibility plumbing only when the runtime still exposes it.
+- Simulation bundles may also persist `frames.jsonl` and `objects.parquet` sidecars at the video-capture cadence. Treat `frames.jsonl` as sparse timestamps and `objects.parquet` as the frame-indexed pose-history sidecar; inspect the MP4 and that sidecar together when motion or timing matters.
 - Never infer coordinates from raw pixels, filenames, or stale manifests.
 
 ## Inspection Rules

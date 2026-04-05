@@ -1,6 +1,6 @@
 ---
 name: engineer-coder
-description: Problemologist engineering implementation role. Use when turning approved engineering handoffs into solution_script.py, solving engineering evals with bounded retries, selecting mechanism patterns, validating and simulating revisions, inspecting render evidence, querying render-bundle history or point-pick results, preserving planner inventory exactness, grounding work in proof-backed plan.md contracts, or refusing an infeasible plan with plan_refusal.md.
+description: Problemologist engineering implementation role. Use when turning approved engineering handoffs into solution_script.py, solving engineering evals with bounded retries, selecting mechanism patterns, validating and simulating revisions, inspecting render evidence, querying render-bundle history or point-pick results, preserving planner inventory exactness, grounding work in proof-backed plan.md contracts, inspecting simulation evidence through frame-indexed `objects.parquet` sidecars, or refusing an infeasible plan with plan_refusal.md.
 ---
 
 # Engineer Coder
@@ -53,6 +53,7 @@ from utils.preview import (
 - `query_render_bundle()` returns compact frame/object slices when you need bundle metadata without the full media payload.
 - `pick_preview_pixel()` and `pick_preview_pixels()` resolve screen-space points against the bundle-local snapshot when you need click-to-world or batch point-pick evidence.
 - `from utils.visualize import ...` is a compatibility alias, but `utils.preview` is the preferred namespace for new code.
+- When simulation evidence exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata only.
 
 ## What This Skill Owns
 
@@ -169,6 +170,7 @@ This role should behave like a high-confidence solver, not a wandering explorer.
 - A passing validator does not excuse skipping the simulation video or frame evidence. Use the first dynamic result to confirm direction, capture, and stability.
 - If `preview(...)` evidence exists for the current revision, inspect the corresponding render bundle before finishing.
 - If render history matters, use `list_render_bundles()` and `query_render_bundle()` to select the exact bundle snapshot instead of assuming the newest visible render is the right one.
+- If a simulation bundle exposes frame/object slices, inspect the sampled frame-indexed `objects.parquet` pose-history sidecar rather than treating `frames.jsonl` as pose history.
 - If a question depends on screen-space picking, use `pick_preview_pixel()` or `pick_preview_pixels()` against that bundle-local snapshot before changing geometry.
 - If render images exist for the current revision, inspect them with `inspect_media(...)` before finishing.
 - If the solution has moving behavior and simulation video exists, inspect the dynamic evidence before approval.

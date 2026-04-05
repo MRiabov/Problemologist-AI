@@ -1,6 +1,6 @@
 ---
 name: benchmark-coder
-description: Benchmark implementation role for turning approved benchmark plans into benchmark_script.py and helper modules, validating and simulating benchmark revisions, preserving planner inventory exactness, handling benchmark-side motion or COTS-backed fixture geometry, and refusing only when the approved plan is infeasible. Use when working as the Benchmark Coder after plan approval, when fixing benchmark validation or simulation failures, when producing review-ready benchmark evidence, or when deciding whether to write plan_refusal.md.
+description: Benchmark implementation role for turning approved benchmark plans into benchmark_script.py and helper modules, validating and simulating benchmark revisions, preserving planner inventory exactness, handling benchmark-side motion or COTS-backed fixture geometry, and refusing only when the approved plan is infeasible. Use when working as the Benchmark Coder after plan approval, when fixing benchmark validation or simulation failures, when producing review-ready benchmark evidence, when deciding whether to write plan_refusal.md, or when inspecting simulation evidence through frame-indexed `objects.parquet` sidecars.
 ---
 
 # Benchmark Coder
@@ -37,9 +37,10 @@ from utils.preview import (
 - `preview(...)` is the live scene and objective-overlay path; use `payload_path=True` only when the current workflow needs the live payload-path overlay. `preview_drawing()` is the drafting-package path and keeps the payload overlay off.
 - `objectives_geometry()` reconstructs benchmark objective overlays when needed.
 - `list_render_bundles()` selects the exact current or historical render bundle before you inspect media or point-pick results.
-- `query_render_bundle()` returns compact bundle metadata and frame slices without pulling the full media payload.
+- `query_render_bundle()` returns compact bundle metadata and frame/object slices without pulling the full media payload.
 - `pick_preview_pixel()` and `pick_preview_pixels()` resolve screen-space points against the bundle-local snapshot when click-to-world evidence matters.
 - `from utils.visualize import ...` is a compatibility alias, but `utils.preview` is the preferred namespace for new code.
+- When simulation evidence exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata only.
 
 ## Geometry Contract
 

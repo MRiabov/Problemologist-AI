@@ -1,6 +1,6 @@
 ---
 name: engineer-planner
-description: Engineering planning role for turning benchmark handoff context into implementation-ready plan artifacts. Use when drafting or revising `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, or `solution_plan_technical_drawing_script.py`; when interpreting `benchmark_assembly_definition.yaml` and `benchmark_script.py` as read-only context; when validating cost, weight, motion contracts, detailed payload trajectory calculations, build-zone feasibility, or exact-grounded inventory mentions; when using `preview_drawing()` or media inspection to check planner drafts; or when deciding whether a proposed engineering approach is infeasible and needs replanning.
+description: Engineering planning role for turning benchmark handoff context into implementation-ready plan artifacts. Use when drafting or revising `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, or `solution_plan_technical_drawing_script.py`; when interpreting `benchmark_assembly_definition.yaml` and `benchmark_script.py` as read-only context; when validating cost, weight, motion contracts, detailed payload trajectory calculations, build-zone feasibility, or exact-grounded inventory mentions; when using `preview_drawing()` or media inspection to check planner drafts; when inspecting simulation evidence through frame-indexed `objects.parquet` sidecars; or when deciding whether a proposed engineering approach is infeasible and needs replanning.
 ---
 
 # Engineer Planner
@@ -22,7 +22,7 @@ Use the shared preview helpers whenever the plan needs visual evidence:
 - `preview_drawing()` for drafting packages and plan evidence
 - `objectives_geometry()` when the preview scene needs benchmark objective overlays reconstructed
 - `list_render_bundles()` when the current or historical render bundle matters
-- `query_render_bundle()` when you need compact bundle metadata without the full media payload
+- `query_render_bundle()` when you need compact bundle metadata or frame/object slices from a simulation bundle; use the sampled frame-indexed `objects.parquet` pose-history sidecar instead of treating `frames.jsonl` as pose data
 - `pick_preview_pixel()` / `pick_preview_pixels()` when a preview bundle needs click-to-world evidence
 - Prefer `utils.preview` for new code paths; `utils.visualize` is compatibility-only
 
@@ -97,7 +97,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 06. Bind views, datums, dimensions, callouts, and notes to the reviewed mechanism only; do not invent new parts, joints, motions, or geometry beyond the existing handoff.
 07. Keep planner drafting scripts aligned with the same preserved geometry, repeated quantities, and COTS identities when drafting mode is enabled.
 08. Use `validate_costing_and_price()` before submission and fix the source of any pricing or weight mismatch.
-09. Inspect relevant renders or draft drawings with `preview_drawing()` and media inspection when visual evidence exists. Use `list_render_bundles()` and `query_render_bundle()` first when the question depends on a specific revision, and use `pick_preview_pixel()` / `pick_preview_pixels()` when the question depends on a screen-space point.
+09. Inspect relevant renders or draft drawings with `preview_drawing()` and media inspection when visual evidence exists. Use `list_render_bundles()` and `query_render_bundle()` first when the question depends on a specific revision, and use `pick_preview_pixel()` / `pick_preview_pixels()` when the question depends on a screen-space point. If simulation evidence already exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
 10. Call `submit_plan()` only when the handoff is coherent, physically plausible, and ready for implementation.
 11. When motion proof is required, make `assembly_definition.yaml.motion_forecast` the coarse contract and `payload_trajectory_definition.yaml` the denser refinement; load `references/motion-trajectory-contract.md` for the calculation checklist; keep the same moving parts, preserve the same build-safe first anchor and terminal goal proof, and keep any math in `plan.md` synchronized with the actual waypoint sequence rather than with prose estimates.
 

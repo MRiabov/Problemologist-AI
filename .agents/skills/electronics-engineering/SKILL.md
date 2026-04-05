@@ -1,6 +1,6 @@
 ---
 name: electronics-engineering
-description: Electromechanical planning and runtime guidance for the current Problemologist electronics stack. Use only when a plan or implementation explicitly includes an `electronics` section, benchmark `electronics_requirements`, circuit validation, or electronics review.
+description: Electromechanical planning and runtime guidance for the current Problemologist electronics stack. Use only when a plan or implementation explicitly includes an `electronics` section, benchmark `electronics_requirements`, circuit validation, electronics review, or simulation evidence for an electromechanical system.
 ---
 
 # Electronics Engineering Skill
@@ -29,6 +29,7 @@ It is for electromechanical reasoning and handoff alignment, not for importing r
 4. Use current schemas and helpers, not stale placeholder APIs.
 5. Backward compatibility still exists:
    if there is no `electronics` section and no explicit circuit-validation task, do not load this skill just because the design has motors or wires. Do not invent electronics unless the task requires it.
+6. If the electronics work affects a moving system, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata only.
 
 ## Practical Workflow
 

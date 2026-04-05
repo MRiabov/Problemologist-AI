@@ -1,6 +1,6 @@
 ---
 name: benchmark-planner
-description: Benchmark planning and handoff authoring for Problemologist. Use when creating or revising benchmark planner artifacts (`plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`), checking benchmark solvability or randomization, defining benchmark-owned fixture motion, reviewing planner drafting output with `preview_drawing()`, enforcing exact-grounded inventory mentions, or preparing the plan for `submit_plan()`.
+description: Benchmark planning and handoff authoring for Problemologist. Use when creating or revising benchmark planner artifacts (`plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`), checking benchmark solvability or randomization, defining benchmark-owned fixture motion, reviewing planner drafting output with `preview_drawing()`, enforcing exact-grounded inventory mentions, preparing the plan for `submit_plan()`, or inspecting simulation evidence through frame-indexed `objects.parquet` sidecars.
 ---
 
 # Benchmark Planner
@@ -22,7 +22,7 @@ Use the shared preview helpers when evidence or objective overlays are part of t
 - `preview_drawing()` for drafting packages and orthographic plan evidence
 - `objectives_geometry()` when a benchmark preview needs reconstructed objective overlays
 - `list_render_bundles()` when the task depends on the exact bundle revision
-- `query_render_bundle()` when you need compact bundle metadata or frame slices
+- `query_render_bundle()` when you need compact bundle metadata or frame/object slices from a simulation bundle; use the sampled frame-indexed `objects.parquet` pose-history sidecar instead of treating `frames.jsonl` as pose data
 - `pick_preview_pixel()` / `pick_preview_pixels()` when a preview bundle needs click-to-world evidence
 - Prefer `utils.preview` for new import paths; `utils.visualize` is compatibility-only
 
@@ -84,6 +84,7 @@ Read these before drafting or revising the handoff:
 - Use `preview(...)` for live scene previews and `preview_drawing()` for drafting packages; they are not interchangeable.
 - Use `payload_path=True` on `preview(...)` when the live payload-path overlay is part of the inspection.
 - When drawings are part of the handoff, inspect the drafted package with `preview_drawing()` before `submit_plan()`.
+- If simulation evidence already exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
 - If the review depends on bundle identity or a click-to-world answer, select the exact bundle with `list_render_bundles()` and inspect or query that bundle-local snapshot instead of assuming the newest visible render is the right one.
 - Make the benchmark-owned motion contract explicit if any fixture moves. In this repo, keep each moving fixture to one explicit DOF axis and spell out the controller facts and limits.
 - Keep the moved object inside `build_zone` under static variation plus runtime jitter.
