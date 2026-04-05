@@ -27,7 +27,9 @@ from worker_heavy.utils.dfm import (
     validate_and_price_assembly,
 )
 from worker_heavy.utils.file_validation import (
+    _assembly_script_expected_identity_pairs,
     _assembly_script_expected_tokens,
+    _benchmark_script_expected_identity_pairs,
     _benchmark_script_expected_tokens,
     _technical_drawing_script_imports_and_calls_technical_drawing,
     validate_component_inventory_exactness,
@@ -432,10 +434,19 @@ def submit_for_review(
         if normalized_stage == "benchmark_reviewer"
         else _assembly_script_expected_tokens(estimation)
     )
+    component_inventory_pairs = (
+        _benchmark_script_expected_identity_pairs(
+            benchmark_definition=objectives_model,
+            assembly_definition=estimation,
+        )
+        if normalized_stage == "benchmark_reviewer"
+        else _assembly_script_expected_identity_pairs(estimation)
+    )
     inventory_errors = validate_component_inventory_exactness(
         component=component,
         expected_tokens=component_inventory_tokens,
         artifact_name=script_path.name,
+        expected_identity_pairs=component_inventory_pairs,
     )
     if inventory_errors:
         logger.warning(

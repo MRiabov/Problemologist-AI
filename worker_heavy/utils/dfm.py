@@ -5,7 +5,11 @@ import structlog
 import yaml
 from build123d import Compound, Part
 
-from shared.models.schemas import AssemblyDefinition, BenchmarkDefinition, BoundingBox
+from shared.models.schemas import (
+    AssemblyDefinition,
+    BenchmarkDefinition,
+    BoundingBox,
+)
 from shared.workers.workbench_models import (
     CostBreakdown,
     ManufacturingConfig,
@@ -669,6 +673,37 @@ def validate_and_price_assembly(
     Treating the whole assembly as one CNC stock body creates false undercut and
     corner violations across disconnected children.
     """
+    if assembly_definition is not None:
+        from worker_heavy.utils.file_validation import (
+            _assembly_script_expected_identity_pairs,
+            _assembly_script_expected_tokens,
+            validate_component_inventory_exactness,
+        )
+
+        inventory_errors = validate_component_inventory_exactness(
+            component=part,
+            expected_tokens=_assembly_script_expected_tokens(assembly_definition),
+            artifact_name=_part_label(part),
+            expected_identity_pairs=_assembly_script_expected_identity_pairs(
+                assembly_definition
+            ),
+        )
+        if inventory_errors:
+            return WorkbenchResult(
+                is_manufacturable=False,
+                unit_cost=0.0,
+                weight_g=0.0,
+                violations=inventory_errors,
+                metadata=WorkbenchMetadata(
+                    additional_info={
+                        "part_reports": [],
+                        "part_count": 0,
+                        "quantity": quantity,
+                        "requested_quantity": quantity,
+                    }
+                ),
+            )
+
     reports = _part_reports_for_analysis(part)
     if part_labels is not None:
         reports = [
