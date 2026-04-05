@@ -1,4 +1,0 @@
-interface:
-  display_name: "Spec Editing Style Guide"
-  short_description: "Enforce plan-style-traits on spec edits."
-  default_prompt: "Use this skill before writing or editing files under specs/. Read specs/plan-style-traits.md first and apply it strictly."
