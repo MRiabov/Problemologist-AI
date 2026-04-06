@@ -101,13 +101,6 @@ def camera_position_from_orbit(
     return (x, y, z)
 
 
-_NO_RENDER_ROLE = {
-    "benchmark_plan_reviewer",
-    "benchmark_coder",
-    "engineer_planner",
-    "engineer_plan_reviewer",
-}
-
 _RENDER_ROLE_WITH_SCRIPT = {
     "benchmark_reviewer",
     "engineer_execution_reviewer",
@@ -768,19 +761,17 @@ def update_seed_artifact_renders(artifact_dir: Path) -> list[str]:
     artifact_dir = Path(artifact_dir)
     role_name = _role_name_for_artifact(artifact_dir)
     renders_dir = artifact_dir / "renders"
+    scratch_dir = renders_dir / "tmp"
 
-    if role_name in _NO_RENDER_ROLE:
-        if renders_dir.exists():
-            shutil.rmtree(renders_dir)
-        return []
+    # Keep scratch previews ephemeral, but preserve any persistent buckets
+    # already present under renders/.
+    if scratch_dir.exists():
+        shutil.rmtree(scratch_dir)
 
     if role_name not in _RENDER_ROLE_WITH_SCRIPT | _RENDER_ROLE_WITH_DEFINITION_PREVIEW:
         return []
 
     script_path = _resolve_render_script_path(artifact_dir, role_name)
-
-    if renders_dir.exists():
-        shutil.rmtree(renders_dir)
 
     session_id = f"seed-renders-{artifact_dir.name}-{uuid.uuid4().hex[:8]}"
     staging_root = _stage_render_bundle_root(artifact_dir)

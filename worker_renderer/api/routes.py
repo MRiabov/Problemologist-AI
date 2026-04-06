@@ -65,8 +65,8 @@ from worker_renderer.utils.rendering import (
     build_render_bundle_index_entry,
     build_render_manifest,
     normalize_render_manifest,
-    select_scratch_preview_render_subdir,
     select_single_preview_render_subdir,
+    select_static_preview_render_subdir,
 )
 from worker_renderer.utils.scene_builder import normalize_preview_label
 from worker_renderer.utils.technical_drawing import render_technical_drawing_preview
@@ -1315,7 +1315,7 @@ async def api_static_preview(
                     renders_dir = (
                         root
                         / "renders"
-                        / select_scratch_preview_render_subdir(
+                        / select_static_preview_render_subdir(
                             root, agent_role=x_agent_role
                         )
                     )

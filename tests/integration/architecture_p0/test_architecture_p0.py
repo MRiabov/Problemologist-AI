@@ -305,7 +305,7 @@ def build():
         assert static_preview_data.artifacts is not None
         assert static_preview_data.artifacts.render_paths, static_preview_data
         assert all(
-            path.startswith("renders/tmp/")
+            path.startswith("renders/benchmark_renders/")
             for path in static_preview_data.artifacts.render_paths
         ), static_preview_data.artifacts.render_paths
 
