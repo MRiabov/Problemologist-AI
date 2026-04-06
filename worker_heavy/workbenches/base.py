@@ -3,6 +3,7 @@ from collections.abc import Callable
 from typing import Protocol
 
 from build123d import Compound, Part
+from deprecated import deprecated
 
 from shared.type_checking import type_check
 from shared.workers.workbench_models import (
@@ -35,6 +36,10 @@ class Workbench(ABC):
     """
 
     @abstractmethod
+    @deprecated(
+        "Use validate_geometry, will be removed soon. Not to be "
+        "confused with agents' validate."
+    )
     def validate(self, part: Part) -> list[Exception | str]:
         """
         Validates the part against the workbench constraints.
