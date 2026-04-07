@@ -117,9 +117,18 @@ def preview(
     if response.status_text is None:
         response.status_text = response.message or "Preview generated successfully"
 
+    preview_message = (
+        "Preview generated successfully. "
+        f"Saved renders to {Path(response.manifest_path).parent}. "
+        f"Manifest: {response.manifest_path}."
+    )
+    response.message = preview_message
+    print(preview_message)
+
     logger.info(
         "preview_saved",
         path=str(materialized_path),
+        saved_render_dir=str(materialized_path.parent.relative_to(workspace_root)),
         orbit_pitch=orbit_pitch,
         orbit_yaw=orbit_yaw,
         rendering_type=response.rendering_type.value,

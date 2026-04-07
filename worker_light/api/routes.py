@@ -317,8 +317,17 @@ async def api_preview(
 
         artifact_path = str(image_path.relative_to(workspace_root))
         target_preview_prefix = str(Path(artifact_path).parent)
+        saved_render_dir = str(Path(artifact_path).parent).replace("\\", "/")
+        manifest_path = str(
+            Path(artifact_path).parent / "render_manifest.json"
+        ).replace("\\", "/")
+        preview_message = (
+            "Preview generated successfully. "
+            f"Saved renders to {saved_render_dir}. "
+            f"Manifest: {manifest_path}."
+        )
         if (
-            preview_renders_dir.name != "tmp"
+            preview_renders_dir.name != "current-episode"
             and source_preview_prefix
             and response.render_manifest_json
             and source_preview_prefix != target_preview_prefix
@@ -342,7 +351,7 @@ async def api_preview(
             "worker_light_preview_finished",
             session_id=x_session_id,
             artifact_path=artifact_path,
-            manifest_path=str(Path(artifact_path).parent / "render_manifest.json"),
+            manifest_path=manifest_path,
             rendering_type=(
                 request.rendering_type.value if request.rendering_type else None
             ),
@@ -351,13 +360,13 @@ async def api_preview(
         return PreviewDesignResponse(
             success=True,
             status_text="Preview generated successfully",
-            message="Preview generated successfully",
+            message=preview_message,
             job_id=response.job_id,
             queued=response.queued,
             view_count=response.view_count,
             view_specs=response.view_specs,
             artifact_path=artifact_path,
-            manifest_path=str(Path(artifact_path).parent / "render_manifest.json"),
+            manifest_path=manifest_path,
             rendering_type=response.rendering_type,
             drafting=response.drafting or request.drafting,
             pitch=request.orbit_pitch

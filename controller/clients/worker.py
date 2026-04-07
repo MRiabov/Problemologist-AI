@@ -1076,13 +1076,17 @@ class WorkerClient:
             await self._close_client(client)
 
     async def validate(
-        self, script_path: str = "script.py", script_content: str | None = None
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        bundle_base64: str | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger geometric validation via worker."""
         if self.controller_url:
             payload = {
                 "script_path": script_path,
                 "agent_role": self.agent_role,
+                "bundle_base64": bundle_base64,
             }
             if script_content is not None:
                 raise NotImplementedError(
@@ -1098,7 +1102,7 @@ class WorkerClient:
 
         client = await self._get_client()
         try:
-            payload = {"script_path": script_path}
+            payload = {"script_path": script_path, "bundle_base64": bundle_base64}
             if script_content is not None:
                 payload["script_content"] = script_content
 
@@ -1233,6 +1237,7 @@ class WorkerClient:
         self,
         script_path: str = "script.py",
         script_content: str | None = None,
+        bundle_base64: str | None = None,
         reviewer_stage: ReviewerStage | None = None,
         episode_id: str | None = None,
     ) -> BenchmarkToolResponse:
@@ -1246,6 +1251,7 @@ class WorkerClient:
                 "agent_role": self.agent_role,
                 "reviewer_stage": effective_stage,
                 "episode_id": episode_id,
+                "bundle_base64": bundle_base64,
             }
             if script_content is not None:
                 raise NotImplementedError(
@@ -1261,7 +1267,7 @@ class WorkerClient:
 
         client = await self._get_client()
         try:
-            payload = {"script_path": script_path}
+            payload = {"script_path": script_path, "bundle_base64": bundle_base64}
             if script_content is not None:
                 payload["script_content"] = script_content
             if effective_stage:

@@ -365,13 +365,13 @@ def _is_benchmark_role(agent_role: str | None) -> bool:
 def select_single_preview_render_subdir(
     workspace_root: Path, *, agent_role: str | None = None
 ) -> str:
-    return "tmp"
+    return "current-episode"
 
 
 def select_scratch_preview_render_subdir(
     workspace_root: Path, *, agent_role: str | None = None
 ) -> str:
-    return "tmp"
+    return "current-episode"
 
 
 def select_static_preview_render_subdir(

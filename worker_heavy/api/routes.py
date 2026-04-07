@@ -545,6 +545,18 @@ async def api_preview(
                 )
                 if image_path is None:
                     raise RuntimeError("renderer returned no preview image")
+                saved_render_dir = str(
+                    image_path.parent.relative_to(workspace_root)
+                ).replace("\\", "/")
+                manifest_path = str(
+                    image_path.parent.relative_to(workspace_root)
+                    / "render_manifest.json"
+                ).replace("\\", "/")
+                preview_message = (
+                    "Preview generated successfully. "
+                    f"Saved renders to {saved_render_dir}. "
+                    f"Manifest: {manifest_path}."
+                )
                 resolved_rendering_type = _resolve_preview_rendering_type(
                     request, response
                 )
@@ -553,22 +565,15 @@ async def api_preview(
                     "worker_heavy_preview_finished",
                     session_id=x_session_id,
                     artifact_path=str(image_path.relative_to(workspace_root)),
-                    manifest_path=str(
-                        image_path.parent.relative_to(workspace_root)
-                        / "render_manifest.json"
-                    ).replace("\\", "/"),
+                    manifest_path=manifest_path,
                     rendering_type=resolved_rendering_type.value,
                 )
                 return PreviewDesignResponse(
                     success=response.success,
-                    message=response.message,
-                    status_text=response.status_text,
+                    status_text="Preview generated successfully",
                     image_path=str(image_path.relative_to(workspace_root)),
                     artifact_path=str(image_path.relative_to(workspace_root)),
-                    manifest_path=str(
-                        image_path.parent.relative_to(workspace_root)
-                        / "render_manifest.json"
-                    ).replace("\\", "/"),
+                    manifest_path=manifest_path,
                     rendering_type=resolved_rendering_type,
                     drafting=response.drafting or request.drafting,
                     pitch=request.orbit_pitch,
@@ -577,6 +582,7 @@ async def api_preview(
                     object_store_keys=response.object_store_keys,
                     render_manifest_json=response.render_manifest_json,
                     events=response.events,
+                    message=preview_message,
                 )
 
     except HTTPException:

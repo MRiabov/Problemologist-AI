@@ -879,6 +879,7 @@ class RemoteFilesystemMiddleware:
         backend: SimulatorBackendType | None = None,
         smoke_test_mode: bool | None = None,
         stream_render_frames: bool = False,
+        bundle_base64: str | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger physics simulation via worker client (with bundling)."""
         p_str = str(script_path)
@@ -895,7 +896,11 @@ class RemoteFilesystemMiddleware:
         self._require_temporal_for_heavy_operation("simulate")
 
         # Bundle from light worker
-        bundle = await self.client.bundle_session()
+        bundle = (
+            base64.b64decode(bundle_base64)
+            if bundle_base64 is not None
+            else await self.client.bundle_session()
+        )
         workflow_id = _bundle_workflow_id("sim", self.client.session_id, bundle)
         res = await self._execute_or_use_existing_workflow(
             HeavySimulationWorkflow.run,
@@ -1033,11 +1038,15 @@ class RemoteFilesystemMiddleware:
             script_content=script_content,
         )
 
-    async def validate(self, script_path: str | Path) -> BenchmarkToolResponse:
+    async def validate(
+        self,
+        script_path: str | Path,
+        bundle_base64: str | None = None,
+    ) -> BenchmarkToolResponse:
         """Trigger geometric validation via the worker-light validation path."""
         p_str = str(script_path)
 
-        res = await self.client.validate(p_str)
+        res = await self.client.validate(p_str, bundle_base64=bundle_base64)
 
         await record_events(
             episode_id=self.episode_id,
@@ -1104,6 +1113,7 @@ class RemoteFilesystemMiddleware:
         self,
         script_path: str | Path,
         reviewer_stage: ReviewerStage | None = None,
+        bundle_base64: str | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger handover to review via worker client."""
         p_str = str(script_path)
@@ -1120,7 +1130,11 @@ class RemoteFilesystemMiddleware:
 
         self._require_temporal_for_heavy_operation("submit")
 
-        bundle = await self.client.bundle_session()
+        bundle = (
+            base64.b64decode(bundle_base64)
+            if bundle_base64 is not None
+            else await self.client.bundle_session()
+        )
         workflow_id = _bundle_workflow_id("sub", self.client.session_id, bundle)
         res = await self._execute_or_use_existing_workflow(
             HeavySubmitWorkflow.run,

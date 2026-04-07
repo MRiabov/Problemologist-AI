@@ -194,7 +194,9 @@ async def validate_script(
         async with _controller_script_middleware(
             x_session_id, payload.agent_role, request, payload.episode_id
         ) as middleware:
-            result = await middleware.validate(payload.script_path)
+            result = await middleware.validate(
+                payload.script_path, bundle_base64=payload.bundle_base64
+            )
             await middleware.client._sync_handover_artifacts_to_light(result)
             return result
 
@@ -218,6 +220,7 @@ async def simulate_script(
                 backend=payload.backend,
                 smoke_test_mode=payload.smoke_test_mode,
                 stream_render_frames=payload.stream_render_frames,
+                bundle_base64=payload.bundle_base64,
             )
             if isinstance(result, BenchmarkToolResponse):
                 await middleware.client._sync_handover_artifacts_to_light(result)
@@ -330,7 +333,9 @@ async def submit_script(
         ) as middleware:
             result = await _retry_busy(
                 lambda: middleware.submit(
-                    payload.script_path, reviewer_stage=payload.reviewer_stage
+                    payload.script_path,
+                    reviewer_stage=payload.reviewer_stage,
+                    bundle_base64=payload.bundle_base64,
                 )
             )
             if isinstance(result, BenchmarkToolResponse):

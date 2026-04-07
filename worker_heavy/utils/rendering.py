@@ -192,7 +192,7 @@ def select_single_preview_render_subdir(
     workspace_root: Path, *, agent_role: str | None = None
 ) -> str:
     """Choose the single-view preview bundle directory for the active workspace."""
-    return "tmp"
+    return "current-episode"
 
 
 def select_static_preview_render_subdir(

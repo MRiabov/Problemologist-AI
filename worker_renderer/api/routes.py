@@ -1218,18 +1218,27 @@ async def api_preview(
                         if request.depth
                         else PreviewRenderingType.SEGMENTATION
                     )
+                saved_render_dir = str(
+                    first_image_path.parent.relative_to(root)
+                ).replace("\\", "/")
+                manifest_path = str(
+                    preview_manifest.parent.relative_to(root) / "render_manifest.json"
+                ).replace("\\", "/")
+                preview_message = (
+                    "Preview generated successfully. "
+                    f"Saved renders to {saved_render_dir}. "
+                    f"Manifest: {manifest_path}."
+                )
                 return PreviewDesignResponse(
                     success=True,
                     status_text="Preview generated successfully",
-                    message="Preview generated successfully",
+                    message=preview_message,
                     job_id=None,
                     queued=False,
                     view_count=len(view_specs),
                     view_specs=view_specs,
                     artifact_path=str(first_image_path.relative_to(root)),
-                    manifest_path=str(
-                        preview_manifest.parent / "render_manifest.json"
-                    ).replace("\\", "/"),
+                    manifest_path=manifest_path,
                     rendering_type=resolved_rendering_type,
                     pitch=request.orbit_pitch
                     if isinstance(request.orbit_pitch, float)
