@@ -155,7 +155,7 @@ agents:
         - assembly_definition.yaml
         - benchmark_definition.yaml
         - renders/engineer_plan_renders/**
-        - renders/tmp/**
+        - renders/current-episode/**
         - benchmark_plan_evidence_script.py
         - benchmark_plan_technical_drawing_script.py
         - solution_plan_evidence_script.py
@@ -215,7 +215,7 @@ agents:
         - '**/*.py'
         - todo.md
         - journal.md
-        - renders/tmp/**
+        - renders/current-episode/**
         - plan_refusal.md
         - payload_trajectory_definition.yaml
         - plan.md
@@ -272,7 +272,7 @@ agents:
         - '**/*.py'
         - todo.md
         - journal.md
-        - renders/tmp/**
+        - renders/current-episode/**
         - plan_refusal.md
         deny:
         - benchmark_definition.yaml
@@ -432,7 +432,7 @@ agents:
         - benchmark_plan_evidence_script.py
         - benchmark_plan_technical_drawing_script.py
         - renders/benchmark_renders/**
-        - renders/tmp/**
+        - renders/current-episode/**
       deny:
       - .agents/skills/**
       - utils/**

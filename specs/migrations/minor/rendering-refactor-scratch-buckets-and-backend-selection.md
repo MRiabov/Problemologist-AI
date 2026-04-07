@@ -15,8 +15,9 @@ added_at: '2026-04-04T18:08:23Z'
 
 ## Purpose
 
-This migration finishes the render-contract cleanup by making `renders/tmp/`
-the only writable scratch render tree, renaming the final handoff bucket to
+This migration finishes the render-contract cleanup by making
+`renders/current-episode/` the only writable scratch render tree, renaming the
+final handoff bucket to
 `renders/final_solution_submission_renders/`, and removing the last runtime and
 prompt assumptions that preview rendering is tied to a specific authoring
 library.
@@ -62,19 +63,19 @@ and collector surfaces still need to converge on it.
 
 | Area | Current behavior | Why it must change |
 | -- | -- | -- |
-| `worker_light/api/routes.py` and `worker_heavy/utils/preview.py` | Live preview requests still materialize render evidence through legacy bucket assumptions instead of treating `renders/tmp/` as the only scratch tree. | Manual preview should be ephemeral and stage-local, not published as a persistent handoff bundle. |
+| `worker_light/api/routes.py` and `worker_heavy/utils/preview.py` | Live preview requests still materialize render evidence through legacy bucket assumptions instead of treating `renders/current-episode/` as the only scratch tree. | Manual preview should be ephemeral and stage-local, not published as a persistent handoff bundle. |
 | `worker_heavy/utils/rendering.py` and `worker_heavy/api/routes.py` | Bucket selection and handoff rendering still know about the old role-scoped naming and the old preview wording. | The backend must write the renamed buckets and keep preview/backend selection opaque to callers. |
 | `shared/rendering/renderer_client.py` and `worker_renderer/api/routes.py` | Preview materialization still needs to be kept aligned with the renderer-owned backend selection and the new bundle split. | The renderer worker remains the owner of image generation, but not of legacy bucket naming. |
 | `shared/script_contracts.py`, `controller/agent/initialization.py`, `controller/agent/handover_constants.py`, `controller/agent/nodes/base.py` | Manifest readers, workspace seeding, and discovery paths still enumerate old preview bucket names. | New bundles must resolve through `engineer_plan_renders` and `final_solution_submission_renders`. |
-| `worker_heavy/utils/handover.py`, `worker_heavy/activities/heavy_tasks.py`, `controller/api/routes/datasets.py`, `controller/api/tasks.py`, `controller/middleware/remote_fs.py` | Collectors and readers still treat the old bucket paths as first-class surfaces. | Handoff assembly must recurse the renamed persistent buckets and exclude `renders/tmp/` from promotion. |
+| `worker_heavy/utils/handover.py`, `worker_heavy/activities/heavy_tasks.py`, `controller/api/routes/datasets.py`, `controller/api/tasks.py`, `controller/middleware/remote_fs.py` | Collectors and readers still treat the old bucket paths as first-class surfaces. | Handoff assembly must recurse the renamed persistent buckets and exclude `renders/current-episode/` from promotion. |
 | `config/agents_config.yaml` and `config/prompts.yaml` | Path permissions and prompt text still encode the old bucket names and still imply the old render wording in a few places. | The agent-facing contract must match the architecture docs exactly. |
 | Render-related integration tests and seed fixtures | Existing coverage still validates the old path split and the old bundle names. | The test suite must prove the new scratch/persistent split and the final-bundle composition rule. |
 
 ## Proposed Target State
 
 1. `preview(...)` and `preview_drawing(...)` write live inspection evidence
-   into `renders/tmp/` only.
-2. `renders/tmp/` is deleted at handoff and never enters the persisted bundle
+   into `renders/current-episode/` only.
+2. `renders/current-episode/` is deleted at handoff and never enters the persisted bundle
    index or handoff payload as a durable artifact.
 3. Persistent 24-view handoff bundles are published only under:
    - `renders/benchmark_renders/`
@@ -101,7 +102,7 @@ and collector surfaces still need to converge on it.
 ### 1. Rewrite preview materialization
 
 - Update the live preview entrypoints so manual preview requests materialize
-  into `renders/tmp/` only.
+  into `renders/current-episode/` only.
 - Keep the renderer worker as the image-generation service, but remove any
   wording or branching that treats build123d as the renderer backend.
 - Ensure the preview helper and the renderer routes keep the same manifest
@@ -121,11 +122,11 @@ and collector surfaces still need to converge on it.
 
 ### 3. Enforce the scratch-only rule
 
-- Make `renders/tmp/` the only agent-writable render tree in
+- Make `renders/current-episode/` the only agent-writable render tree in
   `config/agents_config.yaml`.
 - Remove write permissions to the persistent render buckets from every agent
   role.
-- Ensure the handoff path purges or replaces `renders/tmp/` at stage
+- Ensure the handoff path purges or replaces `renders/current-episode/` at stage
   transition so scratch renders do not become durable outputs by accident.
 
 ### 4. Fix final submission composition
@@ -151,7 +152,7 @@ and collector surfaces still need to converge on it.
 
 ### 6. Update tests and seed fixtures
 
-- Update integration tests to prove live preview goes to `renders/tmp/`,
+- Update integration tests to prove live preview goes to `renders/current-episode/`,
   persistent bundles use the renamed directories, and the persistent buckets
   remain read-only to agents.
 - Add or refresh coverage for the final solution submission bundle so it
@@ -187,7 +188,7 @@ The safe order is:
 1. A repo-wide search across runtime code, prompt files, and workspace seeding
    finds no live references to `engineer_renders` or `final_preview_renders`
    outside historical migration docs.
-2. Manual preview requests materialize into `renders/tmp/` only.
+2. Manual preview requests materialize into `renders/current-episode/` only.
 3. Published persistent 24-view bundles appear only under
    `renders/benchmark_renders/`, `renders/engineer_plan_renders/`, and
    `renders/final_solution_submission_renders/`.
@@ -207,7 +208,7 @@ The safe order is:
 
 ### Preview materialization
 
-- [x] Move live preview helpers to `renders/tmp/`.
+- [x] Move live preview helpers to `renders/current-episode/`.
 - [x] Remove any remaining build123d-specific render wording or branch checks
   from runtime helpers.
 
@@ -221,8 +222,8 @@ The safe order is:
 ### Access control
 
 - [x] Make persistent render buckets read-only for agents.
-- [x] Keep `renders/tmp/` writable only during the active stage.
-- [x] Purge or replace `renders/tmp/` at handoff so scratch renders do not
+- [x] Keep `renders/current-episode/` writable only during the active stage.
+- [x] Purge or replace `renders/current-episode/` at handoff so scratch renders do not
   survive as durable bundle content.
 
 ### Final bundle composition

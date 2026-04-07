@@ -142,7 +142,7 @@ The backend contract is:
 2. Genesis remains the backend for Genesis-only simulation behavior such as FEM and fluids.
 3. Explicit preview rendering uses the renderer worker's selected preview backend and is executed by the renderer worker.
 4. The explicit preview path is a fast geometry/context artifact path, not a Genesis-runtime proof path.
-5. Manual preview evidence is written into `renders/tmp/` during the active stage, while the 24-view handoff bundles are written separately under `renders/benchmark_renders/`, `renders/engineer_plan_renders/`, or `renders/final_solution_submission_renders/` depending on the workflow.
+5. Manual preview evidence is written into `renders/current-episode/` during the active stage, while the 24-view handoff bundles are written separately under `renders/benchmark_renders/`, `renders/engineer_plan_renders/`, or `renders/final_solution_submission_renders/` depending on the workflow.
 
 This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asymmetric:
 
@@ -173,7 +173,7 @@ The rule is:
 
 04. Explicit preview remains a separate preview contract, executed by the renderer worker, and continues to live in the preview manifest path.
 
-05. `preview(...)` is the ephemeral on-demand path. It normalizes scalar/list camera inputs into zip-paired views, renders a composed `Part | Compound` at the requested camera and modality set, streams queued/view-ready status over the websocket control path, and writes the resulting files into `renders/tmp/` for the active stage. The canonical RGB preview artifact stem is `{part_name}_render_{angle_1}_{angle_2}`, and the persisted file is `<stem>.png`; `part_name` comes from the rendered component label, so previewing `Part(Box(), label="test_part")` at the default 45/45 orbit uses the unchanged `e45_a45` angle family and produces `test_part_render_e45_a45.png`. Scratch previews are separate from simulation evidence, validation results, and the persisted 24-view handoff bundles.
+05. `preview(...)` is the ephemeral on-demand path. It normalizes scalar/list camera inputs into zip-paired views, renders a composed `Part | Compound` at the requested camera and modality set, streams queued/view-ready status over the websocket control path, and writes the resulting files into `renders/current-episode/` for the active stage. The canonical RGB preview artifact stem is `{part_name}_render_{angle_1}_{angle_2}`, and the persisted file is `<stem>.png`; `part_name` comes from the rendered component label, so previewing `Part(Box(), label="test_part")` at the default 45/45 orbit uses the unchanged `e45_a45` angle family and produces `test_part_render_e45_a45.png`. Scratch previews are separate from simulation evidence, validation results, and the persisted 24-view handoff bundles.
 
 06. When `preview(..., payload_path=True)` is requested, the static preview bundle may also include a motion-path overlay. The renderer resolves that overlay from the finest available motion artifact for the current workflow, preferring engineer-coder `payload_trajectory_definition.yaml`, then planner `motion_forecast`, then benchmark motion evidence when applicable. The overlay is review context only and does not affect validation or simulation semantics.
 
