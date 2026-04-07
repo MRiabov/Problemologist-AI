@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from shared.enums import AgentName
 from shared.rendering import (
+    bundle_workspace_base64,
     export_preview_scene_bundle,
     materialize_preview_response,
     render_preview,
@@ -154,6 +155,10 @@ def _workspace_script_path() -> str:
         if (workspace / candidate).exists():
             return candidate
     return role_default
+
+
+def _workspace_bundle_base64() -> str:
+    return bundle_workspace_base64(_workspace_root())
 
 
 def _workspace_root() -> Path:
@@ -498,11 +503,13 @@ def simulate(compound: Compound, **kwargs) -> BenchmarkToolResponse:
         kwargs = {**kwargs, "script_path": script_path}
         return real_simulate(compound, **kwargs)
 
+    bundle_base64 = kwargs.get("bundle_base64") or _workspace_bundle_base64()
     controller_payload = {
         "script_path": str(script_path),
         "agent_role": _script_agent_role(),
         "backend": kwargs.get("backend", get_default_simulator_backend()),
         "smoke_test_mode": kwargs.get("smoke_test_mode"),
+        "bundle_base64": bundle_base64,
     }
     controller_res = _call_controller_script_tool(
         "simulate",
@@ -513,7 +520,7 @@ def simulate(compound: Compound, **kwargs) -> BenchmarkToolResponse:
 
     # In non-controller contexts, fall back to the heavy worker for standalone
     # local tooling and worker-level tests.
-    payload = {"script_path": script_path, **kwargs}
+    payload = {**kwargs, "script_path": script_path, "bundle_base64": bundle_base64}
     res = _call_heavy_worker("/benchmark/simulate", payload)
     return BenchmarkToolResponse.model_validate(res)
 
@@ -528,24 +535,42 @@ def validate(compound: Compound, **kwargs) -> tuple[bool, str | None]:
     )
     if not matches:
         return False, mismatch_message
-    controller_payload = {
-        "script_path": str(script_path),
-        "agent_role": _script_agent_role(),
-    }
-    controller_res = _call_controller_script_tool(
-        "validate",
-        controller_payload,
-    )
-    if controller_res is not None:
-        parsed = BenchmarkToolResponse.model_validate(controller_res)
-        return parsed.success, parsed.message
+    local_kwargs: dict[str, Any] = {}
+    for key in (
+        "build_zone",
+        "output_dir",
+        "session_id",
+        "smoke_test_mode",
+        "particle_budget",
+        "script_content",
+    ):
+        if key in kwargs and kwargs[key] is not None:
+            local_kwargs[key] = kwargs[key]
 
-    # In non-controller contexts, use the light worker directly for standalone
-    # local tooling and worker-level tests.
-    payload = {"script_path": script_path, **kwargs}
-    res = _call_worker_light("/benchmark/validate", payload)
-    parsed = BenchmarkToolResponse.model_validate(res)
-    return parsed.success, parsed.message
+    if "output_dir" not in local_kwargs:
+        local_kwargs["output_dir"] = _workspace_root()
+    else:
+        local_kwargs["output_dir"] = Path(local_kwargs["output_dir"])
+
+    from worker_heavy.utils.file_validation import validate_benchmark_definition_yaml
+    from worker_heavy.utils.validation import validate as real_validate
+
+    benchmark_definition_path = (
+        Path(local_kwargs["output_dir"]) / "benchmark_definition.yaml"
+    )
+    if benchmark_definition_path.exists():
+        benchmark_valid, benchmark_result = validate_benchmark_definition_yaml(
+            benchmark_definition_path.read_text(encoding="utf-8"),
+            session_id=local_kwargs.get("session_id"),
+        )
+        if not benchmark_valid:
+            return False, "; ".join(benchmark_result)
+
+    local_kwargs["script_path"] = script_path
+    success, message = real_validate(compound, **local_kwargs)
+    if success and not message:
+        message = "Validation successful"
+    return success, message
 
 
 def validate_and_price(
@@ -611,11 +636,13 @@ def submit_for_review(compound: Compound) -> bool:
             script_path=script_path,
         )
 
+    bundle_base64 = _workspace_bundle_base64()
     controller_payload = {
         "script_path": script_path,
         "agent_role": _script_agent_role(),
         "reviewer_stage": reviewer_stage,
         "episode_id": episode_id,
+        "bundle_base64": bundle_base64,
     }
     controller_res = _call_controller_script_tool(
         "submit",
@@ -629,6 +656,7 @@ def submit_for_review(compound: Compound) -> bool:
         "script_path": script_path,
         "reviewer_stage": reviewer_stage,
         "episode_id": episode_id,
+        "bundle_base64": bundle_base64,
     }
     res = _call_heavy_worker("/benchmark/submit", payload)
     return BenchmarkToolResponse.model_validate(res).success
@@ -791,6 +819,8 @@ async def _preview_async(
             response.yaw = orbit_yaw[0]
     if response.status_text is None:
         response.status_text = response.message or "Preview generated successfully"
+    if response.message:
+        print(response.message)
     return response
 
 
