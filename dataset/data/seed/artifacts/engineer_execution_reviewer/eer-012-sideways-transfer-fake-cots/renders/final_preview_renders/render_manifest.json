@@ -4,7 +4,7 @@
   "created_at": "2026-04-02T14:01:56.678812+00:00",
   "episode_id": "02502551-29d0-50ed-a239-5c7d8228ba82",
   "worker_session_id": "seed-renders-eer-012-sideways-transfer-fake-cots",
-  "revision": "cf25c646eb8cf698adf536f2be9b24c901c6f112",
+  "revision": "53d6e93b05cfc7dd67a166c4ce5370c06e70f32c",
   "scene_hash": "43efc78c4d45c5e59ac3f2ba7cb14c8c898e28d07d1e1a71f2dc876e62b8c606",
   "bundle_path": "renders/final_preview_renders",
   "environment_version": "1.0",
