@@ -761,12 +761,15 @@ def update_seed_artifact_renders(artifact_dir: Path) -> list[str]:
     artifact_dir = Path(artifact_dir)
     role_name = _role_name_for_artifact(artifact_dir)
     renders_dir = artifact_dir / "renders"
-    scratch_dir = renders_dir / "tmp"
+    scratch_dir = renders_dir / "current-episode"
 
     # Keep scratch previews ephemeral, but preserve any persistent buckets
     # already present under renders/.
     if scratch_dir.exists():
         shutil.rmtree(scratch_dir)
+    legacy_scratch_dir = renders_dir / "tmp"
+    if legacy_scratch_dir.exists():
+        shutil.rmtree(legacy_scratch_dir)
 
     if role_name not in _RENDER_ROLE_WITH_SCRIPT | _RENDER_ROLE_WITH_DEFINITION_PREVIEW:
         return []

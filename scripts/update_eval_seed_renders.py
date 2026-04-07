@@ -213,6 +213,11 @@ async def _async_main(args: argparse.Namespace) -> int:
         return 1
 
     if failures:
+        for agent_value, item_id, detail in failures:
+            print(
+                f"FAILED {agent_value} {item_id}: {detail}",
+                file=sys.stderr,
+            )
         if not args.errors_only:
             print(
                 f"Processed {checked} row(s): {touched} updated, {skipped} skipped, "

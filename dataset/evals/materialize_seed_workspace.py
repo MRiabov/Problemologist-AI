@@ -156,6 +156,14 @@ def _parse_args() -> argparse.Namespace:
         help="Wait for the eval lock instead of failing fast when another eval run is active.",
     )
     parser.add_argument(
+        "--force-no-validate-seed",
+        action="store_true",
+        help=(
+            "Disable the seeded-entry validation step before the workspace "
+            "launches. Urgent demo use only; do not use this in normal runs."
+        ),
+    )
+    parser.add_argument(
         "--technical-drawing-mode",
         type=str,
         default=DraftingMode.FULL.value,
@@ -299,18 +307,27 @@ def main() -> None:
         workspace_dir=workspace_dir,
     )
 
-    try:
-        asyncio.run(
-            _validate_materialized_workspace(
-                agent=agent,
-                item=row,
-                workspace_dir=materialized.workspace_dir,
-            )
+    if args.force_no_validate_seed:
+        warning = (
+            "--force-no-validate-seed disables the seeded-entry validation "
+            "step before the workspace starts. Urgent demo use only; do not "
+            "use this in normal runs."
         )
-    except Exception as exc:
-        raise SystemExit(
-            f"Seeded entry contract invalid for {agent.value} {row.id}: {exc}"
-        ) from exc
+        print(warning, file=sys.stderr)
+        logger.warning(warning)
+    else:
+        try:
+            asyncio.run(
+                _validate_materialized_workspace(
+                    agent=agent,
+                    item=row,
+                    workspace_dir=materialized.workspace_dir,
+                )
+            )
+        except Exception as exc:
+            raise SystemExit(
+                f"Seeded entry contract invalid for {agent.value} {row.id}: {exc}"
+            ) from exc
 
     print(f"workspace: {materialized.workspace_dir}")
     print(f"prompt: {materialized.prompt_path}")

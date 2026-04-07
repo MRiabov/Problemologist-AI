@@ -175,7 +175,8 @@ result = part
         preview = PreviewDesignResponse.model_validate(resp.json())
         assert preview.success, preview.message
         assert preview.image_path is not None
-        assert preview.image_path.startswith("renders/tmp/"), preview
+        assert preview.image_path.startswith("renders/current-episode/"), preview
+        assert "Saved renders to" in preview.message
         assert preview.image_path in preview.object_store_keys, preview
         assert preview.object_store_keys[preview.image_path] == preview.image_path
         assert preview.image_bytes_base64 is None
@@ -280,10 +281,15 @@ def build():
         preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
         assert preview_data.success, preview_data.message
         assert preview_data.image_path is not None
-        assert preview_data.image_path.startswith("renders/tmp/"), preview_data
+        assert preview_data.image_path.startswith("renders/current-episode/"), (
+            preview_data
+        )
         assert preview_data.manifest_path is not None
-        assert preview_data.manifest_path.startswith("renders/tmp/"), preview_data
+        assert preview_data.manifest_path.startswith("renders/current-episode/"), (
+            preview_data
+        )
         assert preview_data.manifest_path.endswith("render_manifest.json"), preview_data
+        assert "Saved renders to" in preview_data.message
         assert preview_data.render_manifest_json is not None
         assert "artifacts" in preview_data.render_manifest_json
 
