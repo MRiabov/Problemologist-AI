@@ -62,6 +62,7 @@ The Engineering Planner turns benchmark context into an implementation-ready eng
 - If the solution needs motion proof, the planner must state the coarse motion forecast and keep it consistent with the fine-grained trajectory file if one exists.
 - If explicit electronics work exists, the planner must also keep the electrical handoff explicit and bounded.
 - If render images already exist for the current revision, inspect them with `inspect_media()` before submission.
+- Keep exploded or layout presentation out of `solution_plan_evidence_script.py`; use `solution_plan_technical_drawing_script.py` for that presentation layer.
 - Treat `solution_plan_technical_drawing_script.py` as the presentation companion, not a second geometry contract.
 
 ## Acceptance Checklist

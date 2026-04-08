@@ -103,6 +103,8 @@ Planner-authored drafting scripts are read-only evidence, not a second source of
 - `solution_plan_evidence_script.py` / `solution_plan_technical_drawing_script.py` for the engineering graph
 - `benchmark_plan_evidence_script.py` / `benchmark_plan_technical_drawing_script.py` for the benchmark graph
 
+The evidence script stays compact and reviewable; if the planner wants exploded or other layout-oriented presentation, that belongs in the technical-drawing companion instead of the evidence script.
+
 ## Drafting package structure
 
 The drafting content lives in a dedicated section under `assembly_definition.yaml`.
@@ -351,6 +353,7 @@ Minimum validation checks:
 19. The planner-authored evidence script and technical-drawing script preserve the same labels, quantities, and COTS identities as the assembly inventory; the planner must self-validate this before handoff.
 20. Drafting-enabled revisions are invalid unless the `preview_drawing()` usage gate above has been satisfied on the current revision.
 21. The technical-drawing scripts, `solution_plan_technical_drawing_script.py` and `benchmark_plan_technical_drawing_script.py`, must pass a structural build123d `TechnicalDrawing` import-and-call check. Validation must parse the Python source or resolve its symbols; substring matching is not accepted.
+22. The planner-authored evidence script must not use exploded-layout presentation; that presentation belongs in the technical-drawing script instead.
 
 Warning-only checks:
 
