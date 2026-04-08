@@ -1,3 +1,4 @@
+import hashlib
 import io
 import json
 import os
@@ -10,12 +11,14 @@ import pytest
 import yaml
 from PIL import Image
 
+from controller.agent.benchmark.tools import get_benchmark_planner_tools
 from controller.agent.tools import get_engineer_planner_tools
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from shared.agents import get_image_render_resolution
 from shared.agents.config import DraftingMode
 from shared.enums import AgentName
+from shared.git_utils import repo_revision
 from shared.models.schemas import (
     AssemblyConstraints,
     AssemblyDefinition,
@@ -35,6 +38,8 @@ from shared.models.schemas import (
     ObjectivesSection,
     PartConfig,
     PhysicsConfig,
+    RandomizationMeta,
+    StaticRandomization,
 )
 from shared.models.simulation import SimulationResult
 from shared.script_contracts import (
@@ -51,11 +56,13 @@ from shared.workers.schema import (
     PreviewDesignResponse,
     PreviewRenderingType,
     ReadFileRequest,
+    RenderArtifactMetadata,
     RenderBundlePointPickRequest,
     RenderBundlePointPickResult,
     RenderBundleQueryRequest,
     RenderBundleQueryResult,
     RenderManifest,
+    RenderSiblingPaths,
     WriteFileRequest,
 )
 from shared.workers.workbench_models import ManufacturingMethod
@@ -250,6 +257,18 @@ def _set_engineer_planner_technical_drawing_mode(mode: DraftingMode) -> str:
     agents = data.setdefault("agents", {})
     engineer_planner = agents.setdefault("engineer_planner", {})
     engineer_planner["technical_drawing_mode"] = mode.value
+    AGENTS_CONFIG_PATH.write_text(
+        yaml.safe_dump(data, sort_keys=False), encoding="utf-8"
+    )
+    return original
+
+
+def _set_benchmark_planner_technical_drawing_mode(mode: DraftingMode) -> str:
+    original = AGENTS_CONFIG_PATH.read_text(encoding="utf-8")
+    data = yaml.safe_load(original) or {}
+    agents = data.setdefault("agents", {})
+    benchmark_planner = agents.setdefault("benchmark_planner", {})
+    benchmark_planner["technical_drawing_mode"] = mode.value
     AGENTS_CONFIG_PATH.write_text(
         yaml.safe_dump(data, sort_keys=False), encoding="utf-8"
     )
@@ -679,6 +698,316 @@ async def test_int_188_engineer_planner_submit_plan_rejects_empty_drafting_manif
 
 
 @pytest.mark.integration_p0
+@pytest.mark.xdist_group(name="physics_sims")
+@pytest.mark.asyncio
+async def test_int_188_benchmark_planner_submit_plan_publishes_scratch_drafting_bundle():
+    """INT-188: benchmark planner submit_plan must publish the scratch drafting bundle."""
+    session_id = f"INT-188-{uuid.uuid4().hex[:8]}"
+    episode_id = str(uuid.uuid4())
+    worker_client = WorkerClient(
+        base_url=WORKER_LIGHT_URL,
+        session_id=session_id,
+        heavy_url=WORKER_HEAVY_URL,
+        controller_url=CONTROLLER_URL,
+        agent_role=AgentName.BENCHMARK_PLANNER,
+        light_transport="http",
+    )
+    fs = RemoteFilesystemMiddleware(
+        worker_client,
+        agent_role=AgentName.BENCHMARK_PLANNER,
+        episode_id=episode_id,
+    )
+    benchmark_plan_text = (
+        "## 1. Learning Objective\n"
+        "- Show that a passive rigid-body benchmark can route a sphere into a goal "
+        "zone using only static geometry.\n"
+        "- Keep the scenario simple enough to validate quickly, but specific enough "
+        "that the geometry, input object, and objective zones are unambiguous.\n\n"
+        "## 2. Geometry\n"
+        "- `environment_fixture`: a compact box-like passive scene shell around the "
+        "origin with a floor, side walls, and a center redirecting surface.\n"
+        "- The static geometry should leave a clear gravity path that is still "
+        "obstructed enough to require deliberate routing.\n"
+        "- No benchmark-owned moving fixtures, motors, or fluids are needed.\n\n"
+        "## 3. Objectives\n"
+        "- Input object:\n"
+        "  - Shape: `sphere`\n"
+        "  - Label: `projectile_ball`\n"
+        "  - Static randomization: radius in `[1, 2]` mm\n"
+        "  - Nominal start position: `[0, 0, 0]`\n"
+        "  - Runtime jitter: `[0.5, 0.5, 0.5]`\n"
+        "- Goal zone: `min [6, -2, 0]`, `max [10, 2, 4]`\n"
+        "- Forbid zone: `min [3, -3, 0]`, `max [4, 3, 4]`\n"
+        "- Build zone: `min [-10, -10, -10]`, `max [10, 10, 10]`\n"
+        "- Simulation bounds: `min [-30, -30, -30]`, `max [30, 30, 30]`\n"
+        "- Success requires the sphere to reach the goal zone without crossing the "
+        "forbid zone.\n\n"
+        "## 4. Randomization\n"
+        "- Static randomization is limited to the moved sphere radius.\n"
+        "- Runtime jitter is limited to the sphere spawn position.\n"
+        "- The passive fixture remains fixed so the benchmark stays reproducible.\n\n"
+        "## 5. Implementation Notes\n"
+        "- Keep the drafted benchmark grounded in a single passive environment fixture.\n"
+        "- The benchmark_definition file will carry the copied customer caps and the "
+        "exact moved-object contract.\n"
+        "- No moving benchmark-owned fixtures, motors, or fluids are needed.\n"
+    )
+    benchmark_todo_text = "- [x] Test benchmark\n"
+    benchmark_definition = BenchmarkDefinition(
+        objectives=ObjectivesSection(
+            goal_zone=BoundingBox(min=(6.0, -2.0, 0.0), max=(10.0, 2.0, 4.0)),
+            forbid_zones=[
+                ForbidZone(
+                    name="obstacle_collision_zone",
+                    min=(3.0, -3.0, 0.0),
+                    max=(4.0, 3.0, 4.0),
+                )
+            ],
+            build_zone=BoundingBox(min=(-10.0, -10.0, -10.0), max=(10.0, 10.0, 10.0)),
+        ),
+        physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
+        simulation_bounds=BoundingBox(
+            min=(-30.0, -30.0, -30.0), max=(30.0, 30.0, 30.0)
+        ),
+        moved_object=MovedObject(
+            label="projectile_ball",
+            shape="sphere",
+            material_id="abs",
+            static_randomization=StaticRandomization(radius=(1.0, 2.0)),
+            start_position=(0.0, 0.0, 0.0),
+            runtime_jitter=(0.5, 0.5, 0.5),
+        ),
+        constraints=Constraints(
+            estimated_solution_cost_usd=120.0,
+            estimated_solution_weight_g=120.0,
+        ),
+        randomization=RandomizationMeta(
+            static_variation_id="v1.0",
+            runtime_jitter_enabled=True,
+        ),
+        benchmark_parts=[
+            {
+                "part_id": "environment_fixture",
+                "label": "environment_fixture",
+                "metadata": {
+                    "fixed": True,
+                    "allows_engineer_interaction": False,
+                    "material_id": "aluminum_6061",
+                },
+            }
+        ],
+    )
+    benchmark_assembly_definition = AssemblyDefinition(
+        version="1.0",
+        constraints=AssemblyConstraints(
+            benchmark_max_unit_cost_usd=180.0,
+            benchmark_max_weight_g=180.0,
+            planner_target_max_unit_cost_usd=90.0,
+            planner_target_max_weight_g=90.0,
+        ),
+        manufactured_parts=[
+            ManufacturedPartEstimate(
+                part_name="environment_fixture",
+                part_id="environment_fixture",
+                manufacturing_method=ManufacturingMethod.THREE_DP,
+                material_id="aluminum_6061",
+                quantity=1,
+                part_volume_mm3=1000.0,
+                stock_bbox_mm={"x": 10.0, "y": 10.0, "z": 10.0},
+                stock_volume_mm3=1000.0,
+                removed_volume_mm3=0.0,
+                estimated_unit_cost_usd=10.0,
+            )
+        ],
+        cots_parts=[],
+        final_assembly=[],
+        totals=CostTotals(
+            estimated_unit_cost_usd=10.0,
+            estimated_weight_g=90.0,
+            estimate_confidence="high",
+        ),
+        drafting=DraftingSheet(
+            sheet_id="sheet-1",
+            title="Seeded benchmark drafting",
+            views=[
+                DraftingView(
+                    view_id="view-1",
+                    target="environment_fixture",
+                    projection="front",
+                    datums=["A"],
+                    dimensions=[
+                        DraftingDimension(
+                            dimension_id="dim-1",
+                            kind="linear",
+                            target="environment_fixture",
+                            value=10.0,
+                            binding=True,
+                        )
+                    ],
+                    callouts=[
+                        DraftingCallout(
+                            callout_id="callout-1",
+                            label="environment_fixture",
+                            target="environment_fixture",
+                        )
+                    ],
+                )
+            ],
+        ),
+    )
+    benchmark_evidence_script_text = (
+        "from build123d import Box, Location\n\n"
+        "from shared.models.schemas import PartMetadata\n\n"
+        "def build():\n"
+        "    part = Box(6, 6, 2).move(Location((-6, 0, 1)))\n"
+        '    part.label = "environment_fixture"\n'
+        '    part.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)\n'
+        "    return part\n"
+    )
+    benchmark_technical_drawing_script_text = (
+        "from build123d import Box, Location, TechnicalDrawing\n\n"
+        "from shared.models.schemas import PartMetadata\n\n"
+        "def build():\n"
+        '    TechnicalDrawing(title="Seeded drafting")\n'
+        "    part = Box(6, 6, 2).move(Location((-6, 0, 1)))\n"
+        '    part.label = "environment_fixture"\n'
+        '    part.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)\n'
+        "    return part\n"
+    )
+    benchmark_preview_sha = hashlib.sha256(
+        benchmark_technical_drawing_script_text.encode("utf-8")
+    ).hexdigest()
+    source_render_path = "renders/current-episode/00_front.png"
+    source_svg_path = "renders/current-episode/00_front.svg"
+    source_dxf_path = "renders/current-episode/00_front.dxf"
+    source_manifest_path = "renders/current-episode/render_manifest.json"
+    source_manifest = RenderManifest(
+        version="1.0",
+        episode_id=session_id,
+        worker_session_id=session_id,
+        revision=repo_revision(Path.cwd()),
+        bundle_path="renders/current-episode",
+        environment_version="integration-test",
+        drafting=True,
+        source_script_sha256=benchmark_preview_sha,
+        preview_evidence_paths=[source_render_path],
+        artifacts={
+            source_render_path: RenderArtifactMetadata(
+                modality="rgb",
+                group_key="00_front",
+                siblings=RenderSiblingPaths(
+                    rgb=source_render_path,
+                    svg=source_svg_path,
+                    dxf=source_dxf_path,
+                ),
+            )
+        },
+    )
+    original_config = AGENTS_CONFIG_PATH.read_text(encoding="utf-8")
+    try:
+        await worker_client.write_file(
+            "benchmark_plan.md",
+            benchmark_plan_text,
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        await worker_client.write_file(
+            "todo.md",
+            benchmark_todo_text,
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        await worker_client.write_file(
+            "benchmark_definition.yaml",
+            yaml.safe_dump(benchmark_definition.model_dump(mode="json")),
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        await worker_client.write_file(
+            "benchmark_assembly_definition.yaml",
+            yaml.safe_dump(benchmark_assembly_definition.model_dump(mode="json")),
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        await worker_client.write_file(
+            "manufacturing_config.yaml",
+            REPO_MANUFACTURING_CONFIG,
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        await worker_client.write_file(
+            "benchmark_plan_evidence_script.py",
+            benchmark_evidence_script_text,
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        await worker_client.write_file(
+            "benchmark_plan_technical_drawing_script.py",
+            benchmark_technical_drawing_script_text,
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        await worker_client.write_file(
+            source_render_path,
+            "drafting-preview-png",
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        await worker_client.write_file(
+            source_svg_path,
+            "drafting-preview-svg",
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        await worker_client.write_file(
+            source_dxf_path,
+            "drafting-preview-dxf",
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        await worker_client.write_file(
+            source_manifest_path,
+            source_manifest.model_dump_json(indent=2),
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+
+        tools = get_benchmark_planner_tools(fs, session_id)
+        submit_plan = next(tool for tool in tools if tool.__name__ == "submit_plan")
+
+        result = await submit_plan()
+        assert result["ok"] is True, result
+        assert result["status"] == "submitted", result
+
+        published_manifest_raw = await worker_client.read_file_optional(
+            "renders/benchmark_renders/render_manifest.json",
+            bypass_agent_permissions=True,
+        )
+        assert published_manifest_raw is not None
+        published_manifest = RenderManifest.model_validate_json(published_manifest_raw)
+        assert published_manifest.drafting is True
+        assert published_manifest.source_script_sha256 == benchmark_preview_sha
+        assert published_manifest.preview_evidence_paths == [
+            "renders/benchmark_renders/00_front.png"
+        ]
+        assert await worker_client.exists(
+            "renders/benchmark_renders/00_front.png",
+            bypass_agent_permissions=True,
+        )
+        assert await worker_client.exists(
+            "renders/benchmark_renders/00_front.svg",
+            bypass_agent_permissions=True,
+        )
+        assert await worker_client.exists(
+            "renders/benchmark_renders/00_front.dxf",
+            bypass_agent_permissions=True,
+        )
+    finally:
+        await worker_client.aclose()
+        AGENTS_CONFIG_PATH.write_text(original_config, encoding="utf-8")
+
+
+@pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_188_validation_preview_honors_render_modality_config():
     """INT-188: preview respects render modality toggles in agents_config."""
@@ -940,11 +1269,10 @@ def build():
                 ), suffix
             assert preview_data.render_manifest_json is not None
 
+            preview_root = Path(preview_data.manifest_path).parent.as_posix()
             ls_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/ls",
-                json=ListFilesRequest(path="renders/engineer_plan_renders").model_dump(
-                    mode="json"
-                ),
+                json=ListFilesRequest(path=preview_root).model_dump(mode="json"),
                 headers=headers,
             )
             assert ls_resp.status_code == 200, ls_resp.text
@@ -955,6 +1283,22 @@ def build():
             assert any(name.endswith(".svg") for name in render_names), render_names
             assert any(name.endswith(".dxf") for name in render_names), render_names
             assert "render_manifest.json" in render_names, render_names
+
+            png_names = sorted(name for name in render_names if name.endswith(".png"))
+            assert png_names, render_names
+            for png_name in png_names:
+                png_resp = await client.post(
+                    f"{WORKER_LIGHT_URL}/fs/read_blob",
+                    json=ReadFileRequest(path=f"{preview_root}/{png_name}").model_dump(
+                        mode="json"
+                    ),
+                    headers=headers,
+                )
+                assert png_resp.status_code == 200, png_resp.text
+                with Image.open(io.BytesIO(png_resp.content)) as image:
+                    width, height = image.size
+                assert width >= 640, (png_name, width, height)
+                assert height >= 480, (png_name, width, height)
     finally:
         AGENTS_CONFIG_PATH.write_text(original_config, encoding="utf-8")
 
