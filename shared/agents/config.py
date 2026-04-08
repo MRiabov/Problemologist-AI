@@ -91,6 +91,12 @@ class PayloadTrajectoryClearanceBudget(BaseModel):
     leaf_span_deg: tuple[float, float, float] = Field(default=(2.0, 2.0, 2.0))
 
 
+class PayloadTrajectoryMonitorPolicy(BaseModel):
+    enabled: bool = True
+    monitor_sample_stride_s: float = Field(default=0.3, gt=0)
+    consecutive_miss_count: int = Field(default=2, ge=1)
+
+
 class AgentPolicy(BaseModel):
     filesystem_permissions: FilesystemPermissions = Field(
         default_factory=FilesystemPermissions
@@ -300,6 +306,9 @@ class AgentsConfig(BaseModel):
     render: RenderPolicyConfig = Field(default_factory=RenderPolicyConfig)
     execution: AgentExecutionConfig = Field(default_factory=AgentExecutionConfig)
     motion_forecast: MotionForecastPolicy = Field(default_factory=MotionForecastPolicy)
+    payload_trajectory_monitor: PayloadTrajectoryMonitorPolicy = Field(
+        default_factory=PayloadTrajectoryMonitorPolicy
+    )
     payload_trajectory_clearance: PayloadTrajectoryClearanceBudget = Field(
         default_factory=PayloadTrajectoryClearanceBudget
     )

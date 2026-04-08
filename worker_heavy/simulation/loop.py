@@ -7,7 +7,11 @@ from build123d import Compound, Part
 from shared.agents import get_video_render_resolution
 from shared.config.simulation import simulation_settings
 from shared.enums import FailureReason
-from shared.models.schemas import BenchmarkDefinition, ElectronicsSection
+from shared.models.schemas import (
+    BenchmarkDefinition,
+    ElectronicsSection,
+    PayloadTrajectoryDefinition,
+)
 from shared.models.simulation import (
     SimulationFailure,
     SimulationMetrics,
@@ -35,6 +39,9 @@ from worker_heavy.simulation.metrics import MetricCollector
 from worker_heavy.simulation.naming import moved_object_scene_name
 from worker_heavy.simulation.object_pose import write_object_pose_parquet
 from worker_heavy.simulation.objectives import ObjectiveEvaluator
+from worker_heavy.simulation.payload_trajectory_monitor import (
+    PayloadTrajectoryMonitor,
+)
 from worker_heavy.utils.dfm import (
     resolve_requested_quantity,
     validate_and_price_assembly,
@@ -53,6 +60,7 @@ class SimulationLoop:
         backend_type: SimulatorBackendType | None = None,
         electronics: ElectronicsSection | None = None,
         objectives: BenchmarkDefinition | None = None,
+        payload_trajectory_definition: PayloadTrajectoryDefinition | None = None,
         smoke_test_mode: bool | None = None,
         session_id: str | None = None,
         particle_budget: int | None = None,
@@ -278,6 +286,8 @@ class SimulationLoop:
             )
             self._electronics_dirty = False
             self.metric_collector = MetricCollector()
+            self.payload_trajectory_monitor = None
+            self.payload_trajectory_monitor_init_error = None
             self.success_evaluator = SuccessEvaluator(
                 max_simulation_time=self.max_simulation_time,
                 motor_overload_threshold=simulation_settings.motor_overload_threshold_seconds,
@@ -293,6 +303,24 @@ class SimulationLoop:
                 session_id=session_id,
             )
             self.objective_evaluator.initialize_flow_rate(self.backend)
+
+            if payload_trajectory_definition is not None:
+                try:
+                    self.payload_trajectory_monitor = PayloadTrajectoryMonitor(
+                        payload_definition=payload_trajectory_definition,
+                        backend=self.backend,
+                        backend_type=self.backend_type,
+                        goal_sites=list(self.goal_sites),
+                        target_body_name=self._identify_target_body(),
+                        session_id=session_id,
+                    )
+                except Exception as exc:
+                    self.payload_trajectory_monitor_init_error = str(exc)
+                    logger.warning(
+                        "payload_trajectory_monitor_init_failed",
+                        error=str(exc),
+                        session_id=session_id,
+                    )
 
             # T015: derive is_powered_map from electronics.circuit state
             if self.electronics:
@@ -367,6 +395,8 @@ class SimulationLoop:
         self.actuator_clamp_duration = {}
         self.success_evaluator.motor_overload_timer = {}
         self.objective_evaluator.reset()
+        if getattr(self, "payload_trajectory_monitor", None) is not None:
+            self.payload_trajectory_monitor.reset()
         # WP2: Re-initialize flow rate capture after reset to ensure first-step crossings are caught
         if hasattr(self, "backend") and self.backend:
             self.objective_evaluator.initialize_flow_rate(self.backend)
@@ -600,6 +630,27 @@ class SimulationLoop:
                 confidence="high",
             )
 
+        if self.payload_trajectory_monitor_init_error:
+            self.fail_reason = SimulationFailure(
+                reason=FailureReason.VALIDATION_FAILED,
+                detail=self.payload_trajectory_monitor_init_error,
+            )
+            return SimulationMetrics(
+                total_time=0.0,
+                total_energy=0.0,
+                max_velocity=0.0,
+                success=False,
+                fail_reason=str(self.fail_reason),
+                fail_mode=self.fail_reason.reason,
+                failure=self.fail_reason,
+                payload_trajectory_monitor=(
+                    self.payload_trajectory_monitor.state
+                    if self.payload_trajectory_monitor is not None
+                    else None
+                ),
+                confidence="high",
+            )
+
         if self.wire_clearance_error:
             self.fail_reason = SimulationFailure(
                 reason=FailureReason.VALIDATION_FAILED,
@@ -688,7 +739,14 @@ class SimulationLoop:
             self.fail_reason = self._resolve_backend_failure(res)
             return True
 
-        # 4. SuccessEvaluator checks
+        # 4. Payload trajectory monitor checks
+        if getattr(self, "payload_trajectory_monitor", None) is not None:
+            monitor_failure = self.payload_trajectory_monitor.check(current_time)
+            if monitor_failure:
+                self.fail_reason = monitor_failure
+                return True
+
+        # 5. SuccessEvaluator checks
         for bname in self.body_names:
             bstate = self.backend.get_body_state(bname)
             eval_fail_reason = self.success_evaluator.check_failure(
@@ -845,6 +903,11 @@ class SimulationLoop:
             fail_reason=str(self.fail_reason) if self.fail_reason else None,
             fail_mode=self.fail_reason.reason if self.fail_reason else None,
             failure=self.fail_reason,
+            payload_trajectory_monitor=(
+                self.payload_trajectory_monitor.state
+                if getattr(self, "payload_trajectory_monitor", None) is not None
+                else None
+            ),
             stress_summaries=self.stress_summaries,
             stress_fields=self._get_stress_fields(),
             fluid_metrics=self.fluid_metrics,

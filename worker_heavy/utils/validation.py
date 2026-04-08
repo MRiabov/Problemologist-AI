@@ -33,6 +33,7 @@ from shared.models.schemas import (
     FluidDefinition,
     FluidProperties,
     FluidVolume,
+    PayloadTrajectoryDefinition,
 )
 from shared.models.simulation import (
     SimulationFailure,
@@ -72,6 +73,9 @@ from worker_heavy.simulation.factory import (
 from worker_heavy.simulation.naming import MOVED_OBJECT_SCENE_PREFIX
 from worker_heavy.simulation.object_pose import (
     summarize_payload_position_history,
+)
+from worker_heavy.simulation.payload_trajectory_monitor import (
+    load_payload_trajectory_definition,
 )
 from worker_heavy.utils.rendering import prerender_24_views
 from worker_heavy.workbenches.config import load_config, load_merged_config
@@ -1571,6 +1575,7 @@ def simulate(
 
     objectives = None
     assembly_definition = None
+    payload_trajectory_definition: PayloadTrajectoryDefinition | None = None
     objectives_path = working_dir / "benchmark_definition.yaml"
     if objectives_path.exists():
         content = objectives_path.read_text(encoding="utf-8")
@@ -1646,6 +1651,24 @@ def simulate(
                     ),
                     confidence="high",
                 )
+
+    try:
+        payload_trajectory_definition = load_payload_trajectory_definition(working_dir)
+    except Exception as exc:
+        logger.error(
+            "failed_to_load_payload_trajectory_definition",
+            error=str(exc),
+            session_id=session_id,
+        )
+        return SimulationResult(
+            success=False,
+            summary=f"payload_trajectory_definition.yaml invalid: {exc}",
+            failure=SimulationFailure(
+                reason=FailureReason.VALIDATION_FAILED,
+                detail=str(exc),
+            ),
+            confidence="high",
+        )
 
     cost_est_path = _find_workspace_assembly_definition(
         working_dir, prefer_benchmark=True
@@ -1765,6 +1788,7 @@ def simulate(
         backend_type=backend_type,
         electronics=electronics,
         objectives=objectives,
+        payload_trajectory_definition=payload_trajectory_definition,
         smoke_test_mode=smoke_test_mode,
         session_id=session_id,
         particle_budget=particle_budget,
@@ -1869,6 +1893,7 @@ def simulate(
                 backend_type=backend_type,
                 electronics=electronics,
                 objectives=objectives,
+                payload_trajectory_definition=payload_trajectory_definition,
                 smoke_test_mode=True,
                 session_id=session_id,
                 particle_budget=5000,
@@ -2038,6 +2063,7 @@ def simulate(
             success=metrics.success,
             summary=status_msg,
             failure=metrics.failure,
+            payload_trajectory_monitor=metrics.payload_trajectory_monitor,
             render_provenance=render_provenance,
             render_paths=render_paths,
             render_object_store_keys=render_object_store_keys,

@@ -115,6 +115,8 @@ def map_simulation_failure_reason(res_dict: dict[str, Any]) -> SimulationFailure
         return SimulationFailureMode.OPEN_CIRCUIT
     if "ELECTRONICS_FLUID_DAMAGE" in raw_reason:
         return SimulationFailureMode.ELECTRONICS_FLUID_DAMAGE
+    if "PAYLOAD_TRAJECTORY" in raw_reason:
+        return SimulationFailureMode.PAYLOAD_TRAJECTORY_CONTRACT_VIOLATION
 
     return SimulationFailureMode.NONE
 
