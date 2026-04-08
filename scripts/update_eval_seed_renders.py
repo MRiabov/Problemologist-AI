@@ -27,6 +27,7 @@ from scripts.internal.eval_seed_selection import (  # noqa: E402
 )
 from shared.agents.config import TECHNICAL_DRAWING_MODE_ENV, DraftingMode  # noqa: E402
 from shared.enums import AgentName  # noqa: E402
+from shared.workers.schema import RenderManifest  # noqa: E402
 
 _STACK_PROFILE_NAME = (
     "integration"
@@ -54,6 +55,75 @@ def _resolve_seed_artifact_dir(item, *, root: Path) -> Path | None:
             return dataset_relative
 
     return repo_relative
+
+
+_RENDER_SIDE_CAR_FILENAMES = {
+    "preview_scene.json",
+    "frames.jsonl",
+    "objects.parquet",
+}
+
+
+def _discover_render_sidecars(artifact_dir: Path) -> list[str]:
+    renders_dir = artifact_dir / "renders"
+    if not renders_dir.exists():
+        return []
+
+    discovered: list[str] = []
+    for path in renders_dir.rglob("*"):
+        if not path.is_file():
+            continue
+        if path.name not in _RENDER_SIDE_CAR_FILENAMES:
+            continue
+        discovered.append(str(path.relative_to(artifact_dir)).replace("\\", "/"))
+    return sorted(dict.fromkeys(discovered))
+
+
+def _validate_required_render_sidecars(
+    artifact_dir: Path,
+    *,
+    render_paths: list[str],
+) -> None:
+    missing: list[str] = []
+
+    for rel_path in render_paths:
+        if not rel_path.endswith("render_manifest.json"):
+            continue
+
+        manifest_path = artifact_dir / rel_path
+        if not manifest_path.exists():
+            continue
+
+        manifest = RenderManifest.model_validate_json(
+            manifest_path.read_text(encoding="utf-8")
+        )
+        bundle_root = artifact_dir / Path(manifest.bundle_path or Path(rel_path).parent)
+        evidence_paths = [
+            Path(path)
+            for path in manifest.preview_evidence_paths
+            if path and Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
+        ]
+        if not evidence_paths:
+            evidence_paths = [
+                Path(path)
+                for path in manifest.artifacts
+                if Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
+            ]
+
+        if any(path.suffix.lower() == ".mp4" for path in evidence_paths):
+            for required_name in ("frames.jsonl", "objects.parquet"):
+                required_path = bundle_root / required_name
+                if required_path.exists():
+                    continue
+                missing.append(
+                    str(required_path.relative_to(artifact_dir)).replace("\\", "/")
+                )
+
+    if missing:
+        raise RuntimeError(
+            "Rendered eval seed bundle is missing required sidecar file(s): "
+            f"{sorted(dict.fromkeys(missing))}"
+        )
 
 
 def _parse_args() -> argparse.Namespace:
@@ -142,6 +212,9 @@ def _update_item(
     from scripts.internal.eval_seed_renders import update_seed_artifact_renders
 
     saved_paths = update_seed_artifact_renders(artifact_dir)
+    saved_paths.extend(_discover_render_sidecars(artifact_dir))
+    saved_paths = sorted(dict.fromkeys(saved_paths))
+    _validate_required_render_sidecars(artifact_dir, render_paths=saved_paths)
     saved_count = len(saved_paths)
     if not errors_only:
         print(f"UPDATED {agent.value} {item.id}: {saved_count} render file(s)")
