@@ -49,6 +49,29 @@ class EvalDatasetItem(BaseModel):
         return self
 
 
+class E2EResumeStageRecord(BaseModel):
+    stage_index: int = Field(ge=0)
+    agent_name: AgentName
+    workspace_dir: Path
+    session_id: str
+    launch_return_code: int
+    verification_name: str
+    verification_success: bool
+    simulation_success: bool | None = None
+    review_decision: str | None = None
+
+
+class E2EResumeState(BaseModel):
+    seed_dir: Path
+    workspace_root: Path
+    stages: list[E2EResumeStageRecord] = Field(default_factory=list)
+
+    def last_completed_stage(self) -> E2EResumeStageRecord | None:
+        if not self.stages:
+            return None
+        return self.stages[-1]
+
+
 class HardCheckAggregate(BaseModel):
     total: int = 0
     passed: int = 0
