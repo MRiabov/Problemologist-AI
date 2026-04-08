@@ -179,11 +179,11 @@ Control-file ownership split:
 01. `benchmark_definition.yaml` owns benchmark/task definition and benchmark fixture metadata (`benchmark_parts`).
 02. `benchmark_assembly_definition.yaml` owns benchmark-owned fixture structure, motion metadata, and benchmark-side implementation details.
 03. `benchmark_script.py` owns benchmark-owned geometry composition and read-only benchmark preview context.
-04. `benchmark_plan_evidence_script.py` owns benchmark planner drafting evidence geometry.
+04. `benchmark_plan_evidence_script.py` owns benchmark planner technical drawing evidence geometry.
 05. `benchmark_plan_technical_drawing_script.py` owns benchmark planner technical-drawing exports.
 06. `benchmark_plan.md` owns benchmark planner narrative and exact inventory grounding.
 07. `solution_script.py` owns engineer-planned solution geometry and implementation code.
-08. `solution_plan_evidence_script.py` owns engineering planner drafting evidence geometry.
+08. `solution_plan_evidence_script.py` owns engineering planner technical drawing evidence geometry.
 09. `solution_plan_technical_drawing_script.py` owns engineering planner technical-drawing exports.
 10. `engineering_plan.md` owns engineering planner narrative, proof structure, and exact inventory grounding.
 11. `assembly_definition.yaml` owns engineer-planned solution structure, costing inputs, and motion metadata.

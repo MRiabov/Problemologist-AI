@@ -13,7 +13,7 @@ The Engineering Planner turns benchmark context into an implementation-ready eng
 - `solution_plan_evidence_script.py`
 - `solution_plan_technical_drawing_script.py`
 - `journal.md`
-- `renders/engineer_plan_renders/` persistent preview evidence
+- `renders/engineer_plan_renders/` persistent render evidence
 - `renders/current-episode/` scratch evidence during the active run
 - `.manifests/engineering_plan_review_manifest.json` via `submit_plan()`
 

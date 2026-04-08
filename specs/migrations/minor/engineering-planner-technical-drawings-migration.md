@@ -97,8 +97,8 @@ new CAD language.
 | `config/prompts.yaml` | Holds role prompts and appendices, but no dedicated planner drafting appendix branch. | PromptManager needs a place to inject drafting instructions without duplicating role prompts. |
 | `controller/agent/prompt_manager.py` | Merges prompt fragments, but does not yet conditionally inject drafting instructions. | It must become the single place that adds or omits the drafting appendix based on mode. |
 | `evals/logic/codex_workspace.py` | Materializes workspace context without a drafting-specific prompt payload. | It should remain prompt-source agnostic while still passing the required runtime context through. |
-| `worker_heavy/utils/preview.py` | Renders 3D preview bundles only. | The runtime needs a 2D technical-drawing companion path. |
-| `worker_renderer/api/routes.py` | Persists the current preview bundle contract. | It must accept the drawing preview bundle and any vector sidecars. |
+| `worker_heavy/utils/preview.py` | Renders 3D render bundles only. | The runtime needs a 2D technical-drawing companion path. |
+| `worker_renderer/api/routes.py` | Persists the current render bundle contract. | It must accept the drawing render bundle and any vector sidecars. |
 | `scripts/validate_eval_seed.py` and `controller/agent/node_entry_validation.py` | Validate seed and workspace contracts, but not drafting-specific requirements. | They need fail-closed enforcement when the mode requires drafting artifacts, including the planner-owned evidence and drawing scripts. |
 | `tests/integration/**` | Exercise the current planner and preview flows, but not the 2D drafting contract. | The migration needs a narrow integration slice for draft mode, preview, and review. |
 | `shared/agent_templates/` and `shared/assets/template_repos/` | Hold prompt-context and starter-workspace material. | Any drafting guidance or examples must live there if they are part of the workspace contract, not as ad hoc prompt text. |

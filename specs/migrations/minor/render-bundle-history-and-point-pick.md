@@ -49,7 +49,7 @@ history/query system.
 | Area | Current behavior | Why it matters |
 | -- | -- | -- |
 | `worker_renderer/api/routes.py` | Synthesizes a preview manifest from the current render paths and returns the current preview payload. | The preview output is still current-bundle oriented, not explicitly history indexed. |
-| `shared/rendering/renderer_client.py` | Materializes preview responses into the workspace and writes one manifest companion for preview bundles. | The preview materializer has no durable append-only history surface yet. |
+| `shared/rendering/renderer_client.py` | Materializes preview responses into the workspace and writes one manifest companion for render bundles. | The preview materializer has no durable append-only history surface yet. |
 | `worker_heavy/simulation/media.py` and `worker_heavy/simulation/renderer.py` | Capture MuJoCo simulation frames, provenance, and final simulation-video artifacts from the physics backend. | Simulation metadata is heavy-owned, so the bundle contract must account for a second producer. |
 | `shared/workers/schema.py` | Defines per-artifact render metadata and the current render manifest shape. | The schema captures artifact metadata, but not a typed bundle index entry or the bundle-local lookup contract. |
 | `shared/rendering/preview_scene.py` and `worker_renderer/utils/build123d_rendering.py` | Already build and serialize preview-scene state plus the camera math used by preview renders. | These are the right base for bundle-local scene snapshots, but they are still preview-oriented. |
@@ -61,7 +61,7 @@ history/query system.
 ## Proposed Target State
 
 01. Every render-producing request publishes an immutable bundle directory under
-    `renders/**`, with preview bundles authored by `worker-renderer` and MuJoCo
+    `renders/**`, with render bundles authored by `worker-renderer` and MuJoCo
     simulation bundles authored by `worker-heavy`.
 02. Each bundle carries a bundle-local manifest and any lookup sidecars required
     by agent tooling.
@@ -96,7 +96,7 @@ history/query system.
 - Keep render outputs in immutable bundle directories instead of treating the
   latest manifest as the only durable artifact.
 - Write a bundle-local manifest beside each bundle.
-- Treat the producer as part of the contract: preview bundles are written by
+- Treat the producer as part of the contract: render bundles are written by
   `worker-renderer`; MuJoCo simulation bundles are written by `worker-heavy`.
 - Append a history row for each published bundle to `renders/render_index.jsonl`.
 - Carry the bundle-local manifest through current-bundle compatibility paths
@@ -204,7 +204,7 @@ the same bundle identity.
 
 ### 3. Publish immutable bundles
 
-- [x] Write each preview bundle into its own immutable bundle directory.
+- [x] Write each render bundle into its own immutable bundle directory.
 - [x] Write each MuJoCo simulation-video bundle into its own immutable bundle
   directory.
 - [x] Emit the bundle-local manifest only after the bundle contents are fully
@@ -215,7 +215,7 @@ the same bundle identity.
 
 ### 4. Persist query sidecars
 
-- [x] Persist `preview_scene.json` for preview bundles as the exact scene
+- [x] Persist `preview_scene.json` for render bundles as the exact scene
   snapshot used to render the image.
 - [x] Persist `frames.jsonl` for simulation bundles that contain video evidence
   or frame-level metadata.

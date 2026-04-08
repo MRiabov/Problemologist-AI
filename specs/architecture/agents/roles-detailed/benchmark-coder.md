@@ -45,7 +45,7 @@ The Benchmark Coder turns an approved benchmark handoff into `benchmark_script.p
 ## Runtime Helpers To Use From Scripts
 
 - `from utils.submission import validate, simulate, submit_for_review`
-- `from utils.preview import preview, render_technical_drawing, objectives_geometry, list_render_bundles, query_render_bundle, pick_preview_pixel, pick_preview_pixels`
+- `from utils.preview import render_cad, render_technical_drawing, objectives_geometry, list_render_bundles, query_render_bundle, pick_preview_pixel, pick_preview_pixels`
 
 ## What Humans Must Tell It
 

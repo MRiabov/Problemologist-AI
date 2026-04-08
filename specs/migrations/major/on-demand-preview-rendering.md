@@ -76,10 +76,10 @@ This migration sits on top of the existing split architecture in
 The repository already contains several partial preview implementations:
 
 - `worker_heavy.utils.build123d_rendering.render_preview_view(...)` already
-  exports a live `Compound` into a preview bundle and renders a single view,
+  exports a live `Compound` into a render bundle and renders a single view,
   which is still a useful lower-level primitive for the new async helper.
 - `worker_heavy.utils.build123d_rendering.render_preview_bundle(...)` already
-  renders the full RGB/depth/segmentation preview bundle.
+  renders the full RGB/depth/segmentation render bundle.
 - `worker_renderer/api/routes.py` already serves `/benchmark/preview`,
   `/benchmark/static-preview`, and `/benchmark/simulation-video`.
 - `shared/rendering/renderer_client.py` already knows how to call the renderer
@@ -158,7 +158,7 @@ async def render_cad(
 - The helper returns a structured job ack immediately and streams queued,
   running, and view-ready status while the renderer worker materializes the
   files.
-- The helper should persist under the workflow-specific preview bundle
+- The helper should persist under the workflow-specific render bundle
   directory, not flatten everything into a single root-level render folder.
 - The helper should keep a stable orbit-angle naming convention plus a
   request-scoped view index so repeated runs remain visually and textually easy
@@ -230,7 +230,7 @@ Target on-demand flow:
 - Do not send raw geometry objects over HTTP.
 - Do not collapse preview into simulation provenance.
 - Do not route preview generation back through `/benchmark/validate`.
-- Do not reintroduce a default validation-time preview bundle.
+- Do not reintroduce a default validation-time render bundle.
 - Do not add a generic render queue.
 - Do not change simulation semantics.
 
@@ -506,7 +506,7 @@ validation paths.
   `inspect_media(...)`; `INT-188` stays render-free; `INT-212`-`INT-215`
   cover list-normalized multi-view preview, manifest identity, and websocket
   status streaming; `INT-204`/`INT-074`/`INT-075` keep the latest-revision
-  review gate aligned with the new preview bundle shape.
+  review gate aligned with the new render bundle shape.
 - [ ] Add a dedicated controller/Temporal preview-path integration test if no
   existing INT already exercises the full worker-light -> controller ->
   Temporal -> renderer chain.

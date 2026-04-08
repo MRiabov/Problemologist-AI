@@ -13,7 +13,7 @@ The Benchmark Planner turns a problem brief into a benchmark handoff package. It
 - `benchmark_plan_evidence_script.py`
 - `benchmark_plan_technical_drawing_script.py`
 - `journal.md`
-- `renders/benchmark_renders/` persistent preview evidence
+- `renders/benchmark_renders/` persistent render evidence
 - `renders/current-episode/` scratch evidence during the active run
 - `.manifests/benchmark_plan_review_manifest.json` via `submit_plan()`
 

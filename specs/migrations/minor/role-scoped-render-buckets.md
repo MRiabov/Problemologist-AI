@@ -15,7 +15,7 @@ added_at: '2026-03-31T20:20:26Z'
 ## Purpose
 
 This document investigates a render-path refactor that keeps benchmark preview evidence,
-engineer inspection previews, and final preview bundles in separate
+engineer inspection previews, and final render bundles in separate
 workspace buckets while preserving the existing manifest and review contracts.
 
 The architecture already names those buckets. This note records the runtime
@@ -64,7 +64,7 @@ The path split is mostly in place, but the plumbing is still partly implicit:
 2. Keep engineer single-view inspection previews in `renders/engineer_renders/`
    so `engineer_coder` can inspect its own part previews without confusing them
    with benchmark input evidence.
-3. Keep final engineer preview bundles in `renders/final_preview_renders/`
+3. Keep final engineer render bundles in `renders/final_preview_renders/`
    so `engineer_execution_reviewer` can review the final assembly bundle as a
    separate evidence surface.
 4. Preserve benchmark-owned static renders as read-only input for engineer
@@ -153,7 +153,7 @@ The safe order is:
 
 1. Benchmark review evidence is surfaced from `renders/benchmark_renders/`.
 2. Engineer inspection previews are surfaced from `renders/engineer_renders/`.
-3. Final preview bundles are surfaced from `renders/final_preview_renders/`.
+3. Final render bundles are surfaced from `renders/final_preview_renders/`.
 4. `benchmark_reviewer` and `engineer_execution_reviewer` can inspect
    benchmark renders without the files being reclassified as engineer-owned
    output.

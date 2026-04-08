@@ -128,7 +128,7 @@ The cache rule is:
 
 The reason is architectural rather than incidental:
 
-- explicit preview requests use the renderer worker's selected preview backend for preview evidence by default,
+- explicit preview requests use the renderer worker's selected preview backend for render evidence by default,
 - `/benchmark/simulate` may still use Genesis for the same session,
 - a single shared per-session backend cache would let the preview path poison the later simulation path with the wrong backend instance.
 
@@ -144,7 +144,7 @@ The backend contract is:
 2. Genesis remains the backend for Genesis-only simulation behavior such as FEM and fluids.
 3. Explicit preview rendering uses the renderer worker's selected preview backend and is executed by the renderer worker.
 4. The explicit preview path is a fast geometry/context artifact path, not a Genesis-runtime proof path.
-5. Manual preview evidence is written into `renders/current-episode/` during the active stage, while the 24-view handoff bundles are written separately under `renders/benchmark_renders/`, `renders/engineer_plan_renders/`, or `renders/final_solution_submission_renders/` depending on the workflow.
+5. Manual render evidence is written into `renders/current-episode/` during the active stage, while the 24-view handoff bundles are written separately under `renders/benchmark_renders/`, `renders/engineer_plan_renders/`, or `renders/final_solution_submission_renders/` depending on the workflow.
 
 This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asymmetric:
 
@@ -177,7 +177,7 @@ The rule is:
 
 05. `render_cad(...)` is the ephemeral on-demand path. It normalizes scalar/list camera inputs into zip-paired views, renders a composed `Part | Compound` at the requested camera and modality set, streams queued/view-ready status over the websocket control path, and writes the resulting files into `renders/current-episode/` for the active stage. The canonical RGB preview artifact stem is `{part_name}_render_{angle_1}_{angle_2}`, and the persisted file is `<stem>.png`; `part_name` comes from the rendered component label, so previewing `Part(Box(), label="test_part")` at the default 45/45 orbit uses the unchanged `e45_a45` angle family and produces `test_part_render_e45_a45.png`. Scratch previews are separate from simulation evidence, validation results, and the persisted 24-view handoff bundles.
 
-06. When `render_cad(..., payload_path=True)` is requested, the static preview bundle may also include a motion-path overlay. The renderer resolves that overlay from the finest available motion artifact for the current workflow, preferring engineer-coder `payload_trajectory_definition.yaml`, then planner `motion_forecast`, then benchmark motion evidence when applicable. The overlay is review context only and does not affect validation or simulation semantics.
+06. When `render_cad(..., payload_path=True)` is requested, the static render bundle may also include a motion-path overlay. The renderer resolves that overlay from the finest available motion artifact for the current workflow, preferring engineer-coder `payload_trajectory_definition.yaml`, then planner `motion_forecast`, then benchmark motion evidence when applicable. The overlay is review context only and does not affect validation or simulation semantics.
 
 07. Every persistent handoff render request publishes an immutable 24-view bundle directory with a bundle-local manifest, using the established 8-azimuth by 3-elevation view family. RGB handoff bundles display the payload-path overlay specified by the relevant benchmark or engineer motion contract by default, and the overlay can be disabled through `render.handoff_rgb_payload_path_overlay.enabled` in `config/agents_config.yaml`. Historical discovery flows through the render bundle contract in [CAD and other infrastructure](./CAD-and-other-infra.md); `renders/render_manifest.json` may remain as a current-bundle compatibility alias. Simulation bundles may also persist `frames.jsonl` and frame-indexed `objects.parquet` sidecars sampled at the video-capture cadence when the active `PhysicsBackend` export path provides them.
 

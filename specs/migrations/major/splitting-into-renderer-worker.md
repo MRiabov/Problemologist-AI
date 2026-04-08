@@ -83,7 +83,7 @@ For MuJoCo, FEM, and fluid jobs, the bundle can contain the backend-produced sce
 For simulation video, the bundle can contain captured frame files plus a small manifest of frame paths and encoding parameters; the renderer worker encodes the MP4 from those files rather than from in-memory frame arrays.
 The bundle transport may still be a gzipped tarball encoded as base64 on legacy JSON-only boundaries, but that is compatibility plumbing rather than the preferred data plane.
 New or refactored paths should prefer the transport rules in `distributed-execution.md#networking`: binary bytes, batch file endpoints, or object-store pointers where appropriate.
-When a preview bundle is scene-backed, the renderer must preserve modality metadata in the manifest, including depth/segmentation groupings and segmentation legends, rather than flattening every PNG to RGB.
+When a render bundle is scene-backed, the renderer must preserve modality metadata in the manifest, including depth/segmentation groupings and segmentation legends, rather than flattening every PNG to RGB.
 
 This is the key rule:
 

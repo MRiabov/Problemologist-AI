@@ -114,7 +114,7 @@ and collector surfaces still need to converge on it.
 ### 2. Rename the persistent render buckets end-to-end
 
 - Replace `engineer_renders` with `engineer_plan_renders` wherever runtime code
-  resolves preview bundles, manifest paths, or workspace seed files.
+  resolves render bundles, manifest paths, or workspace seed files.
 - Replace `final_preview_renders` with
   `final_solution_submission_renders` wherever runtime code resolves final
   handoff bundles, manifest paths, or dataset/task collectors.

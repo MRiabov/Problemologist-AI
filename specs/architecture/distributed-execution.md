@@ -200,7 +200,7 @@ Worker-specific logic stays in:
   - any GPU work, if necessary.
 - `worker_renderer/*` for:
   - static preview generation
-  - selection snapshots and render-manifest generation for preview bundles
+  - selection snapshots and render-manifest generation for render bundles
   - all headless rendering dependencies and preview post-processing
 
 Validation now lives in `worker-light`; the static preview part of validation is still executed by `worker-renderer`. The point of the split is to keep validation on the worker-light geometry path while isolating the graphics stack from simulation state and keeping the fast geometry gate off the heavy worker.

@@ -73,7 +73,7 @@ Role prompts define the agent identity and the minimum operating contract for th
 
 They should stay close to the current engineer_coder style: compact, direct, and workspace-aware.
 
-Role prompts should name the authored source file, the read-only context files, the planner drafting evidence/drawing scripts when those are enabled, and the submission path when that matters for the role. They should not restate the full workflow that already lives in skills or runtime contracts.
+Role prompts should name the authored source file, the read-only context files, the planner technical drawing evidence/drawing scripts when those are enabled, and the submission path when that matters for the role. They should not restate the full workflow that already lives in skills or runtime contracts.
 
 ### Shared appendices
 
