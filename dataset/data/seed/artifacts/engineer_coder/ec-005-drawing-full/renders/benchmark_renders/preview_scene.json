@@ -2,12 +2,50 @@
   "component_label": "benchmark_environment",
   "entities": [
     {
+      "label": "environment_fixture",
+      "semantic_label": "environment_fixture",
+      "instance_id": "environment_fixture",
+      "instance_name": "environment_fixture",
+      "object_type": "part",
+      "object_id": 0,
+      "pos": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/environment_fixture.obj"
+      ],
+      "box_size": null,
+      "material_id": "aluminum_6061",
+      "body_name": "environment_fixture",
+      "geom_name": "environment_fixture",
+      "zone_type": null,
+      "color_rgba": [
+        0.7529411764705882,
+        0.7529411764705882,
+        0.7529411764705882,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        235,
+        59,
+        59
+      ],
+      "include_in_segmentation": true
+    },
+    {
       "label": "projectile_ball",
       "semantic_label": "projectile_ball",
       "instance_id": "projectile_ball",
       "instance_name": "projectile_ball",
       "object_type": "part",
-      "object_id": 0,
+      "object_id": 1,
       "pos": [
         -180.0,
         0.0,
@@ -33,9 +71,9 @@
         1.0
       ],
       "segmentation_color_rgb": [
-        235,
         59,
-        59
+        110,
+        235
       ],
       "include_in_segmentation": true
     },
@@ -45,7 +83,7 @@
       "instance_id": "zone_goal",
       "instance_name": "zone_goal",
       "object_type": "zone",
-      "object_id": 1,
+      "object_id": 2,
       "pos": [
         470.0,
         0.0,
@@ -73,9 +111,9 @@
         0.22
       ],
       "segmentation_color_rgb": [
-        59,
-        110,
-        235
+        161,
+        235,
+        59
       ],
       "include_in_segmentation": false
     },
@@ -85,7 +123,7 @@
       "instance_id": "zone_forbid_0_central_blocker",
       "instance_name": "zone_forbid_0_central_blocker",
       "object_type": "zone",
-      "object_id": 2,
+      "object_id": 3,
       "pos": [
         190.0,
         0.0,
@@ -113,9 +151,9 @@
         0.2
       ],
       "segmentation_color_rgb": [
-        161,
         235,
-        59
+        59,
+        213
       ],
       "include_in_segmentation": false
     },
@@ -125,7 +163,7 @@
       "instance_id": "zone_build",
       "instance_name": "zone_build",
       "object_type": "zone",
-      "object_id": 3,
+      "object_id": 4,
       "pos": [
         160.0,
         0.0,
@@ -153,9 +191,9 @@
         0.14
       ],
       "segmentation_color_rgb": [
-        235,
         59,
-        213
+        235,
+        205
       ],
       "include_in_segmentation": false
     }

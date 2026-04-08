@@ -52,6 +52,14 @@ def _build_moved_object(moved: dict):
     return moved_part
 
 
+def _build_environment_fixture():
+    fixture = Box(10.0, 10.0, 10.0, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    fixture = fixture.moved(Location((0.0, 0.0, 0.0)))
+    fixture.label = "environment_fixture"
+    fixture.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    return fixture
+
+
 _moved_object_contract = _load_moved_object()
 _moved_object = _build_moved_object(_moved_object_contract)
 
@@ -69,7 +77,7 @@ def build() -> Compound:
     # must not be `environment`, start with `zone_`, or start with
     # `benchmark_moved_object__` because the simulator reserves those names for the
     # scene root and generated objective bodies.
-    environment = Compound(children=[_moved_object])
+    environment = Compound(children=[_build_environment_fixture(), _moved_object])
     environment.label = "benchmark_environment"
     environment.metadata = CompoundMetadata()
     return environment
