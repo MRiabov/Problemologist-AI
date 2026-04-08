@@ -58,6 +58,9 @@ from worker_heavy.utils.dfm import (
     validate_exact_declared_assembly_cost,
     validate_exact_declared_assembly_weight,
 )
+from worker_heavy.utils.payload_trajectory_validation import (
+    validate_payload_trajectory_swept_clearance,
+)
 from worker_heavy.utils.validation import (
     _shape_volume,
     _validate_benchmark_definition_consistency,
@@ -1366,6 +1369,10 @@ def validate_payload_trajectory_definition_yaml(
     benchmark_definition: BenchmarkDefinition | None = None,
     coarse_motion_forecast: MotionForecast | None = None,
     expected_moving_part_names: list[str] | None = None,
+    assembly_definition: AssemblyDefinition | None = None,
+    benchmark_assembly_definition: AssemblyDefinition | None = None,
+    workspace_root: Path | None = None,
+    validate_clearance: bool = True,
     session_id: str | None = None,
 ) -> tuple[bool, PayloadTrajectoryDefinition | list[str]]:
     try:
@@ -1466,6 +1473,19 @@ def validate_payload_trajectory_definition_yaml(
 
     if errors:
         return False, errors
+
+    if validate_clearance and benchmark_definition is not None:
+        clearance_errors = validate_payload_trajectory_swept_clearance(
+            workspace_root=workspace_root or Path.cwd(),
+            benchmark_definition=benchmark_definition,
+            payload_definition=precise_path,
+            assembly_definition=assembly_definition,
+            benchmark_assembly_definition=benchmark_assembly_definition,
+            session_id=session_id,
+        )
+        if clearance_errors:
+            return False, clearance_errors
+
     logger.info("payload_trajectory_definition_yaml_valid", session_id=session_id)
     return True, precise_path
 
@@ -2519,6 +2539,42 @@ def validate_plan_refusal(
         return False, errors
 
 
+def _validate_payload_trajectory_clearance_from_artifacts(
+    *,
+    files_content_map: dict[str, str],
+    benchmark_definition: BenchmarkDefinition,
+    payload_definition: PayloadTrajectoryDefinition,
+    assembly_definition: AssemblyDefinition | None,
+    benchmark_assembly_definition: AssemblyDefinition | None,
+    session_id: str | None = None,
+) -> list[str]:
+    with tempfile.TemporaryDirectory(prefix="payload_trajectory_clearance_") as tmp:
+        workspace_root = Path(tmp)
+
+        benchmark_script_content = files_content_map.get("benchmark_script.py")
+        if benchmark_script_content is not None:
+            (workspace_root / "benchmark_script.py").write_text(
+                benchmark_script_content,
+                encoding="utf-8",
+            )
+
+        solution_script_content = files_content_map.get("solution_script.py")
+        if solution_script_content is not None:
+            (workspace_root / "solution_script.py").write_text(
+                solution_script_content,
+                encoding="utf-8",
+            )
+
+        return validate_payload_trajectory_swept_clearance(
+            workspace_root=workspace_root,
+            benchmark_definition=benchmark_definition,
+            payload_definition=payload_definition,
+            assembly_definition=assembly_definition,
+            benchmark_assembly_definition=benchmark_assembly_definition,
+            session_id=session_id,
+        )
+
+
 def validate_node_output(
     node_type: str,
     files_content_map: dict[str, str],
@@ -2541,6 +2597,7 @@ def validate_node_output(
     benchmark_definition_model: BenchmarkDefinition | None = None
     assembly_definition_models: dict[str, AssemblyDefinition] = {}
     payload_trajectory_definition_content: str | None = None
+    payload_trajectory_definition_model: PayloadTrajectoryDefinition | None = None
     effective_config = manufacturing_config
     try:
         node_enum = (
@@ -2806,6 +2863,9 @@ def validate_node_output(
     engineering_assembly_definition_model = assembly_definition_models.get(
         "assembly_definition.yaml"
     )
+    benchmark_assembly_definition_model = assembly_definition_models.get(
+        "benchmark_assembly_definition.yaml"
+    )
     if payload_trajectory_definition_content is not None:
         is_valid, precise_result = validate_payload_trajectory_definition_yaml(
             payload_trajectory_definition_content,
@@ -2815,6 +2875,9 @@ def validate_node_output(
                 if engineering_assembly_definition_model is not None
                 else None
             ),
+            assembly_definition=engineering_assembly_definition_model,
+            benchmark_assembly_definition=benchmark_assembly_definition_model,
+            workspace_root=Path.cwd(),
             expected_moving_part_names=(
                 [
                     part.part_name
@@ -2828,6 +2891,23 @@ def validate_node_output(
         )
         if not is_valid and isinstance(precise_result, list):
             errors.extend(precise_result)
+        elif is_valid:
+            payload_trajectory_definition_model = precise_result
+
+    if (
+        payload_trajectory_definition_model is not None
+        and benchmark_definition_model is not None
+    ):
+        errors.extend(
+            _validate_payload_trajectory_clearance_from_artifacts(
+                files_content_map=files_content_map,
+                benchmark_definition=benchmark_definition_model,
+                payload_definition=payload_trajectory_definition_model,
+                assembly_definition=engineering_assembly_definition_model,
+                benchmark_assembly_definition=benchmark_assembly_definition_model,
+                session_id=session_id,
+            )
+        )
 
     return len(errors) == 0, errors
 

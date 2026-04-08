@@ -83,6 +83,14 @@ class MotionForecastPolicy(BaseModel):
     )
 
 
+class PayloadTrajectoryClearanceBudget(BaseModel):
+    enabled: bool = True
+    max_orientation_cells: int = Field(default=96, ge=1)
+    max_recursion_depth: int = Field(default=6, ge=0)
+    max_exact_checks: int = Field(default=9, ge=1)
+    leaf_span_deg: tuple[float, float, float] = Field(default=(2.0, 2.0, 2.0))
+
+
 class AgentPolicy(BaseModel):
     filesystem_permissions: FilesystemPermissions = Field(
         default_factory=FilesystemPermissions
@@ -292,6 +300,9 @@ class AgentsConfig(BaseModel):
     render: RenderPolicyConfig = Field(default_factory=RenderPolicyConfig)
     execution: AgentExecutionConfig = Field(default_factory=AgentExecutionConfig)
     motion_forecast: MotionForecastPolicy = Field(default_factory=MotionForecastPolicy)
+    payload_trajectory_clearance: PayloadTrajectoryClearanceBudget = Field(
+        default_factory=PayloadTrajectoryClearanceBudget
+    )
     defaults: AgentPolicy = Field(default_factory=AgentPolicy)
     agents: dict[str, AgentPolicy] = Field(default_factory=dict)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import uuid
 from collections.abc import Mapping, Sequence
 from enum import StrEnum
@@ -243,6 +244,105 @@ def _technical_drawing_mode_for_node(node_type: AgentName) -> DraftingMode:
     }:
         return config.get_technical_drawing_mode(AgentName.ENGINEER_PLANNER)
     return DraftingMode.OFF
+
+
+async def _validate_payload_trajectory_clearance_on_worker(
+    worker_client: WorkerClient,
+) -> list[NodeEntryValidationError]:
+    command = r"""
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+import yaml
+
+from shared.models.schemas import (
+    AssemblyDefinition,
+    BenchmarkDefinition,
+)
+from worker_heavy.utils.file_validation import (
+    validate_payload_trajectory_definition_yaml,
+)
+
+root = Path.cwd()
+benchmark = BenchmarkDefinition.model_validate(
+    yaml.safe_load((root / "benchmark_definition.yaml").read_text(encoding="utf-8"))
+)
+assembly = AssemblyDefinition.model_validate(
+    yaml.safe_load((root / "assembly_definition.yaml").read_text(encoding="utf-8"))
+)
+benchmark_assembly_path = root / "benchmark_assembly_definition.yaml"
+benchmark_assembly = (
+    AssemblyDefinition.model_validate(
+        yaml.safe_load(
+            benchmark_assembly_path.read_text(encoding="utf-8")
+        )
+    )
+    if benchmark_assembly_path.exists()
+    else None
+)
+payload_text = (root / "payload_trajectory_definition.yaml").read_text(
+    encoding="utf-8"
+)
+ok, result = validate_payload_trajectory_definition_yaml(
+    payload_text,
+    benchmark_definition=benchmark,
+    assembly_definition=assembly,
+    benchmark_assembly_definition=benchmark_assembly,
+    workspace_root=root,
+    validate_clearance=True,
+)
+print(
+    json.dumps(
+        {
+            "ok": ok,
+            "errors": result if isinstance(result, list) else [],
+        },
+        ensure_ascii=False,
+    )
+)
+PY
+"""
+    response = await worker_client.execute_command(command, timeout=300)
+    if response.exit_code != 0:
+        return [
+            _seeded_schema_error(
+                message=(
+                    "payload_trajectory_definition.yaml: worker clearance "
+                    f"validation failed: {response.stderr or response.stdout}"
+                ),
+                artifact_path="payload_trajectory_definition.yaml",
+            )
+        ]
+
+    try:
+        stdout_lines = [
+            line.strip()
+            for line in (response.stdout or "").splitlines()
+            if line.strip()
+        ]
+        payload = json.loads(stdout_lines[-1] if stdout_lines else "{}")
+    except Exception as exc:
+        return [
+            _seeded_schema_error(
+                message=(
+                    "payload_trajectory_definition.yaml: unable to parse worker "
+                    f"clearance output: {exc}"
+                ),
+                artifact_path="payload_trajectory_definition.yaml",
+            )
+        ]
+
+    if payload.get("ok"):
+        return []
+
+    return [
+        _seeded_schema_error(
+            message=message,
+            artifact_path="payload_trajectory_definition.yaml",
+        )
+        for message in payload.get("errors", [])
+    ]
 
 
 def _node_technical_drawing_artifacts(target_node: AgentName) -> list[str]:
@@ -1253,6 +1353,9 @@ async def validate_seeded_workspace_handoff_artifacts(
                     if assembly_definition_model is not None
                     else None
                 ),
+                assembly_definition=assembly_definition_model,
+                benchmark_assembly_definition=benchmark_assembly_definition_model,
+                validate_clearance=False,
                 session_id=worker_client.session_id,
             )
             if not is_valid and isinstance(precise_result, list):
@@ -1379,6 +1482,15 @@ async def validate_seeded_workspace_handoff_artifacts(
                             artifact_path="benchmark_assembly_definition.yaml",
                         )
                     )
+
+    if (
+        "payload_trajectory_definition.yaml" in present_paths
+        and benchmark_definition_model is not None
+        and assembly_definition_model is not None
+    ):
+        errors.extend(
+            await _validate_payload_trajectory_clearance_on_worker(worker_client)
+        )
 
     render_error = await validate_render_images_non_black(
         worker_client,

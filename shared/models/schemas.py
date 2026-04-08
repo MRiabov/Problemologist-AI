@@ -290,7 +290,7 @@ class MotionForecastAnchor(StrictContractModel):
     t_s: float = Field(ge=0)
     reference_point: str
     pos_mm: CoercedTuple3D
-    rot_deg: CoercedTuple3D | None = None
+    rot_deg: CoercedTuple3D
     position_tolerance_mm: Annotated[
         tuple[NonNegativeFloat, NonNegativeFloat, NonNegativeFloat],
         BeforeValidator(_coerce_to_tuple),
@@ -321,11 +321,6 @@ class MotionForecastAnchor(StrictContractModel):
 
     @model_validator(mode="after")
     def validate_anchor_contract(self) -> "MotionForecastAnchor":
-        if (self.rot_deg is None) != (self.rotation_tolerance_deg is None):
-            raise ValueError(
-                "rot_deg and rotation_tolerance_deg must be provided together"
-            )
-
         if self.first_contacts:
             orders = [contact.order for contact in self.first_contacts]
             if len(set(orders)) != len(orders):
@@ -483,6 +478,48 @@ class PayloadTrajectoryDefinition(StrictContractModel):
         if len(self.anchors) < 1:
             raise ValueError(
                 "payload_trajectory_definition must contain at least one anchor"
+            )
+
+        first_anchor = self.anchors[0]
+        if not first_anchor.build_zone_valid:
+            raise ValueError(
+                "payload_trajectory_definition first anchor must explicitly set "
+                "build_zone_valid=true"
+            )
+
+        if (
+            self.initial_pose.reference_point != first_anchor.reference_point
+            or self.initial_pose.pos_mm != first_anchor.pos_mm
+            or self.initial_pose.rot_deg != first_anchor.rot_deg
+        ):
+            raise ValueError(
+                "payload_trajectory_definition initial_pose must match the first "
+                "anchor pose and reference_point"
+            )
+
+        for anchor in self.anchors[:-1]:
+            if anchor.goal_zone_contact or anchor.goal_zone_entry:
+                raise ValueError(
+                    "payload_trajectory_definition only the terminal motion "
+                    "anchor may assert goal-zone entry/contact"
+                )
+
+        terminal_assertion_count = 0
+        last_anchor = self.anchors[-1]
+        if last_anchor.goal_zone_contact or last_anchor.goal_zone_entry:
+            terminal_assertion_count += 1
+        if self.terminal_event is not None:
+            terminal_assertion_count += 1
+
+        if terminal_assertion_count == 0:
+            raise ValueError(
+                "payload_trajectory_definition must prove the terminal goal-zone "
+                "entry/contact in the final anchor or via terminal_event"
+            )
+        if terminal_assertion_count > 1:
+            raise ValueError(
+                "payload_trajectory_definition terminal proof must appear in the "
+                "final anchor or terminal_event, not both"
             )
         return self
 
