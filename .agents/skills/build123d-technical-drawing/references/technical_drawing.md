@@ -31,7 +31,7 @@ Use this reference when turning an existing 3D build123d model into a sheet that
 ## Problemologist Workflow
 
 - The drawing is derived from the authored 3D model, not the other way around.
-- In planner/reviewer workspaces, call `preview_drawing()` before submit or approval.
+- In planner/reviewer workspaces, call `render_technical_drawing()` before submit or approval.
 - Treat the vector export as the authoritative sheet and the preview image as the inspection surface.
 
 ## Official Tutorial

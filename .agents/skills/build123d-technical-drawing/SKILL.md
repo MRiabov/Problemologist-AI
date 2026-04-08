@@ -1,6 +1,6 @@
 ---
 name: build123d-technical-drawing
-description: Author and review build123d technical drawings with `TechnicalDrawing`, projected orthographic views, dimensioning, line layering, and SVG/DXF export. Use when creating or editing drawing scripts, orthographic sheets, annotations, or `preview_drawing()` artifacts grounded in an existing 3D build123d model.
+description: Author and review build123d technical drawings with `TechnicalDrawing`, projected orthographic views, dimensioning, line layering, and SVG/DXF export. Use when creating or editing drawing scripts, orthographic sheets, annotations, or `render_technical_drawing()` artifacts grounded in an existing 3D build123d model.
 ---
 
 # Build123d Technical Drawing
@@ -20,7 +20,7 @@ Turn an existing 3D build123d model into a clean technical drawing package. Keep
 5. Add only binding dimensions, labels, and callouts.
 6. Keep visible and hidden geometry separated by layer or line style.
 7. Export SVG for review and DXF when downstream CAD interchange is needed.
-8. In Problemologist planner/reviewer workspaces, call `preview_drawing()` on the current revision before submission or approval.
+8. In Problemologist planner/reviewer workspaces, call `render_technical_drawing()` on the current revision before submission or approval.
 
 ## Quality Rules
 

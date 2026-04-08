@@ -27,14 +27,14 @@ from utils.preview import (
     pick_preview_pixel,
     pick_preview_pixels,
     preview,
-    preview_drawing,
+    render_technical_drawing,
     query_render_bundle,
 )
 ```
 
 - `validate(result)` and `simulate(result)` are the required pre-handoff checks.
 - `submit_for_review(result)` is the final benchmark review handoff helper.
-- `preview(...)` is the live scene and objective-overlay path; use `payload_path=True` only when the current workflow needs the live payload-path overlay. `preview_drawing()` is the drafting-package path and keeps the payload overlay off.
+- `render_cad(...)` is the live scene and objective-overlay path; use `payload_path=True` only when the current workflow needs the live payload-path overlay. `render_technical_drawing()` is the drafting-package path and keeps the payload overlay off.
 - `objectives_geometry()` reconstructs benchmark objective overlays when needed.
 - `list_render_bundles()` selects the exact current or historical render bundle before you inspect media or point-pick results.
 - `query_render_bundle()` returns compact bundle metadata and frame/object slices without pulling the full media payload.
@@ -149,7 +149,7 @@ Do not invent fallback behavior to paper over contradictions. If the approved pl
 - Validation success is necessary but not sufficient.
 - Simulation success is necessary but not sufficient.
 - If render images or simulation media exist, inspect them before handoff, especially when motion is present.
-- If `preview(...)` evidence exists for the current revision, inspect the render bundle before changing geometry.
+- If `render_cad(...)` evidence exists for the current revision, inspect the render bundle before changing geometry.
 - After any significant blocker or repeated failure on the same issue, inspect the current render or simulation evidence before the next geometry change. If the same issue has failed more than three times in a row, keep inspecting render evidence on every subsequent retry until the blocker changes; use `../render-evidence/SKILL.md` as the visual-inspection playbook.
 - Treat screenshots and video as evidence, not as text summaries.
 - Keep review readiness tied to the current revision, not a stale earlier run.

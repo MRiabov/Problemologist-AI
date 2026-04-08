@@ -62,6 +62,7 @@ Open only what you need, but default to these after the role skills above:
 08. If a stage requires a manifest or hash, populate a real contract-valid file rather than weakening validation, and compute any deterministic derived values exactly.
 09. Negative eval cases must still pass deterministic hard checks at seeded entry so the run reaches LLM evaluation; they may be semantically bad, but they should not be schema-invalid or rely on approximate deterministic fields.
 10. Do not add "negative" seeds that are out of bounds, over cost/weight caps, self-intersecting, schema-invalid, or otherwise guaranteed to fail before the target role is evaluated.
+11. If the model needs to view changes, regenerate the seed views first with `scripts/update_eval_seed_renders.py` and inspect the regenerated images; do not rely on stale render artifacts or the deprecated `scripts/validate_eval_seed.py --update-renders` alias.
 
 ## File layout
 

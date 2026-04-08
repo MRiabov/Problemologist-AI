@@ -1,6 +1,6 @@
 ---
 name: engineer-planner
-description: Engineering planning role for turning benchmark handoff context into implementation-ready plan artifacts. Use when drafting or revising `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, or `solution_plan_technical_drawing_script.py`; when interpreting `benchmark_assembly_definition.yaml` and `benchmark_script.py` as read-only context; when validating cost, weight, motion contracts, detailed payload trajectory calculations, build-zone feasibility, or exact-grounded inventory mentions; when using `preview_drawing()` or media inspection to check planner drafts; when inspecting simulation evidence through frame-indexed `objects.parquet` sidecars; or when deciding whether a proposed engineering approach is infeasible and needs replanning.
+description: Engineering planning role for turning benchmark handoff context into implementation-ready plan artifacts. Use when drafting or revising `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, or `solution_plan_technical_drawing_script.py`; when interpreting `benchmark_assembly_definition.yaml` and `benchmark_script.py` as read-only context; when validating cost, weight, motion contracts, detailed payload trajectory calculations, build-zone feasibility, or exact-grounded inventory mentions; when using `render_technical_drawing()` or media inspection to check planner drafts; when inspecting simulation evidence through frame-indexed `objects.parquet` sidecars; or when deciding whether a proposed engineering approach is infeasible and needs replanning.
 ---
 
 # Engineer Planner
@@ -18,8 +18,8 @@ description: Engineering planning role for turning benchmark handoff context int
 
 Use the shared preview helpers whenever the plan needs visual evidence:
 
-- `preview(...)` for live scene inspection and engineering preview renders
-- `preview_drawing()` for drafting packages and plan evidence
+- `render_cad(...)` for live scene inspection and engineering preview renders
+- `render_technical_drawing()` for drafting packages and plan evidence
 - `objectives_geometry()` when the preview scene needs benchmark objective overlays reconstructed
 - `list_render_bundles()` when the current or historical render bundle matters
 - `query_render_bundle()` when you need compact bundle metadata or frame/object slices from a simulation bundle; use the sampled frame-indexed `objects.parquet` pose-history sidecar instead of treating `frames.jsonl` as pose data
@@ -98,7 +98,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 06. Bind views, datums, dimensions, callouts, and notes to the reviewed mechanism only; do not invent new parts, joints, motions, or geometry beyond the existing handoff.
 07. Keep planner drafting scripts aligned with the same preserved geometry, repeated quantities, and COTS identities when drafting mode is enabled.
 08. Use `validate_costing_and_price()` before submission and fix the source of any pricing or weight mismatch.
-09. Inspect relevant renders or draft drawings with `preview_drawing()` and media inspection when visual evidence exists. Use `list_render_bundles()` and `query_render_bundle()` first when the question depends on a specific revision, and use `pick_preview_pixel()` / `pick_preview_pixels()` when the question depends on a screen-space point. If simulation evidence already exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
+09. Inspect relevant renders or draft drawings with `render_technical_drawing()` and media inspection when visual evidence exists. Use `list_render_bundles()` and `query_render_bundle()` first when the question depends on a specific revision, and use `pick_preview_pixel()` / `pick_preview_pixels()` when the question depends on a screen-space point. If simulation evidence already exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
 10. Call `submit_plan()` only when the handoff is coherent, physically plausible, and ready for implementation.
 11. When motion proof is required, make `assembly_definition.yaml.motion_forecast` the coarse contract and `payload_trajectory_definition.yaml` the denser refinement; load `references/motion-trajectory-contract.md` for the calculation checklist; keep the same moving parts, preserve the same build-safe first anchor and terminal goal proof, and keep any math in `engineering_plan.md` synchronized with the actual waypoint sequence rather than with prose estimates.
 
@@ -115,8 +115,8 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 - Never explode, stagger, or otherwise layout-shift `solution_plan_evidence_script.py` for readability. If a review-only presentation layout is needed, keep that concern in the drawing companion, which may copy the validated geometry and apply explode/layout presentation there when it improves review readability.
 - Treat `solution_plan_technical_drawing_script.py` as a presentation companion: it may duplicate the validated shape tree for drawing purposes, but it must not invent a second geometry contract or diverge from the approved plan geometry.
 - Bind dimensions, datums, and notes to the preserved mechanism only.
-- Use `preview(...)` for live scene inspection and `preview_drawing()` for drafting packages; do not substitute one for the other.
-- Use `payload_path=True` on `preview(...)` when the live payload-path overlay is part of the inspection.
+- Use `render_cad(...)` for live scene inspection and `render_technical_drawing()` for drafting packages; do not substitute one for the other.
+- Use `payload_path=True` on `render_cad(...)` when the live payload-path overlay is part of the inspection.
 - Avoid over-specifying implementation details that belong in `solution_script.py`.
 - If the plan depends on exact catalog identity, keep provenance explicit rather than substituting anonymous solids.
 - If a placement depends on a real interface, derive it from the joint frame or mating datum instead of a world-space guess.

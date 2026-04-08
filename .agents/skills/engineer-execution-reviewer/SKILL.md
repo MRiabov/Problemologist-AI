@@ -11,8 +11,8 @@ Use this skill for the engineering execution gate after the coder has produced a
 
 When execution evidence needs visual checking, use the shared preview helpers explicitly:
 
-- `preview(...)` for live scene or engineer preview inspection
-- `preview_drawing()` for drafting-package review evidence
+- `render_cad(...)` for live scene or engineer preview inspection
+- `render_technical_drawing()` for drafting-package review evidence
 - `objectives_geometry()` when a preview scene needs benchmark objective overlays reconstructed
 - `list_render_bundles()` when exact bundle identity matters
 - `query_render_bundle()` when you need bundle metadata or frame/object slices without the full media payload

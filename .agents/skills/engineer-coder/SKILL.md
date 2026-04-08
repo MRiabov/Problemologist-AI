@@ -40,14 +40,14 @@ from utils.preview import (
     pick_preview_pixel,
     pick_preview_pixels,
     preview,
-    preview_drawing,
+    render_technical_drawing,
     query_render_bundle,
 )
 ```
 
 - `validate(result)` and `simulate(result)` are the required pre-handoff checks.
 - `submit_for_review(result)` is available for supporting scripts that own the final handoff step.
-- `preview(...)` is the live scene and objective-overlay path; use `payload_path=True` only when the current workflow needs the live payload-path overlay. `preview_drawing()` is the drafting-package path and keeps the payload overlay off.
+- `render_cad(...)` is the live scene and objective-overlay path; use `payload_path=True` only when the current workflow needs the live payload-path overlay. `render_technical_drawing()` is the drafting-package path and keeps the payload overlay off.
 - `objectives_geometry()` reconstructs benchmark objective overlays when needed.
 - `list_render_bundles()` locates the exact current or historical render bundle instead of assuming the latest file on disk is the right snapshot.
 - `query_render_bundle()` returns compact frame/object slices when you need bundle metadata without the full media payload.
@@ -170,7 +170,7 @@ This role should behave like a high-confidence solver, not a wandering explorer.
 - Validation success is necessary but not sufficient.
 - Simulation success is necessary but not sufficient.
 - A passing validator does not excuse skipping the simulation video or frame evidence. Use the first dynamic result to confirm direction, capture, and stability.
-- If `preview(...)` evidence exists for the current revision, inspect the corresponding render bundle before finishing.
+- If `render_cad(...)` evidence exists for the current revision, inspect the corresponding render bundle before finishing.
 - If render history matters, use `list_render_bundles()` and `query_render_bundle()` to select the exact bundle snapshot instead of assuming the newest visible render is the right one.
 - If a simulation bundle exposes frame/object slices, inspect the sampled frame-indexed `objects.parquet` pose-history sidecar rather than treating `frames.jsonl` as pose history.
 - If a question depends on screen-space picking, use `pick_preview_pixel()` or `pick_preview_pixels()` against that bundle-local snapshot before changing geometry.

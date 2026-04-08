@@ -31,7 +31,7 @@ from utils.preview import (
     pick_preview_pixel,
     pick_preview_pixels,
     preview,
-    preview_drawing,
+    render_technical_drawing,
     query_render_bundle,
 )
 ```

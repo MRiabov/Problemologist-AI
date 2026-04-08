@@ -11,8 +11,8 @@ Use this skill to decide whether the implemented benchmark is ready to hand off 
 
 When preview evidence or objective overlays are present, use the shared preview helpers explicitly:
 
-- `preview(...)` for live scene previews or benchmark evidence inspection
-- `preview_drawing()` for drafting-package review evidence
+- `render_cad(...)` for live scene previews or benchmark evidence inspection
+- `render_technical_drawing()` for drafting-package review evidence
 - `objectives_geometry()` when a benchmark preview needs reconstructed objective overlays
 - `list_render_bundles()` when exact bundle identity matters
 - `query_render_bundle()` when you need bundle metadata without the full media payload or frame/object slices from a simulation bundle

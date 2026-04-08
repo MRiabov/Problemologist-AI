@@ -153,8 +153,8 @@ Use when you need to interpret preview bundles, drafting packages, or screen-spa
 
 Common forms:
 
-- Live scene preview via `preview(...)`
-- Drafting package via `preview_drawing()`
+- Live scene preview via `render_cad(...)`
+- Drafting package via `render_technical_drawing()`
 - Bundle history selection via `list_render_bundles()`
 - Compact bundle slices via `query_render_bundle()`
 - Screen-space click-to-world queries via `pick_preview_pixel()` and `pick_preview_pixels()`
@@ -163,7 +163,7 @@ Drafting cues:
 
 - Select the exact bundle that matches the revision under test before inspecting media.
 - Use `payload_path=True` only when verifying the live payload-path overlay in a preview bundle.
-- Keep `preview(...)` and `preview_drawing()` separate; they answer different questions.
+- Keep `render_cad(...)` and `render_technical_drawing()` separate; they answer different questions.
 - Treat bundle-local history as authoritative; do not infer a world point from image bytes or a stale filename.
 - Use batch point-picks when you need to compare several candidate pixels against the same bundle snapshot.
 
