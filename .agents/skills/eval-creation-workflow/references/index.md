@@ -2,6 +2,7 @@
 
 Use this index when creating or repairing seeded eval rows.
 The same filename can appear in multiple stages, so always check the active role contract before editing.
+The canonical file-specific acceptance criteria now live in `specs/architecture/agents/agent-artifacts/`; the files in this folder are workflow helpers, maps, and fallback notes.
 When this index conflicts with the live validator, `config/prompts.yaml`, or the architecture docs, the live contract wins.
 The acceptance-criteria files linked from this index should prefer `References` sections with markdown heading citations and code/function hooks. Treat integration tests as secondary checks only.
 

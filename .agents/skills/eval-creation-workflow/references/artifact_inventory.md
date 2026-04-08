@@ -2,6 +2,7 @@
 
 Use this document when you need the full filename surface that can appear in seeded evals or eval-adjacent workspaces.
 This is an inventory, not an acceptance-criteria doc. For any row marked "needs criteria", create a dedicated per-file reference from the fallback template and specialize it to the active validator.
+The canonical per-file acceptance criteria now live in `specs/architecture/agents/agent-artifacts/`; this table keeps the same basenames for compactness.
 
 ## Scope
 

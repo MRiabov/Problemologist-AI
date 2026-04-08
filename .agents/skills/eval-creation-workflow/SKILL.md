@@ -27,18 +27,14 @@ Seeded artifacts must already satisfy any deterministic checks that will run bef
 
 For the detailed seed-hygiene checklist, contract expectations, and command snippets, see:
 
+- [agent-artifacts README](../../../specs/architecture/agents/agent-artifacts/README.md)
 - [references/index.md](references/index.md)
 - [references/role_input_index.md](references/role_input_index.md)
 - [references/common_seed_failure_patterns.md](references/common_seed_failure_patterns.md)
 - [references/file-contract-template.md](references/file-contract-template.md)
 - [references/seed-hygiene.md](references/seed-hygiene.md)
 - [references/validation-commands.md](references/validation-commands.md)
-- [references/benchmark_definition_yaml_acceptance_criteria.md](references/benchmark_definition_yaml_acceptance_criteria.md)
-- [references/benchmark_assembly_definition_yaml_acceptance_criteria.md](references/benchmark_assembly_definition_yaml_acceptance_criteria.md)
-- [references/assembly_definition_yaml_acceptance_criteria.md](references/assembly_definition_yaml_acceptance_criteria.md)
-- [references/payload_trajectory_definition_yaml_acceptance_criteria.md](references/payload_trajectory_definition_yaml_acceptance_criteria.md)
 - [references/artifact_inventory.md](references/artifact_inventory.md)
-- [references/reviewer_manifest_acceptance_criteria.md](references/reviewer_manifest_acceptance_criteria.md)
 
 If a filename does not yet have a dedicated acceptance reference, start from `references/file-contract-template.md` and specialize it with the active role contract, validator, and cross-file checks.
 Use `references/artifact_inventory.md` when you need to discover which file families are in scope before authoring the per-file criteria.
@@ -50,7 +46,7 @@ Open only what you need, but default to these after the role skills above:
 1. `specs/desired_architecture.md`
 2. `specs/architecture/agents/handover-contracts.md`
 3. `specs/architecture/agents/roles.md`
-4. `specs/architecture/evals-and-gates.md`
+4. `specs/architecture/evals-architecture.md`
 5. `specs/dataset-generation.md`
 6. `specs/integration-tests.md`
 
@@ -128,32 +124,36 @@ If the role consumes reviewer decisions, also seed the stage-specific review fil
 
 ## File-Specific Reference Library
 
-When this workflow creates or modifies any eval artifact, load the matching acceptance-criteria reference before you finalize the seed.
-Use `references/index.md` first if you need the file map.
+When this workflow creates or modifies any eval artifact, load the matching acceptance-criteria reference in `../../../specs/architecture/agents/agent-artifacts/` before you finalize the seed.
+Use `references/index.md` or `references/artifact_inventory.md` first if you need the file map.
 
-- `references/benchmark_definition_yaml_acceptance_criteria.md`
-- `references/benchmark_assembly_definition_yaml_acceptance_criteria.md`
-- `references/assembly_definition_yaml_acceptance_criteria.md`
-- `references/plan_md_acceptance_criteria.md`
-- `references/todo_md_acceptance_criteria.md`
-- `references/journal_md_acceptance_criteria.md`
-- `references/benchmark_plan_evidence_script_py_acceptance_criteria.md`
-- `references/benchmark_plan_technical_drawing_script_py_acceptance_criteria.md`
-- `references/solution_plan_evidence_script_py_acceptance_criteria.md`
-- `references/solution_plan_technical_drawing_script_py_acceptance_criteria.md`
-- `references/benchmark_script_py_acceptance_criteria.md`
-- `references/solution_script_py_acceptance_criteria.md`
-- `references/validation_results_json_acceptance_criteria.md`
-- `references/simulation_result_json_acceptance_criteria.md`
-- `references/plan_refusal_md_acceptance_criteria.md`
-- `references/workbench_report_md_acceptance_criteria.md`
-- `references/scene_json_acceptance_criteria.md`
-- `references/renders_acceptance_criteria.md`
-- `references/benchmark_plan_review_yaml_acceptance_criteria.md`
-- `references/benchmark_execution_review_yaml_acceptance_criteria.md`
-- `references/engineering_plan_review_yaml_acceptance_criteria.md`
-- `references/engineering_execution_review_yaml_acceptance_criteria.md`
-- `references/electronics_review_yaml_acceptance_criteria.md`
+The canonical files in that library use the same basenames as the workspace artifacts, including:
+
+- `benchmark_definition_yaml_acceptance_criteria.md`
+- `benchmark_assembly_definition_yaml_acceptance_criteria.md`
+- `assembly_definition_yaml_acceptance_criteria.md`
+- `plan_md_acceptance_criteria.md`
+- `todo_md_acceptance_criteria.md`
+- `journal_md_acceptance_criteria.md`
+- `benchmark_plan_evidence_script_py_acceptance_criteria.md`
+- `benchmark_plan_technical_drawing_script_py_acceptance_criteria.md`
+- `solution_plan_evidence_script_py_acceptance_criteria.md`
+- `solution_plan_technical_drawing_script_py_acceptance_criteria.md`
+- `benchmark_script_py_acceptance_criteria.md`
+- `solution_script_py_acceptance_criteria.md`
+- `validation_results_json_acceptance_criteria.md`
+- `simulation_result_json_acceptance_criteria.md`
+- `plan_refusal_md_acceptance_criteria.md`
+- `workbench_report_md_acceptance_criteria.md`
+- `scene_json_acceptance_criteria.md`
+- `payload_trajectory_definition_yaml_acceptance_criteria.md`
+- `reviewer_manifest_acceptance_criteria.md`
+- `benchmark_plan_review_yaml_acceptance_criteria.md`
+- `benchmark_execution_review_yaml_acceptance_criteria.md`
+- `engineering_plan_review_yaml_acceptance_criteria.md`
+- `engineering_execution_review_yaml_acceptance_criteria.md`
+- `electronics_review_yaml_acceptance_criteria.md`
+- `renders_acceptance_criteria.md`
 
 ## Workflow
 
