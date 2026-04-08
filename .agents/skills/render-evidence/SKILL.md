@@ -27,12 +27,13 @@ from utils.preview import (
 ```
 
 `from utils import preview_drawing` still works for compatibility, but the namespaced module is the clearer surface for new code.
+The current callable signatures and request shapes live in [function_signatures.md](references/function_signatures.md); use that snapshot instead of re-running `help(...)` for every eval.
 
 ## Read This First
 
 - `references/bundle-history.md` when you need to select or verify the correct render bundle.
 - `references/media-inspection.md` when you need to inspect images or videos.
-- `references/api_reference.md` when you need the render-query helper index or the point-pick / bundle-lookup split.
+- `references/function_signatures.md` when you need the current render-helper signatures or the point-pick / bundle-lookup split.
 - `references/point-pick.md` when you need a world-space hit or bundle-local query result from a pixel.
 
 ## Core Workflow

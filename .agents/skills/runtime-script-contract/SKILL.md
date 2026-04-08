@@ -15,6 +15,8 @@ Use this skill when authoring build123d scripts that the runtime will execute or
 ## Read This
 
 - `references/files.md` for the workspace file map and artifact ownership rules.
+- `references/function_signatures.md` for the current submission-helper signatures.
+- `../render-evidence/references/function_signatures.md` for the current preview and point-pick helper signatures.
 
 ## Canonical Imports
 
@@ -37,6 +39,7 @@ from utils.preview import (
 `shared.*` paths are implementation internals. Do not use them in authored agent scripts.
 
 For render evidence and point-pick workflows, prefer the namespaced helpers in `utils.preview`; use `utils.visualize` only as a compatibility alias when older code already references it. `list_render_bundles()` selects the exact bundle, `query_render_bundle()` returns compact bundle slices, and `pick_preview_pixel()` / `pick_preview_pixels()` resolve pixel-to-world evidence against the bundle-local snapshot.
+The exact callable signatures live in the reference snapshots listed above; use those files instead of calling `help(...)` during every eval run.
 
 For ordinary mechanical engineer scripts, keep imports minimal:
 
