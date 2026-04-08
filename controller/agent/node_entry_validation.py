@@ -29,6 +29,7 @@ from controller.agent.handover_constants import (
     ENGINEER_BENCHMARK_SOURCE_ARTIFACTS,
     ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
     ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
+    ENGINEER_PLANNER_EVIDENCE_LAYOUT_CHECK,
     ENGINEER_PLANNER_HANDOFF_ARTIFACTS,
     ENGINEERING_EXECUTION_HANDOFF_MANIFEST,
     ENGINEERING_EXECUTION_REVIEWER_HANDOFF_ARTIFACTS,
@@ -81,6 +82,7 @@ from worker_heavy.utils.file_validation import (
     validate_payload_trajectory_definition_yaml,
     validate_plan_md_structure,
     validate_plan_refusal,
+    validate_planner_evidence_script_layout_contract,
     validate_planner_handoff_cross_contract,
 )
 
@@ -388,6 +390,7 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
                 *ENGINEER_BENCHMARK_SOURCE_ARTIFACTS,
                 *_node_technical_drawing_artifacts(AgentName.ENGINEER_CODER),
             ],
+            custom_check=ENGINEER_PLANNER_EVIDENCE_LAYOUT_CHECK,
         ),
         AgentName.ELECTRONICS_REVIEWER: NodeEntryContract(
             node=AgentName.ELECTRONICS_REVIEWER,
@@ -715,6 +718,76 @@ async def engineer_benchmark_handover_custom_check(
             source=EntryValidationSource.HANDOVER,
             artifact_path="benchmark_definition.yaml",
         )
+    ]
+
+
+async def engineer_planner_evidence_layout_custom_check(
+    *,
+    contract: NodeEntryContract,  # noqa: ARG001
+    state: BaseModel | Mapping[str, Any],
+) -> list[NodeEntryValidationError]:
+    worker_session_id = _get_state_value(state, "worker_session_id")
+    session = _get_state_value(state, "session")
+    if isinstance(session, Mapping):
+        session_id = session.get("session_id")
+    else:
+        session_id = getattr(session, "session_id", None)
+    normalized_session_id = str(worker_session_id or session_id or "").strip()
+    if not normalized_session_id:
+        return [
+            NodeEntryValidationError(
+                code=REASON_HANDOVER_INVALID,
+                message=(
+                    "Engineer planner evidence-layout check failed: missing session_id."
+                ),
+                source=EntryValidationSource.HANDOVER,
+                artifact_path=SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH,
+            )
+        ]
+
+    client = WorkerClient(
+        base_url=controller_settings.worker_light_url,
+        heavy_url=controller_settings.worker_heavy_url,
+        session_id=normalized_session_id,
+        agent_role=AgentName.ENGINEER_PLANNER,
+    )
+    try:
+        evidence_script_content = await client.read_file_optional(
+            SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH
+        )
+    except Exception as exc:
+        evidence_script_content = None
+        read_error = f"solution plan evidence script read failed: {exc}"
+    else:
+        read_error = None
+    finally:
+        await client.aclose()
+
+    if read_error is not None:
+        return [
+            NodeEntryValidationError(
+                code=REASON_HANDOVER_INVALID,
+                message=f"Engineer planner entry blocked: {read_error}",
+                source=EntryValidationSource.HANDOVER,
+                artifact_path=SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH,
+            )
+        ]
+
+    if evidence_script_content is None:
+        return []
+
+    layout_errors = validate_planner_evidence_script_layout_contract(
+        artifact_name=SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH,
+        content=evidence_script_content,
+    )
+    return [
+        NodeEntryValidationError(
+            code=REASON_HANDOVER_INVALID,
+            message=error,
+            source=EntryValidationSource.HANDOVER,
+            artifact_path=SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH,
+        )
+        for error in layout_errors
     ]
 
 

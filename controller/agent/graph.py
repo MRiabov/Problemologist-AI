@@ -17,6 +17,7 @@ from controller.agent.handover_constants import (
     ENGINEER_BENCHMARK_HANDOVER_CHECK,
     ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
     ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
+    ENGINEER_PLANNER_EVIDENCE_LAYOUT_CHECK,
     ENGINEERING_EXECUTION_HANDOFF_MANIFEST,
 )
 from controller.agent.node_entry_validation import (
@@ -25,6 +26,7 @@ from controller.agent.node_entry_validation import (
     _materialize_reviewer_handover,
     build_engineer_node_contracts,
     engineer_benchmark_handover_custom_check,
+    engineer_planner_evidence_layout_custom_check,
     evaluate_node_entry_contract,
     integration_mode_enabled,
     plan_reviewer_handover_custom_check_from_session_id,
@@ -55,6 +57,40 @@ from .state import AgentState, AgentStatus
 logger = structlog.get_logger(__name__)
 
 ENGINEER_NODE_CONTRACTS = build_engineer_node_contracts()
+
+
+async def _engineer_plan_reviewer_handover_with_layout(*, contract, state):  # noqa: ANN001
+    handover_errors = await plan_reviewer_handover_custom_check_from_session_id(
+        session_id=(
+            getattr(state, "worker_session_id", None)
+            or getattr(state, "session_id", None)
+        ),
+    )
+    if handover_errors:
+        return handover_errors
+    return await engineer_planner_evidence_layout_custom_check(
+        contract=contract,
+        state=state,
+    )
+
+
+async def _engineer_execution_reviewer_handover_with_layout(*, contract, state):  # noqa: ANN001
+    handover_errors = await reviewer_handover_custom_check_from_session_id(
+        session_id=(
+            getattr(state, "worker_session_id", None)
+            or getattr(state, "session_id", None)
+        ),
+        reviewer_label="Execution",
+        manifest_path=ENGINEERING_EXECUTION_HANDOFF_MANIFEST,
+        expected_stage="engineering_execution_reviewer",
+        agent_role=AgentName.ENGINEER_EXECUTION_REVIEWER,
+    )
+    if handover_errors:
+        return handover_errors
+    return await engineer_planner_evidence_layout_custom_check(
+        contract=contract,
+        state=state,
+    )
 
 
 async def _sidecars_disabled_for_state(state: AgentState) -> bool:
@@ -218,19 +254,23 @@ async def _evaluate_engineer_node_entry(target_node: AgentName, state: AgentStat
             )
         ),
         ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK: (
-            lambda *, contract, state: (
-                plan_reviewer_handover_custom_check_from_session_id(
-                    session_id=getattr(state, "session_id", None),
-                )
+            lambda *, contract, state: _engineer_plan_reviewer_handover_with_layout(
+                contract=contract,
+                state=state,
             )
         ),
         ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK: (
-            lambda *, contract, state: reviewer_handover_custom_check_from_session_id(  # noqa: ARG005
-                session_id=getattr(state, "session_id", None),
-                reviewer_label="Execution",
-                manifest_path=ENGINEERING_EXECUTION_HANDOFF_MANIFEST,
-                expected_stage="engineering_execution_reviewer",
-                agent_role=AgentName.ENGINEER_EXECUTION_REVIEWER,
+            lambda *, contract, state: (
+                _engineer_execution_reviewer_handover_with_layout(
+                    contract=contract,
+                    state=state,
+                )
+            )
+        ),
+        ENGINEER_PLANNER_EVIDENCE_LAYOUT_CHECK: (
+            lambda *, contract, state: engineer_planner_evidence_layout_custom_check(
+                contract=contract,
+                state=state,
             )
         ),
         ELECTRONICS_REVIEWER_HANDOVER_CHECK: (

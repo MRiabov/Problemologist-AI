@@ -44,6 +44,7 @@ from shared.observability.events import emit_event
 from shared.observability.schemas import LintFailureDocsEvent, LogicFailureEvent
 from shared.script_contracts import (
     BENCHMARK_SCRIPT_PATH,
+    SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH,
     SOLUTION_SCRIPT_PATH,
     drafting_render_manifest_path_for_agent,
     technical_drawing_script_path_for_agent,
@@ -368,6 +369,23 @@ def _planner_drafting_script_names_for_node(
             "solution_plan_technical_drawing_script.py",
         ]
     return []
+
+
+def validate_planner_evidence_script_layout_contract(
+    *,
+    artifact_name: str,
+    content: str,
+) -> list[str]:
+    """Reject exploded-view wording in the engineering planning evidence script."""
+    if artifact_name != SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH:
+        return []
+    if not re.search(r"\bexploded\b", content, flags=re.IGNORECASE):
+        return []
+    return [
+        f"{artifact_name}: 'exploded' is forbidden in the planning evidence script; "
+        "keep exploded/layout presentation in "
+        "solution_plan_technical_drawing_script.py instead."
+    ]
 
 
 def _validate_exact_identifier_mentions(
@@ -2234,6 +2252,12 @@ def validate_planner_handoff_cross_contract(
         for artifact_name, content in sorted(drafting_artifacts.items()):
             if not content.strip():
                 continue
+            errors.extend(
+                validate_planner_evidence_script_layout_contract(
+                    artifact_name=artifact_name,
+                    content=content,
+                )
+            )
             if artifact_name.endswith("_technical_drawing_script.py"):
                 errors.extend(
                     _technical_drawing_script_imports_and_calls_technical_drawing(
