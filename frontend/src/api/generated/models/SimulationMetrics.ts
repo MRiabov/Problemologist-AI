@@ -4,6 +4,7 @@
 /* eslint-disable */
 import type { FailureReason } from './FailureReason';
 import type { FluidMetricResult } from './FluidMetricResult';
+import type { PayloadTrajectoryMonitorState } from './PayloadTrajectoryMonitorState';
 import type { SimulationFailure } from './SimulationFailure';
 import type { StressFieldData } from './StressFieldData';
 import type { StressSummary } from './StressSummary';
@@ -16,6 +17,7 @@ export type SimulationMetrics = {
     fail_reason?: (string | null);
     fail_mode?: (FailureReason | null);
     failure?: (SimulationFailure | null);
+    payload_trajectory_monitor?: (PayloadTrajectoryMonitorState | null);
     stress_summaries?: Array<StressSummary>;
     stress_fields?: Record<string, StressFieldData>;
     fluid_metrics?: Array<FluidMetricResult>;

@@ -57,6 +57,7 @@ export type { MessageRequest } from './models/MessageRequest';
 export type { MultiRunResult } from './models/MultiRunResult';
 export type { ObjectStoragePointer } from './models/ObjectStoragePointer';
 export { ObservabilityEventType } from './models/ObservabilityEventType';
+export type { PayloadTrajectoryMonitorState } from './models/PayloadTrajectoryMonitorState';
 export { PlanReviewManifest } from './models/PlanReviewManifest';
 export type { PreviewDesignResponse } from './models/PreviewDesignResponse';
 export { PreviewRenderingType } from './models/PreviewRenderingType';

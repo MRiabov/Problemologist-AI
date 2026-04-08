@@ -5410,6 +5410,196 @@
         ],
         "title": "ObservabilityEventType"
       },
+      "PayloadTrajectoryMonitorState": {
+        "properties": {
+          "tracked_body_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tracked Body Names"
+          },
+          "last_checked_anchor_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Checked Anchor Index"
+          },
+          "last_checked_anchor_t_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Checked Anchor T S"
+          },
+          "monitor_sample_stride_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monitor Sample Stride S"
+          },
+          "configured_consecutive_miss_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configured Consecutive Miss Count"
+          },
+          "consecutive_miss_count": {
+            "type": "integer",
+            "title": "Consecutive Miss Count",
+            "default": 0
+          },
+          "observed_position_mm": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed Position Mm"
+          },
+          "observed_rotation_deg": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed Rotation Deg"
+          },
+          "position_error_mm": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position Error Mm"
+          },
+          "rotation_error_deg": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rotation Error Deg"
+          },
+          "required_first_contacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Required First Contacts"
+          },
+          "observed_first_contacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Observed First Contacts"
+          },
+          "terminal_goal_zone_proven": {
+            "type": "boolean",
+            "title": "Terminal Goal Zone Proven",
+            "default": false
+          },
+          "failure_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Detail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PayloadTrajectoryMonitorState",
+        "description": "Runtime stop context for engineer-owned payload trajectory monitoring."
+      },
       "PlanReviewManifest": {
         "properties": {
           "status": {
@@ -6738,6 +6928,16 @@
               }
             ],
             "title": "Detail"
+          },
+          "payload_trajectory_monitor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PayloadTrajectoryMonitorState"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -6799,6 +6999,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/SimulationFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "payload_trajectory_monitor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PayloadTrajectoryMonitorState"
               },
               {
                 "type": "null"
@@ -6994,6 +7204,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/SimulationFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "payload_trajectory_monitor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PayloadTrajectoryMonitorState"
               },
               {
                 "type": "null"
