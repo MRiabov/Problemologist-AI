@@ -146,6 +146,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 12. When multiple viable implementations satisfy the handoff, prefer the more stable, cheaper, simpler, and more manufacturable one.
 13. When the approved handoff uses the engineering planner template, keep every declared inventory label and selected COTS `part_id` grounded by an exact identifier mention in `plan.md`, and preserve planner-authored assumptions, calculations, operating-envelope limits, and collision-validated layout geometry without renaming, resizing, or re-spacing them.
 14. If the motion math and the precise path disagree, repair the source handoff first; do not "prove" a different path by changing only the implementation.
+15. Never use exploded views or the word `exploded` in `solution_plan_evidence_script.py`; keep any exploded or layout presentation in `solution_plan_technical_drawing_script.py` instead.
 
 ## Retry Discipline
 
