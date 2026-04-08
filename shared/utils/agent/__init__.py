@@ -24,7 +24,10 @@ from shared.rendering import (
     render_preview,
     select_single_preview_render_subdir,
 )
-from shared.script_contracts import authored_script_path_for_agent
+from shared.script_contracts import (
+    authored_script_path_for_agent,
+    technical_drawing_script_path_for_agent,
+)
 from shared.simulation.schemas import get_default_simulator_backend
 from shared.utils.fasteners import HoleType as HoleType
 from shared.utils.fasteners import fastener_hole as fastener_hole
@@ -141,7 +144,25 @@ def _worker_light_base_url() -> str | None:
 
 
 def _script_agent_role() -> str:
-    return os.getenv(AGENT_NAME_ENV, AgentName.ENGINEER_CODER.value)
+    raw = os.getenv(AGENT_NAME_ENV, "").strip()
+    if raw:
+        return raw
+
+    workspace = _workspace_root()
+    benchmark_handoff = workspace / "benchmark_assembly_definition.yaml"
+    engineer_handoff = workspace / "assembly_definition.yaml"
+    benchmark_plan = workspace / "benchmark_plan.md"
+    engineer_plan = workspace / "engineering_plan.md"
+
+    if benchmark_plan.exists() and not engineer_plan.exists():
+        return AgentName.BENCHMARK_PLANNER.value
+    if engineer_plan.exists() and not benchmark_plan.exists():
+        return AgentName.ENGINEER_PLANNER.value
+    if benchmark_handoff.exists() and not engineer_handoff.exists():
+        return AgentName.BENCHMARK_PLANNER.value
+    if engineer_handoff.exists() and not benchmark_handoff.exists():
+        return AgentName.ENGINEER_PLANNER.value
+    return AgentName.ENGINEER_CODER.value
 
 
 def _workspace_script_path() -> str:
@@ -725,29 +746,75 @@ async def _preview_async(
             drafting=drafting,
             rendering_type=requested_rendering_type,
         )
-
-    preview_scene_bundle = export_preview_scene_bundle(
-        component,
-        objectives=None,
-        workspace_root=_workspace_root(),
-    )
     try:
-        preview_request = PreviewDesignRequest(
-            script_path="preview_scene.json",
-            bundle_base64=preview_scene_bundle,
-            orbit_pitch=orbit_pitch,
-            orbit_yaw=orbit_yaw,
-            rgb=rgb,
-            depth=depth,
-            segmentation=segmentation,
-            payload_path=payload_path,
-            drafting=drafting,
-            rendering_type=(
-                PreviewRenderingType(str(rendering_type))
-                if rendering_type is not None
-                else None
-            ),
-        )
+        agent_role = _script_agent_role()
+        fallback_bundle_base64: str | None
+        fallback_script_path: str
+        if drafting:
+            script_path = technical_drawing_script_path_for_agent(agent_role)
+            workspace_root = _workspace_root()
+            workspace_script_path = workspace_root / script_path
+            if not workspace_script_path.exists():
+                raise FileNotFoundError(
+                    f"{script_path} is required for drafting preview"
+                )
+
+            matches, mismatch_message = _ensure_component_matches_workspace_script(
+                component, script_path=script_path
+            )
+            if not matches:
+                return PreviewDesignResponse(
+                    success=False,
+                    status_text="Preview generation failed",
+                    message=mismatch_message or "Drafting script mismatch",
+                    drafting=True,
+                    rendering_type=requested_rendering_type,
+                )
+
+            preview_request = PreviewDesignRequest(
+                script_path=str(script_path),
+                bundle_base64=_workspace_bundle_base64(),
+                agent_role=agent_role,
+                orbit_pitch=orbit_pitch,
+                orbit_yaw=orbit_yaw,
+                rgb=rgb,
+                depth=depth,
+                segmentation=segmentation,
+                payload_path=payload_path,
+                drafting=True,
+                rendering_type=(
+                    PreviewRenderingType(str(rendering_type))
+                    if rendering_type is not None
+                    else None
+                ),
+            )
+            fallback_bundle_base64 = _workspace_bundle_base64()
+            fallback_script_path = str(script_path)
+        else:
+            preview_scene_bundle = export_preview_scene_bundle(
+                component,
+                objectives=None,
+                workspace_root=_workspace_root(),
+            )
+            preview_request = PreviewDesignRequest(
+                script_path="preview_scene.json",
+                bundle_base64=preview_scene_bundle,
+                agent_role=agent_role,
+                orbit_pitch=orbit_pitch,
+                orbit_yaw=orbit_yaw,
+                rgb=rgb,
+                depth=depth,
+                segmentation=segmentation,
+                payload_path=payload_path,
+                drafting=False,
+                rendering_type=(
+                    PreviewRenderingType(str(rendering_type))
+                    if rendering_type is not None
+                    else None
+                ),
+            )
+            fallback_bundle_base64 = preview_scene_bundle
+            fallback_script_path = "preview_scene.json"
     except Exception as exc:
         return PreviewDesignResponse(
             success=False,
@@ -763,8 +830,8 @@ async def _preview_async(
         response = _call_controller_preview_tool(preview_request)
     if response is None:
         response = render_preview(
-            bundle_base64=preview_scene_bundle,
-            script_path="preview_scene.json",
+            bundle_base64=fallback_bundle_base64,
+            script_path=fallback_script_path,
             orbit_pitch=orbit_pitch,
             orbit_yaw=orbit_yaw,
             rgb=rgb,
@@ -778,7 +845,7 @@ async def _preview_async(
                 else None
             ),
             session_id=os.getenv("SESSION_ID"),
-            agent_role=_script_agent_role(),
+            agent_role=agent_role,
         )
     if not response.success:
         return response
