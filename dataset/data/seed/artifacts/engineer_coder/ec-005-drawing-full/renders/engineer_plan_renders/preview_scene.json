@@ -1,0 +1,369 @@
+{
+  "component_label": "unnamed_1",
+  "entities": [
+    {
+      "label": "route_base",
+      "semantic_label": "route_base",
+      "instance_id": "route_base",
+      "instance_name": "route_base",
+      "object_type": "part",
+      "object_id": 0,
+      "pos": [
+        160.0,
+        0.0,
+        230.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/route_base.obj"
+      ],
+      "box_size": null,
+      "material_id": "aluminum_6061",
+      "body_name": "route_base",
+      "geom_name": "route_base",
+      "zone_type": null,
+      "color_rgba": [
+        0.7529411764705882,
+        0.7529411764705882,
+        0.7529411764705882,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        235,
+        59,
+        59
+      ],
+      "include_in_segmentation": true
+    },
+    {
+      "label": "entry_catcher",
+      "semantic_label": "entry_catcher",
+      "instance_id": "entry_catcher",
+      "instance_name": "entry_catcher",
+      "object_type": "part",
+      "object_id": 1,
+      "pos": [
+        -150.0,
+        0.0,
+        0.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/entry_catcher.obj"
+      ],
+      "box_size": null,
+      "material_id": "hdpe",
+      "body_name": "entry_catcher",
+      "geom_name": "entry_catcher",
+      "zone_type": null,
+      "color_rgba": [
+        0.9450980392156862,
+        0.9607843137254902,
+        0.9764705882352941,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        59,
+        110,
+        235
+      ],
+      "include_in_segmentation": true
+    },
+    {
+      "label": "outer_rail",
+      "semantic_label": "outer_rail",
+      "instance_id": "outer_rail",
+      "instance_name": "outer_rail",
+      "object_type": "part",
+      "object_id": 2,
+      "pos": [
+        280.0,
+        165.0,
+        60.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/outer_rail.obj"
+      ],
+      "box_size": null,
+      "material_id": "hdpe",
+      "body_name": "outer_rail",
+      "geom_name": "outer_rail",
+      "zone_type": null,
+      "color_rgba": [
+        0.9450980392156862,
+        0.9607843137254902,
+        0.9764705882352941,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        161,
+        235,
+        59
+      ],
+      "include_in_segmentation": true
+    },
+    {
+      "label": "inner_rail",
+      "semantic_label": "inner_rail",
+      "instance_id": "inner_rail",
+      "instance_name": "inner_rail",
+      "object_type": "part",
+      "object_id": 3,
+      "pos": [
+        260.0,
+        170.0,
+        100.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/inner_rail.obj"
+      ],
+      "box_size": null,
+      "material_id": "hdpe",
+      "body_name": "inner_rail",
+      "geom_name": "inner_rail",
+      "zone_type": null,
+      "color_rgba": [
+        0.9450980392156862,
+        0.9607843137254902,
+        0.9764705882352941,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        235,
+        59,
+        213
+      ],
+      "include_in_segmentation": true
+    },
+    {
+      "label": "blocker_skirt",
+      "semantic_label": "blocker_skirt",
+      "instance_id": "blocker_skirt",
+      "instance_name": "blocker_skirt",
+      "object_type": "part",
+      "object_id": 4,
+      "pos": [
+        105.0,
+        170.0,
+        140.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/blocker_skirt.obj"
+      ],
+      "box_size": null,
+      "material_id": "hdpe",
+      "body_name": "blocker_skirt",
+      "geom_name": "blocker_skirt",
+      "zone_type": null,
+      "color_rgba": [
+        0.9450980392156862,
+        0.9607843137254902,
+        0.9764705882352941,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        59,
+        235,
+        205
+      ],
+      "include_in_segmentation": true
+    },
+    {
+      "label": "goal_tray",
+      "semantic_label": "goal_tray",
+      "instance_id": "goal_tray",
+      "instance_name": "goal_tray",
+      "object_type": "part",
+      "object_id": 5,
+      "pos": [
+        350.0,
+        0.0,
+        0.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/goal_tray.obj"
+      ],
+      "box_size": null,
+      "material_id": "hdpe",
+      "body_name": "goal_tray",
+      "geom_name": "goal_tray",
+      "zone_type": null,
+      "color_rgba": [
+        0.9450980392156862,
+        0.9607843137254902,
+        0.9764705882352941,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        235,
+        154,
+        59
+      ],
+      "include_in_segmentation": true
+    },
+    {
+      "label": "zone_goal",
+      "semantic_label": "zone_goal",
+      "instance_id": "zone_goal",
+      "instance_name": "zone_goal",
+      "object_type": "zone",
+      "object_id": 6,
+      "pos": [
+        470.0,
+        0.0,
+        62.5
+      ],
+      "euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mesh_paths": [],
+      "box_size": [
+        50.0,
+        60.0,
+        47.5
+      ],
+      "material_id": null,
+      "body_name": null,
+      "geom_name": null,
+      "zone_type": "goal",
+      "color_rgba": [
+        0.2,
+        0.72,
+        0.34,
+        0.22
+      ],
+      "segmentation_color_rgb": [
+        103,
+        59,
+        235
+      ],
+      "include_in_segmentation": false
+    },
+    {
+      "label": "zone_forbid_0_central_blocker",
+      "semantic_label": "zone_forbid_0_central_blocker",
+      "instance_id": "zone_forbid_0_central_blocker",
+      "instance_name": "zone_forbid_0_central_blocker",
+      "object_type": "zone",
+      "object_id": 7,
+      "pos": [
+        190.0,
+        0.0,
+        75.0
+      ],
+      "euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mesh_paths": [],
+      "box_size": [
+        70.0,
+        130.0,
+        75.0
+      ],
+      "material_id": null,
+      "body_name": null,
+      "geom_name": null,
+      "zone_type": "forbid",
+      "color_rgba": [
+        0.83,
+        0.2,
+        0.2,
+        0.2
+      ],
+      "segmentation_color_rgb": [
+        66,
+        235,
+        59
+      ],
+      "include_in_segmentation": false
+    },
+    {
+      "label": "zone_build",
+      "semantic_label": "zone_build",
+      "instance_id": "zone_build",
+      "instance_name": "zone_build",
+      "object_type": "zone",
+      "object_id": 8,
+      "pos": [
+        160.0,
+        0.0,
+        120.0
+      ],
+      "euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mesh_paths": [],
+      "box_size": [
+        400.0,
+        180.0,
+        120.0
+      ],
+      "material_id": null,
+      "body_name": null,
+      "geom_name": null,
+      "zone_type": "build",
+      "color_rgba": [
+        0.55,
+        0.55,
+        0.55,
+        0.14
+      ],
+      "segmentation_color_rgb": [
+        235,
+        59,
+        117
+      ],
+      "include_in_segmentation": false
+    }
+  ],
+  "bounds_min": [
+    -240.0,
+    -180.0,
+    0.0
+  ],
+  "bounds_max": [
+    560.0,
+    180.0,
+    240.0
+  ],
+  "center": [
+    160.0,
+    0.0,
+    120.0
+  ],
+  "diagonal": 909.5053600721658
+}
