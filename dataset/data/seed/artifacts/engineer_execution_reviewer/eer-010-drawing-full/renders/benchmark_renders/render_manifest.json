@@ -4,7 +4,7 @@
   "created_at": "2026-04-08T07:04:04.643108+00:00",
   "episode_id": "066bd7b5-1d86-5680-9348-5e3b372d1257",
   "worker_session_id": "seed-renders-eer-010-drawing-full-201ae71c",
-  "revision": "a7fcc0998efefd4b4b6d70c1eb21a739b94d6bf2",
+  "revision": "e691b2472caf44ff025eaefde26a51009a5d8ec7",
   "scene_hash": "6530b7652a5b5267d246d6a574be9d4ec76b0ed4aad326eac966a1d936074552",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",

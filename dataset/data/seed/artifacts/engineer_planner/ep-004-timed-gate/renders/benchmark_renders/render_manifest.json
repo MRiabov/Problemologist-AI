@@ -4,7 +4,7 @@
   "created_at": "2026-04-08T06:35:06.650981+00:00",
   "episode_id": "df18edda-7327-57b8-b925-198dcc3fe348",
   "worker_session_id": "seed-renders-ep-004-timed-gate-a3b34764",
-  "revision": "a7fcc0998efefd4b4b6d70c1eb21a739b94d6bf2",
+  "revision": "e691b2472caf44ff025eaefde26a51009a5d8ec7",
   "scene_hash": "022fcbf0b5928c887e265a9e8f0d947c07f1c5955c2d198ae2f64cc0a7037525",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",

@@ -123,7 +123,6 @@ async def run_validate_and_price_script(
 ) -> dict[str, object]:
     """Run the canonical planner pricing script and return a structured result."""
     validator_path = _runtime_skill_script_path(
-        "skills",
         "manufacturing-knowledge",
         "scripts",
         "validate_and_price.py",
