@@ -638,6 +638,10 @@ class PreviewDesignRequest(BaseModel):
         default=None,
         description="Direct content of the script.",
     )
+    agent_role: StrictStr | None = Field(
+        default=None,
+        description="Optional workflow role used to route preview artifacts.",
+    )
     bundle_base64: str | None = Field(
         default=None,
         description="Gzipped tarball of the session workspace (base64 encoded).",

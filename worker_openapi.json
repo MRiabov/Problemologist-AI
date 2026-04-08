@@ -3254,6 +3254,18 @@
             "title": "Script Content",
             "description": "Direct content of the script."
           },
+          "agent_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Role",
+            "description": "Optional workflow role used to route preview artifacts."
+          },
           "bundle_base64": {
             "anyOf": [
               {

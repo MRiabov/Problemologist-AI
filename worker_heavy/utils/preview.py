@@ -11,10 +11,16 @@ from deprecated import deprecated
 from shared.agents import get_image_render_resolution
 from shared.models.schemas import BenchmarkDefinition
 from shared.rendering import (
+    bundle_workspace_base64,
     export_preview_scene_bundle,
     materialize_preview_response,
     render_preview,
     select_single_preview_render_subdir,
+)
+from shared.script_contracts import technical_drawing_script_path_for_agent
+from shared.utils.agent import (
+    _ensure_component_matches_workspace_script,
+    _script_agent_role,
 )
 from shared.workers.schema import PreviewDesignResponse, PreviewRenderingType
 from worker_renderer.utils.scene_builder import normalize_preview_label
@@ -46,15 +52,33 @@ def preview(
     del width, height
 
     workspace_root = Path.cwd()
-    preview_scene_bundle = export_preview_scene_bundle(
-        component,
-        objectives=objectives,
-        workspace_root=workspace_root,
-    )
     session_id = os.getenv("SESSION_ID") or None
+    agent_role = _script_agent_role()
+    if drafting:
+        script_path = technical_drawing_script_path_for_agent(agent_role)
+        workspace_script_path = workspace_root / script_path
+        if not workspace_script_path.exists():
+            raise FileNotFoundError(f"{script_path} is required for drafting preview")
+
+        matches, mismatch_message = _ensure_component_matches_workspace_script(
+            component, script_path=script_path
+        )
+        if not matches:
+            raise RuntimeError(mismatch_message or "Drafting script mismatch")
+
+        preview_bundle_base64 = bundle_workspace_base64(workspace_root)
+        preview_script_path = str(script_path)
+    else:
+        preview_bundle_base64 = export_preview_scene_bundle(
+            component,
+            objectives=objectives,
+            workspace_root=workspace_root,
+        )
+        preview_script_path = "preview_scene.json"
+
     response = render_preview(
-        bundle_base64=preview_scene_bundle,
-        script_path="preview_scene.json",
+        bundle_base64=preview_bundle_base64,
+        script_path=preview_script_path,
         orbit_pitch=orbit_pitch,
         orbit_yaw=orbit_yaw,
         rgb=rgb,
@@ -68,7 +92,7 @@ def preview(
             else None
         ),
         session_id=session_id,
-        agent_role=os.getenv("AGENT_NAME") or None,
+        agent_role=agent_role,
     )
     if not response.success:
         raise RuntimeError(response.message or "build123d preview render failed")

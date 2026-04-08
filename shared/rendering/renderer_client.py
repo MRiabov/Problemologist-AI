@@ -145,6 +145,7 @@ def render_preview(
     payload = PreviewDesignRequest(
         bundle_base64=bundle_base64,
         script_path=script_path,
+        agent_role=agent_role,
         orbit_pitch=orbit_pitch,
         orbit_yaw=orbit_yaw,
         rgb=rgb,

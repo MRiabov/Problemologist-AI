@@ -362,6 +362,26 @@ def _is_benchmark_role(agent_role: str | None) -> bool:
     return bool(agent_role and agent_role.startswith("benchmark_"))
 
 
+def _workspace_has_benchmark_preview_context(workspace_root: Path) -> bool:
+    return any(
+        (workspace_root / rel_path).exists()
+        for rel_path in (
+            "benchmark_plan.md",
+            "benchmark_assembly_definition.yaml",
+        )
+    )
+
+
+def _workspace_has_engineer_preview_context(workspace_root: Path) -> bool:
+    return any(
+        (workspace_root / rel_path).exists()
+        for rel_path in (
+            "engineering_plan.md",
+            "assembly_definition.yaml",
+        )
+    )
+
+
 def select_single_preview_render_subdir(
     workspace_root: Path, *, agent_role: str | None = None
 ) -> str:
@@ -383,8 +403,15 @@ def select_static_preview_render_subdir(
             if _is_benchmark_role(agent_role)
             else "final_solution_submission_renders"
         )
-    return (
-        "final_solution_submission_renders"
-        if (workspace_root / "assembly_definition.yaml").exists()
-        else "benchmark_renders"
-    )
+
+    benchmark_context = _workspace_has_benchmark_preview_context(workspace_root)
+    engineer_context = _workspace_has_engineer_preview_context(workspace_root)
+    if benchmark_context and not engineer_context:
+        return "benchmark_renders"
+    if engineer_context and not benchmark_context:
+        return "final_solution_submission_renders"
+    if benchmark_context:
+        return "benchmark_renders"
+    if engineer_context:
+        return "final_solution_submission_renders"
+    return "benchmark_renders"
