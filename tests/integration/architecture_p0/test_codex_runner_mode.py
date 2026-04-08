@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import fcntl
 import hashlib
 import json
@@ -641,6 +642,170 @@ def test_materialize_seed_workspace_forwards_new_terminal_flag_to_open_cli_ui(
     assert captured["new_terminal"] is True
     assert captured["provider_name"] == "qwen"
     assert captured["task_id"] == "ec-001-drawing-full"
+
+
+@pytest.mark.integration_p0
+def test_run_e2e_seed_stage_continues_after_closing_open_cli_ui_terminal(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import dataset.evals.run_e2e_seed as run_e2e_seed_module
+
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+    stage_calls: list[str] = []
+
+    class FakeLocalWorkspaceClient:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    async def fake_preflight_seeded_entry_contract(**kwargs):
+        return None
+
+    async def fake_verify_workspace_for_agent(**kwargs):
+        return SimpleNamespace(
+            success=True,
+            verification_name="local-verification",
+            errors=[],
+            details={},
+        )
+
+    def fake_materialize_seed_workspace(**kwargs):
+        stage_calls.append("materialize_seed_workspace")
+        return SimpleNamespace(
+            workspace_dir=workspace_dir,
+            prompt_text="prompt text",
+        )
+
+    def fake_open_cli_ui(*args, **kwargs):
+        stage_calls.append("open_cli_ui")
+        return 130
+
+    def fake_launch_cli_exec(*args, **kwargs):
+        stage_calls.append("launch_cli_exec")
+        return 0
+
+    monkeypatch.setattr(
+        "evals.logic.codex_workspace.LocalWorkspaceClient",
+        FakeLocalWorkspaceClient,
+    )
+    monkeypatch.setattr(
+        "evals.logic.codex_workspace.materialize_seed_workspace",
+        fake_materialize_seed_workspace,
+    )
+    monkeypatch.setattr(
+        "evals.logic.codex_workspace.open_cli_ui",
+        fake_open_cli_ui,
+    )
+    monkeypatch.setattr(
+        "evals.logic.codex_workspace.launch_cli_exec",
+        fake_launch_cli_exec,
+    )
+    monkeypatch.setattr(
+        "evals.logic.codex_workspace.verify_workspace_for_agent",
+        fake_verify_workspace_for_agent,
+    )
+    monkeypatch.setattr(
+        "evals.logic.workspace.preflight_seeded_entry_contract",
+        fake_preflight_seeded_entry_contract,
+    )
+    monkeypatch.setattr(run_e2e_seed_module, "_simulation_success", lambda _: True)
+
+    stage = run_e2e_seed_module.StageSpec(AgentName.BENCHMARK_PLANNER)
+    item = EvalDatasetItem.model_validate(
+        {
+            "id": run_e2e_seed_module.DEFAULT_TASK_ID,
+            "task": "benchmark planner seed",
+            "complexity_level": 0,
+            "technical_drawing_mode": DraftingMode.FULL,
+        }
+    )
+
+    result = asyncio.run(
+        run_e2e_seed_module._run_stage(
+            stage=stage,
+            item=item,
+            workspace_root=tmp_path,
+            provider_name="qwen",
+            yolo=True,
+            source_seed_dir=tmp_path / "seed",
+            open_cli_ui_requested=True,
+            open_cli_ui_new_terminal=True,
+        )
+    )
+
+    assert result.launch_return_code == 0
+    assert result.verification_success is True
+    assert stage_calls == [
+        "materialize_seed_workspace",
+        "open_cli_ui",
+        "launch_cli_exec",
+    ]
+
+
+@pytest.mark.integration_p0
+def test_run_e2e_seed_resume_from_dir_uses_checkpoint(tmp_path: Path):
+    import dataset.evals.run_e2e_seed as run_e2e_seed_module
+    from evals.logic.models import E2EResumeStageRecord
+
+    seed_dir = tmp_path / "seed"
+    seed_dir.mkdir()
+    workspace_root = tmp_path / "resume-root"
+    stage_dir = workspace_root / "workspaces" / "benchmark_planner-1111aaaa"
+    stage_dir.mkdir(parents=True)
+
+    stage_record = E2EResumeStageRecord(
+        stage_index=0,
+        agent_name=AgentName.BENCHMARK_PLANNER,
+        workspace_dir=stage_dir,
+        session_id="session-1",
+        launch_return_code=0,
+        verification_name="local-verification",
+        verification_success=True,
+        simulation_success=None,
+        review_decision=None,
+    )
+    run_e2e_seed_module._save_resume_state(
+        workspace_root=workspace_root,
+        seed_dir=seed_dir,
+        completed_stages=[stage_record],
+    )
+
+    plan = run_e2e_seed_module._build_resume_plan(
+        seed_dir=seed_dir,
+        workspace_root=workspace_root,
+        resume_from_dir=workspace_root,
+        resume_from_agent=None,
+    )
+
+    assert plan.start_stage_index == 1
+    assert plan.source_seed_dir == stage_dir
+    assert plan.resume_label == f"{stage_record.agent_name.value}@{stage_dir}"
+    assert len(plan.completed_stages) == 1
+
+
+@pytest.mark.integration_p0
+def test_run_e2e_seed_resume_from_agent_handle_uses_stage_dir(tmp_path: Path):
+    import dataset.evals.run_e2e_seed as run_e2e_seed_module
+
+    seed_dir = tmp_path / "seed"
+    seed_dir.mkdir()
+    workspace_root = tmp_path / "resume-root"
+    stage_dir = workspace_root / "workspaces" / "benchmark_planner-1111aaaa"
+    stage_dir.mkdir(parents=True)
+    (stage_dir / "prompt.md").write_text("prompt\n", encoding="utf-8")
+
+    plan = run_e2e_seed_module._build_resume_plan(
+        seed_dir=seed_dir,
+        workspace_root=workspace_root,
+        resume_from_dir=None,
+        resume_from_agent=f"benchmark_planner@{stage_dir}",
+    )
+
+    assert plan.workspace_root == workspace_root
+    assert plan.start_stage_index == 1
+    assert plan.source_seed_dir == stage_dir
+    assert plan.resume_label == f"benchmark_planner@{stage_dir}"
 
 
 @pytest.mark.integration_p0
