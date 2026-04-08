@@ -566,6 +566,29 @@ def test_materialize_seed_workspace_uses_generic_cli_flag_names(
 
 
 @pytest.mark.integration_p0
+def test_materialize_seed_workspace_defaults_provider_to_qwen(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from dataset.evals.materialize_seed_workspace import _parse_args
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "materialize_seed_workspace.py",
+            "--agent",
+            "engineer_coder",
+            "--task-id",
+            "ec-001-drawing-full",
+            "--no-yolo",
+        ],
+    )
+    args = _parse_args()
+
+    assert args.provider == "qwen"
+
+
+@pytest.mark.integration_p0
 def test_materialize_seed_workspace_forwards_new_terminal_flag_to_open_cli_ui(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

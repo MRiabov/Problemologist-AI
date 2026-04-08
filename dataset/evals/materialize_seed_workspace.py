@@ -113,11 +113,11 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--provider",
-        default=os.getenv("PROBLEMOLOGIST_CLI_PROVIDER", "codex"),
+        default=os.getenv("PROBLEMOLOGIST_CLI_PROVIDER", "qwen"),
         choices=available_cli_providers(),
         help=(
             "CLI provider to use when launching the workspace after materialization "
-            "(default: codex)."
+            "(default: qwen)."
         ),
     )
     parser.add_argument(
