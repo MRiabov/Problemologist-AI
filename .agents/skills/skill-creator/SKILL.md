@@ -85,6 +85,7 @@ Documentation and reference material intended to be loaded as needed into contex
 
 - **When to include**: For documentation that Claude should reference while working
 - **Examples**: `references/finance.md` for financial schemas, `references/mnda.md` for company NDA template, `references/policies.md` for company policies, `references/api_docs.md` for API specifications
+- **Generated snapshots**: For helper surfaces that change with the runtime, keep exact callable signatures in a dedicated reference file such as `references/function_signatures.md`. Mark the file as generated or derived from the live module and refresh it when the source surface changes instead of hand-maintaining signatures in `SKILL.md`.
 - **Use cases**: Database schemas, API documentation, domain knowledge, company policies, detailed workflow guides
 - **Benefits**: Keeps SKILL.md lean, loaded only when Claude determines it's needed
 - **Best practice**: If files are large (>10k words), include grep search patterns in SKILL.md

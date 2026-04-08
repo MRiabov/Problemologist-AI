@@ -83,6 +83,7 @@ Documentation and reference material intended to be loaded into context to infor
 - Product management: `communication.md`, `context_building.md` - detailed workflow guides
 - BigQuery: API reference documentation and query examples
 - Finance: Schema documentation, company policies
+- Function signatures: `function_signatures.md` - current callable surfaces for runtime helpers or APIs
 
 **Appropriate for:** In-depth documentation, API references, database schemas, comprehensive guides, or any detailed information that Claude should reference while working.
 
@@ -122,33 +123,32 @@ if __name__ == "__main__":
     main()
 '''
 
-EXAMPLE_REFERENCE = """# Reference Documentation for {skill_title}
+EXAMPLE_REFERENCE = """# Generated Function Signatures for {skill_title}
 
-This is a placeholder for detailed reference documentation.
-Replace with actual reference content or delete if not needed.
+This is a placeholder for a generated snapshot of the current callable surface.
+Replace it with the skill's actual helper signatures or delete it if not needed.
 
 Example real reference docs from other skills:
 - product-management/references/communication.md - Comprehensive guide for status updates
 - product-management/references/context_building.md - Deep-dive on gathering context
 - bigquery/references/ - API references and query examples
 
-## When Reference Docs Are Useful
+## When Generated Signature Snapshots Are Useful
 
-Reference docs are ideal for:
-- Comprehensive API documentation
-- Detailed workflow guides
-- Complex multi-step processes
-- Information too lengthy for main SKILL.md
-- Content that's only needed for specific use cases
+Generated signature snapshots are ideal for:
+- Runtime helper signatures
+- API call shapes that change with the source module
+- Request and response shapes that are too detailed for main SKILL.md
+- Content that should be refreshed from the source of truth instead of hand-edited
 
 ## Structure Suggestions
 
-### API Reference Example
-- Overview
-- Authentication
-- Endpoints with examples
-- Error codes
-- Rate limits
+### Function Signatures Example
+- Current helper names
+- Exact parameter types
+- Request shapes
+- Return types
+- Compatibility notes
 
 ### Workflow Guide Example
 - Prerequisites
@@ -241,12 +241,12 @@ def init_skill(skill_name, path):
         example_script.chmod(0o755)
         print("✅ Created scripts/example.py")
 
-        # Create references/ directory with example reference doc
+        # Create references/ directory with example reference snapshot
         references_dir = skill_dir / "references"
         references_dir.mkdir(exist_ok=True)
-        example_reference = references_dir / "api_reference.md"
+        example_reference = references_dir / "function_signatures.md"
         example_reference.write_text(EXAMPLE_REFERENCE.format(skill_title=skill_title))
-        print("✅ Created references/api_reference.md")
+        print("✅ Created references/function_signatures.md")
 
         # Create assets/ directory with example asset placeholder
         assets_dir = skill_dir / "assets"
