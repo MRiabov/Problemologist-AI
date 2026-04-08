@@ -6,6 +6,7 @@ from pathlib import Path
 
 import structlog
 from build123d import Compound, Part
+from deprecated import deprecated
 
 from shared.agents import get_image_render_resolution
 from shared.models.schemas import BenchmarkDefinition
@@ -21,6 +22,7 @@ from worker_renderer.utils.scene_builder import normalize_preview_label
 logger = structlog.get_logger(__name__)
 
 
+@deprecated("Use render_cad instead. preview remains as a compatibility alias only.")
 def preview(
     component: Part | Compound,
     orbit_pitch: float | list[float] = 45.0,

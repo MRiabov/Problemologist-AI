@@ -67,6 +67,76 @@
         "summary": "Api Preview",
         "description": "Render a preview of the CAD design from specified camera angles.",
         "operationId": "api_preview_benchmark_preview_post",
+        "deprecated": true,
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          },
+          {
+            "name": "x-agent-role",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Role"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewDesignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewDesignResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/benchmark/render_cad": {
+      "post": {
+        "tags": [
+          "worker-heavy"
+        ],
+        "summary": "Api Preview",
+        "description": "Render a preview of the CAD design from specified camera angles.",
+        "operationId": "api_preview_benchmark_render_cad_post",
         "parameters": [
           {
             "name": "x-session-id",

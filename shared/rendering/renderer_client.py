@@ -156,7 +156,7 @@ def render_preview(
         script_content=script_content,
         smoke_test_mode=smoke_test_mode,
     ).model_dump(mode="json")
-    url = f"{renderer_base_url()}/benchmark/preview"
+    url = f"{renderer_base_url()}/benchmark/render_cad"
     data = _post_json_with_busy_retry(
         url=url,
         payload=payload,
@@ -165,6 +165,39 @@ def render_preview(
         timeout=60.0,
     )
     return PreviewDesignResponse.model_validate(data)
+
+
+def render_cad(
+    *,
+    bundle_base64: str | None,
+    script_path: str,
+    orbit_pitch: float | list[float],
+    orbit_yaw: float | list[float],
+    session_id: str | None = None,
+    agent_role: str | None = None,
+    script_content: str | None = None,
+    smoke_test_mode: bool | None = None,
+    rgb: bool | None = None,
+    depth: bool | None = None,
+    segmentation: bool | None = None,
+    payload_path: bool = False,
+    rendering_type: PreviewRenderingType | str | None = None,
+) -> PreviewDesignResponse:
+    return render_preview(
+        bundle_base64=bundle_base64,
+        script_path=script_path,
+        orbit_pitch=orbit_pitch,
+        orbit_yaw=orbit_yaw,
+        session_id=session_id,
+        agent_role=agent_role,
+        script_content=script_content,
+        smoke_test_mode=smoke_test_mode,
+        rgb=rgb,
+        depth=depth,
+        segmentation=segmentation,
+        payload_path=payload_path,
+        rendering_type=rendering_type,
+    )
 
 
 def render_preview_drawing(
@@ -184,6 +217,29 @@ def render_preview_drawing(
         orbit_pitch=orbit_pitch,
         orbit_yaw=orbit_yaw,
         drafting=True,
+        session_id=session_id,
+        agent_role=agent_role,
+        script_content=script_content,
+        smoke_test_mode=smoke_test_mode,
+    )
+
+
+def render_technical_drawing(
+    *,
+    bundle_base64: str | None,
+    script_path: str,
+    orbit_pitch: float | list[float],
+    orbit_yaw: float | list[float],
+    session_id: str | None = None,
+    agent_role: str | None = None,
+    script_content: str | None = None,
+    smoke_test_mode: bool | None = None,
+) -> PreviewDesignResponse:
+    return render_preview_drawing(
+        bundle_base64=bundle_base64,
+        script_path=script_path,
+        orbit_pitch=orbit_pitch,
+        orbit_yaw=orbit_yaw,
         session_id=session_id,
         agent_role=agent_role,
         script_content=script_content,

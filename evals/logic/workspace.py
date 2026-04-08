@@ -313,7 +313,7 @@ def _drafting_prompt_text(agent_name: AgentName) -> str:
     return (
         "# Drafting Prompt\n\n"
         f"Agent: {agent_name.value}\n\n"
-        "Use `preview_drawing()` to inspect the drafted package before the next "
+        "Use `render_technical_drawing()` to inspect the drafted package before the next "
         "handoff step.\n"
     )
 

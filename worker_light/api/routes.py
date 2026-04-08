@@ -241,9 +241,15 @@ async def api_inspect_topology(
 
 
 @light_router.post(
+    "/benchmark/render_cad",
+    response_model=PreviewDesignResponse,
+    response_model_exclude_none=True,
+)
+@light_router.post(
     "/benchmark/preview",
     response_model=PreviewDesignResponse,
     response_model_exclude_none=True,
+    deprecated=True,
 )
 async def api_preview(
     request: PreviewDesignRequest,

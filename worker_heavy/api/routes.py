@@ -490,9 +490,15 @@ async def api_analyze(
 
 
 @heavy_router.post(
+    "/benchmark/render_cad",
+    response_model=PreviewDesignResponse,
+    response_model_exclude_none=True,
+)
+@heavy_router.post(
     "/benchmark/preview",
     response_model=PreviewDesignResponse,
     response_model_exclude_none=True,
+    deprecated=True,
 )
 async def api_preview(
     request: PreviewDesignRequest,

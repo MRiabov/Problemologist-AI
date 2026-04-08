@@ -899,7 +899,7 @@ class WorkerClient:
                 )
             else:
                 response = await client.post(
-                    f"{self.base_url}/benchmark/preview",
+                    f"{self.base_url}/benchmark/render_cad",
                     json=payload,
                     headers=self._request_headers(stage=preview_agent_role),
                     timeout=300.0,

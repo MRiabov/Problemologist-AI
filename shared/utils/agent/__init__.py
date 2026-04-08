@@ -13,6 +13,7 @@ from uuid import uuid4
 import httpx
 import structlog
 from build123d import Compound, Part
+from deprecated import deprecated
 from pydantic import BaseModel
 
 from shared.enums import AgentName
@@ -309,7 +310,7 @@ def _call_worker_light_preview(
     try:
         with httpx.Client(timeout=300.0) as client:
             resp = client.post(
-                f"{worker_light_url}/benchmark/preview",
+                f"{worker_light_url}/benchmark/render_cad",
                 json=payload.model_dump(mode="json"),
                 headers={
                     "X-Session-ID": session_id or "default",
@@ -681,7 +682,7 @@ class _PreviewResponseProxy:
             self._resolved = asyncio.run(self._factory())
             return self._resolved
         raise RuntimeError(
-            "preview() must be awaited when called from an async context"
+            "render_cad() must be awaited when called from an async context"
         )
 
     def __await__(self):
@@ -824,7 +825,7 @@ async def _preview_async(
     return response
 
 
-def preview(
+def render_cad(
     component: Part | Compound,
     orbit_pitch: float | list[float] = 45,
     orbit_yaw: float | list[float] = 45,
@@ -848,7 +849,30 @@ def preview(
     )
 
 
-def preview_drawing(
+@deprecated("Use render_cad instead. preview remains as a compatibility alias only.")
+def preview(
+    component: Part | Compound,
+    orbit_pitch: float | list[float] = 45,
+    orbit_yaw: float | list[float] = 45,
+    rgb: bool | None = None,
+    depth: bool | None = None,
+    segmentation: bool | None = None,
+    payload_path: bool = False,
+    rendering_type: PreviewRenderingType | str | None = None,
+) -> _PreviewResponseProxy:
+    return render_cad(
+        component,
+        orbit_pitch=orbit_pitch,
+        orbit_yaw=orbit_yaw,
+        rgb=rgb,
+        depth=depth,
+        segmentation=segmentation,
+        payload_path=payload_path,
+        rendering_type=rendering_type,
+    )
+
+
+def render_technical_drawing(
     component: Part | Compound,
     orbit_pitch: float | list[float] = 45,
     orbit_yaw: float | list[float] = 45,
@@ -861,6 +885,22 @@ def preview_drawing(
             payload_path=False,
             drafting=True,
         )
+    )
+
+
+@deprecated(
+    "Use render_technical_drawing instead. preview_drawing remains as a "
+    "compatibility alias only."
+)
+def preview_drawing(
+    component: Part | Compound,
+    orbit_pitch: float | list[float] = 45,
+    orbit_yaw: float | list[float] = 45,
+) -> _PreviewResponseProxy:
+    return render_technical_drawing(
+        component,
+        orbit_pitch=orbit_pitch,
+        orbit_yaw=orbit_yaw,
     )
 
 
