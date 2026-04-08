@@ -147,7 +147,8 @@ agents:
         - solution_plan_evidence_script.py
         - solution_plan_technical_drawing_script.py
         - payload_trajectory_definition.yaml
-        - plan.md
+        - engineering_plan.md
+        - benchmark_plan.md
         - todo.md
         - journal.md
         - renders/**
@@ -155,7 +156,8 @@ agents:
         - .manifests/**
       write:
         allow:
-        - plan.md
+        - engineering_plan.md
+        - benchmark_plan.md
         - todo.md
         - journal.md
         - assembly_definition.yaml
@@ -201,7 +203,8 @@ agents:
         - config/**
         - .agents/skills/**
         - utils/**
-        - plan.md
+        - engineering_plan.md
+        - benchmark_plan.md
         - todo.md
         - journal.md
         - benchmark_definition.yaml
@@ -224,7 +227,8 @@ agents:
         - renders/current-episode/**
         - plan_refusal.md
         - payload_trajectory_definition.yaml
-        - plan.md
+        - engineering_plan.md
+        - benchmark_plan.md
         - assembly_definition.yaml
         - reviews/engineering-plan-review-decision-round-*.yaml
         - reviews/engineering-plan-review-comments-round-*.yaml
@@ -256,7 +260,8 @@ agents:
         - .
         - .agents/skills/**
         - utils/**
-        - plan.md
+        - engineering_plan.md
+        - engineering_plan.md
         - todo.md
         - journal.md
         - benchmark_definition.yaml
@@ -283,7 +288,8 @@ agents:
         deny:
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
-        - plan.md
+        - engineering_plan.md
+        - engineering_plan.md
         - .agents/skills/**
         - utils/**
         - reviews/**
@@ -315,7 +321,10 @@ agents:
         - config/**
         - .agents/skills/**
         - utils/**
-        - plan.md
+        - benchmark_plan.md
+        - benchmark_plan.md
+        - engineering_plan.md
+        - benchmark_plan.md
         - todo.md
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
@@ -365,7 +374,8 @@ agents:
         - config/**
         - .agents/skills/**
         - utils/**
-        - plan.md
+        - benchmark_plan.md
+        - benchmark_plan.md
         - todo.md
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
@@ -420,7 +430,7 @@ agents:
         - benchmark_assembly_definition.yaml
         - benchmark_plan_evidence_script.py
         - benchmark_plan_technical_drawing_script.py
-        - plan.md
+        - benchmark_plan.md
         - todo.md
         - journal.md
         - assets/**
@@ -430,7 +440,7 @@ agents:
         - .manifests/**
       write:
         allow:
-        - plan.md
+        - benchmark_plan.md
         - todo.md
         - journal.md
         - benchmark_definition.yaml
@@ -469,7 +479,7 @@ agents:
         - config/**
         - .agents/skills/**
         - utils/**
-        - plan.md
+        - engineering_plan.md
         - todo.md
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
@@ -509,7 +519,7 @@ agents:
         - config/**
         - .agents/skills/**
         - utils/**
-        - plan.md
+        - engineering_plan.md
         - todo.md
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
@@ -559,14 +569,14 @@ agents:
         - assembly_definition.yaml
         - solution_plan_evidence_script.py
         - solution_plan_technical_drawing_script.py
-        - plan.md
+        - engineering_plan.md
         - todo.md
         - journal.md
         deny:
         - .manifests/**
       write:
         allow:
-        - plan.md
+        - engineering_plan.md
         - todo.md
         - journal.md
         - assembly_definition.yaml
@@ -601,7 +611,7 @@ agents:
         - config/**
         - .agents/skills/**
         - utils/**
-        - plan.md
+        - engineering_plan.md
         - todo.md
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
@@ -645,6 +655,8 @@ agents:
         - benchmark_definition.yaml
         - benchmark_assembly_definition.yaml
         - assembly_definition.yaml
+        - benchmark_plan.md
+        - engineering_plan.md
         - plan.md
         - todo.md
         - journal.md

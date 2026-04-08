@@ -75,6 +75,7 @@ class StackProfile:
         env = {
             "PROBLEMOLOGIST_STACK_PROFILE": self.name,
             "COMPOSE_PROJECT_NAME": self.compose_project_name,
+            "PROBLEMOLOGIST_RENDER_PARALLEL_MODALITIES": "false",
             "IS_INTEGRATION_TEST": "true"
             if self.name == STACK_PROFILE_INTEGRATION
             else "false",

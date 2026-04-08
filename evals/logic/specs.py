@@ -7,19 +7,19 @@ from shared.eval_artifacts import plan_artifacts_for_agent
 # must be included.
 PLANNER_REQUIRED_FILES: dict[AgentName, tuple[str, ...]] = {
     AgentName.BENCHMARK_PLANNER: (
-        "plan.md",
+        "benchmark_plan.md",
         "todo.md",
         "benchmark_definition.yaml",
         "benchmark_assembly_definition.yaml",
     ),
     AgentName.ENGINEER_PLANNER: (
-        "plan.md",
+        "engineering_plan.md",
         "todo.md",
         "benchmark_definition.yaml",
         "assembly_definition.yaml",
     ),
     AgentName.ELECTRONICS_PLANNER: (
-        "plan.md",
+        "engineering_plan.md",
         "todo.md",
         "benchmark_definition.yaml",
         "assembly_definition.yaml",
