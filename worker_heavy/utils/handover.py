@@ -14,6 +14,7 @@ from shared.models.simulation import SimulationResult
 from shared.script_contracts import (
     BENCHMARK_SCRIPT_PATH,
     drafting_render_manifest_path_for_agent,
+    plan_path_for_reviewer_stage,
     technical_drawing_script_path_for_agent,
 )
 from shared.workers.loader import load_component_from_script
@@ -337,15 +338,21 @@ def submit_for_review(
 
     # 1. Validate mandatory base files (INT-005)
 
-    # plan.md
-    plan_path = cwd / "plan.md"
+    plan_artifact_name = plan_path_for_reviewer_stage(normalized_stage).as_posix()
+    legacy_plan_artifact_name = "plan.md"
+
+    # benchmark_plan.md / engineering_plan.md
+    plan_path = cwd / plan_artifact_name
     plan_content: str | None = None
+    if not plan_path.exists():
+        plan_path = cwd / legacy_plan_artifact_name
     if plan_path.exists():
         from .file_validation import validate_plan_md_structure
 
         plan_content = plan_path.read_text(encoding="utf-8")
-        lowered = plan_content.lower()
-        plan_type = "benchmark" if "learning objective" in lowered else "engineering"
+        plan_type = (
+            "benchmark" if normalized_stage == "benchmark_reviewer" else "engineering"
+        )
         is_valid, errors = validate_plan_md_structure(
             plan_content, plan_type=plan_type, session_id=session_id
         )
@@ -356,10 +363,10 @@ def submit_for_review(
                 violations=errors,
                 session_id=session_id,
             )
-            raise ValueError(f"plan.md invalid: {errors}")
+            raise ValueError(f"{plan_artifact_name} invalid: {errors}")
     else:
         logger.warning("plan_md_missing", session_id=session_id)
-        raise ValueError("plan.md is missing (required for submission)")
+        raise ValueError(f"{plan_artifact_name} is missing (required for submission)")
 
     # todo.md
     todo_path = cwd / "todo.md"
@@ -503,6 +510,31 @@ def submit_for_review(
         )
         raise ValueError("Pricing contract violation: " + "; ".join(cost_errors))
 
+    validation_results_path = cwd / "validation_results.json"
+    if not validation_results_path.exists():
+        logger.warning("prior_validation_missing", session_id=session_id)
+        raise ValueError(
+            "Prior validation missing. Call /benchmark/validate before submission."
+        )
+    validation_record = ValidationResultRecord.model_validate_json(
+        validation_results_path.read_text(encoding="utf-8")
+    )
+    if not validation_record.success:
+        logger.warning("prior_validation_failed", session_id=session_id)
+        raise ValueError(
+            "Prior validation failed. Fix validation errors before submission."
+        )
+    if validation_record.script_sha256 != script_sha256:
+        logger.warning(
+            "prior_validation_stale_for_script",
+            session_id=session_id,
+            validation_script_sha256=validation_record.script_sha256,
+            current_script_sha256=script_sha256,
+        )
+        raise ValueError(
+            "Prior validation is stale for current script revision. Re-run validate."
+        )
+
     component_inventory_tokens = (
         _benchmark_script_expected_tokens(
             benchmark_definition=objectives_model,
@@ -599,31 +631,6 @@ def submit_for_review(
                     session_id=session_id,
                 )
                 raise ValueError(f"Submission rejected (Weight): {msg}")
-
-    validation_results_path = cwd / "validation_results.json"
-    if not validation_results_path.exists():
-        logger.warning("prior_validation_missing", session_id=session_id)
-        raise ValueError(
-            "Prior validation missing. Call /benchmark/validate before submission."
-        )
-    validation_record = ValidationResultRecord.model_validate_json(
-        validation_results_path.read_text(encoding="utf-8")
-    )
-    if not validation_record.success:
-        logger.warning("prior_validation_failed", session_id=session_id)
-        raise ValueError(
-            "Prior validation failed. Fix validation errors before submission."
-        )
-    if validation_record.script_sha256 != script_sha256:
-        logger.warning(
-            "prior_validation_stale_for_script",
-            session_id=session_id,
-            validation_script_sha256=validation_record.script_sha256,
-            current_script_sha256=script_sha256,
-        )
-        raise ValueError(
-            "Prior validation is stale for current script revision. Re-run validate."
-        )
 
     planner_node_type = (
         AgentName.BENCHMARK_PLANNER

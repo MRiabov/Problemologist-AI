@@ -54,6 +54,7 @@ from shared.script_contracts import (
     BENCHMARK_SCRIPT_PATH,
     SOLUTION_SCRIPT_PATH,
     drafting_render_manifest_path_for_agent,
+    plan_path_for_agent,
     planner_role_for_drafting_script_path,
     technical_drawing_script_path_for_agent,
 )
@@ -1440,7 +1441,8 @@ def validate_subprocess(
             if planner_role == AgentName.BENCHMARK_PLANNER
             else session_root_path / "assembly_definition.yaml"
         )
-        plan_path = session_root_path / "plan.md"
+        plan_path = session_root_path / plan_path_for_agent(planner_role).as_posix()
+        legacy_plan_path = session_root_path / "plan.md"
 
         if not benchmark_definition_path.exists():
             return False, (
@@ -1478,7 +1480,13 @@ def validate_subprocess(
             manufacturing_config = load_required_merged_config()
 
         plan_text = (
-            plan_path.read_text(encoding="utf-8") if plan_path.exists() else None
+            plan_path.read_text(encoding="utf-8")
+            if plan_path.exists()
+            else (
+                legacy_plan_path.read_text(encoding="utf-8")
+                if legacy_plan_path.exists()
+                else None
+            )
         )
         script_name = Path(script_path).name
         drafted_script_path = session_root_path / script_name

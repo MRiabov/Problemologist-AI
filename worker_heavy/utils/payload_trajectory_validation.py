@@ -194,15 +194,15 @@ def _make_transform(
     initial_pose_pos_mm: tuple[float, float, float],
     initial_pose_rot_deg: tuple[float, float, float],
 ) -> Location:
-    delta_pos = tuple(
-        float(sample_pos_mm[index]) - float(initial_pose_pos_mm[index])
-        for index in range(3)
+    sample_location = Location(
+        tuple(float(value) for value in sample_pos_mm),
+        tuple(float(value) for value in sample_rot_deg),
     )
-    delta_rot = tuple(
-        float(sample_rot_deg[index]) - float(initial_pose_rot_deg[index])
-        for index in range(3)
+    initial_location = Location(
+        tuple(float(value) for value in initial_pose_pos_mm),
+        tuple(float(value) for value in initial_pose_rot_deg),
     )
-    return Location(delta_pos, delta_rot)
+    return sample_location * initial_location.inverse()
 
 
 def _anchor_sample_points(

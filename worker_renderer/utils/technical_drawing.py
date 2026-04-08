@@ -83,12 +83,29 @@ def _sanitize_filename(text: str) -> str:
     return cleaned.replace("/", "_").replace("\\", "_")
 
 
-def _load_assembly_definition(root: Path) -> AssemblyDefinition:
-    assembly_path = root / "assembly_definition.yaml"
-    if not assembly_path.exists():
-        raise FileNotFoundError(
-            "assembly_definition.yaml is required for drafting preview"
-        )
+def _load_assembly_definition(
+    root: Path,
+    *,
+    benchmark_drafting: bool = False,
+) -> AssemblyDefinition:
+    assembly_candidates = (
+        ("benchmark_assembly_definition.yaml", "benchmark_assembly_definition.yaml"),
+        ("assembly_definition.yaml", "assembly_definition.yaml"),
+    )
+    if not benchmark_drafting:
+        assembly_candidates = tuple(reversed(assembly_candidates))
+
+    assembly_path = None
+    required_name = "assembly_definition.yaml"
+    for candidate_name, candidate_required_name in assembly_candidates:
+        candidate_path = root / candidate_name
+        if candidate_path.exists():
+            assembly_path = candidate_path
+            required_name = candidate_required_name
+            break
+
+    if assembly_path is None:
+        raise FileNotFoundError(f"{required_name} is required for drafting preview")
 
     raw = assembly_path.read_text(encoding="utf-8")
     data = yaml.safe_load(raw) or {}
@@ -241,7 +258,13 @@ def render_technical_drawing_preview(
     agent_role: str | None = None,
     script_content: str | None = None,
 ) -> PreviewDesignResponse:
-    assembly_definition = _load_assembly_definition(root)
+    benchmark_drafting = (agent_role or "").startswith("benchmark_") or Path(
+        script_path
+    ).name.startswith("benchmark_")
+    assembly_definition = _load_assembly_definition(
+        root,
+        benchmark_drafting=benchmark_drafting,
+    )
     drafting = assembly_definition.drafting
     if drafting is None:
         raise ValueError("assembly_definition.yaml.drafting is required")

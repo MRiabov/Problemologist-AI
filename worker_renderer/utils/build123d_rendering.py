@@ -58,6 +58,8 @@ from vtkmodules.vtkRenderingCore import (
 logger = structlog.get_logger(__name__)
 
 PREVIEW_BACKEND_NAME = "build123d_vtk"
+_PARALLEL_MODALITIES_ENV = "PROBLEMOLOGIST_RENDER_PARALLEL_MODALITIES"
+_FALSE_STRINGS = {"0", "false", "no", "off"}
 
 
 class PreviewEntity(BaseModel):
@@ -1140,10 +1142,6 @@ def render_preview_scene_bundle(
         logger.info("smoke_test_mode_reducing_render_views")
         view_specs = [(-45.0, 45.0)]
 
-    parallel_modalities = os.getenv(
-        "PROBLEMOLOGIST_RENDER_PARALLEL_MODALITIES", "true"
-    ).strip().lower() not in {"0", "false", "no", "off"}
-
     modality_jobs: list[str] = []
     if include_rgb:
         modality_jobs.append("rgb")
@@ -1151,6 +1149,16 @@ def render_preview_scene_bundle(
         modality_jobs.append("depth")
     if include_segmentation:
         modality_jobs.append("segmentation")
+
+    parallel_modalities = (
+        os.getenv(_PARALLEL_MODALITIES_ENV, "false").strip().lower()
+        not in _FALSE_STRINGS
+    )
+    if parallel_modalities and not smoke_test_mode and len(modality_jobs) > 1:
+        raise NotImplementedError(
+            "Parallel preview modality rendering is not implemented outside "
+            "smoke-test mode. Set PROBLEMOLOGIST_RENDER_PARALLEL_MODALITIES=false."
+        )
 
     render_results: dict[str, _PreviewModalityRenderResult] = {}
     if parallel_modalities and len(modality_jobs) > 1:

@@ -47,6 +47,7 @@ from shared.script_contracts import (
     SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH,
     SOLUTION_SCRIPT_PATH,
     drafting_render_manifest_path_for_agent,
+    plan_path_for_agent,
     technical_drawing_script_path_for_agent,
 )
 from shared.simulation.schemas import SimulatorBackendType
@@ -913,7 +914,7 @@ def validate_planner_drafting_geometry_contract(
             return [
                 f"{artifact_name}: 3D backing geometry overlaps goal zone "
                 f"(offending solid: {solid_label}); explicit capture, occupy, "
-                "or reference intent is required in plan.md"
+                f"or reference intent is required in {artifact_name}"
             ]
 
     for zone in benchmark_definition.objectives.forbid_zones:
@@ -2198,6 +2199,7 @@ def validate_planner_handoff_cross_contract(
 ) -> list[str]:
     """Validate planner targets against benchmark caps and reject stale copies."""
     errors: list[str] = []
+    plan_artifact_name = plan_path_for_agent(planner_node_type).as_posix()
     planner_node_value = (
         planner_node_type.value
         if isinstance(planner_node_type, AgentName)
@@ -2247,7 +2249,7 @@ def validate_planner_handoff_cross_contract(
             plan_tokens = Counter()
         errors.extend(
             _validate_exact_identifier_mentions(
-                artifact_name="plan.md",
+                artifact_name=plan_artifact_name,
                 content=plan_text,
                 required_tokens=plan_tokens,
             )
@@ -2605,6 +2607,20 @@ def validate_node_output(
         )
     except Exception:
         node_enum = None
+    plan_artifact_name = plan_path_for_agent(
+        node_enum if node_enum is not None else node_type
+    ).as_posix()
+    legacy_plan_artifact_name = "plan.md"
+    resolved_plan_artifact_name = (
+        plan_artifact_name
+        if plan_artifact_name in files_content_map
+        else legacy_plan_artifact_name
+        if legacy_plan_artifact_name in files_content_map
+        else plan_artifact_name
+    )
+    plan_content = files_content_map.get(resolved_plan_artifact_name)
+    if plan_content is None:
+        plan_content = files_content_map.get(legacy_plan_artifact_name)
 
     def _missing_file(path: str) -> bool:
         content = files_content_map.get(path)
@@ -2625,37 +2641,37 @@ def validate_node_output(
             # If refusal is invalid, we still want regular files or a better refusal
             required_files = {
                 AgentName.ENGINEER_PLANNER: [
-                    "plan.md",
+                    resolved_plan_artifact_name,
                     "todo.md",
                     "benchmark_definition.yaml",
                     "assembly_definition.yaml",
                 ],
                 AgentName.BENCHMARK_PLANNER: [
-                    "plan.md",
+                    resolved_plan_artifact_name,
                     "todo.md",
                     "benchmark_definition.yaml",
                     "benchmark_assembly_definition.yaml",
                 ],
                 AgentName.ENGINEER_CODER: [
-                    "plan.md",
+                    resolved_plan_artifact_name,
                     "todo.md",
                     "benchmark_definition.yaml",
                     SOLUTION_SCRIPT_PATH,
                 ],
                 AgentName.ELECTRONICS_PLANNER: [
-                    "plan.md",
+                    resolved_plan_artifact_name,
                     "todo.md",
                     "benchmark_definition.yaml",
                     "assembly_definition.yaml",
                 ],
                 AgentName.BENCHMARK_CODER: [
-                    "plan.md",
+                    resolved_plan_artifact_name,
                     "todo.md",
                     "benchmark_definition.yaml",
                     BENCHMARK_SCRIPT_PATH,
                 ],
                 AgentName.ELECTRONICS_ENGINEER: [
-                    "plan.md",
+                    resolved_plan_artifact_name,
                     "todo.md",
                     "assembly_definition.yaml",
                 ],
@@ -2663,37 +2679,37 @@ def validate_node_output(
     else:
         required_files = {
             AgentName.ENGINEER_PLANNER: [
-                "plan.md",
+                resolved_plan_artifact_name,
                 "todo.md",
                 "benchmark_definition.yaml",
                 "assembly_definition.yaml",
             ],
             AgentName.BENCHMARK_PLANNER: [
-                "plan.md",
+                resolved_plan_artifact_name,
                 "todo.md",
                 "benchmark_definition.yaml",
                 "benchmark_assembly_definition.yaml",
             ],
             AgentName.ENGINEER_CODER: [
-                "plan.md",
+                resolved_plan_artifact_name,
                 "todo.md",
                 "benchmark_definition.yaml",
                 SOLUTION_SCRIPT_PATH,
             ],
             AgentName.ELECTRONICS_PLANNER: [
-                "plan.md",
+                resolved_plan_artifact_name,
                 "todo.md",
                 "benchmark_definition.yaml",
                 "assembly_definition.yaml",
             ],
             AgentName.BENCHMARK_CODER: [
-                "plan.md",
+                resolved_plan_artifact_name,
                 "todo.md",
                 "benchmark_definition.yaml",
                 BENCHMARK_SCRIPT_PATH,
             ],
             AgentName.ELECTRONICS_ENGINEER: [
-                "plan.md",
+                resolved_plan_artifact_name,
                 "todo.md",
                 "assembly_definition.yaml",
             ],
@@ -2739,16 +2755,19 @@ def validate_node_output(
     for filename, content in files_content_map.items():
         if _is_missing_file_error(content, expected_path=filename):
             continue
-        if filename == "plan.md":
+        if filename in {plan_artifact_name, legacy_plan_artifact_name}:
             plan_type = "engineering"  # Default to engineering for most nodes
             if "benchmark" in node_type or "# Learning Objective" in content:
                 plan_type = "benchmark"
 
             is_valid, plan_errors = validate_plan_md_structure(
-                content, plan_type, session_id=session_id
+                content,
+                plan_type,
+                session_id=session_id,
+                artifact_path=filename,
             )
             if not is_valid:
-                errors.extend([f"plan.md: {e}" for e in plan_errors])
+                errors.extend([f"{filename}: {e}" for e in plan_errors])
         elif filename == "todo.md":
             from shared.workers.markdown_validator import validate_todo_md
 
@@ -2793,7 +2812,7 @@ def validate_node_output(
                     motion_errors = validate_benchmark_assembly_motion_contract(
                         benchmark_definition=benchmark_definition_model,
                         assembly_definition=asm_res,
-                        plan_text=files_content_map.get("plan.md"),
+                        plan_text=plan_content,
                         todo_text=files_content_map.get("todo.md"),
                         plan_refusal_text=files_content_map.get("plan_refusal.md"),
                     )
@@ -2852,7 +2871,7 @@ def validate_node_output(
                 assembly_definition=assembly_definition_model,
                 manufacturing_config=effective_config,
                 planner_node_type=node_type,
-                plan_text=files_content_map.get("plan.md"),
+                plan_text=plan_content,
                 drafting_artifacts=drafting_artifacts or None,
             )
             if cross_contract_errors:
@@ -2913,7 +2932,10 @@ def validate_node_output(
 
 
 def validate_plan_md_structure(
-    content: str, plan_type: str = "benchmark", session_id: str | None = None
+    content: str,
+    plan_type: str = "benchmark",
+    session_id: str | None = None,
+    artifact_path: str = "plan.md",
 ) -> tuple[bool, list[str]]:
     """
     Validate plan.md has required sections.
@@ -2938,7 +2960,9 @@ def validate_plan_md_structure(
                 session_id=session_id,
             )
             for error in result.violations:
-                emit_event(LintFailureDocsEvent(file_path="plan.md", errors=[error]))
+                emit_event(
+                    LintFailureDocsEvent(file_path=artifact_path, errors=[error])
+                )
             return False, result.violations
 
         logger.info("plan_md_valid", plan_type=plan_type, session_id=session_id)
@@ -2954,7 +2978,7 @@ def validate_plan_md_structure(
             session_id=session_id,
         )
         for error in result.violations:
-            emit_event(LintFailureDocsEvent(file_path="plan.md", errors=[error]))
+            emit_event(LintFailureDocsEvent(file_path=artifact_path, errors=[error]))
         return False, result.violations
 
     logger.info("plan_md_valid", plan_type=plan_type, session_id=session_id)
