@@ -6,6 +6,7 @@ import math
 import os
 import shutil
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
@@ -1119,10 +1120,6 @@ def render_preview_scene_bundle(
         width = default_width if width is None else width
         height = default_height if height is None else height
 
-    saved_paths: list[str] = []
-    legend_entries = _preview_segmentation_legend(scene)
-    legend_by_path: dict[str, list[SegmentationLegendEntry]] = {}
-    depth_ranges_by_path: dict[str, tuple[float, float]] = {}
     relative_root = workspace_root or (
         output_dir.parent.parent
         if output_dir.parent.name == "renders"
@@ -1138,186 +1135,103 @@ def render_preview_scene_bundle(
         or (normalize_preview_label(scene.entities[0].label) if scene.entities else "")
         or f"{_UNNAMED_PREVIEW_LABEL_PREFIX}_1"
     )
+    view_specs = [(elevation, angle) for elevation in elevations for angle in angles]
     if smoke_test_mode:
         logger.info("smoke_test_mode_reducing_render_views")
-        angles = [45]
-        elevations = [-45]
+        view_specs = [(-45.0, 45.0)]
 
-    for elevation in elevations:
-        for angle in angles:
-            camera_position = camera_position_from_orbit(
-                center, distance, elevation, angle
+    parallel_modalities = os.getenv(
+        "PROBLEMOLOGIST_RENDER_PARALLEL_MODALITIES", "true"
+    ).strip().lower() not in {"0", "false", "no", "off"}
+
+    modality_jobs: list[str] = []
+    if include_rgb:
+        modality_jobs.append("rgb")
+    if include_depth:
+        modality_jobs.append("depth")
+    if include_segmentation:
+        modality_jobs.append("segmentation")
+
+    render_results: dict[str, _PreviewModalityRenderResult] = {}
+    if parallel_modalities and len(modality_jobs) > 1:
+        with ThreadPoolExecutor(max_workers=len(modality_jobs)) as executor:
+            futures = {
+                modality: executor.submit(
+                    _render_preview_modality_bundle,
+                    scene,
+                    output_dir=output_dir,
+                    workspace_root=relative_root,
+                    center=center,
+                    distance=distance,
+                    width=width,
+                    height=height,
+                    preview_label=preview_label,
+                    view_specs=view_specs,
+                    include_payload_path_overlay=include_payload_path_overlay,
+                    payload_path_points=payload_path_points,
+                    modality=modality,
+                    rgb_axes=rgb_axes,
+                    rgb_edges=rgb_edges,
+                    depth_axes=depth_axes,
+                    depth_edges=depth_edges,
+                    segmentation_axes=segmentation_axes,
+                    segmentation_edges=segmentation_edges,
+                )
+                for modality in modality_jobs
+            }
+            for modality in modality_jobs:
+                render_results[modality] = futures[modality].result()
+    elif modality_jobs:
+        modality = modality_jobs[0]
+        render_results[modality] = _render_preview_modality_bundle(
+            scene,
+            output_dir=output_dir,
+            workspace_root=relative_root,
+            center=center,
+            distance=distance,
+            width=width,
+            height=height,
+            preview_label=preview_label,
+            view_specs=view_specs,
+            include_payload_path_overlay=include_payload_path_overlay,
+            payload_path_points=payload_path_points,
+            modality=modality,
+            rgb_axes=rgb_axes,
+            rgb_edges=rgb_edges,
+            depth_axes=depth_axes,
+            depth_edges=depth_edges,
+            segmentation_axes=segmentation_axes,
+            segmentation_edges=segmentation_edges,
+        )
+
+    legend_by_path: dict[str, list[SegmentationLegendEntry]] = {}
+    depth_ranges_by_path: dict[str, tuple[float, float]] = {}
+    for modality in ("rgb", "depth", "segmentation"):
+        result = render_results.get(modality)
+        if result is None:
+            continue
+        legend_by_path.update(result.legend_by_path)
+        depth_ranges_by_path.update(result.depth_ranges_by_path)
+
+    saved_paths: list[str] = []
+    for elevation, angle in view_specs:
+        group_key = _preview_render_stem(preview_label, elevation, angle)
+        if "rgb" in render_results:
+            saved_paths.append(
+                str((output_dir / f"{group_key}.png").relative_to(relative_root))
             )
-            group_key = _preview_render_stem(preview_label, elevation, angle)
-            rgb_path = output_dir / f"{group_key}.png"
-            depth_path = output_dir / f"{group_key}_depth.png"
-            segmentation_path = output_dir / f"{group_key}_segmentation.png"
-
-            rgb_bundle: _RendererBundle | None = None
-            rgb_overlay_bundle: _RendererBundle | None = None
-            if include_rgb:
-                rgb_bundle = _build_renderer(
-                    scene,
-                    width=width,
-                    height=height,
-                    segmentation=False,
-                    include_axes=rgb_axes,
-                    include_edges=rgb_edges,
-                    include_fill=True,
-                    axes_color=_RGB_AXES_COLOR,
-                    edge_color=_RGB_EDGE_COLOR,
-                    background=(0.98, 0.98, 0.99),
-                )
-                if include_payload_path_overlay and payload_path_points:
-                    rgb_overlay_bundle = _build_payload_path_overlay_bundle(
-                        payload_path_points,
-                        width=width,
-                        height=height,
+        if "depth" in render_results:
+            saved_paths.append(
+                str((output_dir / f"{group_key}_depth.png").relative_to(relative_root))
+            )
+        if "segmentation" in render_results:
+            saved_paths.append(
+                str(
+                    (output_dir / f"{group_key}_segmentation.png").relative_to(
+                        relative_root
                     )
-
-            depth_base_bundle: _RendererBundle | None = None
-            depth_overlay_bundle: _RendererBundle | None = None
-            if include_depth:
-                depth_base_bundle = _build_renderer(
-                    scene,
-                    width=width,
-                    height=height,
-                    segmentation=False,
-                    include_axes=False,
-                    include_edges=False,
-                    include_fill=True,
-                    axes_color=_OVERLAY_AXES_COLOR,
-                    edge_color=_OVERLAY_EDGE_COLOR,
-                    background=(0.98, 0.98, 0.99),
                 )
-                if depth_axes or depth_edges:
-                    depth_overlay_bundle = _build_renderer(
-                        scene,
-                        width=width,
-                        height=height,
-                        segmentation=False,
-                        include_axes=depth_axes,
-                        include_edges=depth_edges,
-                        include_fill=False,
-                        axes_color=_OVERLAY_AXES_COLOR,
-                        edge_color=_OVERLAY_EDGE_COLOR,
-                        background=(0.0, 0.0, 0.0),
-                    )
-
-            seg_base_bundle: _RendererBundle | None = None
-            seg_overlay_bundle: _RendererBundle | None = None
-            if include_segmentation:
-                seg_base_bundle = _build_renderer(
-                    scene,
-                    width=width,
-                    height=height,
-                    segmentation=True,
-                    include_axes=False,
-                    include_edges=False,
-                    include_fill=True,
-                    axes_color=_OVERLAY_AXES_COLOR,
-                    edge_color=_OVERLAY_EDGE_COLOR,
-                    background=(0.0, 0.0, 0.0),
-                )
-                if segmentation_axes or segmentation_edges:
-                    seg_overlay_bundle = _build_renderer(
-                        scene,
-                        width=width,
-                        height=height,
-                        segmentation=False,
-                        include_axes=segmentation_axes,
-                        include_edges=segmentation_edges,
-                        include_fill=False,
-                        axes_color=_OVERLAY_AXES_COLOR,
-                        edge_color=_OVERLAY_EDGE_COLOR,
-                        background=(0.0, 0.0, 0.0),
-                    )
-
-            rgb_image: np.ndarray | None = None
-            depth_image: np.ndarray | None = None
-            seg_image: np.ndarray | None = None
-
-            if rgb_bundle is not None:
-                rgb_image, _ = _render_view(
-                    rgb_bundle,
-                    camera_position=camera_position,
-                    lookat=center,
-                    up=(0.0, 0.0, 1.0),
-                    capture_depth=False,
-                )
-                if rgb_overlay_bundle is not None:
-                    rgb_overlay_image, _ = _render_view(
-                        rgb_overlay_bundle,
-                        camera_position=camera_position,
-                        lookat=center,
-                        up=(0.0, 0.0, 1.0),
-                        capture_depth=False,
-                    )
-                    rgb_image = _composite_non_black(rgb_image, rgb_overlay_image)
-            if depth_base_bundle is not None:
-                _, depth_buffer = _render_view(
-                    depth_base_bundle,
-                    camera_position=camera_position,
-                    lookat=center,
-                    up=(0.0, 0.0, 1.0),
-                    capture_depth=True,
-                )
-                if depth_buffer is None:
-                    raise RuntimeError("depth rendering was disabled for render")
-                depth_render, depth_range = _depth_buffer_to_display_rgb(depth_buffer)
-                if depth_range is not None:
-                    depth_ranges_by_path[str(depth_path.relative_to(relative_root))] = (
-                        depth_range
-                    )
-                if depth_overlay_bundle is not None:
-                    depth_overlay, _ = _render_view(
-                        depth_overlay_bundle,
-                        camera_position=camera_position,
-                        lookat=center,
-                        up=(0.0, 0.0, 1.0),
-                        capture_depth=False,
-                    )
-                    depth_render = _composite_non_black(depth_render, depth_overlay)
-                depth_image = depth_render
-            if seg_base_bundle is not None:
-                seg_image, _ = _render_view(
-                    seg_base_bundle,
-                    camera_position=camera_position,
-                    lookat=center,
-                    up=(0.0, 0.0, 1.0),
-                    capture_depth=False,
-                )
-                if seg_overlay_bundle is not None:
-                    seg_overlay, _ = _render_view(
-                        seg_overlay_bundle,
-                        camera_position=camera_position,
-                        lookat=center,
-                        up=(0.0, 0.0, 1.0),
-                        capture_depth=False,
-                    )
-                    seg_image = _composite_non_black(seg_image, seg_overlay)
-
-            if rgb_image is not None:
-                Image.fromarray(rgb_image).save(rgb_path, "PNG")
-                saved_paths.append(str(rgb_path.relative_to(relative_root)))
-
-            if depth_image is not None:
-                if depth_image.ndim == 2:
-                    Image.fromarray(depth_image, mode="L").save(depth_path, "PNG")
-                else:
-                    Image.fromarray(depth_image, mode="RGB").save(depth_path, "PNG")
-                saved_paths.append(str(depth_path.relative_to(relative_root)))
-
-            if seg_image is not None:
-                Image.fromarray(seg_image, mode="RGB").save(segmentation_path, "PNG")
-                rel_segmentation_path = str(
-                    segmentation_path.relative_to(relative_root)
-                )
-                saved_paths.append(rel_segmentation_path)
-                legend_by_path[rel_segmentation_path] = legend_entries
-
-            if rgb_overlay_bundle is not None:
-                del rgb_overlay_bundle
+            )
 
     return PreviewRenderResult(
         saved_paths=saved_paths,
@@ -1386,8 +1300,9 @@ def _render_view(
     lookat: tuple[float, float, float],
     up: tuple[float, float, float],
     fov: float | None = None,
+    capture_rgb: bool = True,
     capture_depth: bool = False,
-) -> tuple[np.ndarray, np.ndarray | None]:
+) -> tuple[np.ndarray | None, np.ndarray | None]:
     _configure_camera(
         bundle.renderer,
         camera_position=camera_position,
@@ -1398,13 +1313,218 @@ def _render_view(
     bundle.renderer.ResetCameraClippingRange()
     bundle.window.Render()
 
-    rgb_image = _vtk_image_to_numpy_rgb(bundle.window)
+    rgb_image = _vtk_image_to_numpy_rgb(bundle.window) if capture_rgb else None
     depth_image = None
     if capture_depth:
         depth_buffer = _vtk_image_to_numpy_rgb(bundle.window, depth_buffer=True)
         near, far = bundle.renderer.GetActiveCamera().GetClippingRange()
         depth_image = _linearize_depth_buffer(depth_buffer, near, far)
     return rgb_image, depth_image
+
+
+@dataclass
+class _PreviewModalityRenderResult:
+    saved_paths: list[str]
+    legend_by_path: dict[str, list[SegmentationLegendEntry]]
+    depth_ranges_by_path: dict[str, tuple[float, float]]
+
+
+def _render_preview_modality_bundle(
+    scene: PreviewScene,
+    *,
+    output_dir: Path,
+    workspace_root: Path,
+    center: tuple[float, float, float],
+    distance: float,
+    width: int,
+    height: int,
+    preview_label: str,
+    view_specs: list[tuple[float, float]],
+    include_payload_path_overlay: bool,
+    payload_path_points: list[tuple[float, float, float]] | None,
+    modality: str,
+    rgb_axes: bool,
+    rgb_edges: bool,
+    depth_axes: bool,
+    depth_edges: bool,
+    segmentation_axes: bool,
+    segmentation_edges: bool,
+) -> _PreviewModalityRenderResult:
+    legend_entries = _preview_segmentation_legend(scene)
+    saved_paths: list[str] = []
+    legend_by_path: dict[str, list[SegmentationLegendEntry]] = {}
+    depth_ranges_by_path: dict[str, tuple[float, float]] = {}
+    bundle: _RendererBundle | None = None
+    overlay_bundle: _RendererBundle | None = None
+
+    if modality == "rgb":
+        bundle = _build_renderer(
+            scene,
+            width=width,
+            height=height,
+            segmentation=False,
+            include_axes=rgb_axes,
+            include_edges=rgb_edges,
+            include_fill=True,
+            axes_color=_RGB_AXES_COLOR,
+            edge_color=_RGB_EDGE_COLOR,
+            background=(0.98, 0.98, 0.99),
+        )
+        overlay_bundle = None
+        if include_payload_path_overlay and payload_path_points:
+            overlay_bundle = _build_payload_path_overlay_bundle(
+                payload_path_points,
+                width=width,
+                height=height,
+            )
+    elif modality == "depth":
+        bundle = _build_renderer(
+            scene,
+            width=width,
+            height=height,
+            segmentation=False,
+            include_axes=False,
+            include_edges=False,
+            include_fill=True,
+            axes_color=_OVERLAY_AXES_COLOR,
+            edge_color=_OVERLAY_EDGE_COLOR,
+            background=(0.98, 0.98, 0.99),
+        )
+        overlay_bundle = None
+        if depth_axes or depth_edges:
+            overlay_bundle = _build_renderer(
+                scene,
+                width=width,
+                height=height,
+                segmentation=False,
+                include_axes=depth_axes,
+                include_edges=depth_edges,
+                include_fill=False,
+                axes_color=_OVERLAY_AXES_COLOR,
+                edge_color=_OVERLAY_EDGE_COLOR,
+                background=(0.0, 0.0, 0.0),
+            )
+    elif modality == "segmentation":
+        bundle = _build_renderer(
+            scene,
+            width=width,
+            height=height,
+            segmentation=True,
+            include_axes=False,
+            include_edges=False,
+            include_fill=True,
+            axes_color=_OVERLAY_AXES_COLOR,
+            edge_color=_OVERLAY_EDGE_COLOR,
+            background=(0.0, 0.0, 0.0),
+        )
+        overlay_bundle = None
+        if segmentation_axes or segmentation_edges:
+            overlay_bundle = _build_renderer(
+                scene,
+                width=width,
+                height=height,
+                segmentation=False,
+                include_axes=segmentation_axes,
+                include_edges=segmentation_edges,
+                include_fill=False,
+                axes_color=_OVERLAY_AXES_COLOR,
+                edge_color=_OVERLAY_EDGE_COLOR,
+                background=(0.0, 0.0, 0.0),
+            )
+    else:  # pragma: no cover - defensive programming
+        raise ValueError(f"unsupported modality: {modality}")
+
+    try:
+        for elevation, angle in view_specs:
+            camera_position = camera_position_from_orbit(
+                center, distance, elevation, angle
+            )
+            group_key = _preview_render_stem(preview_label, elevation, angle)
+            rgb_path = output_dir / f"{group_key}.png"
+            depth_path = output_dir / f"{group_key}_depth.png"
+            segmentation_path = output_dir / f"{group_key}_segmentation.png"
+
+            if modality == "rgb":
+                rgb_image, _ = _render_view(
+                    bundle,
+                    camera_position=camera_position,
+                    lookat=center,
+                    up=(0.0, 0.0, 1.0),
+                    capture_depth=False,
+                )
+                if overlay_bundle is not None:
+                    rgb_overlay_image, _ = _render_view(
+                        overlay_bundle,
+                        camera_position=camera_position,
+                        lookat=center,
+                        up=(0.0, 0.0, 1.0),
+                        capture_depth=False,
+                    )
+                    rgb_image = _composite_non_black(rgb_image, rgb_overlay_image)
+                Image.fromarray(rgb_image).save(rgb_path, "PNG")
+                saved_paths.append(str(rgb_path.relative_to(workspace_root)))
+                continue
+
+            if modality == "depth":
+                _, depth_buffer = _render_view(
+                    bundle,
+                    camera_position=camera_position,
+                    lookat=center,
+                    up=(0.0, 0.0, 1.0),
+                    capture_rgb=False,
+                    capture_depth=True,
+                )
+                if depth_buffer is None:
+                    raise RuntimeError("depth rendering was disabled for render")
+                depth_render, depth_range = _depth_buffer_to_display_rgb(depth_buffer)
+                if depth_range is not None:
+                    depth_ranges_by_path[
+                        str(depth_path.relative_to(workspace_root))
+                    ] = depth_range
+                if overlay_bundle is not None:
+                    depth_overlay, _ = _render_view(
+                        overlay_bundle,
+                        camera_position=camera_position,
+                        lookat=center,
+                        up=(0.0, 0.0, 1.0),
+                        capture_depth=False,
+                    )
+                    depth_render = _composite_non_black(depth_render, depth_overlay)
+                Image.fromarray(depth_render, mode="RGB").save(depth_path, "PNG")
+                saved_paths.append(str(depth_path.relative_to(workspace_root)))
+                continue
+
+            seg_image, _ = _render_view(
+                bundle,
+                camera_position=camera_position,
+                lookat=center,
+                up=(0.0, 0.0, 1.0),
+                capture_depth=False,
+            )
+            if overlay_bundle is not None:
+                seg_overlay, _ = _render_view(
+                    overlay_bundle,
+                    camera_position=camera_position,
+                    lookat=center,
+                    up=(0.0, 0.0, 1.0),
+                    capture_depth=False,
+                )
+                seg_image = _composite_non_black(seg_image, seg_overlay)
+            Image.fromarray(seg_image, mode="RGB").save(segmentation_path, "PNG")
+            rel_segmentation_path = str(segmentation_path.relative_to(workspace_root))
+            saved_paths.append(rel_segmentation_path)
+            legend_by_path[rel_segmentation_path] = legend_entries
+    finally:
+        if bundle is not None:
+            del bundle
+        if overlay_bundle is not None:
+            del overlay_bundle
+
+    return _PreviewModalityRenderResult(
+        saved_paths=saved_paths,
+        legend_by_path=legend_by_path,
+        depth_ranges_by_path=depth_ranges_by_path,
+    )
 
 
 def camera_position_from_orbit(
