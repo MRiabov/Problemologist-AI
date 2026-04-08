@@ -22,6 +22,7 @@ from evals.logic.codex_workspace import launch_cli_exec as _launch_cli_exec
 from evals.logic.codex_workspace import (
     materialize_seed_workspace as _materialize_workspace,
 )
+from evals.logic.codex_workspace import open_cli_ui as _open_cli_ui
 from evals.logic.codex_workspace import resolve_cli_home_root as _resolve_cli_home_root
 from evals.logic.codex_workspace import resume_cli_exec as _resume_cli_exec
 from evals.logic.codex_workspace import (
@@ -404,6 +405,8 @@ async def _run_cli_eval(
     enable_skill_loop: bool = False,
     enable_codex_skill_loop: bool | None = None,
     provider_name: str | None = None,
+    open_cli_ui: bool = False,
+    open_cli_ui_new_terminal: bool = False,
     deps: dict[str, Any] | None = None,
 ) -> bool:
     deps = deps or {}
@@ -416,6 +419,7 @@ async def _run_cli_eval(
     )
     materialize_workspace = _dep(deps, "materialize_workspace", _materialize_workspace)
     launch_cli_exec = _dep(deps, "launch_cli_exec", _launch_cli_exec)
+    open_cli_ui_fn = _dep(deps, "open_cli_ui", _open_cli_ui)
     verify_workspace_for_agent = _dep(
         deps, "verify_workspace_for_agent", _verify_workspace_for_agent
     )
@@ -538,17 +542,32 @@ async def _run_cli_eval(
         primary_timeout_seconds = int(
             load_agents_config().execution.agents[agent_name].timeout_seconds
         )
-        launch_return_code = await asyncio.to_thread(
-            launch_cli_exec,
-            materialized.workspace_dir,
-            materialized.prompt_text,
-            task_id=task_id,
-            agent_name=agent_name,
-            session_id=session_id,
-            runtime_root=cli_runtime_root,
-            yolo=False,
-            timeout_seconds=primary_timeout_seconds,
-        )
+        if open_cli_ui:
+            launch_return_code = await asyncio.to_thread(
+                open_cli_ui_fn,
+                materialized.workspace_dir,
+                materialized.prompt_text,
+                task_id=task_id,
+                agent_name=agent_name,
+                session_id=session_id,
+                runtime_root=cli_runtime_root,
+                yolo=False,
+                timeout_seconds=primary_timeout_seconds,
+                provider_name=provider.provider_name,
+                new_terminal=open_cli_ui_new_terminal,
+            )
+        else:
+            launch_return_code = await asyncio.to_thread(
+                launch_cli_exec,
+                materialized.workspace_dir,
+                materialized.prompt_text,
+                task_id=task_id,
+                agent_name=agent_name,
+                session_id=session_id,
+                runtime_root=cli_runtime_root,
+                yolo=False,
+                timeout_seconds=primary_timeout_seconds,
+            )
         if launch_return_code != 0:
             failure_reason = f"CLI-provider exited with code {launch_return_code}"
 

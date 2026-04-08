@@ -142,6 +142,14 @@ def _parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--new-terminal",
+        action="store_true",
+        help=(
+            "When used with --open-cli-ui, open the UI in a separate terminal "
+            "window instead of the current shell."
+        ),
+    )
+    parser.add_argument(
         "--env-up",
         action="store_true",
         help=(
@@ -339,6 +347,8 @@ def main() -> None:
 
     if args.launch_cli_exec and args.open_cli_ui:
         raise SystemExit("Choose only one of --launch-cli-exec or --open-cli-ui.")
+    if args.new_terminal and not args.open_cli_ui:
+        raise SystemExit("--new-terminal requires --open-cli-ui.")
 
     lock_lease = None
     if args.env_up:
@@ -387,6 +397,7 @@ def main() -> None:
                 task_id=row.id,
                 yolo=args.yolo,
                 provider_name=args.provider,
+                new_terminal=args.new_terminal,
             )
         )
 

@@ -36,6 +36,7 @@ from evals.logic.codex_workspace import launch_cli_exec as _launch_cli_exec
 from evals.logic.codex_workspace import (
     materialize_seed_workspace as _materialize_workspace,
 )
+from evals.logic.codex_workspace import open_cli_ui as _open_cli_ui
 from evals.logic.codex_workspace import resolve_cli_home_root as _resolve_cli_home_root
 from evals.logic.codex_workspace import resume_cli_exec as _resume_cli_exec
 from evals.logic.codex_workspace import (
@@ -285,6 +286,8 @@ async def _run_cli_eval(
     enable_skill_loop: bool = False,
     enable_codex_skill_loop: bool | None = None,
     provider_name: str | None = None,
+    open_cli_ui: bool = False,
+    open_cli_ui_new_terminal: bool = False,
 ) -> bool:
     if enable_codex_skill_loop is not None:
         enable_skill_loop = enable_codex_skill_loop
@@ -303,9 +306,12 @@ async def _run_cli_eval(
         run_reviewers_with_judge=run_reviewers_with_judge,
         enable_skill_loop=enable_skill_loop,
         provider_name=provider_name,
+        open_cli_ui=open_cli_ui,
+        open_cli_ui_new_terminal=open_cli_ui_new_terminal,
         deps={
             "materialize_workspace": _materialize_workspace,
             "launch_cli_exec": _launch_cli_exec,
+            "open_cli_ui": _open_cli_ui,
             "verify_workspace_for_agent": _verify_workspace_for_agent,
             "capture_latest_codex_session_artifacts": _capture_latest_codex_session_artifacts,
             "snapshot_workspace_state": _snapshot_workspace_state,
@@ -338,6 +344,8 @@ async def run_single_eval(
     enable_skill_loop: bool = False,
     enable_codex_skill_loop: bool | None = None,
     provider_name: str | None = None,
+    open_cli_ui: bool = False,
+    open_cli_ui_new_terminal: bool = False,
 ):
     if enable_codex_skill_loop is not None:
         enable_skill_loop = enable_codex_skill_loop
@@ -370,6 +378,8 @@ async def run_single_eval(
             run_reviewers_with_judge=run_reviewers_with_judge,
             enable_skill_loop=enable_skill_loop,
             provider_name=provider_name,
+            open_cli_ui=open_cli_ui,
+            open_cli_ui_new_terminal=open_cli_ui_new_terminal,
         )
         return
 
@@ -590,6 +600,15 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--open-cli-ui",
+        action="store_true",
+        help=(
+            "Open local CLI-provider eval launches in an interactive UI instead "
+            "of the plain exec path. When concurrency is greater than 1, each "
+            "launch uses a separate terminal window."
+        ),
+    )
+    parser.add_argument(
         "--provider",
         type=str,
         default="codex",
@@ -647,6 +666,9 @@ async def main():
         )
     except ValueError as exc:
         parser.error(str(exc))
+
+    if args.open_cli_ui and runner_backend != EvalRunnerBackend.CODEX:
+        parser.error("--open-cli-ui requires the local Codex CLI backend")
 
     requested_command = [sys.argv[0], *sys.argv[1:]]
     requested_selection = EvalRunSelection(
@@ -988,6 +1010,7 @@ async def main():
 
     if tasks:
         semaphore = asyncio.Semaphore(max(1, args.concurrency))
+        open_cli_ui_new_terminal = args.open_cli_ui and args.concurrency > 1
 
         async def _guarded(item: EvalDatasetItem, agent: AgentName):
             async with semaphore:
@@ -1005,6 +1028,8 @@ async def main():
                     update_manifests=args.update_manifests,
                     enable_skill_loop=args.codex_skill_loop,
                     provider_name=args.provider,
+                    open_cli_ui=args.open_cli_ui,
+                    open_cli_ui_new_terminal=open_cli_ui_new_terminal,
                 )
 
         await asyncio.gather(*(_guarded(item, agent) for item, agent in tasks))

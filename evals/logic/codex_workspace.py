@@ -949,6 +949,44 @@ def _run_subprocess_invocation(
     )
 
 
+def _run_subprocess_invocation_in_terminal(
+    *,
+    invocation: CliInvocation,
+    env: dict[str, str],
+    timeout_seconds: float | None,
+    terminal_title: str,
+) -> subprocess.CompletedProcess[str]:
+    terminal_binary = shutil.which("gnome-terminal")
+    if terminal_binary is None:
+        raise FileNotFoundError(
+            "No supported terminal emulator found for --open-cli-ui new-terminal mode"
+        )
+
+    merged_env = dict(env)
+    merged_env.update(invocation.env_overrides)
+    for display_var in ("DISPLAY", "WAYLAND_DISPLAY", "XAUTHORITY"):
+        if display_var in os.environ:
+            merged_env[display_var] = os.environ[display_var]
+
+    terminal_argv = [
+        terminal_binary,
+        "--wait",
+        f"--title={terminal_title}",
+    ]
+    if invocation.cwd is not None:
+        terminal_argv.append(f"--working-directory={invocation.cwd}")
+    terminal_argv.extend(["--", *invocation.argv])
+    return subprocess.run(
+        terminal_argv,
+        input=None,
+        text=True,
+        cwd=str(invocation.cwd) if invocation.cwd is not None else None,
+        env=merged_env,
+        check=False,
+        timeout=timeout_seconds,
+    )
+
+
 def _run_cli_exec_command(
     *,
     workspace_dir: Path,
@@ -1265,6 +1303,8 @@ def open_cli_ui(
     runtime_root: Path | None = None,
     yolo: bool = True,
     provider_name: str | None = None,
+    timeout_seconds: float | None = None,
+    new_terminal: bool = False,
 ) -> int:
     """Open the interactive CLI-provider UI with a workspace prompt."""
     if not (workspace_dir / ".git").exists():
@@ -1293,17 +1333,26 @@ def open_cli_ui(
         kind="ui",
     )
     print("launching: " + " ".join(invocation.argv))
-    completed = _run_subprocess_invocation(
-        invocation=invocation,
-        env=provider.build_env(
-            task_id=task_id,
-            workspace_dir=workspace_dir,
-            codex_home_root=codex_home_root,
-            session_id=session_id,
-            agent_name=agent_name,
-        ),
-        timeout_seconds=None,
+    env = provider.build_env(
+        task_id=task_id,
+        workspace_dir=workspace_dir,
+        codex_home_root=codex_home_root,
+        session_id=session_id,
+        agent_name=agent_name,
     )
+    if new_terminal:
+        completed = _run_subprocess_invocation_in_terminal(
+            invocation=invocation,
+            env=env,
+            timeout_seconds=timeout_seconds,
+            terminal_title=f"{provider.provider_name}:{task_id}",
+        )
+    else:
+        completed = _run_subprocess_invocation(
+            invocation=invocation,
+            env=env,
+            timeout_seconds=timeout_seconds,
+        )
     return completed.returncode
 
 
