@@ -226,6 +226,15 @@ def _parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--skip-env-up",
+        action="store_true",
+        help=(
+            "Compatibility alias for eval-maintenance workflows. This "
+            "command never bootstraps env_up and always joins the shared "
+            "eval lock directly."
+        ),
+    )
+    parser.add_argument(
         "--technical-drawing-mode",
         type=str,
         default=DraftingMode.FULL.value,

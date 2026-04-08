@@ -103,6 +103,12 @@ motion_forecast:
     sample_stride_s: 0.3
     position_tolerance_mm: [0.6, 0.6, 0.6]
     rotation_tolerance_deg: [0.1, 0.1, 2.0]
+payload_trajectory_clearance:
+  enabled: true
+  max_orientation_cells: 96
+  max_recursion_depth: 6
+  max_exact_checks: 9
+  leaf_span_deg: [2.0, 2.0, 2.0]
 defaults:
   reasoning_effort: high
   filesystem_permissions:

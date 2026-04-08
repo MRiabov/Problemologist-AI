@@ -41,6 +41,13 @@ if [ "$STACK_PROFILE" = "eval" ] && [ "${PROBLEMOLOGIST_EVAL_LOCK_HELD:-0}" != "
     exit 1
   fi
   export PROBLEMOLOGIST_EVAL_LOCK_HELD=1
+  python3 - <<'PY'
+import fcntl
+
+fd = 9
+flags = fcntl.fcntl(fd, fcntl.F_GETFD)
+fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
+PY
 fi
 
 eval "$(python3 -m evals.logic.stack_profiles --profile "$STACK_PROFILE" --root "$(pwd)" --format shell)"

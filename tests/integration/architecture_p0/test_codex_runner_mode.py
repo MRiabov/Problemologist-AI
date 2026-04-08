@@ -3361,6 +3361,50 @@ def test_run_evals_skip_env_up_can_join_shared_eval_lock(tmp_path: Path):
 
 
 @pytest.mark.integration_p0
+def test_update_eval_seed_renders_skip_env_up_can_join_shared_eval_lock(
+    tmp_path: Path,
+):
+    lock_path = tmp_path / "problemologist-eval.lock"
+    state_path = tmp_path / "problemologist-eval.run.json"
+
+    with lock_path.open("a+", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_SH)
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "scripts/update_eval_seed_renders.py",
+                "--skip-env-up",
+                "--agent",
+                "benchmark_planner",
+                "--task-id",
+                "bp-does-not-exist",
+                "--technical-drawing-mode",
+                "full",
+                "--errors-only",
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=300,
+            env={
+                **os.environ,
+                "EVAL_RUN_LOCK_PATH": str(lock_path),
+                "EVAL_RUN_STATE_PATH": str(state_path),
+            },
+        )
+
+    combined_output = "\n".join(
+        part for part in (completed.stdout, completed.stderr) if part
+    )
+
+    assert completed.returncode == 1, combined_output
+    assert "another eval run is already running." not in completed.stderr
+    assert "task id not found in dataset" in combined_output
+    assert not state_path.exists(), state_path
+
+
+@pytest.mark.integration_p0
 def test_refresh_plan_review_manifest_hashes_can_fix_drift(tmp_path: Path):
     artifact_dir = tmp_path / "seed_artifacts"
     artifact_dir.mkdir()

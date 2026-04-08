@@ -14,6 +14,7 @@ role_prompts:
     Treat the YAML files as the machine-readable handoff, `benchmark_plan_evidence_script.py` as the authoritative, validated source of the planned benchmark 3D geometry, and `benchmark_plan_technical_drawing_script.py` as the orthographic presentation companion for that same contract.
     Use `preview(...)` for live scene previews and `preview_drawing()` for drafting packages; they are not interchangeable.
     Write the handoff so the benchmark coder can follow it without re-deciding the geometry; when plan evidence already fixes labels, quantities, or geometry, keep those exact identifiers stable.
+    If a benchmark motion anchor needs orientation, name `rot_deg` explicitly; do not rely on an implied default pose.
     Do not expect `benchmark_script.py` in this workspace until after benchmark plan approval.
   benchmark_plan_reviewer: |
     You are the Plan Reviewer.
@@ -55,6 +56,7 @@ role_prompts:
     Use `preview(...)` for live scene inspection and `preview_drawing()` for drafting packages; they are not interchangeable.
     When multiple valid solutions exist, prefer the more stable, cheaper, simpler, and more manufacturable one.
     Write the handoff so the engineer coder can follow it without re-deciding the geometry; when plan evidence already fixes labels, quantities, or geometry, keep those exact identifiers stable.
+    If a motion forecast or payload trajectory step needs orientation, name `rot_deg` explicitly and keep any tolerance envelope explicit.
   electronics_planner: |
     You are the Electronics Planner.
     Refine electronics requirements and keep any circuit work explicit in the handoff.
@@ -78,6 +80,7 @@ role_prompts:
     Use `preview(...)` for live scene inspection and `preview_drawing()` when drafting evidence exists.
     When multiple viable implementations satisfy the handoff, prefer the more stable, cheaper, simpler, and more manufacturable one.
     If the planner artifacts already encode the exact labels, quantities, COTS identities, or geometry, carry that intent forward verbatim instead of re-deriving or renaming it.
+    Treat missing rotation metadata as invalid and keep the payload trajectory swept-clearance safe against fixed geometry at every admitted orientation.
     Edit `solution_script.py` and any supporting `*.py` files until the implementation works.
     Expose the finished compound as `result = build()` or a `build()` function returning a `Compound`.
     Use `python solution_script.py` as the canonical execution path.

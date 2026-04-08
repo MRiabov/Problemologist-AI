@@ -41,6 +41,8 @@ from shared.models.schemas import (
     MovedObject,
     ObjectivesSection,
     PartConfig,
+    PayloadTrajectoryDefinition,
+    PayloadTrajectoryPose,
     PhysicsConfig,
 )
 from shared.simulation.schemas import SimulatorBackendType
@@ -50,6 +52,8 @@ from tests.integration.agent.helpers import (
     wait_for_benchmark_state,
     wait_for_episode_terminal,
 )
+from worker_heavy.utils.dfm import load_planner_manufacturing_config_from_text
+from worker_heavy.utils.file_validation import validate_node_output
 
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 AGENTS_CONFIG_PATH = Path("config/agents_config.yaml")
@@ -240,15 +244,15 @@ def _motion_forecast_validation_payloads(
     )
     motion_forecast = MotionForecast(
         moving_part_names=["moving_bracket"],
-        sample_stride_s=0.5,
+        sample_stride_s=0.3,
         anchors=[
             MotionForecastAnchor(
                 t_s=0.0,
                 reference_point="build_zone_start",
                 pos_mm=first_anchor_pos,
                 rot_deg=(0.0, 0.0, 0.0),
-                position_tolerance_mm=(1.2, 1.2, 1.2),
-                rotation_tolerance_deg=(0.1, 0.1, 5.0),
+                position_tolerance_mm=(0.6, 0.6, 0.6),
+                rotation_tolerance_deg=(0.1, 0.1, 2.0),
                 first_contacts=[
                     MotionForecastContact(
                         order=1,
@@ -263,8 +267,8 @@ def _motion_forecast_validation_payloads(
                 reference_point="goal_zone_contact",
                 pos_mm=terminal_anchor_pos,
                 rot_deg=(0.0, 0.0, 0.0),
-                position_tolerance_mm=(1.2, 1.2, 1.2),
-                rotation_tolerance_deg=(0.1, 0.1, 5.0),
+                position_tolerance_mm=(0.6, 0.6, 0.6),
+                rotation_tolerance_deg=(0.1, 0.1, 2.0),
                 goal_zone_contact=True,
             ),
         ],
@@ -293,6 +297,107 @@ def _motion_forecast_validation_payloads(
     return (
         benchmark_definition.model_dump(mode="json", by_alias=True, exclude_none=True),
         assembly_definition.model_dump(mode="json", by_alias=True, exclude_none=True),
+    )
+
+
+def _swept_clearance_geometry_scripts(
+    *,
+    obstacle_center_y: float,
+) -> tuple[str, str]:
+    benchmark_script = f"""from build123d import Align, Box, Compound, Location
+
+
+def build():
+    fixture = Box(20.0, 0.2, 2.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    fixture = fixture.move(Location((0.0, {obstacle_center_y}, 0.0)))
+    return Compound(children=[fixture], label="fixture_block")
+
+
+result = build()
+"""
+    solution_script = """from build123d import Align, Box, Compound
+
+
+def build():
+    payload = Box(8.0, 2.0, 2.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    return Compound(children=[payload], label="moving_bracket")
+
+
+result = build()
+"""
+    return benchmark_script, solution_script
+
+
+def _payload_trajectory_definition(
+    *,
+    first_anchor_rotation_tolerance: tuple[float, float, float] | None = None,
+) -> PayloadTrajectoryDefinition:
+    return PayloadTrajectoryDefinition(
+        backend=SimulatorBackendType.GENESIS,
+        moving_part_names=["moving_bracket"],
+        initial_pose=PayloadTrajectoryPose(
+            reference_point="build_zone_start",
+            pos_mm=(0.0, 0.0, 0.0),
+            rot_deg=(0.0, 0.0, 0.0),
+        ),
+        sample_stride_s=0.3,
+        anchors=[
+            MotionForecastAnchor(
+                t_s=0.0,
+                reference_point="build_zone_start",
+                pos_mm=(0.0, 0.0, 0.0),
+                rot_deg=(0.0, 0.0, 0.0),
+                position_tolerance_mm=(0.1, 0.1, 0.1),
+                rotation_tolerance_deg=first_anchor_rotation_tolerance,
+                build_zone_valid=True,
+            ),
+            MotionForecastAnchor(
+                t_s=1.5,
+                reference_point="goal_zone_contact",
+                pos_mm=(12.0, 12.0, 0.0),
+                rot_deg=(0.0, 0.0, 0.0),
+                position_tolerance_mm=(0.1, 0.1, 0.1),
+                goal_zone_contact=True,
+            ),
+        ],
+    )
+
+
+async def _upload_swept_clearance_workspace(
+    worker: WorkerClient,
+    *,
+    benchmark_definition: BenchmarkDefinition | dict[str, object],
+    assembly_definition: AssemblyDefinition | dict[str, object],
+    payload_definition: PayloadTrajectoryDefinition,
+    obstacle_center_y: float = 1.15,
+) -> None:
+    await _upload_engineer_motion_seed_workspace(
+        worker,
+        benchmark_definition=benchmark_definition,
+        assembly_definition=assembly_definition,
+    )
+    benchmark_script, solution_script = _swept_clearance_geometry_scripts(
+        obstacle_center_y=obstacle_center_y
+    )
+    await worker.upload_file(
+        "benchmark_script.py",
+        benchmark_script.encode("utf-8"),
+        bypass_agent_permissions=True,
+    )
+    await worker.upload_file(
+        "solution_script.py",
+        solution_script.encode("utf-8"),
+        bypass_agent_permissions=True,
+    )
+    await worker.upload_file(
+        "payload_trajectory_definition.yaml",
+        yaml.safe_dump(
+            payload_definition.model_dump(
+                mode="json", by_alias=True, exclude_none=True
+            ),
+            sort_keys=False,
+        ).encode("utf-8"),
+        bypass_agent_permissions=True,
     )
 
 
@@ -1834,6 +1939,260 @@ async def test_int_184_seeded_workspace_rejects_motion_forecast_missing_goal_zon
     assert any(
         "motion_forecast" in error.message.lower()
         and "goal_zone" in error.message.lower()
+        for error in errors
+    ), errors
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_184_seeded_workspace_rejects_payload_trajectory_missing_rot_deg(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """
+    INT-184: Payload trajectory handoff must reject anchors that omit explicit
+    orientation metadata.
+    """
+    drafting_config = _agents_config_with_technical_drawing_modes(
+        engineer_mode=DraftingMode.OFF,
+        benchmark_mode=DraftingMode.OFF,
+    )
+    monkeypatch.setattr(
+        "controller.agent.node_entry_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+    monkeypatch.setattr(
+        "worker_heavy.utils.file_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+
+    session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        benchmark_definition, assembly_definition = (
+            _motion_forecast_validation_payloads(
+                first_anchor_pos=(0.0, 0.0, 0.0),
+                terminal_anchor_pos=(12.0, 12.0, 0.0),
+            )
+        )
+        payload_definition = _payload_trajectory_definition()
+        payload_data = payload_definition.model_dump(
+            mode="json", by_alias=True, exclude_none=True
+        )
+        del payload_data["anchors"][0]["rot_deg"]
+
+        await _upload_engineer_motion_seed_workspace(
+            worker,
+            benchmark_definition=benchmark_definition,
+            assembly_definition=assembly_definition,
+        )
+        benchmark_script, solution_script = _swept_clearance_geometry_scripts(
+            obstacle_center_y=4.2
+        )
+        await worker.upload_file(
+            "benchmark_script.py",
+            benchmark_script.encode("utf-8"),
+            bypass_agent_permissions=True,
+        )
+        await worker.upload_file(
+            "solution_script.py",
+            solution_script.encode("utf-8"),
+            bypass_agent_permissions=True,
+        )
+        await worker.upload_file(
+            "payload_trajectory_definition.yaml",
+            yaml.safe_dump(payload_data, sort_keys=False).encode("utf-8"),
+            bypass_agent_permissions=True,
+        )
+
+        errors = await validate_seeded_workspace_handoff_artifacts(
+            worker_client=worker,
+            target_node=AgentName.ENGINEER_PLAN_REVIEWER,
+        )
+    finally:
+        await worker.aclose()
+
+    assert errors, "Expected the payload trajectory to reject missing rot_deg."
+    assert any(
+        error.artifact_path == "payload_trajectory_definition.yaml" for error in errors
+    ), errors
+    assert any("rot_deg" in error.message for error in errors), errors
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_184_seeded_workspace_rejects_payload_trajectory_rotated_collision(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """
+    INT-184: Payload trajectory handoff must reject a rotation envelope that
+    is nominally safe but collides at an allowed rotated orientation.
+    """
+    drafting_config = _agents_config_with_technical_drawing_modes(
+        engineer_mode=DraftingMode.OFF,
+        benchmark_mode=DraftingMode.OFF,
+    )
+    monkeypatch.setattr(
+        "controller.agent.node_entry_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+    monkeypatch.setattr(
+        "worker_heavy.utils.file_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+
+    session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        benchmark_definition, assembly_definition = (
+            _motion_forecast_validation_payloads(
+                first_anchor_pos=(0.0, 0.0, 0.0),
+                terminal_anchor_pos=(12.0, 12.0, 0.0),
+            )
+        )
+        payload_definition = _payload_trajectory_definition(
+            first_anchor_rotation_tolerance=(0.1, 0.1, 2.0)
+        )
+        await _upload_swept_clearance_workspace(
+            worker,
+            benchmark_definition=benchmark_definition,
+            assembly_definition=assembly_definition,
+            payload_definition=payload_definition,
+            obstacle_center_y=1.15,
+        )
+
+        errors = await validate_seeded_workspace_handoff_artifacts(
+            worker_client=worker,
+            target_node=AgentName.ENGINEER_PLAN_REVIEWER,
+        )
+    finally:
+        await worker.aclose()
+
+    assert errors, "Expected the rotated collision to fail validation."
+    assert any(
+        error.artifact_path == "payload_trajectory_definition.yaml" for error in errors
+    ), errors
+    assert any(
+        "payload_trajectory_definition.yaml" in error.message
+        and (
+            "fixed geometry" in error.message.lower()
+            or "rotation envelope" in error.message.lower()
+        )
+        for error in errors
+    ), errors
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_184_seeded_workspace_accepts_payload_trajectory_explicit_orientation(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """
+    INT-184: Payload trajectory handoff must allow an explicit orientation when
+    the path remains clear at every checked pose.
+    """
+    drafting_config = _agents_config_with_technical_drawing_modes(
+        engineer_mode=DraftingMode.OFF,
+        benchmark_mode=DraftingMode.OFF,
+    )
+    monkeypatch.setattr(
+        "controller.agent.node_entry_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+    monkeypatch.setattr(
+        "worker_heavy.utils.file_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+
+    session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        benchmark_definition, assembly_definition = (
+            _motion_forecast_validation_payloads(
+                first_anchor_pos=(0.0, 0.0, 0.0),
+                terminal_anchor_pos=(12.0, 12.0, 0.0),
+            )
+        )
+        payload_definition = _payload_trajectory_definition()
+        await _upload_swept_clearance_workspace(
+            worker,
+            benchmark_definition=benchmark_definition,
+            assembly_definition=assembly_definition,
+            payload_definition=payload_definition,
+            obstacle_center_y=1.15,
+        )
+
+        errors = await validate_seeded_workspace_handoff_artifacts(
+            worker_client=worker,
+            target_node=AgentName.ENGINEER_PLAN_REVIEWER,
+        )
+    finally:
+        await worker.aclose()
+
+    assert not errors, errors
+
+
+@pytest.mark.integration_p0
+def test_int_184_validate_node_output_rejects_payload_trajectory_rotated_collision(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """
+    INT-184: submit-time validation must reject a payload trajectory whose
+    admissible rotation envelope collides with fixed geometry.
+    """
+    drafting_config = _agents_config_with_technical_drawing_modes(
+        engineer_mode=DraftingMode.OFF,
+        benchmark_mode=DraftingMode.OFF,
+    )
+    monkeypatch.setattr(
+        "worker_heavy.utils.file_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+
+    benchmark_definition, assembly_definition = _motion_forecast_validation_payloads(
+        first_anchor_pos=(0.0, 0.0, 0.0),
+        terminal_anchor_pos=(12.0, 12.0, 0.0),
+    )
+    payload_definition = _payload_trajectory_definition(
+        first_anchor_rotation_tolerance=(0.1, 0.1, 2.0)
+    )
+    benchmark_script, solution_script = _swept_clearance_geometry_scripts(
+        obstacle_center_y=1.15
+    )
+    artifacts = {
+        "benchmark_definition.yaml": yaml.safe_dump(
+            benchmark_definition, sort_keys=False
+        ),
+        "assembly_definition.yaml": yaml.safe_dump(
+            assembly_definition, sort_keys=False
+        ),
+        "benchmark_assembly_definition.yaml": yaml.safe_dump(
+            assembly_definition, sort_keys=False
+        ),
+        "benchmark_script.py": benchmark_script,
+        "solution_script.py": solution_script,
+        "payload_trajectory_definition.yaml": yaml.safe_dump(
+            payload_definition.model_dump(
+                mode="json", by_alias=True, exclude_none=True
+            ),
+            sort_keys=False,
+        ),
+    }
+    manufacturing_config = load_planner_manufacturing_config_from_text(
+        REPO_MANUFACTURING_CONFIG
+    )
+
+    is_valid, errors = validate_node_output(
+        AgentName.ENGINEER_CODER,
+        artifacts,
+        manufacturing_config=manufacturing_config,
+    )
+
+    assert not is_valid, errors
+    assert any(
+        error.startswith("payload_trajectory_definition.yaml:") for error in errors
+    ), errors
+    assert any(
+        "fixed geometry" in error.lower() or "rotation envelope" in error.lower()
         for error in errors
     ), errors
 

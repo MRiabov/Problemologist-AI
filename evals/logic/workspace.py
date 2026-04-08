@@ -12,6 +12,7 @@ from controller.agent.node_entry_validation import (
     ENGINEER_BENCHMARK_HANDOVER_CHECK,
     ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
     ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
+    ENGINEER_PLANNER_EVIDENCE_LAYOUT_CHECK,
     NodeEntryValidationError,
     NodeEntryValidationResult,
     ValidationGraph,
@@ -20,6 +21,7 @@ from controller.agent.node_entry_validation import (
     build_benchmark_node_contracts,
     build_engineer_node_contracts,
     engineer_benchmark_handover_custom_check,
+    engineer_planner_evidence_layout_custom_check,
     evaluate_node_entry_contract,
     plan_reviewer_handover_custom_check_from_session_id,
     reviewer_handover_custom_check_from_session_id,
@@ -942,6 +944,12 @@ async def preflight_seeded_entry_contract(
                 plan_reviewer_handover_custom_check_from_session_id(
                     session_id=session_id,
                 )
+            )
+        ),
+        ENGINEER_PLANNER_EVIDENCE_LAYOUT_CHECK: (
+            lambda *, contract, state: engineer_planner_evidence_layout_custom_check(
+                contract=contract,
+                state=state,
             )
         ),
         ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK: (
