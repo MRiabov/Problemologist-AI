@@ -214,10 +214,10 @@ def _validate_render_manifest_bundle(
         )
         if missing_render_files:
             raise ValueError(
-                f"latest preview bundle is missing render files: {missing_render_files}"
+                f"latest render bundle is missing render files: {missing_render_files}"
             )
         raise ValueError(
-            "bundle-local render_manifest.json missing for latest preview bundle"
+            "bundle-local render_manifest.json missing for latest render bundle"
         )
 
     try:
@@ -235,7 +235,7 @@ def _validate_render_manifest_bundle(
     if not current_revision:
         raise ValueError(
             "Unable to determine current repository git revision for latest "
-            "preview bundle validation."
+            "render bundle validation."
         )
     if render_manifest.revision.strip().lower() != current_revision:
         raise ValueError(

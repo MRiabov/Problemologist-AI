@@ -41,9 +41,9 @@ async def seed_benchmark_review_preview_bundle(
     render_paths: list[str],
 ) -> None:
     """
-    Fail closed if the benchmark review preview bundle is missing.
+    Fail closed if the benchmark review render bundle is missing.
 
-    The benchmark review path relies on a canonical preview bundle during
+    The benchmark review path relies on a canonical render bundle during
     startup. The bundle must already include the preview images, sidecars, and
     render manifest. This helper does not synthesize any fallback assets.
     """
@@ -56,7 +56,7 @@ async def seed_benchmark_review_preview_bundle(
         )
     )
     if not canonical_render_paths:
-        raise FileNotFoundError("benchmark review preview bundle has no render paths")
+        raise FileNotFoundError("benchmark review render bundle has no render paths")
 
     existing_paths: set[str] = set()
     try:
@@ -84,7 +84,7 @@ async def seed_benchmark_review_preview_bundle(
 
     if missing_paths:
         raise FileNotFoundError(
-            "benchmark review preview bundle is missing required paths: "
+            "benchmark review render bundle is missing required paths: "
             f"{sorted(set(missing_paths))}"
         )
 

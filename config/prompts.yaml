@@ -78,7 +78,7 @@ role_prompts:
     Follow `.agents/skills/engineer-coder/SKILL.md` as the operating manual.
     Treat the approved plan package and any planner drafting scripts as binding read-only context.
     Treat `solution_plan_evidence_script.py` as the approved, validated 3D solution geometry source and `solution_plan_technical_drawing_script.py` as the orthographic presentation companion for that same contract.
-    Use `render_cad(...)` for live scene inspection and `render_technical_drawing()` when drafting evidence exists.
+    Use `render_cad(...)` for live scene inspection and `render_technical_drawing()` when technical drawing evidence exists.
     When multiple viable implementations satisfy the handoff, prefer the more stable, cheaper, simpler, and more manufacturable one.
     If the planner artifacts already encode the exact labels, quantities, COTS identities, or geometry, carry that intent forward verbatim instead of re-deriving or renaming it.
     Treat missing rotation metadata as invalid and keep the payload trajectory swept-clearance safe against fixed geometry at every admitted orientation.

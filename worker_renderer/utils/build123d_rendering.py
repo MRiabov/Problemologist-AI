@@ -1013,7 +1013,7 @@ def export_preview_scene_bundle(
     workspace_root: Path,
     smoke_test_mode: bool = False,
 ) -> str:
-    """Materialize a mesh-backed preview bundle for renderer-worker handoff."""
+    """Materialize a mesh-backed render bundle for renderer-worker handoff."""
     with tempfile.TemporaryDirectory() as tmpdir:
         bundle_root = Path(tmpdir)
         mesh_root = bundle_root / "meshes"
@@ -1142,7 +1142,7 @@ def render_preview_scene_bundle(
     payload_path_points: list[tuple[float, float, float]] | None = None,
     include_payload_path_overlay: bool = False,
 ) -> PreviewRenderResult:
-    """Render the standard preview bundle from a pre-built mesh scene."""
+    """Render the standard render bundle from a pre-built mesh scene."""
     if width is None or height is None:
         default_width, default_height = get_image_render_resolution()
         width = default_width if width is None else width
@@ -2076,7 +2076,7 @@ def render_preview_bundle(
     height: int | None = None,
 ) -> PreviewRenderResult:
     """
-    Render the standard preview bundle through build123d/VTK.
+    Render the standard render bundle through build123d/VTK.
 
     Returns the saved render paths and the per-entity segmentation legend.
     """

@@ -171,14 +171,14 @@ async def _collect_render_blobs(
 
     if render_image_paths and not manifest_found:
         raise ValueError(
-            "bundle-local render_manifest.json missing for latest preview bundle"
+            "bundle-local render_manifest.json missing for latest render bundle"
         )
 
     if render_image_paths and not any(
         path.endswith("render_manifest.json") for path in render_blobs_base64
     ):
         raise ValueError(
-            "bundle-local render_manifest.json missing for latest preview bundle"
+            "bundle-local render_manifest.json missing for latest render bundle"
         )
 
     return render_blobs_base64

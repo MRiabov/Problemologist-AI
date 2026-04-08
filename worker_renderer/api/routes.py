@@ -1293,7 +1293,7 @@ async def api_static_preview(
     x_session_id: str = Header(default="renderer"),
     x_agent_role: str | None = Header(default=None),
 ):
-    """Render the multi-view validation preview bundle in a dedicated process."""
+    """Render the multi-view validation render bundle in a dedicated process."""
     try:
         async with render_operation_admission("static-preview", x_session_id):
             render_policy = load_agents_config().render

@@ -185,7 +185,7 @@ async def _validate_render_manifest_bundle(
             if preview_paths == expected_render_paths:
                 return None
             return (
-                f"{manifest_path} is out of sync with the latest preview bundle: "
+                f"{manifest_path} is out of sync with the latest render bundle: "
                 "preview evidence paths do not match the artifact set."
             )
 
@@ -197,11 +197,11 @@ async def _validate_render_manifest_bundle(
         if unexpected:
             details.append(f"unexpected entries: {unexpected}")
         return (
-            f"{manifest_path} is out of sync with the latest preview bundle: "
+            f"{manifest_path} is out of sync with the latest render bundle: "
             + "; ".join(details)
         )
 
-    return "bundle-local render_manifest.json missing for latest preview bundle"
+    return "bundle-local render_manifest.json missing for latest render bundle"
 
 
 def _is_binary_review_artifact(path: str) -> bool:
