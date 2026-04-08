@@ -24,6 +24,7 @@ from shared.models.schemas import AssemblyDefinition, EpisodeMetadata
 from shared.models.simulation import SimulationResult
 from shared.script_contracts import (
     drafting_render_manifest_path_for_agent,
+    plan_path_for_reviewer_stage,
     technical_drawing_script_path_for_agent,
 )
 from shared.workers.schema import (
@@ -331,8 +332,9 @@ async def collect_plan_reviewer_handover_evidence(
         return None, validation_error
 
     artifacts: dict[str, str] = {}
+    plan_artifact_name = plan_path_for_reviewer_stage(expected_stage).as_posix()
     for rel_path in (
-        "plan.md",
+        plan_artifact_name,
         "todo.md",
         "benchmark_definition.yaml",
         "benchmark_assembly_definition.yaml",
@@ -789,10 +791,16 @@ async def validate_planner_artifacts_cross_contract(
     except Exception as e:
         return f"planner handoff pricing-config parse failure: {e}"
 
+    plan_artifact_name = plan_path_for_reviewer_stage(expected_stage).as_posix()
     plan_text = await worker_client.read_file_optional(
-        "plan.md",
+        plan_artifact_name,
         bypass_agent_permissions=True,
     )
+    if plan_text is None:
+        plan_text = await worker_client.read_file_optional(
+            "plan.md",
+            bypass_agent_permissions=True,
+        )
     drafting_artifacts: dict[str, str] = {}
     script_names = (
         (
@@ -828,7 +836,9 @@ async def validate_planner_artifacts_cross_contract(
         plan_text = None
         todo_text = None
         plan_refusal_text = await worker_client.read_file_optional("plan_refusal.md")
-        plan_text = await worker_client.read_file_optional("plan.md")
+        plan_text = await worker_client.read_file_optional(plan_artifact_name)
+        if plan_text is None:
+            plan_text = await worker_client.read_file_optional("plan.md")
         todo_text = await worker_client.read_file_optional("todo.md")
         motion_errors = validate_benchmark_assembly_motion_contract(
             benchmark_definition=benchmark_definition,

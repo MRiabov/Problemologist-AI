@@ -13,7 +13,7 @@ TEMPLATE_REPOS_ROOT = (
 )
 ROLE_TEMPLATE_FILES: dict[AgentName, tuple[str, ...]] = {
     AgentName.BENCHMARK_PLANNER: (
-        "plan.md",
+        "benchmark_plan.md",
         "todo.md",
         "benchmark_definition.yaml",
         "benchmark_assembly_definition.yaml",
@@ -21,7 +21,7 @@ ROLE_TEMPLATE_FILES: dict[AgentName, tuple[str, ...]] = {
         "benchmark_plan_technical_drawing_script.py",
     ),
     AgentName.ENGINEER_PLANNER: (
-        "plan.md",
+        "engineering_plan.md",
         "todo.md",
         "assembly_definition.yaml",
         "drafting/solution_plan_evidence_script.py",
@@ -30,7 +30,7 @@ ROLE_TEMPLATE_FILES: dict[AgentName, tuple[str, ...]] = {
         "drafting/benchmark_plan_technical_drawing_script.py",
     ),
     AgentName.ELECTRONICS_PLANNER: (
-        "plan.md",
+        "engineering_plan.md",
         "todo.md",
         "assembly_definition.yaml",
     ),

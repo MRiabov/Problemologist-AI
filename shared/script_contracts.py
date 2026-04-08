@@ -5,6 +5,7 @@ from pathlib import Path
 from shared.enums import AgentName
 
 BENCHMARK_SCRIPT_PATH = "benchmark_script.py"
+BENCHMARK_PLAN_PATH = "benchmark_plan.md"
 BENCHMARK_PLAN_EVIDENCE_SCRIPT_PATH = "benchmark_plan_evidence_script.py"
 BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH = (
     "benchmark_plan_technical_drawing_script.py"
@@ -13,6 +14,7 @@ PAYLOAD_TRAJECTORY_DEFINITION_PATH = "payload_trajectory_definition.yaml"
 # Compatibility alias for older imports during the rename rollout.
 PRECISE_PATH_DEFINITION_PATH = PAYLOAD_TRAJECTORY_DEFINITION_PATH
 SOLUTION_SCRIPT_PATH = "solution_script.py"
+ENGINEERING_PLAN_PATH = "engineering_plan.md"
 SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH = "solution_plan_evidence_script.py"
 SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH = (
     "solution_plan_technical_drawing_script.py"
@@ -54,6 +56,27 @@ def authored_script_path_for_agent(agent_name: AgentName | str | None) -> Path:
     }:
         return _as_path(SOLUTION_SCRIPT_PATH)
     return _as_path(LEGACY_SCRIPT_PATH)
+
+
+def plan_path_for_agent(agent_name: AgentName | str | None) -> Path:
+    normalized = _normalize_agent_name(agent_name)
+    if normalized in {
+        AgentName.BENCHMARK_PLANNER,
+        AgentName.BENCHMARK_PLAN_REVIEWER,
+        AgentName.BENCHMARK_CODER,
+        AgentName.BENCHMARK_REVIEWER,
+    }:
+        return _as_path(BENCHMARK_PLAN_PATH)
+    if normalized in {
+        AgentName.ENGINEER_CODER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.ELECTRONICS_REVIEWER,
+        AgentName.ENGINEER_PLANNER,
+        AgentName.ENGINEER_PLAN_REVIEWER,
+        AgentName.ELECTRONICS_PLANNER,
+    }:
+        return _as_path(ENGINEERING_PLAN_PATH)
+    return _as_path("plan.md")
 
 
 def technical_drawing_script_path_for_agent(
@@ -158,3 +181,16 @@ def authored_script_path_for_reviewer_stage(reviewer_stage: str | None) -> Path:
     if stage in {"engineering_execution_reviewer", "electronics_reviewer"}:
         return _as_path(SOLUTION_SCRIPT_PATH)
     return _as_path(LEGACY_SCRIPT_PATH)
+
+
+def plan_path_for_reviewer_stage(reviewer_stage: str | None) -> Path:
+    stage = (reviewer_stage or "").strip()
+    if stage == "benchmark_reviewer":
+        return _as_path(BENCHMARK_PLAN_PATH)
+    if stage in {
+        "engineering_plan_reviewer",
+        "engineering_execution_reviewer",
+        "electronics_reviewer",
+    }:
+        return _as_path(ENGINEERING_PLAN_PATH)
+    return _as_path("plan.md")

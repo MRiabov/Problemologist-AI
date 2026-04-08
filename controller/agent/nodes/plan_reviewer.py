@@ -70,7 +70,7 @@ class PlanReviewerNode(BaseNode):
         plan_markdown = state.plan or ""
         with suppress(Exception):
             plan_markdown = await self._read_optional_workspace_file(
-                "plan.md", plan_markdown
+                "engineering_plan.md", plan_markdown
             )
 
         try:
@@ -140,7 +140,7 @@ class PlanReviewerNode(BaseNode):
                 f"{summary}. Expected minimal engineering DOFs: "
                 f"{expected_minimal_dofs}. "
                 "This is a dof_minimality failure. "
-                "Add explicit DOF_JUSTIFICATION markers in plan.md."
+                "Add explicit DOF_JUSTIFICATION markers in engineering_plan.md."
             )
             review = apply_canonical_dof_checklist(
                 ReviewResult(
@@ -218,7 +218,7 @@ class PlanReviewerNode(BaseNode):
         }
 
         validate_files = [
-            "plan.md",
+            "engineering_plan.md",
             "todo.md",
             "assembly_definition.yaml",
             "benchmark_assembly_definition.yaml",

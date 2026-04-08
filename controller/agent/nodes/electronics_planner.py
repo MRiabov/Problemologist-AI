@@ -62,7 +62,7 @@ class ElectronicsPlannerNode(BaseNode):
             ),
         }
         validate_files = [
-            "plan.md",
+            "engineering_plan.md",
             "todo.md",
             "benchmark_definition.yaml",
             "assembly_definition.yaml",
@@ -128,7 +128,7 @@ class ElectronicsPlannerNode(BaseNode):
         summary = getattr(prediction, "summary", "No summary provided.")
         return state.model_copy(
             update={
-                "plan": artifacts.get("plan.md", state.plan),
+                "plan": artifacts.get("engineering_plan.md", state.plan),
                 "todo": artifacts.get("todo.md", state.todo),
                 "journal": state.journal
                 + f"\n[Electronics Planner] {summary}"

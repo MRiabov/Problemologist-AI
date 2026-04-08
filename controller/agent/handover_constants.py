@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from shared.script_contracts import (
+    BENCHMARK_PLAN_PATH,
     BENCHMARK_SCRIPT_PATH,
+    ENGINEERING_PLAN_PATH,
     PAYLOAD_TRAJECTORY_DEFINITION_PATH,
     SOLUTION_SCRIPT_PATH,
 )
@@ -14,6 +16,7 @@ ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS: tuple[str, ...] = (
 ENGINEER_BENCHMARK_SOURCE_ARTIFACTS: tuple[str, ...] = (SOLUTION_SCRIPT_PATH,)
 
 BENCHMARK_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
+    BENCHMARK_PLAN_PATH,
     "plan.md",
     "todo.md",
     "benchmark_definition.yaml",
@@ -42,6 +45,7 @@ ELECTRONICS_REVIEWER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
 )
 
 ENGINEER_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
+    ENGINEERING_PLAN_PATH,
     "plan.md",
     "todo.md",
     "benchmark_definition.yaml",
@@ -67,6 +71,8 @@ ENGINEER_BENCHMARK_HANDOVER_CHECK = "engineer_benchmark_handover"
 ENGINEER_PLANNER_EVIDENCE_LAYOUT_CHECK = "engineer_planner_evidence_layout_check"
 
 SCHEMA_BACKED_HANDOFF_PATHS: tuple[str, ...] = (
+    BENCHMARK_PLAN_PATH,
+    ENGINEERING_PLAN_PATH,
     "plan.md",
     "todo.md",
     "plan_refusal.md",

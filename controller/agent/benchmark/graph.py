@@ -2072,8 +2072,12 @@ async def _update_episode_persistence(
                 or str(session_id)
             )
             plan_md = await _read_session_markdown(
-                effective_worker_session_id, "plan.md"
+                effective_worker_session_id, "benchmark_plan.md"
             )
+            if not plan_md:
+                plan_md = await _read_session_markdown(
+                    effective_worker_session_id, "plan.md"
+                )
             journal_md = await _read_session_markdown(
                 effective_worker_session_id, "journal.md"
             )

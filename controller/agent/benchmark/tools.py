@@ -22,6 +22,7 @@ from shared.models.schemas import PlannerSubmissionResult
 from shared.script_contracts import (
     drafting_render_manifest_path_for_agent,
     drafting_script_paths_for_agent,
+    plan_path_for_agent,
 )
 from shared.workers.schema import PlanReviewManifest
 
@@ -190,6 +191,20 @@ def get_benchmark_planner_tools(
     async def grep(pattern: str, path: str | None = None, glob: str | None = None):
         return await fs.grep(pattern, path, glob)
 
+    async def preview_drawing(
+        script_path: str = "benchmark_plan_technical_drawing_script.py",
+        orbit_pitch: float | list[float] = 45,
+        orbit_yaw: float | list[float] = 45,
+        smoke_test_mode: bool | None = None,
+    ):
+        return await fs.client.preview_drawing(
+            script_path,
+            orbit_pitch=orbit_pitch,
+            orbit_yaw=orbit_yaw,
+            smoke_test_mode=smoke_test_mode,
+            agent_role=AgentName.BENCHMARK_PLANNER,
+        )
+
     async def invoke_cots_search_subagent(
         query: str,
         max_weight_g: float | None = None,
@@ -225,7 +240,7 @@ def get_benchmark_planner_tools(
         from worker_heavy.utils.file_validation import validate_node_output
 
         required_files = [
-            "plan.md",
+            plan_path_for_agent(AgentName.BENCHMARK_PLANNER).as_posix(),
             "todo.md",
             "benchmark_definition.yaml",
             "benchmark_assembly_definition.yaml",
@@ -267,21 +282,6 @@ def get_benchmark_planner_tools(
                 node_type=AgentName.BENCHMARK_PLANNER,
             )
             return result.model_dump(mode="json")
-
-        if _benchmark_planner_drafting_required():
-            drafting_errors = await _validate_drafting_preview_artifacts(
-                fs,
-                AgentName.BENCHMARK_PLANNER,
-                artifacts,
-            )
-            if drafting_errors:
-                result = PlannerSubmissionResult(
-                    ok=False,
-                    status="rejected",
-                    errors=drafting_errors,
-                    node_type=AgentName.BENCHMARK_PLANNER,
-                )
-                return result.model_dump(mode="json")
 
         manufacturing_config_text = await fs.client.read_file_optional(
             "manufacturing_config.yaml", bypass_agent_permissions=True
@@ -366,6 +366,21 @@ def get_benchmark_planner_tools(
             benchmark_assembly_definition_text
         )
 
+        if _benchmark_planner_drafting_required():
+            drafting_errors = await _validate_drafting_preview_artifacts(
+                fs,
+                AgentName.BENCHMARK_PLANNER,
+                artifacts,
+            )
+            if drafting_errors:
+                result = PlannerSubmissionResult(
+                    ok=False,
+                    status="rejected",
+                    errors=drafting_errors,
+                    node_type=AgentName.BENCHMARK_PLANNER,
+                )
+                return result.model_dump(mode="json")
+
         is_valid, errors = validate_node_output(
             AgentName.BENCHMARK_PLANNER,
             artifacts,
@@ -395,6 +410,12 @@ def get_benchmark_planner_tools(
                 overwrite=True,
                 bypass_agent_permissions=True,
             )
+            await fs.client.write_file(
+                "benchmark_plan_review_manifest.json",
+                json.dumps(manifest.model_dump(mode="json"), indent=2),
+                overwrite=True,
+                bypass_agent_permissions=True,
+            )
         result = PlannerSubmissionResult(
             ok=is_valid,
             status="submitted" if is_valid else "rejected",
@@ -412,6 +433,7 @@ def get_benchmark_planner_tools(
             edit_file,
             grep,
             invoke_cots_search_subagent,
+            preview_drawing,
             submit_plan,
         ],
     )

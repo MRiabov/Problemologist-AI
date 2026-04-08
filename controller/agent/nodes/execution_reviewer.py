@@ -136,7 +136,7 @@ class ExecutionReviewerNode(BaseNode):
             )
             plan_markdown = state.plan or ""
             plan_markdown = await self._read_optional_workspace_file(
-                "plan.md", plan_markdown
+                "engineering_plan.md", plan_markdown
             )
             try:
                 findings = collect_excessive_dof_findings(assembly_definition)
@@ -229,7 +229,7 @@ class ExecutionReviewerNode(BaseNode):
                     f"{summary}. Expected minimal engineering DOFs: "
                     f"{expected_minimal_dofs}. "
                     "This is a dof_deviation_justified failure. "
-                    "Add explicit DOF_JUSTIFICATION markers in plan.md."
+                    "Add explicit DOF_JUSTIFICATION markers in engineering_plan.md."
                 )
                 review = apply_canonical_dof_checklist(
                     ReviewResult(

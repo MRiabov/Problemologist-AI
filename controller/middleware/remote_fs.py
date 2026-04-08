@@ -211,7 +211,8 @@ class RemoteFilesystemMiddleware:
 
     def _check_perm(self, action: Literal["read", "write"], path: str | Path) -> None:
         """Check if action is allowed by policy."""
-        if not self.policy.check_permission(self.agent_role, action, path):
+        canonical_path = self._canonical_path(path)
+        if not self.policy.check_permission(self.agent_role, action, canonical_path):
             role = (
                 self.agent_role.value
                 if isinstance(self.agent_role, AgentName)
@@ -243,6 +244,33 @@ class RemoteFilesystemMiddleware:
                 session_id=self.client.session_id,
             )
             raise PermissionError(msg)
+
+    def _canonical_path(self, path: str | Path) -> Path:
+        """Map legacy shared plan paths to the canonical split filenames."""
+        path_obj = Path(str(path))
+        normalized = path_obj.as_posix().lstrip("/")
+        if normalized != "plan.md":
+            return path_obj
+
+        benchmark_roles = {
+            AgentName.BENCHMARK_PLANNER,
+            AgentName.BENCHMARK_PLAN_REVIEWER,
+            AgentName.BENCHMARK_CODER,
+            AgentName.BENCHMARK_REVIEWER,
+        }
+        engineer_roles = {
+            AgentName.ENGINEER_PLANNER,
+            AgentName.ENGINEER_PLAN_REVIEWER,
+            AgentName.ENGINEER_CODER,
+            AgentName.ELECTRONICS_PLANNER,
+            AgentName.ELECTRONICS_REVIEWER,
+            AgentName.ENGINEER_EXECUTION_REVIEWER,
+        }
+        if self.agent_role in benchmark_roles:
+            return Path("benchmark_plan.md")
+        if self.agent_role in engineer_roles:
+            return Path("engineering_plan.md")
+        return path_obj
 
     @staticmethod
     def _entry_path(entry: object) -> str | None:
@@ -373,6 +401,7 @@ class RemoteFilesystemMiddleware:
 
     async def list_files(self, path: str | Path = "/") -> list[FileInfo]:
         """List files via the Worker client."""
+        path = self._canonical_path(path)
         self._check_perm("read", path)
         await record_events(
             episode_id=self.episode_id,
@@ -393,17 +422,20 @@ class RemoteFilesystemMiddleware:
         self, target_id: str, script_path: str | Path = "script.py"
     ) -> InspectTopologyResponse:
         """Inspect topological features via the Worker client."""
+        script_path = self._canonical_path(script_path)
         self._check_perm("read", script_path)
         # We could add a specific event type for this if needed
         return await self.client.inspect_topology(target_id, str(script_path))
 
     async def exists(self, path: str | Path) -> bool:
         """Check if a file exists via the Worker client."""
+        path = self._canonical_path(path)
         self._check_perm("read", path)
         return await self.client.exists(str(path))
 
     async def read_file(self, path: str | Path) -> str:
         """Read file via the Worker client."""
+        path = self._canonical_path(path)
         self._check_perm("read", path)
         if self._is_visual_media_path(path):
             mime_type, media_kind = self._media_metadata_for_path(path)
@@ -451,6 +483,7 @@ class RemoteFilesystemMiddleware:
         bypass_agent_permissions: bool = False,
     ) -> str | None:
         """Read file via the Worker client and return ``None`` if it is absent."""
+        path = self._canonical_path(path)
         if not bypass_agent_permissions:
             self._check_perm("read", path)
         if self._is_visual_media_path(path):
@@ -683,6 +716,7 @@ class RemoteFilesystemMiddleware:
         self, path: str | Path, content: str, overwrite: bool = True
     ) -> bool:
         """Write file via the Worker client, enforcing read-only constraints."""
+        path = self._canonical_path(path)
         self._check_perm("write", path)
         p_str = str(path)
 
@@ -698,7 +732,7 @@ class RemoteFilesystemMiddleware:
 
         if success:
             # Track library usage (new)
-            p_str = path.lstrip("/")
+            p_str = path.as_posix().lstrip("/")
             module_name = _library_usage_name(p_str)
             if module_name is not None:
                 from shared.observability.schemas import LibraryUsageEvent
@@ -707,7 +741,7 @@ class RemoteFilesystemMiddleware:
                     episode_id=self.episode_id,
                     events=[
                         LibraryUsageEvent(
-                            module_name=module_name, usage_type="new", path=path
+                            module_name=module_name, usage_type="new", path=p_str
                         )
                     ],
                 )
@@ -758,6 +792,7 @@ class RemoteFilesystemMiddleware:
 
     async def edit_file(self, path: str | Path, edits: list[EditOp]) -> bool:
         """Edit a file via the Worker client."""
+        path = self._canonical_path(path)
         self._check_perm("write", path)
         p_str = str(path)
 
@@ -859,6 +894,7 @@ class RemoteFilesystemMiddleware:
     ) -> list[GrepMatch]:
         """Search for a pattern in files via the Worker client."""
         if path:
+            path = self._canonical_path(path)
             self._check_perm("read", path)
         else:
             self._check_perm("read", ".")

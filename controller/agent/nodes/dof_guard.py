@@ -87,7 +87,7 @@ def has_accepted_dof_justification(plan_markdown: str, *, part_id: str) -> bool:
     """
     Lightweight, deterministic escape hatch for justified high-DOF mechanisms.
 
-    Accepted markers in `plan.md`:
+    Accepted markers in `engineering_plan.md`:
     - `DOF_JUSTIFICATION_ACCEPTED` (global)
     - `DOF_JUSTIFICATION:<part_id>` (part-specific)
     """

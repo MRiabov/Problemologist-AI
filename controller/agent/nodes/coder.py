@@ -95,7 +95,7 @@ class CoderNode(BaseNode):
             "feedback": self._prepare_text_context(state.feedback, max_chars=2000),
         }
         validate_files = [
-            "plan.md",
+            "engineering_plan.md",
             "todo.md",
             "benchmark_definition.yaml",
             "assembly_definition.yaml",

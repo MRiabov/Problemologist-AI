@@ -12,6 +12,7 @@ from shared.models.schemas import (
     BenchmarkDefinition,
     PlannerSubmissionResult,
 )
+from shared.script_contracts import plan_path_for_agent
 from shared.simulation.schemas import CustomObjectives, RandomizationStrategy
 from shared.workers.schema import BenchmarkAttachmentPolicySummary
 from worker_heavy.utils.file_validation import (
@@ -94,7 +95,7 @@ def _validate_benchmark_motion_visibility(
         except Exception:
             pass
 
-    plan_text = artifacts.get("plan.md")
+    plan_text = artifacts.get("benchmark_plan.md") or artifacts.get("plan.md")
     todo_text = artifacts.get("todo.md")
     benchmark_definition_text = artifacts.get("benchmark_definition.yaml")
     benchmark_assembly_definition_text = artifacts.get(
@@ -271,8 +272,9 @@ async def validate_benchmark_planner_handoff_artifacts(
 ) -> list[str]:
     """Validate the planner-to-coder handoff package from the worker session."""
     errors: list[str] = []
+    plan_artifact_name = plan_path_for_agent(AgentName.BENCHMARK_PLANNER).as_posix()
     files_to_check = (
-        "plan.md",
+        plan_artifact_name,
         "todo.md",
         "benchmark_definition.yaml",
         "benchmark_assembly_definition.yaml",

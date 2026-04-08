@@ -13,6 +13,7 @@ from shared.models.schemas import PlannerSubmissionResult
 from shared.script_contracts import (
     drafting_render_manifest_path_for_agent,
     drafting_script_paths_for_agent,
+    plan_path_for_agent,
 )
 from shared.workers.schema import PlanReviewManifest
 from worker_heavy.utils.dfm import (
@@ -46,10 +47,16 @@ def _planner_agent(workspace: Path | None = None) -> AgentName | None:
     # Fall back to the workspace file layout only if the prompt marker is absent.
     benchmark_handoff = workspace / "benchmark_assembly_definition.yaml"
     engineering_handoff = workspace / "assembly_definition.yaml"
+    benchmark_plan = workspace / "benchmark_plan.md"
+    engineering_plan = workspace / "engineering_plan.md"
 
     has_benchmark_handoff = benchmark_handoff.exists()
     has_engineering_handoff = engineering_handoff.exists()
 
+    if benchmark_plan.exists() and not engineering_plan.exists():
+        return AgentName.BENCHMARK_PLANNER
+    if engineering_plan.exists() and not benchmark_plan.exists():
+        return AgentName.ENGINEER_PLANNER
     if has_benchmark_handoff and not has_engineering_handoff:
         return AgentName.BENCHMARK_PLANNER
     if has_engineering_handoff and not has_benchmark_handoff:
@@ -92,14 +99,12 @@ def _workspace_environment_version(workspace: Path) -> str | None:
 def _required_files(agent_name: AgentName) -> tuple[str, ...]:
     if agent_name == AgentName.BENCHMARK_PLANNER:
         return (
-            "plan.md",
             "todo.md",
             "benchmark_definition.yaml",
             "benchmark_assembly_definition.yaml",
             "manufacturing_config.yaml",
         )
     return (
-        "plan.md",
         "todo.md",
         "benchmark_definition.yaml",
         "assembly_definition.yaml",
@@ -174,6 +179,13 @@ def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
     workspace = Path.cwd() if workspace is None else Path(workspace)
     agent_name = _planner_agent(workspace)
     session_id = _session_id()
+    plan_path = plan_path_for_agent(agent_name)
+    legacy_plan_path = workspace / "plan.md"
+    plan_required_path = (
+        plan_path
+        if (workspace / plan_path).exists() or not legacy_plan_path.exists()
+        else legacy_plan_path
+    )
 
     if agent_name is None:
         return PlannerSubmissionResult(
@@ -186,7 +198,7 @@ def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
             node_type=AgentName.ENGINEER_PLANNER,
         )
 
-    required_files = list(_required_files(agent_name))
+    required_files = [plan_required_path.name, *_required_files(agent_name)]
     required_files.extend(_drafting_required_files(agent_name))
     try:
         artifacts = _read_workspace_files(workspace, tuple(required_files))
@@ -214,6 +226,14 @@ def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
         workspace.joinpath("benchmark_definition.yaml").write_text(
             canonical_benchmark_definition,
             encoding="utf-8",
+        )
+
+    if not (workspace / plan_path).exists() and not legacy_plan_path.exists():
+        return PlannerSubmissionResult(
+            ok=False,
+            status="rejected",
+            errors=[f"Missing required file: {plan_path.as_posix()}"],
+            node_type=agent_name,
         )
 
     try:
@@ -263,6 +283,14 @@ def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
         },
     )
     manifest_path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+    visible_manifest_path = workspace / (
+        "benchmark_plan_review_manifest.json"
+        if agent_name == AgentName.BENCHMARK_PLANNER
+        else "engineering_plan_review_manifest.json"
+    )
+    visible_manifest_path.write_text(
+        manifest.model_dump_json(indent=2), encoding="utf-8"
+    )
 
     return PlannerSubmissionResult(
         ok=True,

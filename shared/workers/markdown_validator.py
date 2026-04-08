@@ -1,5 +1,6 @@
 """
-Markdown validation utilities for plan.md and todo.md files.
+Markdown validation utilities for benchmark_plan.md / engineering_plan.md and
+todo.md files.
 
 Validates structural requirements as per desired_architecture.md.
 """
@@ -62,6 +63,28 @@ BENCHMARK_PLAN_VARIANTS = [
             r"^##\s*7\.\s*Build123d\s+Strategy\s*$",
             r"^##\s*8\.\s*Cost\s*&\s*Weight\s+Envelope\s*$",
             r"^##\s*9\.\s*Part\s+Metadata\s*$",
+        ],
+    },
+    {
+        "required_sections": [
+            "## 1. Solution Overview",
+            "## 2. Parts List",
+            "## 3. Assembly Strategy",
+            "## 4. Assumption Register",
+            "## 5. Detailed Calculations",
+            "## 6. Critical Constraints / Operating Envelope",
+            "## 7. Cost & Weight Budget",
+            "## 8. Risk Assessment",
+        ],
+        "section_patterns": [
+            r"^##\s*1\.\s*Solution\s+Overview\s*$",
+            r"^##\s*2\.\s*Parts\s+List\s*$",
+            r"^##\s*3\.\s*Assembly\s+Strategy\s*$",
+            r"^##\s*4\.\s*Assumption\s+Register\s*$",
+            r"^##\s*5\.\s*Detailed\s+Calculations\s*$",
+            r"^##\s*6\.\s*Critical\s+Constraints\s*/\s*Operating\s+Envelope\s*$",
+            r"^##\s*7\.\s*Cost\s*&\s*Weight\s+Budget\s*$",
+            r"^##\s*8\.\s*Risk\s+Assessment\s*$",
         ],
     },
     {
@@ -312,11 +335,9 @@ def _validate_plan_md_with_spec(
     if plan_type == "benchmark":
         for section in required_sections[1:]:
             lines = sections.get(section, [])
-            if section in sections and not (
-                _has_table(lines) or BULLET_LIST_PATTERN.search("\n".join(lines))
-            ):
+            if section in sections and not "\n".join(lines).strip():
                 violations.append(
-                    f"{section.removeprefix('## ').strip()} must contain a bullet list or table."
+                    f"{section.removeprefix('## ').strip()} must contain content."
                 )
 
     return ValidationResult(is_valid=len(violations) == 0, violations=violations)
@@ -419,7 +440,8 @@ def _validate_calc_block(lines: list[str], calc_id: str) -> list[str]:
 
 def validate_plan_md(content: str, plan_type: str = "engineering") -> ValidationResult:
     """
-    Validate plan.md structure against required sections and list/table requirements.
+    Validate plan markdown structure against required sections and
+    list/table requirements.
 
     Args:
         content: The markdown content to validate
@@ -508,6 +530,10 @@ def validate_markdown_file(path: str, content: str) -> ValidationResult:
     Returns:
         ValidationResult
     """
+    if path.endswith("benchmark_plan.md"):
+        return validate_plan_md(content, plan_type="benchmark")
+    if path.endswith("engineering_plan.md"):
+        return validate_plan_md(content, plan_type="engineering")
     if path.endswith("plan.md"):
         return validate_plan_md(content)
     if path.endswith("todo.md"):

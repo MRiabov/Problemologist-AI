@@ -32,7 +32,7 @@ def _role_template_files(agent_name: AgentName) -> dict[str, str]:
     """Load role-specific starter files that are not common boilerplate."""
     role_mappings: dict[AgentName, dict[str, str]] = {
         AgentName.ENGINEER_PLANNER: {
-            "engineer/plan.md": "plan.md",
+            "engineer/engineering_plan.md": "engineering_plan.md",
             "engineer/todo.md": "todo.md",
             "engineer/assembly_definition.yaml": "assembly_definition.yaml",
             "engineer/drafting/solution_plan_evidence_script.py": (
@@ -70,7 +70,7 @@ def _role_template_files(agent_name: AgentName) -> dict[str, str]:
             ),
         },
         AgentName.ELECTRONICS_PLANNER: {
-            "engineer/plan.md": "plan.md",
+            "engineer/engineering_plan.md": "engineering_plan.md",
             "engineer/todo.md": "todo.md",
             "engineer/assembly_definition.yaml": "assembly_definition.yaml",
             "engineer/benchmark_assembly_definition.yaml": (
@@ -83,7 +83,7 @@ def _role_template_files(agent_name: AgentName) -> dict[str, str]:
             ),
         },
         AgentName.BENCHMARK_PLANNER: {
-            "benchmark_generator/plan.md": "plan.md",
+            "benchmark_generator/benchmark_plan.md": "benchmark_plan.md",
             "benchmark_generator/todo.md": "todo.md",
             "benchmark_generator/benchmark_definition.yaml": "benchmark_definition.yaml",
             "benchmark_generator/benchmark_assembly_definition.yaml": "benchmark_assembly_definition.yaml",

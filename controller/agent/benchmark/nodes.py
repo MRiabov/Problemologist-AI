@@ -38,6 +38,7 @@ from shared.observability.schemas import (
     ReviewDecisionEvent,
 )
 from shared.script_contracts import (
+    BENCHMARK_PLAN_PATH,
     BENCHMARK_SCRIPT_PATH,
     drafting_render_manifest_path_for_agent,
     drafting_script_paths_for_agent,
@@ -67,6 +68,7 @@ _SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER = "SYSTEM_TOOL_RETRY_EXHAUSTED"
 
 BENCHMARK_DEFINITION_FILE = "benchmark_definition.yaml"
 SCRIPT_FILE = BENCHMARK_SCRIPT_PATH
+PLAN_FILE = BENCHMARK_PLAN_PATH
 
 
 def _benchmark_worker_session_id(state: BenchmarkGeneratorState) -> str:
@@ -210,7 +212,7 @@ class BenchmarkPlannerNode(BaseNode):
                 inputs,
                 get_benchmark_planner_tools,
                 [
-                    "plan.md",
+                    PLAN_FILE,
                     "todo.md",
                     "benchmark_definition.yaml",
                     "benchmark_assembly_definition.yaml",
@@ -435,7 +437,9 @@ class BenchmarkPlannerNode(BaseNode):
             if isinstance(parsed, dict):
                 objectives_data = parsed
 
-        plan_markdown = str(artifacts.get("plan.md", "") or "")
+        plan_markdown = str(
+            artifacts.get(PLAN_FILE, "") or artifacts.get("plan.md", "") or ""
+        )
         learning_objective = _extract_markdown_section(
             plan_markdown, "## 1. Learning Objective"
         )
@@ -597,11 +601,36 @@ class BenchmarkPlannerNode(BaseNode):
 
         max_retries = max(1, int(settings.dspy_program_max_retries))
         validate_files = [
-            "plan.md",
+            PLAN_FILE,
             "todo.md",
             "benchmark_definition.yaml",
             "benchmark_assembly_definition.yaml",
         ]
+        from shared.agents.config import DraftingMode, load_agents_config
+
+        drafting_mode = DraftingMode.OFF
+        try:
+            drafting_mode = load_agents_config().get_technical_drawing_mode(
+                AgentName.BENCHMARK_PLANNER
+            )
+        except Exception:
+            drafting_mode = DraftingMode.OFF
+        if drafting_mode in (DraftingMode.MINIMAL, DraftingMode.FULL):
+            validate_files.extend(
+                [
+                    *(
+                        str(path)
+                        for path in drafting_script_paths_for_agent(
+                            AgentName.BENCHMARK_PLANNER
+                        )
+                    ),
+                    str(
+                        drafting_render_manifest_path_for_agent(
+                            AgentName.BENCHMARK_PLANNER
+                        )
+                    ),
+                ]
+            )
         episode_id = getattr(state, "episode_id", None) or self.ctx.episode_id
         db_callback = None
         if episode_id and str(episode_id).strip():
@@ -1241,7 +1270,7 @@ class BenchmarkPlanReviewerNode(BaseNode):
         )
 
     async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-        plan_md = "# No plan.md found."
+        plan_md = f"# No {PLAN_FILE} found."
         todo_md = "# No todo.md found."
         benchmark_definition_yaml = "# No benchmark_definition.yaml found."
         benchmark_assembly_definition_yaml = (
@@ -1250,8 +1279,14 @@ class BenchmarkPlanReviewerNode(BaseNode):
 
         with suppress(Exception):
             plan_md = (
-                await self.ctx.worker_client.read_file_optional("plan.md") or plan_md
+                await self.ctx.worker_client.read_file_optional(PLAN_FILE) or plan_md
             )
+        if plan_md == f"# No {PLAN_FILE} found.":
+            with suppress(Exception):
+                plan_md = (
+                    await self.ctx.worker_client.read_file_optional("plan.md")
+                    or plan_md
+                )
         with suppress(Exception):
             todo_md = (
                 await self.ctx.worker_client.read_file_optional("todo.md") or todo_md
@@ -1324,7 +1359,7 @@ class BenchmarkPlanReviewerNode(BaseNode):
             inputs,
             get_plan_reviewer_tools,
             [
-                "plan.md",
+                PLAN_FILE,
                 "todo.md",
                 "benchmark_definition.yaml",
                 "benchmark_assembly_definition.yaml",
@@ -1524,9 +1559,15 @@ class BenchmarkCoderNode(BaseNode):
                 or benchmark_definition_yaml
             )
         plan_input = (
-            state.plan.model_dump_json() if state.plan else "# No plan.md found."
+            state.plan.model_dump_json() if state.plan else f"# No {PLAN_FILE} found."
         )
-        if plan_input == "# No plan.md found.":
+        if plan_input == f"# No {PLAN_FILE} found.":
+            with suppress(Exception):
+                plan_input = (
+                    await self.ctx.worker_client.read_file_optional(PLAN_FILE)
+                    or plan_input
+                )
+        if plan_input == f"# No {PLAN_FILE} found.":
             with suppress(Exception):
                 plan_input = (
                     await self.ctx.worker_client.read_file_optional("plan.md")
@@ -1554,7 +1595,7 @@ class BenchmarkCoderNode(BaseNode):
             get_benchmark_tools,
             [
                 SCRIPT_FILE,
-                "plan.md",
+                PLAN_FILE,
                 "todo.md",
                 "benchmark_definition.yaml",
                 *[
@@ -1986,11 +2027,17 @@ class BenchmarkReviewerNode(BaseNode):
             return state
 
         # Read context files
-        plan_md = "# No plan.md found."
+        plan_md = f"# No {PLAN_FILE} found."
         with suppress(Exception):
             plan_md = (
-                await self.ctx.worker_client.read_file_optional("plan.md") or plan_md
+                await self.ctx.worker_client.read_file_optional(PLAN_FILE) or plan_md
             )
+        if plan_md == f"# No {PLAN_FILE} found.":
+            with suppress(Exception):
+                plan_md = (
+                    await self.ctx.worker_client.read_file_optional("plan.md")
+                    or plan_md
+                )
 
         objectives = "# No benchmark_definition.yaml found."
         with suppress(Exception):

@@ -12,14 +12,14 @@ from shared.script_contracts import (
 )
 
 _BENCHMARK_PLAN_BASE_FILES: tuple[str, ...] = (
-    "plan.md",
+    "benchmark_plan.md",
     "todo.md",
     "benchmark_definition.yaml",
     "benchmark_assembly_definition.yaml",
 )
 
 _ENGINEER_PLAN_BASE_FILES: tuple[str, ...] = (
-    "plan.md",
+    "engineering_plan.md",
     "todo.md",
     "benchmark_definition.yaml",
     "assembly_definition.yaml",

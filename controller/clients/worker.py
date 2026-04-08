@@ -862,6 +862,7 @@ class WorkerClient:
         rendering_type: PreviewRenderingType | str | None = None,
         bundle_base64: str | None = None,
         smoke_test_mode: bool | None = None,
+        agent_role: AgentName | str | None = None,
     ) -> PreviewDesignResponse:
         """Trigger design preview via the controller preview workflow when available."""
         payload = {
@@ -885,18 +886,22 @@ class WorkerClient:
 
         client = await self._get_client()
         try:
+            preview_agent_role = (
+                agent_role.value if isinstance(agent_role, AgentName) else agent_role
+            ) or self.agent_role
+            payload["agent_role"] = preview_agent_role
             if self.controller_url:
                 response = await client.post(
                     f"{self.controller_url}/api/script-tools/preview",
                     json=payload,
-                    headers=self._request_headers(stage=self.agent_role),
+                    headers=self._request_headers(stage=preview_agent_role),
                     timeout=1000.0,
                 )
             else:
                 response = await client.post(
                     f"{self.base_url}/benchmark/preview",
                     json=payload,
-                    headers=self._request_headers(stage=self.agent_role),
+                    headers=self._request_headers(stage=preview_agent_role),
                     timeout=300.0,
                 )
             response.raise_for_status()
@@ -912,6 +917,7 @@ class WorkerClient:
         orbit_yaw: float | list[float] = 45.0,
         bundle_base64: str | None = None,
         smoke_test_mode: bool | None = None,
+        agent_role: AgentName | str | None = None,
     ) -> PreviewDesignResponse:
         return await self.preview(
             script_path=script_path,
@@ -921,6 +927,7 @@ class WorkerClient:
             drafting=True,
             bundle_base64=bundle_base64,
             smoke_test_mode=smoke_test_mode,
+            agent_role=agent_role,
         )
 
     async def edit_file(

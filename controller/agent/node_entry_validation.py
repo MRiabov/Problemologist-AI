@@ -65,6 +65,7 @@ from shared.script_contracts import (
     SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH,
     authored_script_path_for_reviewer_stage,
     drafting_render_manifest_path_for_agent,
+    plan_path_for_agent,
 )
 from shared.simulation.schemas import CustomObjectives
 from shared.workers.markdown_validator import validate_todo_md
@@ -205,9 +206,6 @@ _ENGINEER_BENCHMARK_DRAFTING_CONTEXT_TARGETS = {
 }
 
 _DRAFTING_PROMPT_TARGETS = {
-    AgentName.BENCHMARK_PLANNER,
-    AgentName.BENCHMARK_PLAN_REVIEWER,
-    AgentName.BENCHMARK_CODER,
     AgentName.ENGINEER_PLANNER,
     AgentName.ENGINEER_PLAN_REVIEWER,
     AgentName.ENGINEER_CODER,
@@ -244,6 +242,26 @@ def _technical_drawing_mode_for_node(node_type: AgentName) -> DraftingMode:
     }:
         return config.get_technical_drawing_mode(AgentName.ENGINEER_PLANNER)
     return DraftingMode.OFF
+
+
+def _benchmark_planner_entry_artifacts() -> list[str]:
+    """Artifacts the benchmark planner needs before it can start planning."""
+    return [
+        "todo.md",
+        "benchmark_definition.yaml",
+        "benchmark_assembly_definition.yaml",
+    ]
+
+
+def _engineer_planner_entry_artifacts() -> list[str]:
+    """Artifacts the engineering planner needs before it can start planning."""
+    return [
+        "todo.md",
+        "benchmark_definition.yaml",
+        "assembly_definition.yaml",
+        "benchmark_assembly_definition.yaml",
+        "benchmark_script.py",
+    ]
 
 
 async def _validate_payload_trajectory_clearance_on_worker(
@@ -406,10 +424,7 @@ def build_benchmark_node_contracts() -> dict[AgentName, NodeEntryContract]:
         AgentName.BENCHMARK_PLANNER: NodeEntryContract(
             node=AgentName.BENCHMARK_PLANNER,
             required_state_fields=["session", "episode_id"],
-            required_artifacts=[
-                *BENCHMARK_PLANNER_HANDOFF_ARTIFACTS,
-                *drafting_artifacts,
-            ],
+            required_artifacts=_benchmark_planner_entry_artifacts(),
         ),
         AgentName.BENCHMARK_PLAN_REVIEWER: NodeEntryContract(
             node=AgentName.BENCHMARK_PLAN_REVIEWER,
@@ -461,10 +476,7 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
         AgentName.ENGINEER_PLANNER: NodeEntryContract(
             node=AgentName.ENGINEER_PLANNER,
             required_state_fields=["task", "episode_id"],
-            required_artifacts=[
-                *ENGINEER_PLANNER_HANDOFF_ARTIFACTS,
-                *_node_technical_drawing_artifacts(AgentName.ENGINEER_PLANNER),
-            ],
+            required_artifacts=_engineer_planner_entry_artifacts(),
             custom_check=ENGINEER_BENCHMARK_HANDOVER_CHECK,
         ),
         AgentName.ELECTRONICS_PLANNER: NodeEntryContract(
@@ -1212,6 +1224,11 @@ async def validate_seeded_workspace_handoff_artifacts(
             contents[rel_path] = content
 
     drafting_mode = _technical_drawing_mode_for_node(target_node)
+    plan_artifact_name = plan_path_for_agent(target_node).as_posix()
+    legacy_plan_artifact_name = "plan.md"
+    plan_content = contents.get(plan_artifact_name) or contents.get(
+        legacy_plan_artifact_name
+    )
     if target_node in _DRAFTING_PROMPT_TARGETS and _technical_drawing_mode_active(
         drafting_mode
     ):
@@ -1242,9 +1259,13 @@ async def validate_seeded_workspace_handoff_artifacts(
             )
 
     for rel_path, content in contents.items():
-        if rel_path == "plan.md":
+        if rel_path in {plan_artifact_name, legacy_plan_artifact_name}:
             plan_type = _plan_type_for_target(target_node, content)
-            is_valid, plan_errors = validate_plan_md_structure(content, plan_type)
+            is_valid, plan_errors = validate_plan_md_structure(
+                content,
+                plan_type,
+                artifact_path=rel_path,
+            )
             if not is_valid:
                 errors.extend(
                     _seeded_schema_error(
@@ -1320,7 +1341,7 @@ async def validate_seeded_workspace_handoff_artifacts(
                     motion_errors = validate_benchmark_assembly_motion_contract(
                         benchmark_definition=benchmark_definition_model,
                         assembly_definition=assembly_result,
-                        plan_text=contents.get("plan.md"),
+                        plan_text=plan_content,
                         todo_text=contents.get("todo.md"),
                         plan_refusal_text=contents.get("plan_refusal.md"),
                     )
@@ -1456,6 +1477,7 @@ async def validate_seeded_workspace_handoff_artifacts(
                 assembly_definition=benchmark_assembly_definition_model,
                 manufacturing_config=manufacturing_config_model,
                 planner_node_type=AgentName.BENCHMARK_PLAN_REVIEWER,
+                plan_text=plan_content,
             )
             errors.extend(
                 _seeded_schema_error(

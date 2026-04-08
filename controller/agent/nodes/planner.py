@@ -32,7 +32,7 @@ class PlannerSignature(dspy.Signature):
 @type_check
 class PlannerNode(BaseNode):
     """
-    Planner node: Analyzes the task and creates plan.md and todo.md using tools.
+    Planner node: Analyzes the task and creates engineering_plan.md and todo.md using tools.
     Refactored to use DSPy ReAct with remote worker execution.
     """
 
@@ -66,7 +66,7 @@ class PlannerNode(BaseNode):
             ),
         }
         validate_files = [
-            "plan.md",
+            "engineering_plan.md",
             "todo.md",
             "benchmark_definition.yaml",
             "assembly_definition.yaml",
@@ -131,7 +131,7 @@ class PlannerNode(BaseNode):
         summary = getattr(prediction, "summary", "No summary provided.")
         return state.model_copy(
             update={
-                "plan": artifacts.get("plan.md", ""),
+                "plan": artifacts.get("engineering_plan.md", ""),
                 "todo": artifacts.get("todo.md", ""),
                 "status": AgentStatus.EXECUTING,
                 "journal": state.journal + f"\n[Planner] {summary}" + journal_entry,

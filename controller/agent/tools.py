@@ -19,6 +19,7 @@ from shared.observability.schemas import RunCommandToolEvent
 from shared.script_contracts import (
     drafting_render_manifest_path_for_agent,
     drafting_script_paths_for_agent,
+    plan_path_for_agent,
     technical_drawing_script_path_for_agent,
 )
 from shared.workers.schema import PlanReviewManifest, RenderManifest
@@ -493,8 +494,19 @@ def get_engineer_planner_tools(
         )
 
         # Engineer planner and electronics planner share the same planner artifacts.
+        plan_path = plan_path_for_agent(planner_node_type).as_posix()
+        legacy_plan_path = "plan.md"
+        if (
+            await fs.client.read_file_optional(plan_path, bypass_agent_permissions=True)
+            is None
+            and await fs.client.read_file_optional(
+                legacy_plan_path, bypass_agent_permissions=True
+            )
+            is not None
+        ):
+            plan_path = legacy_plan_path
         required_files = [
-            "plan.md",
+            plan_path,
             "todo.md",
             "benchmark_definition.yaml",
             "assembly_definition.yaml",
