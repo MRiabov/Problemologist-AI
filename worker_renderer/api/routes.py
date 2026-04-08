@@ -1016,7 +1016,17 @@ def _render_stress_heatmap(
     return output_path
 
 
-@renderer_router.post("/benchmark/preview", response_model=PreviewDesignResponse)
+@renderer_router.post(
+    "/benchmark/render_cad",
+    response_model=PreviewDesignResponse,
+    response_model_exclude_none=True,
+)
+@renderer_router.post(
+    "/benchmark/preview",
+    response_model=PreviewDesignResponse,
+    response_model_exclude_none=True,
+    deprecated=True,
+)
 async def api_preview(
     request: PreviewDesignRequest,
     x_session_id: str = Header(default="renderer"),

@@ -181,6 +181,28 @@ result = part
         assert preview.object_store_keys[preview.image_path] == preview.image_path
         assert preview.image_bytes_base64 is None
 
+        render_cad_resp = await client.post(
+            f"{WORKER_RENDERER_URL}/benchmark/render_cad",
+            json=PreviewDesignRequest(
+                script_path="script.py",
+                script_content=script_content,
+                orbit_pitch=-35.0,
+                orbit_yaw=45.0,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": f"INT-208-{uuid.uuid4().hex[:8]}"},
+            timeout=180.0,
+        )
+        assert render_cad_resp.status_code == 200, render_cad_resp.text
+        render_cad_preview = PreviewDesignResponse.model_validate(
+            render_cad_resp.json()
+        )
+        assert render_cad_preview.success, render_cad_preview.message
+        assert render_cad_preview.image_path is not None
+        assert render_cad_preview.image_path.startswith("renders/current-episode/"), (
+            render_cad_preview
+        )
+        assert "Saved renders to" in render_cad_preview.message
+
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
