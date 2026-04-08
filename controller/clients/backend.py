@@ -71,6 +71,21 @@ class RemoteFilesystemBackend(BackendProtocol):
         try:
             success = await self.client.write_file(file_path, content)
             if success:
+                # Keep controller-side asset state in sync for seed/template writes.
+                try:
+                    from controller.observability.middleware_helper import (
+                        broadcast_file_update,
+                    )
+
+                    await broadcast_file_update(
+                        str(self.client.episode_id), file_path, content
+                    )
+                except Exception as sync_error:
+                    logger.debug(
+                        "awrite_asset_sync_failed",
+                        path=file_path,
+                        error=str(sync_error),
+                    )
                 return WriteResult(path=file_path, files_update=None)
             return WriteResult(error=f"Failed to write file '{file_path}'")
         except Exception as e:
