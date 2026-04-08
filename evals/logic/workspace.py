@@ -914,6 +914,7 @@ async def preflight_seeded_entry_contract(
             lambda *, contract, state: (  # noqa: ARG005
                 benchmark_plan_reviewer_handover_custom_check_from_session_id(
                     session_id=session_id,
+                    worker_client=worker,
                 )
             )
         ),
@@ -922,6 +923,7 @@ async def preflight_seeded_entry_contract(
                 benchmark_coder_handover_custom_check_from_session_id(
                     session_id=session_id,
                     custom_objectives=None,
+                    worker_client=worker,
                 )
             )
         ),
@@ -931,6 +933,7 @@ async def preflight_seeded_entry_contract(
                 reviewer_label="Benchmark",
                 manifest_path=".manifests/benchmark_review_manifest.json",
                 expected_stage="benchmark_reviewer",
+                worker_client=worker,
             )
         ),
         ENGINEER_BENCHMARK_HANDOVER_CHECK: (
@@ -1004,6 +1007,8 @@ async def preflight_seeded_entry_contract(
                     "task": item.task,
                     "episode_id": session_id,
                     "session_id": session_id,
+                    "workspace_client": worker,
+                    "worker_client": worker,
                     "session": {
                         "session_id": session_id,
                         "custom_objectives": None,

@@ -547,6 +547,7 @@ async def reviewer_handover_custom_check_from_session_id(
     manifest_path: str,
     expected_stage: ReviewerStage,
     agent_role: AgentName | None = None,
+    worker_client: Any | None = None,
 ) -> list[NodeEntryValidationError]:
     normalized_session_id = (session_id or "").strip()
     if not normalized_session_id:
@@ -561,7 +562,8 @@ async def reviewer_handover_custom_check_from_session_id(
             )
         ]
 
-    client = WorkerClient(
+    owns_client = worker_client is None
+    client = worker_client or WorkerClient(
         base_url=controller_settings.worker_light_url,
         heavy_url=controller_settings.worker_heavy_url,
         session_id=normalized_session_id,
@@ -577,7 +579,8 @@ async def reviewer_handover_custom_check_from_session_id(
     except Exception as exc:
         handover_error = f"reviewer handover validation exception: {exc}"
     finally:
-        await client.aclose()
+        if owns_client:
+            await client.aclose()
 
     if handover_error is None:
         return []
@@ -596,6 +599,7 @@ async def benchmark_coder_handover_custom_check_from_session_id(
     *,
     session_id: str | None,
     custom_objectives: CustomObjectives | None = None,
+    worker_client: Any | None = None,
 ) -> list[NodeEntryValidationError]:
     normalized_session_id = (session_id or "").strip()
     if not normalized_session_id:
@@ -607,7 +611,8 @@ async def benchmark_coder_handover_custom_check_from_session_id(
             )
         ]
 
-    client = WorkerClient(
+    owns_client = worker_client is None
+    client = worker_client or WorkerClient(
         base_url=controller_settings.worker_light_url,
         heavy_url=controller_settings.worker_heavy_url,
         session_id=normalized_session_id,
@@ -621,7 +626,8 @@ async def benchmark_coder_handover_custom_check_from_session_id(
     except Exception as exc:
         handoff_errors = [f"benchmark planner handoff validation exception: {exc}"]
     finally:
-        await client.aclose()
+        if owns_client:
+            await client.aclose()
 
     return _benchmark_validation_errors(
         messages=handoff_errors,
@@ -634,6 +640,7 @@ async def benchmark_plan_reviewer_handover_custom_check_from_session_id(
     *,
     session_id: str | None,
     episode_id: str | None = None,
+    worker_client: Any | None = None,
 ) -> list[NodeEntryValidationError]:
     normalized_session_id = (session_id or "").strip()
     if not normalized_session_id:
@@ -648,7 +655,8 @@ async def benchmark_plan_reviewer_handover_custom_check_from_session_id(
             )
         ]
 
-    client = WorkerClient(
+    owns_client = worker_client is None
+    client = worker_client or WorkerClient(
         base_url=controller_settings.worker_light_url,
         heavy_url=controller_settings.worker_heavy_url,
         session_id=normalized_session_id,
@@ -670,7 +678,8 @@ async def benchmark_plan_reviewer_handover_custom_check_from_session_id(
     except Exception as exc:
         handover_error = f"plan reviewer handover validation exception: {exc}"
     finally:
-        await client.aclose()
+        if owns_client:
+            await client.aclose()
 
     if handover_error is None:
         return []
@@ -707,6 +716,7 @@ async def benchmark_plan_reviewer_handover_custom_check(
         session_id = session.get("session_id")
     else:
         session_id = getattr(session, "session_id", None)
+    workspace_client = _get_state_worker_client(state)
     return await benchmark_plan_reviewer_handover_custom_check_from_session_id(
         session_id=str(worker_session_id or session_id)
         if worker_session_id or session_id
@@ -714,6 +724,7 @@ async def benchmark_plan_reviewer_handover_custom_check(
         episode_id=str(_get_state_value(state, "episode_id"))
         if _get_state_value(state, "episode_id")
         else None,
+        worker_client=workspace_client,
     )
 
 
@@ -728,11 +739,13 @@ async def benchmark_coder_handover_custom_check(
         session_id = session.get("session_id")
     else:
         session_id = getattr(session, "session_id", None)
+    workspace_client = _get_state_worker_client(state)
     return await benchmark_coder_handover_custom_check_from_session_id(
         session_id=str(worker_session_id or session_id)
         if worker_session_id or session_id
         else None,
         custom_objectives=extract_custom_objectives_from_state(state),
+        worker_client=workspace_client,
     )
 
 
@@ -857,7 +870,9 @@ async def engineer_planner_evidence_layout_custom_check(
             )
         ]
 
-    client = WorkerClient(
+    workspace_client = _get_state_worker_client(state)
+    owns_client = workspace_client is None
+    client = workspace_client or WorkerClient(
         base_url=controller_settings.worker_light_url,
         heavy_url=controller_settings.worker_heavy_url,
         session_id=normalized_session_id,
@@ -873,7 +888,8 @@ async def engineer_planner_evidence_layout_custom_check(
     else:
         read_error = None
     finally:
-        await client.aclose()
+        if owns_client:
+            await client.aclose()
 
     if read_error is not None:
         return [
@@ -1644,6 +1660,12 @@ def _get_state_value(state: BaseModel | Mapping[str, Any], field_name: str) -> A
     if isinstance(state, Mapping):
         return state.get(field_name)
     return getattr(state, field_name, None)
+
+
+def _get_state_worker_client(state: BaseModel | Mapping[str, Any]) -> Any | None:
+    return _get_state_value(state, "workspace_client") or _get_state_value(
+        state, "worker_client"
+    )
 
 
 async def evaluate_node_entry_contract(

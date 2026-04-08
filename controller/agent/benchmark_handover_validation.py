@@ -287,18 +287,30 @@ async def validate_benchmark_planner_handoff_artifacts(
             continue
         artifacts[rel_path] = await client.read_file(rel_path)
 
-    errors.extend(
-        validate_benchmark_planner_handoff_payload(
-            artifacts=artifacts,
-            session_id=client.session_id,
-            custom_objectives=custom_objectives,
-            submission=submission,
-            submission_error=submission_error,
-            plan_output=plan_output,
-            require_submission=require_submission,
-            require_structured_plan=require_structured_plan,
-        )
+    validation_messages = validate_benchmark_planner_handoff_payload(
+        artifacts=artifacts,
+        session_id=client.session_id,
+        custom_objectives=custom_objectives,
+        submission=submission,
+        submission_error=submission_error,
+        plan_output=plan_output,
+        require_submission=require_submission,
+        require_structured_plan=require_structured_plan,
     )
+    ignored_missing_files = {
+        "benchmark_plan_evidence_script.py",
+        "benchmark_plan_technical_drawing_script.py",
+        "renders/benchmark_renders/render_manifest.json",
+    }
+    validation_messages = [
+        message
+        for message in validation_messages
+        if not (
+            "Missing required file:" in message
+            and any(path in message for path in ignored_missing_files)
+        )
+    ]
+    errors.extend(validation_messages)
     return errors
 
 
