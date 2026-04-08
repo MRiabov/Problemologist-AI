@@ -53,10 +53,10 @@ class E2EResumeStageRecord(BaseModel):
     stage_index: int = Field(ge=0)
     agent_name: AgentName
     workspace_dir: Path
-    session_id: str
-    launch_return_code: int
-    verification_name: str
-    verification_success: bool
+    session_id: str | None = None
+    launch_return_code: int | None = None
+    verification_name: str | None = None
+    verification_success: bool | None = None
     simulation_success: bool | None = None
     review_decision: str | None = None
 

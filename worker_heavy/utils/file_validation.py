@@ -598,7 +598,7 @@ def validate_component_inventory_exactness(
 
 
 def _find_template_placeholders(filename: str, content: str) -> list[str]:
-    """Return template placeholder markers, with Python-aware handling for ellipses."""
+    """Return template placeholder markers, with context-aware handling for ellipses."""
     found_placeholders = [
         p for p in TEMPLATE_PLACEHOLDERS if p != "..." and p in content
     ]
@@ -606,8 +606,9 @@ def _find_template_placeholders(filename: str, content: str) -> list[str]:
     if "..." not in content:
         return found_placeholders
 
-    # Python code often contains valid ellipses in strings or type hints. Treat
-    # `...` as a placeholder only when it appears in comments for Python files.
+    # Python code often contains valid ellipses in strings, type hints, or
+    # function-call shorthand. Treat `...` as a placeholder only when it
+    # appears in comments for Python files.
     if filename.endswith(".py"):
         try:
             for token in tokenize.generate_tokens(io.StringIO(content).readline):
@@ -620,8 +621,57 @@ def _find_template_placeholders(filename: str, content: str) -> list[str]:
             found_placeholders.append("...")
         return found_placeholders
 
+    # For non-Python files, check whether `...` appears inside code blocks
+    # (fenced or inline backticks) or YAML block scalars containing code.
+    # Ellipses in those contexts are not template placeholders.
+    if _is_ellipsis_in_code_context(filename, content):
+        return found_placeholders
+
     found_placeholders.append("...")
     return found_placeholders
+
+
+# Regex patterns for detecting code contexts where `...` is legitimate
+_FENCED_CODE_BLOCK_RE = re.compile(r"```[\s\S]*?```", re.MULTILINE)
+_INLINE_CODE_RE = re.compile(r"`[^`\n]+`")
+_YAML_BLOCK_SCALAR_RE = re.compile(
+    r"(?m)^[ \t]*(?:\w[\w_]*):[ \t]*(?:\||>)[+\-]?\n([ \t]+.*\n?)+",
+)
+
+
+def _is_ellipsis_in_code_context(filename: str, content: str) -> bool:
+    """Return True if all `...` occurrences appear inside code contexts."""
+    # Build a set of character spans that are code contexts
+    code_spans: list[tuple[int, int]] = []
+
+    # Fenced code blocks (``` ... ```)
+    for match in _FENCED_CODE_BLOCK_RE.finditer(content):
+        code_spans.append((match.start(), match.end()))
+
+    # Inline code (` ... `)
+    for match in _INLINE_CODE_RE.finditer(content):
+        code_spans.append((match.start(), match.end()))
+
+    # YAML block scalars (| or >) that contain code-like content
+    # Heuristic: if the block contains parentheses, brackets, or dots,
+    # treat it as code context
+    for match in _YAML_BLOCK_SCALAR_RE.finditer(content):
+        block_text = match.group(0)
+        if any(ch in block_text for ch in ("(", ")", "[", "]", "{", "}", "...")):
+            code_spans.append((match.start(), match.end()))
+
+    # Check if every `...` falls within at least one code span
+    for match in re.finditer(r"\.\.\.", content):
+        ellipsis_start = match.start()
+        ellipsis_end = match.end()
+        in_code = any(
+            span_start <= ellipsis_start and ellipsis_end <= span_end
+            for span_start, span_end in code_spans
+        )
+        if not in_code:
+            return False
+
+    return True
 
 
 def _is_missing_file_error(content: str, *, expected_path: str | None = None) -> bool:

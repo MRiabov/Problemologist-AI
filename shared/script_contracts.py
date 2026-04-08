@@ -79,6 +79,22 @@ def plan_path_for_agent(agent_name: AgentName | str | None) -> Path:
     return _as_path("plan.md")
 
 
+def plan_artifact_candidates_for_agent(
+    agent_name: AgentName | str | None,
+) -> tuple[str, ...]:
+    """Return accepted plan-file names for the requested role.
+
+    Historical benchmark and engineer bundles may still carry the legacy
+    ``plan.md`` filename, while newly materialized workspaces use the role-
+    specific plan filename. Validation should accept either spelling for the
+    same role, but not cross-role plan files.
+    """
+    canonical = plan_path_for_agent(agent_name).as_posix()
+    if canonical == "plan.md":
+        return (canonical,)
+    return (canonical, "plan.md")
+
+
 def technical_drawing_script_path_for_agent(
     agent_name: AgentName | str | None,
 ) -> Path:

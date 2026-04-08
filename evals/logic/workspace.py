@@ -46,6 +46,9 @@ from shared.models.schemas import (
     DraftingView,
     PartConfig,
 )
+from shared.script_contracts import plan_artifact_candidates_for_agent
+
+_SEED_ARTIFACT_SKIP_DIR_NAMES = {".git", "__pycache__"}
 
 
 class SeededEntryContractFailure(BaseModel):
@@ -95,6 +98,22 @@ def resolve_seed_artifact_dir(item: EvalDatasetItem, *, root: Path) -> Path | No
     return repo_relative
 
 
+def _is_seed_artifact_path(path: Path) -> bool:
+    if any(part in _SEED_ARTIFACT_SKIP_DIR_NAMES for part in path.parts):
+        return False
+    if path.suffix.lower() in {".pyc", ".pyo"}:
+        return False
+    return True
+
+
+def _iter_seed_artifact_paths(root: Path) -> list[Path]:
+    return [
+        path
+        for path in sorted(p for p in root.rglob("*") if p.is_file())
+        if _is_seed_artifact_path(path)
+    ]
+
+
 def collect_seed_workspace_artifact_paths(
     item: EvalDatasetItem,
     *,
@@ -111,12 +130,8 @@ def collect_seed_workspace_artifact_paths(
         raise FileNotFoundError(f"Seed artifact directory not found: {artifact_dir}")
 
     if artifact_dir is not None and artifact_dir.exists():
-        for path in sorted(p for p in artifact_dir.rglob("*") if p.is_file()):
-            if (
-                path.name == "prompt.md"
-                or any(part in {"__pycache__"} for part in path.parts)
-                or path.suffix.lower() in {".pyc", ".pyo"}
-            ):
+        for path in _iter_seed_artifact_paths(artifact_dir):
+            if path.name == "prompt.md":
                 continue
             expected_paths.add(path.relative_to(artifact_dir).as_posix())
 
@@ -135,6 +150,25 @@ async def validate_workspace_has_artifacts(
         if not await worker.exists(rel_path):
             missing.append(rel_path)
     return missing
+
+
+def _plan_artifact_exists_fn(
+    *,
+    worker: WorkerClient,
+    target_node: AgentName,
+):
+    plan_candidates = plan_artifact_candidates_for_agent(target_node)
+    plan_candidate_set = set(plan_candidates)
+
+    async def _exists(path: str) -> bool:
+        if path in plan_candidate_set:
+            for candidate in plan_candidates:
+                if await worker.exists(candidate):
+                    return True
+            return False
+        return await worker.exists(path)
+
+    return _exists
 
 
 _ENGINEER_DRAFTING_TARGETS = {
@@ -437,7 +471,7 @@ async def materialize_seed_workspace_snapshot(
         seeded_paths.append(rel_path)
 
     if artifact_dir is not None:
-        for path in sorted(p for p in artifact_dir.rglob("*") if p.is_file()):
+        for path in _iter_seed_artifact_paths(artifact_dir):
             rel_path = path.relative_to(artifact_dir).as_posix()
             raw_bytes = path.read_bytes()
             try:
@@ -795,7 +829,7 @@ async def seed_eval_workspace(
             seeded_paths.append(rel_path)
 
         if artifact_dir is not None:
-            for path in sorted(p for p in artifact_dir.rglob("*") if p.is_file()):
+            for path in _iter_seed_artifact_paths(artifact_dir):
                 rel_path = path.relative_to(artifact_dir).as_posix()
                 raw_bytes = path.read_bytes()
                 try:
@@ -981,6 +1015,7 @@ async def preflight_seeded_entry_contract(
     supplemental_validation_errors: list[object] = []
     supplemental_messages: list[str] = []
     result = None
+    artifact_exists = _plan_artifact_exists_fn(worker=worker, target_node=target_node)
 
     def add_message(message: str) -> None:
         normalized = str(message).strip()
@@ -1014,7 +1049,7 @@ async def preflight_seeded_entry_contract(
                         "custom_objectives": None,
                     },
                 },
-                artifact_exists=worker.exists,
+                artifact_exists=artifact_exists,
                 graph=graph,
                 custom_checks=custom_checks,
                 integration_mode=True,

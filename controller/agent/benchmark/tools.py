@@ -10,6 +10,7 @@ from sqlalchemy import select
 
 from controller.agent.tools import (
     _invoke_cots_search_subagent,
+    _publish_drafting_preview_bundle,
     _validate_drafting_preview_artifacts,
     filter_tools_for_agent,
     get_common_tools,
@@ -314,6 +315,21 @@ def get_benchmark_planner_tools(
             "benchmark_assembly_definition.yaml",
         ]
         if _benchmark_planner_drafting_required():
+            try:
+                await _publish_drafting_preview_bundle(
+                    fs,
+                    AgentName.BENCHMARK_PLANNER,
+                )
+            except Exception as exc:
+                result = PlannerSubmissionResult(
+                    ok=False,
+                    status="rejected",
+                    errors=[
+                        f"drafting preview publication failed: {exc}",
+                    ],
+                    node_type=AgentName.BENCHMARK_PLANNER,
+                )
+                return result.model_dump(mode="json")
             required_files.extend(
                 [
                     str(path)

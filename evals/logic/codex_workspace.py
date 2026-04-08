@@ -31,7 +31,7 @@ from evals.logic.review_checks import (
     review_artifacts_complete_for_prefix,
     review_filename_candidates,
 )
-from evals.logic.workspace import resolve_seed_artifact_dir
+from evals.logic.workspace import _is_seed_artifact_path, resolve_seed_artifact_dir
 from shared.agent_templates import (
     load_codex_template_files,
     load_common_template_files,
@@ -92,20 +92,6 @@ _BINARY_SUFFIXES = {
     ".stl",
     ".glb",
 }
-_SKIP_COPY_DIR_NAMES = {
-    ".git",
-    "__pycache__",
-}
-
-
-def _is_seed_artifact_path(path: Path) -> bool:
-    if any(part in _SKIP_COPY_DIR_NAMES for part in path.parts):
-        return False
-    if path.suffix.lower() in {".pyc", ".pyo"}:
-        return False
-    return True
-
-
 _ENGINEER_DRAFTING_TARGETS = {
     AgentName.ENGINEER_PLANNER,
     AgentName.ENGINEER_PLAN_REVIEWER,

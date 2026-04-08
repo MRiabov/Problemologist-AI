@@ -12,7 +12,7 @@ from shared.models.schemas import (
     BenchmarkDefinition,
     PlannerSubmissionResult,
 )
-from shared.script_contracts import plan_path_for_agent
+from shared.script_contracts import plan_artifact_candidates_for_agent
 from shared.simulation.schemas import CustomObjectives, RandomizationStrategy
 from shared.workers.schema import BenchmarkAttachmentPolicySummary
 from worker_heavy.utils.file_validation import (
@@ -272,16 +272,29 @@ async def validate_benchmark_planner_handoff_artifacts(
 ) -> list[str]:
     """Validate the planner-to-coder handoff package from the worker session."""
     errors: list[str] = []
-    plan_artifact_name = plan_path_for_agent(AgentName.BENCHMARK_PLANNER).as_posix()
-    files_to_check = (
-        plan_artifact_name,
+    artifacts: dict[str, str] = {}
+
+    plan_candidates = plan_artifact_candidates_for_agent(AgentName.BENCHMARK_PLANNER)
+    plan_artifact_name = plan_candidates[0]
+    plan_artifact_content = None
+    for candidate in plan_candidates:
+        if await client.exists(candidate):
+            plan_artifact_name = candidate
+            plan_artifact_content = await client.read_file(candidate)
+            break
+    if plan_artifact_content is None:
+        errors.append(
+            "Missing planner artifact: "
+            f"{plan_candidates[0]} (or legacy {plan_candidates[1]})"
+        )
+    else:
+        artifacts[plan_artifact_name] = plan_artifact_content
+
+    for rel_path in (
         "todo.md",
         "benchmark_definition.yaml",
         "benchmark_assembly_definition.yaml",
-    )
-    artifacts: dict[str, str] = {}
-
-    for rel_path in files_to_check:
+    ):
         if not await client.exists(rel_path):
             errors.append(f"Missing planner artifact: {rel_path}")
             continue

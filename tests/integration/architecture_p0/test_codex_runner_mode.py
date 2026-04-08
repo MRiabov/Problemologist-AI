@@ -679,10 +679,6 @@ def test_run_e2e_seed_stage_continues_after_closing_open_cli_ui_terminal(
 
     def fake_open_cli_ui(*args, **kwargs):
         stage_calls.append("open_cli_ui")
-        return 130
-
-    def fake_launch_cli_exec(*args, **kwargs):
-        stage_calls.append("launch_cli_exec")
         return 0
 
     monkeypatch.setattr(
@@ -696,10 +692,6 @@ def test_run_e2e_seed_stage_continues_after_closing_open_cli_ui_terminal(
     monkeypatch.setattr(
         "evals.logic.codex_workspace.open_cli_ui",
         fake_open_cli_ui,
-    )
-    monkeypatch.setattr(
-        "evals.logic.codex_workspace.launch_cli_exec",
-        fake_launch_cli_exec,
     )
     monkeypatch.setattr(
         "evals.logic.codex_workspace.verify_workspace_for_agent",
@@ -739,7 +731,6 @@ def test_run_e2e_seed_stage_continues_after_closing_open_cli_ui_terminal(
     assert stage_calls == [
         "materialize_seed_workspace",
         "open_cli_ui",
-        "launch_cli_exec",
     ]
 
 
@@ -785,6 +776,33 @@ def test_run_e2e_seed_resume_from_dir_uses_checkpoint(tmp_path: Path):
 
 
 @pytest.mark.integration_p0
+def test_run_e2e_seed_resume_from_dir_infers_latest_stage_without_checkpoint(
+    tmp_path: Path,
+):
+    import dataset.evals.run_e2e_seed as run_e2e_seed_module
+
+    seed_dir = tmp_path / "seed"
+    seed_dir.mkdir()
+    workspace_root = tmp_path / "resume-root"
+    stage_dir = workspace_root / "some" / "nested" / "benchmark_planner-1111aaaa"
+    stage_dir.mkdir(parents=True)
+    (stage_dir / "prompt.md").write_text("prompt\n", encoding="utf-8")
+
+    plan = run_e2e_seed_module._build_resume_plan(
+        seed_dir=seed_dir,
+        workspace_root=workspace_root,
+        resume_from_dir=workspace_root,
+        resume_from_agent=None,
+    )
+
+    assert plan.workspace_root == workspace_root
+    assert plan.start_stage_index == 1
+    assert plan.source_seed_dir == stage_dir
+    assert plan.resume_label == f"benchmark_planner@{stage_dir}"
+    assert len(plan.completed_stages) == 1
+
+
+@pytest.mark.integration_p0
 def test_run_e2e_seed_resume_from_agent_handle_uses_stage_dir(tmp_path: Path):
     import dataset.evals.run_e2e_seed as run_e2e_seed_module
 
@@ -806,6 +824,105 @@ def test_run_e2e_seed_resume_from_agent_handle_uses_stage_dir(tmp_path: Path):
     assert plan.start_stage_index == 1
     assert plan.source_seed_dir == stage_dir
     assert plan.resume_label == f"benchmark_planner@{stage_dir}"
+
+
+@pytest.mark.integration_p0
+def test_run_e2e_seed_resume_from_agent_handle_infers_latest_stage_from_root(
+    tmp_path: Path,
+):
+    import dataset.evals.run_e2e_seed as run_e2e_seed_module
+
+    seed_dir = tmp_path / "seed"
+    seed_dir.mkdir()
+    workspace_root = tmp_path / "resume-root"
+    stage_dir = workspace_root / "workspaces" / "benchmark_planner-1111aaaa"
+    stage_dir.mkdir(parents=True)
+    (stage_dir / "prompt.md").write_text("prompt\n", encoding="utf-8")
+
+    plan = run_e2e_seed_module._build_resume_plan(
+        seed_dir=seed_dir,
+        workspace_root=workspace_root,
+        resume_from_dir=None,
+        resume_from_agent=f"benchmark_planner@{workspace_root}",
+    )
+
+    assert plan.workspace_root == workspace_root
+    assert plan.start_stage_index == 1
+    assert plan.source_seed_dir == stage_dir
+    assert plan.resume_label == f"benchmark_planner@{stage_dir}"
+
+
+@pytest.mark.integration_p0
+def test_run_e2e_seed_resume_from_agent_handle_falls_back_to_latest_stage_when_missing(
+    tmp_path: Path,
+):
+    import dataset.evals.run_e2e_seed as run_e2e_seed_module
+
+    seed_dir = tmp_path / "seed"
+    seed_dir.mkdir()
+    workspace_root = tmp_path / "resume-root"
+    stage_dir = workspace_root / "workspaces" / "benchmark_planner-1111aaaa"
+    stage_dir.mkdir(parents=True)
+    (stage_dir / "prompt.md").write_text("prompt\n", encoding="utf-8")
+
+    plan = run_e2e_seed_module._build_resume_plan(
+        seed_dir=seed_dir,
+        workspace_root=workspace_root,
+        resume_from_dir=None,
+        resume_from_agent="benchmark_coder",
+    )
+
+    assert plan.workspace_root == workspace_root
+    assert plan.start_stage_index == 1
+    assert plan.source_seed_dir == stage_dir
+    assert plan.resume_label == f"benchmark_planner@{stage_dir}"
+
+
+@pytest.mark.asyncio
+async def test_seed_workspace_artifacts_skip_git_metadata(
+    tmp_path: Path,
+):
+    from evals.logic.models import EvalDatasetItem
+    from evals.logic.workspace import (
+        InMemorySeedWorkspaceClient,
+        collect_seed_workspace_artifact_paths,
+        materialize_seed_workspace_snapshot,
+    )
+
+    seed_dir = tmp_path / "seed"
+    git_objects_dir = seed_dir / ".git" / "objects" / "05"
+    git_objects_dir.mkdir(parents=True)
+    (git_objects_dir / "deadbeef").write_text("git object\n", encoding="utf-8")
+    (seed_dir / "benchmark_plan.md").write_text("plan\n", encoding="utf-8")
+
+    item = EvalDatasetItem.model_validate(
+        {
+            "id": "e2e-001-drawing-full",
+            "task": "seed artifact filtering",
+            "complexity_level": 0,
+            "seed_artifact_dir": seed_dir,
+            "technical_drawing_mode": DraftingMode.FULL,
+        }
+    )
+
+    expected_paths = collect_seed_workspace_artifact_paths(item, root=tmp_path)
+    assert "benchmark_plan.md" in expected_paths
+    assert not any(path.startswith(".git/") for path in expected_paths)
+
+    workspace_client = InMemorySeedWorkspaceClient(session_id="session-1")
+    seeded_paths = await materialize_seed_workspace_snapshot(
+        item=item,
+        session_id="session-1",
+        agent_name=AgentName.BENCHMARK_PLANNER,
+        root=tmp_path,
+        workspace_client=workspace_client,
+    )
+
+    assert "benchmark_plan.md" in seeded_paths
+    assert not any(path.startswith(".git/") for path in seeded_paths)
+    assert all(
+        not path.startswith(".git/") for path, _ in workspace_client.snapshot_files()
+    )
 
 
 @pytest.mark.integration_p0

@@ -20,7 +20,9 @@ from shared.enums import (
 from shared.models.simulation import (
     SimulationFailure,
 )
-from shared.rendering import select_single_preview_render_subdir
+from shared.rendering import (
+    select_single_preview_render_subdir,
+)
 from shared.workers.loader import load_component_from_script
 from shared.workers.persistence import (
     collect_and_cleanup_events,

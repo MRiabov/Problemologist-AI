@@ -1098,8 +1098,8 @@ async def test_int_214_utils_preview_normalizes_multi_view_requests_and_rejects_
 async def test_int_216_utils_render_technical_drawing_uses_benchmark_drafting_script():
     """
     INT-216: utils.render_technical_drawing() must use the benchmark-owned
-    technical drawing script and persist drafting sidecars in the benchmark
-    render bucket.
+    technical drawing script and persist drafting sidecars in the scratch
+    preview bucket.
     """
     session_id = f"INT-216-{uuid.uuid4().hex[:8]}"
 
@@ -1145,7 +1145,7 @@ async def test_int_216_utils_render_technical_drawing_uses_benchmark_drafting_sc
             if line.startswith("PREVIEW_DRAWING_ARTIFACT_PATH=")
         )
         artifact_path = artifact_line.split("=", 1)[1]
-        assert artifact_path.startswith("renders/benchmark_renders/"), artifact_path
+        assert artifact_path.startswith("renders/current-episode/"), artifact_path
         assert artifact_path.endswith(".png"), artifact_path
 
         manifest_line = next(
@@ -1154,7 +1154,7 @@ async def test_int_216_utils_render_technical_drawing_uses_benchmark_drafting_sc
             if line.startswith("PREVIEW_DRAWING_MANIFEST_PATH=")
         )
         manifest_path = manifest_line.split("=", 1)[1]
-        assert manifest_path == "renders/benchmark_renders/render_manifest.json", (
+        assert manifest_path == "renders/current-episode/render_manifest.json", (
             manifest_path
         )
 
@@ -1178,7 +1178,7 @@ async def test_int_216_utils_render_technical_drawing_uses_benchmark_drafting_sc
 
         ls_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/ls",
-            json=ListFilesRequest(path="renders/benchmark_renders").model_dump(
+            json=ListFilesRequest(path="renders/current-episode").model_dump(
                 mode="json"
             ),
             headers={"X-Session-ID": session_id},

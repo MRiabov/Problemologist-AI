@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import math
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -11,6 +12,7 @@ import structlog
 import yaml
 from build123d import ExportDXF, ExportSVG, LineType, Part
 from build123d.build_enums import Unit
+from PIL import Image
 
 from shared.agents import load_agents_config
 from shared.models.schemas import AssemblyDefinition, DraftingView
@@ -224,8 +226,27 @@ def _plot_drawing(
 
     ax.set_xlim(min(xs) - x_pad, max(xs) + x_pad)
     ax.set_ylim(min(ys) - y_pad, max(ys) + y_pad)
-    fig.savefig(png_path, dpi=150, bbox_inches="tight")
-    plt.close(fig)
+    min_width = 640
+    min_height = 480
+    dpi = 150
+    max_attempts = 4
+    try:
+        for _attempt in range(max_attempts):
+            fig.savefig(png_path, dpi=dpi, bbox_inches="tight")
+            with Image.open(png_path) as image:
+                width, height = image.size
+            if width >= min_width and height >= min_height:
+                break
+
+            scale = max(min_width / max(width, 1), min_height / max(height, 1))
+            dpi = max(dpi + 1, int(math.ceil(dpi * scale)))
+        else:
+            raise ValueError(
+                "drafting preview PNG stayed below the minimum render size after "
+                f"{max_attempts} attempts"
+            )
+    finally:
+        plt.close(fig)
 
 
 def _export_vector_sidecars(
@@ -289,15 +310,7 @@ def render_technical_drawing_preview(
     render_policy = load_agents_config().render
     render_width = render_policy.image_resolution.width
     render_height = render_policy.image_resolution.height
-    output_dir = (
-        root
-        / "renders"
-        / (
-            "benchmark_renders"
-            if (agent_role or "").startswith("benchmark_")
-            else "engineer_plan_renders"
-        )
-    )
+    output_dir = root / "renders" / "current-episode"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     bounding_box = component.bounding_box()
