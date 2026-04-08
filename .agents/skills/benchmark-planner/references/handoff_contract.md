@@ -6,7 +6,7 @@ Use this reference when drafting or reviewing the benchmark planner handoff.
 
 Required planner-owned files:
 
-- `plan.md`
+- `benchmark_plan.md`
 - `todo.md`
 - `benchmark_definition.yaml`
 - `benchmark_assembly_definition.yaml`
@@ -17,7 +17,7 @@ Required planner-owned files:
 
 The planner handoff is YAML-backed. Populate the YAML files so downstream roles can treat them as the machine-readable source of truth, and keep both planner scripts aligned with those YAML fields.
 
-For file-level acceptance criteria, also read `specs/architecture/agents/agent-artifacts/README.md` and the matching contracts for `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py`.
+For file-level acceptance criteria, also read `specs/architecture/agents/agent-artifacts/README.md` and the matching contracts for `benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py`.
 
 ## Source Hierarchy
 
@@ -32,7 +32,7 @@ If these sources disagree, stop and resolve the contradiction before submitting 
 
 ## File Ownership
 
-### `plan.md`
+### `benchmark_plan.md`
 
 Describe the benchmark objective, geometry, randomization, benchmark-owned fixtures, and why the challenge is solvable.
 
@@ -60,8 +60,8 @@ Provide the orthographic drawing companion for the same benchmark geometry.
 
 Before submission, verify all of the following:
 
-- `plan.md`, `todo.md`, the YAML files, and both scripts use the same object names and labels.
-- Every planner-declared inventory label and selected COTS `part_id` appears in `plan.md` at least once as an exact identifier mention.
+- `benchmark_plan.md`, `todo.md`, the YAML files, and both scripts use the same object names and labels.
+- Every planner-declared inventory label and selected COTS `part_id` appears in `benchmark_plan.md` at least once as an exact identifier mention.
 - The evidence and technical-drawing scripts preserve the same labels, repeated quantities, and COTS identities as the YAML inventory.
 - Every length, offset, clearance, and travel limit is formula-backed from declared source geometry, COTS specs, or manufacturing constants. If a value is missing, the handoff is incomplete.
 - The planner evidence and technical-drawing scripts are the inspectable source of the planned solution geometry; do not leave geometry implied only in prose.

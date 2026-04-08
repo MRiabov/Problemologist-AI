@@ -1,6 +1,6 @@
 ---
 name: benchmark-planner
-description: Benchmark planning and handoff authoring for Problemologist. Use when creating or revising benchmark planner artifacts (`plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`), checking benchmark solvability or randomization, defining benchmark-owned fixture motion, reviewing planner drafting output with `preview_drawing()`, enforcing exact-grounded inventory mentions, preparing the plan for `submit_plan()`, or inspecting simulation evidence through frame-indexed `objects.parquet` sidecars.
+description: Benchmark planning and handoff authoring for Problemologist. Use when creating or revising benchmark planner artifacts (`benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`), checking benchmark solvability or randomization, defining benchmark-owned fixture motion, reviewing planner drafting output with `preview_drawing()`, enforcing exact-grounded inventory mentions, preparing the plan for `submit_plan()`, or inspecting simulation evidence through frame-indexed `objects.parquet` sidecars.
 ---
 
 # Benchmark Planner
@@ -59,7 +59,7 @@ Read these before drafting or revising the handoff:
 02. Keep the challenge singular: one objective, one failure mode, one obvious path to success.
 03. Keep `benchmark_definition.yaml` as the source of truth for objective geometry, randomization, and benchmark estimates.
 04. Keep `benchmark_assembly_definition.yaml` as benchmark-owned fixture structure and motion contract.
-05. Keep `plan.md`, `todo.md`, the YAML files, and both benchmark planning scripts mutually consistent.
+05. Keep `benchmark_plan.md`, `todo.md`, the YAML files, and both benchmark planning scripts mutually consistent.
 06. Do not expect `benchmark_script.py` in the planner workspace before plan approval.
 07. Treat benchmark-owned fixtures as downstream read-only context. Do not drift into engineer solution design.
 08. Preserve exact part identity when a benchmark fixture is catalog-backed. Do not replace it with anonymous solids.
@@ -71,15 +71,15 @@ Read these before drafting or revising the handoff:
 1. Reconstruct the objective, build zone, forbid zones, runtime jitter, and any benchmark-owned fixtures.
 2. Choose the simplest benchmark family that still teaches the intended behavior.
 3. Draft the benchmark geometry and any benchmark-owned fixture motion with explicit limits and clear visibility in the handoff.
-4. Write `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py`.
+4. Write `benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py`.
 5. Cross-check labels, AABBs, motion, and script geometry against the YAML before submission.
 6. Call `submit_plan()` only after the handoff is coherent and placeholder-free.
 
 ## Handoff Rules
 
-- Keep `plan.md` narrative-first and specific enough that the benchmark coder can implement without re-deciding the benchmark shape.
+- Keep `benchmark_plan.md` narrative-first and specific enough that the benchmark coder can implement without re-deciding the benchmark shape.
 - Keep `todo.md` actionable and ordered for the benchmark coder.
-- Keep `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` aligned with the same geometry, labels, repeated quantities, and COTS identities as the approved inventory, and ensure every planner-declared inventory label and selected COTS `part_id` appears in `plan.md` at least once as an exact identifier mention.
+- Keep `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` aligned with the same geometry, labels, repeated quantities, and COTS identities as the approved inventory, and ensure every planner-declared inventory label and selected COTS `part_id` appears in `benchmark_plan.md` at least once as an exact identifier mention.
 - Treat `benchmark_plan_technical_drawing_script.py` as display-only: it should not re-author a duplicate shape tree or a second copy of the benchmark geometry, only the orthographic drawing/view scaffolding for the same approved contract.
 - Keep every dimension formula-backed; if the handoff is missing a needed length, thickness, clearance, or placement datum, fix the source rather than guessing.
 - Use `preview(...)` for live scene previews and `preview_drawing()` for drafting packages; they are not interchangeable.
@@ -97,7 +97,7 @@ Read these before drafting or revising the handoff:
 - Goal or forbid zones overlap the moved object path.
 - Runtime AABB escapes the build zone.
 - Labels collide with reserved names or with each other.
-- The inventory is only semantically similar, not exact, across `plan.md`, the YAML, and the planner scripts.
+- The inventory is only semantically similar, not exact, across `benchmark_plan.md`, the YAML, and the planner scripts.
 - The geometry or physics derivation is hand-wavy instead of formula-backed.
 - A moving benchmark fixture is implied but not declared clearly.
 - The evidence script drifts from the YAML geometry.

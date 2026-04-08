@@ -18,8 +18,8 @@ Use these rules when repairing or extending eval seeds for the engineering plann
 
 ## Planner Grounding
 
-- Keep `plan.md` exact-mention complete for every planner-declared inventory label and selected COTS `part_id`.
-- Keep labels stable across `plan.md`, YAML, and both drafting scripts.
+- Keep `engineering_plan.md` exact-mention complete for every planner-declared inventory label and selected COTS `part_id`.
+- Keep labels stable across `engineering_plan.md`, YAML, and both drafting scripts.
 - Prefer read-only benchmark-owned context when the benchmark handoff is the source of truth.
 
 ## Practical Check

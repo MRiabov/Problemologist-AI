@@ -1,6 +1,6 @@
 ---
 name: engineer-planner
-description: Engineering planning role for turning benchmark handoff context into implementation-ready plan artifacts. Use when drafting or revising `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, or `solution_plan_technical_drawing_script.py`; when interpreting `benchmark_assembly_definition.yaml` and `benchmark_script.py` as read-only context; when validating cost, weight, motion contracts, detailed payload trajectory calculations, build-zone feasibility, or exact-grounded inventory mentions; when using `preview_drawing()` or media inspection to check planner drafts; when inspecting simulation evidence through frame-indexed `objects.parquet` sidecars; or when deciding whether a proposed engineering approach is infeasible and needs replanning.
+description: Engineering planning role for turning benchmark handoff context into implementation-ready plan artifacts. Use when drafting or revising `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, or `solution_plan_technical_drawing_script.py`; when interpreting `benchmark_assembly_definition.yaml` and `benchmark_script.py` as read-only context; when validating cost, weight, motion contracts, detailed payload trajectory calculations, build-zone feasibility, or exact-grounded inventory mentions; when using `preview_drawing()` or media inspection to check planner drafts; when inspecting simulation evidence through frame-indexed `objects.parquet` sidecars; or when deciding whether a proposed engineering approach is infeasible and needs replanning.
 ---
 
 # Engineer Planner
@@ -38,9 +38,9 @@ Use the shared preview helpers whenever the plan needs visual evidence:
 ## What This Skill Owns
 
 - Planner-side reasoning for the engineering graph.
-- File-level discipline for `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`.
+- File-level discipline for `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`.
 - Drafting-contract discipline for `assembly_definition.yaml.drafting` when drafting mode is active.
-- Exact-grounding of planner inventory labels and selected COTS `part_id`s in `plan.md`.
+- Exact-grounding of planner inventory labels and selected COTS `part_id`s in `engineering_plan.md`.
 - Planner drafting outputs: `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` when drafting mode is active.
 - Cost, weight, and motion-contract coherence before the plan-review gate.
 
@@ -56,7 +56,7 @@ Use the shared preview helpers whenever the plan needs visual evidence:
 
 Start with the current handoff package:
 
-- `plan.md`
+- `engineering_plan.md`
 - `todo.md`
 - `benchmark_definition.yaml`
 - `assembly_definition.yaml` if it already exists
@@ -93,14 +93,14 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 01. Read the handoff quickly and extract the hard constraints: goal zone, forbid zones, build zone, simulation bounds, runtime jitter, and cost/weight caps.
 02. Identify the smallest plausible mechanism family before drafting geometry.
 03. Keep the motion contract explicit if the solution needs moving parts, and minimize DOFs, actuators, and unique parts.
-04. Draft `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml` so they agree on labels, coordinates, limits, and ownership.
-05. When drafting mode is enabled, keep `plan.md` narrative-first and write the machine-readable drafting contract in `assembly_definition.yaml.drafting`.
+04. Draft `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml` so they agree on labels, coordinates, limits, and ownership.
+05. When drafting mode is enabled, keep `engineering_plan.md` narrative-first and write the machine-readable drafting contract in `assembly_definition.yaml.drafting`.
 06. Bind views, datums, dimensions, callouts, and notes to the reviewed mechanism only; do not invent new parts, joints, motions, or geometry beyond the existing handoff.
 07. Keep planner drafting scripts aligned with the same preserved geometry, repeated quantities, and COTS identities when drafting mode is enabled.
 08. Use `validate_costing_and_price()` before submission and fix the source of any pricing or weight mismatch.
 09. Inspect relevant renders or draft drawings with `preview_drawing()` and media inspection when visual evidence exists. Use `list_render_bundles()` and `query_render_bundle()` first when the question depends on a specific revision, and use `pick_preview_pixel()` / `pick_preview_pixels()` when the question depends on a screen-space point. If simulation evidence already exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
 10. Call `submit_plan()` only when the handoff is coherent, physically plausible, and ready for implementation.
-11. When motion proof is required, make `assembly_definition.yaml.motion_forecast` the coarse contract and `payload_trajectory_definition.yaml` the denser refinement; load `references/motion-trajectory-contract.md` for the calculation checklist; keep the same moving parts, preserve the same build-safe first anchor and terminal goal proof, and keep any math in `plan.md` synchronized with the actual waypoint sequence rather than with prose estimates.
+11. When motion proof is required, make `assembly_definition.yaml.motion_forecast` the coarse contract and `payload_trajectory_definition.yaml` the denser refinement; load `references/motion-trajectory-contract.md` for the calculation checklist; keep the same moving parts, preserve the same build-safe first anchor and terminal goal proof, and keep any math in `engineering_plan.md` synchronized with the actual waypoint sequence rather than with prose estimates.
 
 ## Plan Rules
 
@@ -110,7 +110,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 - Keep benchmark-owned fixtures read-only and never reassign their ownership.
 - Keep every dimension formula-backed; if the handoff is missing a needed length, thickness, clearance, or placement datum, correct the source instead of guessing.
 - Keep part labels unique and stable.
-- Every planner-declared inventory label and selected COTS `part_id` must appear in `plan.md` at least once as an exact identifier mention; backticks are preferred for the first mention, but the exact string match is the validation rule.
+- Every planner-declared inventory label and selected COTS `part_id` must appear in `engineering_plan.md` at least once as an exact identifier mention; backticks are preferred for the first mention, but the exact string match is the validation rule.
 - Keep `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` aligned with the same preserved geometry, repeated quantities, and COTS identities when drafting mode is enabled.
 - Never explode, stagger, or otherwise layout-shift `solution_plan_evidence_script.py` for readability. If a review-only presentation layout is needed, keep that concern in the drawing companion, which may copy the validated geometry and apply explode/layout presentation there when it improves review readability.
 - Treat `solution_plan_technical_drawing_script.py` as a presentation companion: it may duplicate the validated shape tree for drawing purposes, but it must not invent a second geometry contract or diverge from the approved plan geometry.
