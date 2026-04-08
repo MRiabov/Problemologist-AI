@@ -31,6 +31,7 @@ from evals.logic.codex_workspace import (
     build_cli_env,
     launch_cli_exec,
     materialize_seed_workspace,
+    open_cli_ui,
     prepare_cli_home,
     resolve_cli_home_root,
     resume_cli_exec,
@@ -565,6 +566,61 @@ def test_materialize_seed_workspace_uses_generic_cli_flag_names(
 
 
 @pytest.mark.integration_p0
+def test_materialize_seed_workspace_forwards_new_terminal_flag_to_open_cli_ui(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import dataset.evals.materialize_seed_workspace as materialize_seed_workspace_module
+
+    workspace_dir = tmp_path / "workspace"
+    prompt_path = workspace_dir / "prompt.md"
+    captured: dict[str, object] = {}
+
+    monkeypatch.setattr(
+        materialize_seed_workspace_module,
+        "materialize_workspace",
+        lambda **_: SimpleNamespace(
+            workspace_dir=workspace_dir,
+            prompt_path=prompt_path,
+            prompt_text="prompt text",
+            copied_paths=["foo.txt"],
+        ),
+    )
+    monkeypatch.setattr(
+        materialize_seed_workspace_module,
+        "open_cli_ui",
+        lambda *args, **kwargs: captured.update(kwargs) or 0,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "materialize_seed_workspace.py",
+            "--agent",
+            "engineer_coder",
+            "--task-id",
+            "ec-001-drawing-full",
+            "--output-dir",
+            str(workspace_dir),
+            "--provider",
+            "qwen",
+            "--no-yolo",
+            "--open-cli-ui",
+            "--new-terminal",
+            "--force-no-validate-seed",
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        materialize_seed_workspace_module.main()
+
+    assert exc_info.value.code == 0
+    assert captured["new_terminal"] is True
+    assert captured["provider_name"] == "qwen"
+    assert captured["task_id"] == "ec-001-drawing-full"
+
+
+@pytest.mark.integration_p0
 def test_cli_provider_registry_supports_qwen(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
@@ -794,6 +850,100 @@ def test_cli_provider_invocation_supports_prompt_flag_transport(
 
 
 @pytest.mark.integration_p0
+def test_open_cli_ui_uses_new_terminal_when_requested(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class PromptFlagProvider:
+        provider_name = "qwen"
+        binary_name = "qwen"
+        home_dir_name = ".qwen"
+        runtime_root_name = "qwen-runtime"
+        session_prefix = "local-qwen"
+
+        def prepare_home(self, **kwargs):
+            codex_home_root = kwargs["codex_home_root"]
+            codex_home_root.mkdir(parents=True, exist_ok=True)
+            (codex_home_root / self.home_dir_name).mkdir(parents=True, exist_ok=True)
+            return codex_home_root / self.home_dir_name
+
+        def build_env(self, **kwargs):
+            env = dict(os.environ)
+            env["CODEX_HOME"] = str(kwargs["codex_home_root"] / self.home_dir_name)
+            env["QWEN_HOME"] = env["CODEX_HOME"]
+            env["SESSION_ID"] = kwargs.get("session_id") or "session-1"
+            return env
+
+        def build_ui_invocation(
+            self,
+            *,
+            workspace_dir: Path,
+            prompt_text: str,
+            yolo: bool,
+        ) -> CliInvocation:
+            return CliInvocation(
+                argv=[
+                    "qwen",
+                    "--prompt",
+                    prompt_text,
+                    "--workspace",
+                    str(workspace_dir),
+                ],
+                prompt_text=prompt_text,
+                prompt_transport="prompt_flag",
+                cwd=workspace_dir,
+            )
+
+    captured: dict[str, object] = {}
+
+    def fake_run(*args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr("evals.logic.codex_workspace.subprocess.run", fake_run)
+    monkeypatch.setattr(
+        "evals.logic.codex_workspace.shutil.which",
+        lambda name: "/usr/bin/gnome-terminal" if name == "gnome-terminal" else None,
+    )
+    monkeypatch.setattr(
+        "evals.logic.codex_workspace.get_cli_provider",
+        lambda provider_name=None: PromptFlagProvider(),
+    )
+    monkeypatch.setenv("DISPLAY", ":99")
+
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+    (workspace_dir / ".git").mkdir()
+    result = open_cli_ui(
+        workspace_dir,
+        "open ui prompt",
+        task_id="task-1",
+        agent_name=AgentName.ENGINEER_CODER,
+        session_id="session-1",
+        runtime_root=tmp_path / "qwen-runtime",
+        yolo=True,
+        provider_name="qwen",
+        timeout_seconds=123,
+        new_terminal=True,
+    )
+
+    assert result == 0
+    argv = captured["args"][0]
+    assert Path(argv[0]).name == "gnome-terminal"
+    assert "--wait" in argv
+    assert any(arg.startswith("--title=") for arg in argv)
+    assert any(arg.startswith("--working-directory=") for arg in argv)
+    assert "--" in argv
+    assert "qwen" in argv
+    assert "open ui prompt" in argv
+    assert captured["kwargs"]["cwd"] == str(workspace_dir)
+    assert captured["kwargs"]["timeout"] == 123
+    assert captured["kwargs"]["env"]["DISPLAY"] == ":99"
+    assert captured["kwargs"]["env"]["QWEN_HOME"].endswith("/.qwen")
+
+
+@pytest.mark.integration_p0
 def test_skill_training_preserves_legacy_provider_metadata(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -979,6 +1129,7 @@ def test_run_evals_defaults_are_smoke_test_contract():
     assert args.limit == 1
     assert args.concurrency == 1
     assert args.level is None
+    assert args.open_cli_ui is False
 
 
 @pytest.mark.integration_p0
