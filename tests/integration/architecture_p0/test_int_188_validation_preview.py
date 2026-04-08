@@ -55,6 +55,7 @@ from shared.workers.schema import (
     RenderBundlePointPickResult,
     RenderBundleQueryRequest,
     RenderBundleQueryResult,
+    RenderManifest,
     WriteFileRequest,
 )
 from shared.workers.workbench_models import ManufacturingMethod
@@ -1698,42 +1699,137 @@ async def test_int_188_validation_preview_http_preview_route_uses_vtk_renderer(
     pitch: float, yaw: float
 ):
     """INT-188: /benchmark/preview renders through the build123d/VTK path."""
+    original_config = _set_render_modalities(
+        rgb=True,
+        rgb_axes=False,
+        rgb_edges=False,
+        depth=True,
+        segmentation=True,
+        depth_axes=False,
+        depth_edges=False,
+        segmentation_axes=False,
+        segmentation_edges=False,
+    )
     async with httpx.AsyncClient(timeout=300.0) as client:
-        session_id = f"INT-188-{uuid.uuid4().hex[:8]}"
-        headers = {"X-Session-ID": session_id}
+        try:
+            session_off = f"INT-188-{uuid.uuid4().hex[:8]}"
+            headers_off = {"X-Session-ID": session_off}
 
-        await _write_standard_validation_inputs(
-            client, headers, material_id="aluminum_6061"
-        )
+            await _write_standard_validation_inputs(
+                client, headers_off, material_id="aluminum_6061"
+            )
 
-        preview_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/preview",
-            json=PreviewDesignRequest(
-                script_path="script.py",
-                orbit_pitch=pitch,
-                orbit_yaw=yaw,
-            ).model_dump(mode="json"),
-            headers=headers,
-            timeout=180.0,
-        )
-        assert preview_resp.status_code == 200, preview_resp.text
-        preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
-        assert preview_data.success, preview_data.message
-        assert preview_data.image_path is not None
-        assert preview_data.image_path.startswith(f"{BENCHMARK_RENDER_DIR}/"), (
-            preview_data
-        )
-        assert preview_data.image_path.endswith(".png"), preview_data
+            preview_resp_off = await client.post(
+                f"{WORKER_HEAVY_URL}/benchmark/preview",
+                json=PreviewDesignRequest(
+                    script_path="script.py",
+                    orbit_pitch=pitch,
+                    orbit_yaw=yaw,
+                ).model_dump(mode="json"),
+                headers=headers_off,
+                timeout=180.0,
+            )
+            assert preview_resp_off.status_code == 200, preview_resp_off.text
+            preview_data_off = PreviewDesignResponse.model_validate(
+                preview_resp_off.json()
+            )
+            assert preview_data_off.success, preview_data_off.message
+            assert preview_data_off.manifest_path is not None
+            assert preview_data_off.manifest_path.startswith(
+                "renders/current-episode/"
+            ), preview_data_off
+            assert preview_data_off.render_manifest_json is not None
+            manifest_off = RenderManifest.model_validate_json(
+                preview_data_off.render_manifest_json
+            )
+            rgb_paths_off = sorted(
+                path
+                for path, artifact in manifest_off.artifacts.items()
+                if artifact.modality == "rgb"
+            )
+            assert rgb_paths_off, manifest_off.artifacts
 
-        image_resp = await client.post(
-            f"{WORKER_LIGHT_URL}/fs/read_blob",
-            json=ReadFileRequest(path=preview_data.image_path).model_dump(mode="json"),
-            headers=headers,
-        )
-        assert image_resp.status_code == 200, image_resp.text
-        image = Image.open(io.BytesIO(image_resp.content)).convert("RGB")
-        assert image.size == _image_resolution(), image.size
-        assert np.array(image).std() > 0.0
+            image_resp_off = await client.post(
+                f"{WORKER_LIGHT_URL}/fs/read_blob",
+                json=ReadFileRequest(path=rgb_paths_off[0]).model_dump(mode="json"),
+                headers=headers_off,
+            )
+            assert image_resp_off.status_code == 200, image_resp_off.text
+            image_off = np.array(
+                Image.open(io.BytesIO(image_resp_off.content)).convert("RGB")
+            )
+            assert image_off.size > 0, image_off.shape
+
+            _set_render_modalities(
+                rgb=True,
+                rgb_axes=False,
+                rgb_edges=True,
+                depth=True,
+                segmentation=True,
+                depth_axes=False,
+                depth_edges=False,
+                segmentation_axes=False,
+                segmentation_edges=False,
+            )
+
+            session_on = f"INT-188-{uuid.uuid4().hex[:8]}"
+            headers_on = {"X-Session-ID": session_on}
+            await _write_standard_validation_inputs(
+                client, headers_on, material_id="aluminum_6061"
+            )
+
+            preview_resp_on = await client.post(
+                f"{WORKER_HEAVY_URL}/benchmark/preview",
+                json=PreviewDesignRequest(
+                    script_path="script.py",
+                    orbit_pitch=pitch,
+                    orbit_yaw=yaw,
+                ).model_dump(mode="json"),
+                headers=headers_on,
+                timeout=180.0,
+            )
+            assert preview_resp_on.status_code == 200, preview_resp_on.text
+            preview_data_on = PreviewDesignResponse.model_validate(
+                preview_resp_on.json()
+            )
+            assert preview_data_on.success, preview_data_on.message
+            assert preview_data_on.manifest_path is not None
+            assert preview_data_on.manifest_path.startswith(
+                "renders/current-episode/"
+            ), preview_data_on
+            assert preview_data_on.render_manifest_json is not None
+            manifest_on = RenderManifest.model_validate_json(
+                preview_data_on.render_manifest_json
+            )
+            rgb_paths_on = sorted(
+                path
+                for path, artifact in manifest_on.artifacts.items()
+                if artifact.modality == "rgb"
+            )
+            assert rgb_paths_on, manifest_on.artifacts
+
+            image_resp_on = await client.post(
+                f"{WORKER_LIGHT_URL}/fs/read_blob",
+                json=ReadFileRequest(path=rgb_paths_on[0]).model_dump(mode="json"),
+                headers=headers_on,
+            )
+            assert image_resp_on.status_code == 200, image_resp_on.text
+            image_on = np.array(
+                Image.open(io.BytesIO(image_resp_on.content)).convert("RGB")
+            )
+            assert image_on.shape == image_off.shape, (
+                image_on.shape,
+                image_off.shape,
+            )
+
+            edge_delta = np.abs(image_on.astype(np.int16) - image_off.astype(np.int16))
+            edge_pixels = np.any(edge_delta > 20, axis=2)
+            assert int(edge_pixels.sum()) > 100, edge_delta.shape
+            assert np.count_nonzero(image_on.sum(axis=2) < 120) > np.count_nonzero(
+                image_off.sum(axis=2) < 120
+            )
+        finally:
+            AGENTS_CONFIG_PATH.write_text(original_config, encoding="utf-8")
 
 
 @pytest.mark.integration_p0
