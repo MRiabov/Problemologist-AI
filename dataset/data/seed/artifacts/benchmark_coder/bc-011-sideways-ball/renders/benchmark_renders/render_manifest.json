@@ -4,7 +4,7 @@
   "created_at": "2026-04-08T06:30:25.326002+00:00",
   "episode_id": "0cb6e9ce-31f3-579d-bdd3-2351eb4835f6",
   "worker_session_id": "seed-renders-bc-011-sideways-ball-9062ab42",
-  "revision": null,
+  "revision": "900346437b43dcd82d7d05b9f8a3b75d4b573e95",
   "scene_hash": "af71ef4da6d4fa100672db9d7e3eb2505794ad156cd9bafc4a17e28b4a1ab436",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",

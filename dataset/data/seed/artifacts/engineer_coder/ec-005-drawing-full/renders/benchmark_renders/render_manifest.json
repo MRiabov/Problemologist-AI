@@ -1,11 +1,11 @@
 {
   "version": "1.0",
-  "bundle_id": "6f381e5f-ac4b-50c7-90c1-7fea1463fc92",
-  "created_at": "2026-04-08T07:38:23.453270+00:00",
-  "episode_id": "7bdbb4de-6619-5be5-800f-06e7fd98ebbe",
-  "worker_session_id": "seed-renders-ec-005-drawing-full-c7bff629",
+  "bundle_id": "7bfffea7-0ac3-535b-8580-146d1d7cc786",
+  "created_at": "2026-04-08T10:52:35.352791+00:00",
+  "episode_id": "c52183d3-de7a-5260-93d0-3229f49d246d",
+  "worker_session_id": "seed-renders-ec-005-drawing-full-a02b64a3",
   "revision": null,
-  "scene_hash": "fa7d622e74ac0c12b1b4611f9a8df4cc4df100ad1f7ead93c53828b4a1341edd",
+  "scene_hash": "0b4c831736f867d6ab6155d5f5b02b4fc331b118a47f5eb5b9d7cea222810e85",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",
   "drafting": false,
@@ -116,8 +116,8 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 2168.89990234375,
-      "depth_max_m": 2201.213134765625,
+      "depth_min_m": 2168.900146484375,
+      "depth_max_m": 2232.47998046875,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -139,19 +139,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -186,7 +201,7 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 2401.123779296875,
+      "depth_min_m": 2328.727783203125,
       "depth_max_m": 2431.5908203125,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
@@ -209,19 +224,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -256,8 +286,8 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 2497.332275390625,
-      "depth_max_m": 2526.53564453125,
+      "depth_min_m": 2376.080078125,
+      "depth_max_m": 2526.53466796875,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -279,19 +309,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -326,8 +371,8 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 2401.123779296875,
-      "depth_max_m": 2431.590576171875,
+      "depth_min_m": 2328.727783203125,
+      "depth_max_m": 2431.5908203125,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -349,19 +394,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -396,8 +456,8 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 2168.89990234375,
-      "depth_max_m": 2201.212646484375,
+      "depth_min_m": 2168.900146484375,
+      "depth_max_m": 2232.480224609375,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -419,19 +479,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -466,8 +541,8 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 1936.67529296875,
-      "depth_max_m": 1968.7294921875,
+      "depth_min_m": 1936.675537109375,
+      "depth_max_m": 2119.1123046875,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -489,19 +564,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -536,8 +626,8 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 1840.4892578125,
-      "depth_max_m": 1869.9451904296875,
+      "depth_min_m": 1840.489501953125,
+      "depth_max_m": 2075.732666015625,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -559,19 +649,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -606,8 +711,8 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 1936.67529296875,
-      "depth_max_m": 1968.73193359375,
+      "depth_min_m": 1936.675537109375,
+      "depth_max_m": 2119.1123046875,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -629,19 +734,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -676,8 +796,8 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 2173.375,
-      "depth_max_m": 2206.3076171875,
+      "depth_min_m": 2173.375244140625,
+      "depth_max_m": 2280.724365234375,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -699,19 +819,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -746,8 +881,8 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 2343.388916015625,
-      "depth_max_m": 2374.916748046875,
+      "depth_min_m": 2343.388671875,
+      "depth_max_m": 2374.958740234375,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -769,19 +904,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -816,8 +966,8 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 2413.802734375,
-      "depth_max_m": 2444.6669921875,
+      "depth_min_m": 2387.995849609375,
+      "depth_max_m": 2444.66748046875,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -839,19 +989,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -886,8 +1051,8 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 2343.388916015625,
-      "depth_max_m": 2374.948486328125,
+      "depth_min_m": 2343.388671875,
+      "depth_max_m": 2374.93212890625,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -909,19 +1074,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -956,8 +1136,8 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 2173.375,
-      "depth_max_m": 2206.30908203125,
+      "depth_min_m": 2173.375244140625,
+      "depth_max_m": 2280.724365234375,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -979,19 +1159,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -1027,7 +1222,7 @@
         "dxf": null
       },
       "depth_min_m": 2003.3812255859375,
-      "depth_max_m": 2035.0018310546875,
+      "depth_max_m": 2203.5263671875,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -1049,19 +1244,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -1096,8 +1306,8 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 1932.9698486328125,
-      "depth_max_m": 1963.685791015625,
+      "depth_min_m": 1932.9697265625,
+      "depth_max_m": 2167.917724609375,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -1119,19 +1329,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -1167,7 +1392,7 @@
         "dxf": null
       },
       "depth_min_m": 2003.3812255859375,
-      "depth_max_m": 2035.0018310546875,
+      "depth_max_m": 2203.526123046875,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -1189,19 +1414,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -1237,7 +1477,7 @@
         "dxf": null
       },
       "depth_min_m": 2175.972412109375,
-      "depth_max_m": 2208.848388671875,
+      "depth_max_m": 2312.464111328125,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -1259,19 +1499,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -1306,8 +1561,8 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 2238.201171875,
-      "depth_max_m": 2270.69873046875,
+      "depth_min_m": 2238.200927734375,
+      "depth_max_m": 2345.119140625,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -1329,19 +1584,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -1377,7 +1647,7 @@
         "dxf": null
       },
       "depth_min_m": 2263.974853515625,
-      "depth_max_m": 2297.693359375,
+      "depth_max_m": 2356.4033203125,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -1399,19 +1669,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -1446,8 +1731,8 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 2238.201171875,
-      "depth_max_m": 2270.69921875,
+      "depth_min_m": 2238.200927734375,
+      "depth_max_m": 2345.119384765625,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -1469,19 +1754,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -1517,7 +1817,7 @@
         "dxf": null
       },
       "depth_min_m": 2175.972412109375,
-      "depth_max_m": 2208.849853515625,
+      "depth_max_m": 2312.464111328125,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -1539,19 +1839,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -1587,7 +1902,7 @@
         "dxf": null
       },
       "depth_min_m": 2113.736083984375,
-      "depth_max_m": 2145.727294921875,
+      "depth_max_m": 2287.179931640625,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -1609,19 +1924,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -1656,8 +1986,8 @@
         "svg": null,
         "dxf": null
       },
-      "depth_min_m": 2087.9619140625,
-      "depth_max_m": 2120.979736328125,
+      "depth_min_m": 2087.962158203125,
+      "depth_max_m": 2271.6123046875,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -1679,19 +2009,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     },
@@ -1727,7 +2072,7 @@
         "dxf": null
       },
       "depth_min_m": 2113.736083984375,
-      "depth_max_m": 2145.7275390625,
+      "depth_max_m": 2287.179443359375,
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
@@ -1749,19 +2094,34 @@
       "depth_interpretation": null,
       "segmentation_legend": [
         {
-          "instance_id": "projectile_ball",
-          "instance_name": "projectile_ball",
-          "semantic_label": "projectile_ball",
+          "instance_id": "environment_fixture",
+          "instance_name": "environment_fixture",
+          "semantic_label": "environment_fixture",
           "object_type": "part",
           "object_id": 0,
-          "body_name": "projectile_ball",
-          "geom_name": "projectile_ball",
+          "body_name": "environment_fixture",
+          "geom_name": "environment_fixture",
           "color_rgb": [
             235,
             59,
             59
           ],
           "color_hex": "#eb3b3b"
+        },
+        {
+          "instance_id": "projectile_ball",
+          "instance_name": "projectile_ball",
+          "semantic_label": "projectile_ball",
+          "object_type": "part",
+          "object_id": 1,
+          "body_name": "projectile_ball",
+          "geom_name": "projectile_ball",
+          "color_rgb": [
+            59,
+            110,
+            235
+          ],
+          "color_hex": "#3b6eeb"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "created_at": "2026-04-08T07:04:34.509489+00:00",
   "episode_id": "dbf786a8-ef2d-582e-8a69-678669599bea",
   "worker_session_id": "seed-renders-eer-011-sideways-transfer-budget-overrun-5569b08c",
-  "revision": null,
+  "revision": "900346437b43dcd82d7d05b9f8a3b75d4b573e95",
   "scene_hash": "88890f0edd3670af7201f1bb6aa8e76a5201e20d1ddd2feb18250773bf662a9b",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",
