@@ -4,6 +4,7 @@ import asyncio
 import uuid
 from collections.abc import Mapping, Sequence
 from enum import StrEnum
+from pathlib import Path
 from typing import Any, Protocol
 
 import httpx
@@ -67,6 +68,7 @@ from shared.simulation.schemas import CustomObjectives
 from shared.workers.markdown_validator import validate_todo_md
 from shared.workers.schema import (
     PlanReviewManifest,
+    RenderManifest,
     ReviewerStage,
     ReviewManifest,
     ValidationResultRecord,
@@ -928,6 +930,35 @@ def _benchmark_validation_errors(
     return refusal_errors + fallback_errors
 
 
+def _required_render_bundle_sidecars(
+    *,
+    manifest: RenderManifest,
+    manifest_path: str,
+) -> list[str]:
+    bundle_root = Path(manifest.bundle_path or Path(manifest_path).parent)
+    evidence_paths = [
+        Path(path)
+        for path in manifest.preview_evidence_paths
+        if path and Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
+    ]
+    if not evidence_paths:
+        evidence_paths = [
+            Path(path)
+            for path in manifest.artifacts
+            if Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
+        ]
+
+    required: list[str] = []
+    if any(path.suffix.lower() == ".mp4" for path in evidence_paths):
+        required.extend(
+            [
+                str(bundle_root / "frames.jsonl"),
+                str(bundle_root / "objects.parquet"),
+            ]
+        )
+    return required
+
+
 async def validate_seeded_workspace_handoff_artifacts(
     *,
     worker_client: WorkerClient,
@@ -1268,6 +1299,38 @@ async def validate_seeded_workspace_handoff_artifacts(
                 artifact_path="renders",
             )
         )
+
+    for rel_path, content in contents.items():
+        if not rel_path.endswith("render_manifest.json"):
+            continue
+        try:
+            render_manifest = RenderManifest.model_validate_json(content)
+        except Exception as exc:
+            errors.append(
+                _seeded_schema_error(
+                    message=f"{rel_path}: {exc}",
+                    artifact_path=rel_path,
+                )
+            )
+            continue
+
+        for required_sidecar in _required_render_bundle_sidecars(
+            manifest=render_manifest,
+            manifest_path=rel_path,
+        ):
+            if await worker_client.exists(
+                required_sidecar, bypass_agent_permissions=True
+            ):
+                continue
+            errors.append(
+                _seeded_schema_error(
+                    message=(
+                        f"{rel_path}: required render sidecar "
+                        f"'{required_sidecar}' is missing."
+                    ),
+                    artifact_path=required_sidecar,
+                )
+            )
 
     return errors
 
