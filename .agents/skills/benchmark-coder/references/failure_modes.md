@@ -37,7 +37,7 @@ Signals:
 - `result` not bound correctly
 - Import-time side effects
 - Edited benchmark-owned files from the benchmark coder side
-- `plan.md` is missing an exact identifier mention for a declared label or selected COTS `part_id`
+- `benchmark_plan.md` is missing an exact identifier mention for a declared label or selected COTS `part_id`
 - Planner-authored evidence or technical-drawing scripts change labels, quantities, or COTS identities
 
 Likely causes:

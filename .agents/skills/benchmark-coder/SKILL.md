@@ -67,7 +67,7 @@ from utils.preview import (
 
 Start with the benchmark handoff package:
 
-- `plan.md`
+- `benchmark_plan.md`
 - `todo.md`
 - `benchmark_definition.yaml`
 - `benchmark_assembly_definition.yaml`
@@ -82,11 +82,11 @@ Start with the benchmark handoff package:
 
 ## Plan Grounding
 
-When `plan.md` or the planner-authored evidence/drawing scripts already encode the approved labels, repeated quantities, COTS identities, or geometry, copy that exact contract forward into `benchmark_script.py` instead of re-deriving it. The benchmark coder translates the approved plan into build123d; it does not reinterpret the contract.
+When `benchmark_plan.md` or the planner-authored evidence/drawing scripts already encode the approved labels, repeated quantities, COTS identities, or geometry, copy that exact contract forward into `benchmark_script.py` instead of re-deriving it. The benchmark coder translates the approved plan into build123d; it does not reinterpret the contract.
 Treat the planner YAML handoff as the machine-readable source of truth and the two planner scripts as the inspectable source of the approved benchmark solution.
 Because the approved planner handoff has already passed collision and geometry review, treat its layout as collision-validated and preserve the exact dimensions, offsets, and clearances whenever the plan is feasible to implement as written.
 That collision review does not imply manufacturability validation or simulation coverage; the coder still has to validate and simulate the implemented revision before handoff.
-When the benchmark planner uses its structured template, read `plan.md` as a sectioned contract, not prose: the useful sections include `Learning objective`, `Environment geometry (with static randomization)`, `Input objective (moved object)`, `Objective locations`, `Simulation bounds`, `Constraints handed to engineering`, `Success criteria`, and `Planner artifacts`.
+When the benchmark planner uses its structured template, read `benchmark_plan.md` as a sectioned contract, not prose: the useful sections include `Learning objective`, `Environment geometry (with static randomization)`, `Input objective (moved object)`, `Objective locations`, `Simulation bounds`, `Constraints handed to engineering`, `Success criteria`, and `Planner artifacts`.
 
 Load sibling skill guidance only when it changes the implementation outcome:
 
@@ -128,7 +128,7 @@ Do not invent fallback behavior to paper over contradictions. If the approved pl
 - Prefer passive geometry unless the approved benchmark explicitly requires motion.
 - Never invent benchmark-side motion, fallback labels, hidden constraints, or undeclared fixture behavior.
 - Keep benchmark-owned fixtures and objective overlays read-only and reconstruct them faithfully.
-- Keep planner-authored evidence and technical-drawing scripts grounded in the approved inventory. The labels, repeated quantities, and COTS identities in those scripts and in `plan.md` must match the approved handoff exactly; missing, extra, or relabeled items are contract failures, not implementation freedom.
+- Keep planner-authored evidence and technical-drawing scripts grounded in the approved inventory. The labels, repeated quantities, and COTS identities in those scripts and in `benchmark_plan.md` must match the approved handoff exactly; missing, extra, or relabeled items are contract failures, not implementation freedom.
 - Do not "clean up" or resize a collision-validated planner layout to make it look simpler; preserve the approved dimensions and placement relationships unless the plan is genuinely infeasible and must be refused.
 - Preserve explicit motion contracts for any moving benchmark fixture: identity, motion kind, axis or path, bounds, trigger, and engineer interaction flag if relevant.
 - Keep authored labels unique and stable.
@@ -150,13 +150,14 @@ Do not invent fallback behavior to paper over contradictions. If the approved pl
 - Simulation success is necessary but not sufficient.
 - If render images or simulation media exist, inspect them before handoff, especially when motion is present.
 - If `preview(...)` evidence exists for the current revision, inspect the render bundle before changing geometry.
+- After any significant blocker or repeated failure on the same issue, inspect the current render or simulation evidence before the next geometry change. If the same issue has failed more than three times in a row, keep inspecting render evidence on every subsequent retry until the blocker changes; use `../render-evidence/SKILL.md` as the visual-inspection playbook.
 - Treat screenshots and video as evidence, not as text summaries.
 - Keep review readiness tied to the current revision, not a stale earlier run.
 
 ## Refusal Path
 
 - Refuse only when the approved benchmark plan is genuinely infeasible or contradictory.
-- If `plan.md` is not exact-grounded or the planner-authored scripts drift from the approved inventory, surface the handoff defect instead of compensating in `benchmark_script.py`.
+- If `benchmark_plan.md` is not exact-grounded or the planner-authored scripts drift from the approved inventory, surface the handoff defect instead of compensating in `benchmark_script.py`.
 - Write `plan_refusal.md` with concrete evidence.
 - Do not silently pivot to a different benchmark.
 

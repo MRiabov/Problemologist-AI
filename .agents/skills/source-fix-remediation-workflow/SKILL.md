@@ -54,7 +54,7 @@ Use this skill to execute the fix (not just policy) when fallback behavior cause
 
 ## Editing checklist
 
-- No fabricated `plan.md` / `todo.md` / YAML for recovery.
+- No fabricated `benchmark_plan.md` / `engineering_plan.md` / `todo.md` / YAML for recovery.
 - No "contains APPROVED" style routing.
 - No unknown-agent remap fallbacks.
 - No silent default session context for runtime flows.

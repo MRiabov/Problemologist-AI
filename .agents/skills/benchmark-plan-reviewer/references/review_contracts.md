@@ -14,7 +14,7 @@
 ## Required planner handoff
 
 - `.manifests/benchmark_plan_review_manifest.json`
-- `plan.md`
+- `benchmark_plan.md`
 - `todo.md`
 - `benchmark_definition.yaml`
 - `benchmark_assembly_definition.yaml`
@@ -25,8 +25,8 @@
 
 ## Cross-artifact checklist
 
-- Match all object names, labels, repeated quantities, and COTS identities across `plan.md`, the YAML files, and both planner scripts.
-- Ensure every planner-declared inventory label and selected COTS `part_id` appears in `plan.md` as an exact identifier mention.
+- Match all object names, labels, repeated quantities, and COTS identities across `benchmark_plan.md`, the YAML files, and both planner scripts.
+- Ensure every planner-declared inventory label and selected COTS `part_id` appears in `benchmark_plan.md` as an exact identifier mention.
 - Reject nonexistent objects, relabeled inventory, silent renames, or missing repeated entries.
 - Require `benchmark_assembly_definition.yaml` to be a schema-valid full `AssemblyDefinition`.
 - Require `moved_object.material_id` to be present and to reference a known material from `manufacturing_config.yaml`.
@@ -47,10 +47,10 @@
 - Verify anchor coordinates, `sample_stride_s`, first-contact windows, terminal events, and tolerances against the declared geometry, DOFs, and control.
 - Estimate whether the implied speeds and transition timings are physically plausible for the mechanism described in the plan.
 - Treat a missing or hand-wavy payload trajectory estimate as a strong reject. If the planner has not grounded the payload motion, downstream machinery timing and sizing are usually not grounded either.
-- Treat non-rigorous path math in `plan.md` as a strong reject. If the detailed calculation section does not derive the trajectory scientifically, the trajectory estimate itself is not credible.
+- Treat non-rigorous path math in `benchmark_plan.md` as a strong reject. If the detailed calculation section does not derive the trajectory scientifically, the trajectory estimate itself is not credible.
 - Reject hidden DOFs, unsupported acceleration, impossible contact timing, or any path that cannot be satisfied without changing the plan.
-- Require `plan.md`'s detailed calculation section to expose the full derivation behind every path claim, including intermediate math for distances, timing, velocity, clearance, and tolerance checks.
-- Reject path claims that are numerically stated but not actually derived in `plan.md`.
+- Require `benchmark_plan.md`'s detailed calculation section to expose the full derivation behind every path claim, including intermediate math for distances, timing, velocity, clearance, and tolerance checks.
+- Reject path claims that are numerically stated but not actually derived in `benchmark_plan.md`.
 
 ## Comments checklist
 

@@ -68,6 +68,7 @@ The current callable signatures and request shapes live in [function_signatures.
 - For motion evidence, inspect the first useful frames before changing geometry.
 - If the view could be front or rear, confirm camera orientation before assuming a mirror flip.
 - If the task depends on exact bundle identity or revision history, resolve the bundle first and then inspect or query that bundle-local snapshot.
+- If the same issue keeps failing, inspect the exact bundle again before the next change; after three consecutive failures on the same issue, keep inspecting render evidence on every subsequent retry until the blocker changes.
 
 ## Point-Pick Rules
 

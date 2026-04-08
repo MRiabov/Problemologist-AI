@@ -19,7 +19,7 @@
 - `benchmark_script.py`
 - `benchmark_definition.yaml`
 - `benchmark_assembly_definition.yaml`
-- `plan.md`
+- `benchmark_plan.md`
 - `todo.md`
 - `validation_results.json`
 - `simulation_result.json`

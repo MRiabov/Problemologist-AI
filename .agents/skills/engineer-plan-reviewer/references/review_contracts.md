@@ -16,14 +16,14 @@
 
 - Manifest: `.manifests/engineering_plan_review_manifest.json`
 - Required files:
-  - `plan.md`
+  - `engineering_plan.md`
   - `todo.md`
   - `benchmark_definition.yaml`
   - `assembly_definition.yaml`
   - `solution_plan_evidence_script.py`
   - `solution_plan_technical_drawing_script.py`
 - Reject when inventory labels, repeated quantities, or COTS identities drift across the plan and drafting scripts.
-- Reject when `plan.md` omits exact identifier mentions for declared labels and selected `part_id`s.
+- Reject when `engineering_plan.md` omits exact identifier mentions for declared labels and selected `part_id`s.
 - Reject when the plan exceeds benchmark caps, depends on invented materials, or leaves the operating envelope implicit.
 - Reject when the technical-drawing script lacks a real `TechnicalDrawing` construction path.
 - Reject excessive or unjustified engineering DOFs.
@@ -37,7 +37,7 @@
 - Required files:
   - `solution_script.py`
   - helper `*.py` files owned by the current revision
-  - `plan.md`
+  - `engineering_plan.md`
   - `todo.md`
   - `benchmark_definition.yaml`
   - `assembly_definition.yaml`

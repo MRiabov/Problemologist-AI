@@ -58,9 +58,9 @@ For ordinary mechanical engineer scripts, keep imports minimal:
 
 ## Evaluation Playbook
 
-Use this sequence for engineer-coder evals:
+Use this sequence for benchmark-coder and engineer-coder evals:
 
-01. Read `plan.md`, `todo.md`, `assembly_definition.yaml`, and `benchmark_definition.yaml`.
+01. Read `benchmark_plan.md` for benchmark-coder tasks or `engineering_plan.md` for engineer-coder tasks, plus `todo.md`, `assembly_definition.yaml`, and `benchmark_definition.yaml`.
 02. If benchmark geometry exists, read `benchmark_script.py` as read-only context before drafting the solution.
 03. Read `skills/build123d-cad-drafting-skill/SKILL.md` before the first geometry draft.
 04. If the design includes catalog-backed components, read `skills/cots-parts/SKILL.md` before drafting the part geometry or motion contract.

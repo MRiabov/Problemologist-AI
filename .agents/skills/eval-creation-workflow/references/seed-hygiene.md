@@ -25,8 +25,10 @@ Use these rules when repairing or extending eval seeds for Problemologist.
 ## Stage Defaults
 
 - `benchmark_planner`: usually prompt-only.
-- `benchmark_coder`: seed `plan.md`, `todo.md`, `benchmark_definition.yaml`, `journal.md`.
-- `benchmark_reviewer`: seed `plan.md`, `todo.md`, `benchmark_definition.yaml`, `journal.md`, `script.py`, `validation_results.json`, `simulation_result.json`, `.manifests/benchmark_review_manifest.json`.
+- `benchmark_coder`: seed `benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, `journal.md`.
+- `benchmark_reviewer`: seed `benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, `journal.md`, `script.py`, `validation_results.json`, `simulation_result.json`, `.manifests/benchmark_review_manifest.json`.
+- `engineering_planner`: usually prompt-only or seeded with `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, and `benchmark_assembly_definition.yaml`.
+- `engineering_*` roles: seed `engineering_plan.md` plus the role-appropriate downstream artifacts from the active handoff.
 - Engineering and electronics roles: follow `specs/architecture/agents/handover-contracts.md` exactly.
 
 ## Practical Check

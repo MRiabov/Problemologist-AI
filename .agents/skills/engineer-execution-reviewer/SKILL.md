@@ -33,6 +33,7 @@ When execution evidence needs visual checking, use the shared preview helpers ex
 - [ ] Inspect render or simulation media with `inspect_media(...)` whenever they exist.
 - [ ] If simulation evidence exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together before approval.
 - [ ] If bundle identity or a pixel-to-world question matters, resolve the exact bundle with `list_render_bundles()` and query that bundle-local snapshot before making the review call.
+- [ ] After any significant blocker or repeated failure on the same issue, inspect the current render or simulation evidence before the next review decision. If the same issue has failed more than three times in a row, keep inspecting render evidence on every subsequent retry until the blocker changes; use `../render-evidence/SKILL.md` as the visual-inspection playbook.
 - [ ] Verify plan fidelity, exact inventory grounding, robustness, manufacturability, cost/weight compliance, and motion plausibility against the approved contract and evidence.
 - [ ] Reject flaky runtime-jitter behavior, excessive or unjustified DOFs, or any render/video evidence that was not inspected.
 - [ ] Write only the stage-scoped execution review decision and comments YAML pair.

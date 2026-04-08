@@ -18,6 +18,8 @@ It is for electromechanical reasoning and handoff alignment, not for importing r
   Use when routing 3D wires or reviewing clearance/tension risks.
 - `../cots-parts/SKILL.md`
   Use when the electronics plan includes catalog-backed motors, relays, connectors, wires, or other off-the-shelf components that need part identity and provenance preserved.
+- `../render-evidence/SKILL.md`
+  Use when the task needs visual inspection of routed wiring, moving electromechanical evidence, or repeated blocker diagnosis through renders.
 
 ## Core Rules
 
@@ -30,6 +32,7 @@ It is for electromechanical reasoning and handoff alignment, not for importing r
 5. Backward compatibility still exists:
    if there is no `electronics` section and no explicit circuit-validation task, do not load this skill just because the design has motors or wires. Do not invent electronics unless the task requires it.
 6. If the electronics work affects a moving system, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata only.
+7. If the same issue keeps failing, inspect the exact render evidence before another routing or placement change. After three consecutive failures on the same issue, keep inspecting render evidence on every subsequent retry until the blocker changes.
 
 ## Practical Workflow
 

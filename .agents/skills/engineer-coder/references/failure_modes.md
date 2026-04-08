@@ -44,9 +44,9 @@ Signals:
 - `result` not bound correctly
 - Import-time side effects
 - Wrote benchmark-owned files from the engineer side
-- `plan.md` is missing an exact identifier mention for a declared label or selected COTS `part_id`
-- `plan.md` is missing the tightened proof sections for a binding engineering claim, such as the Assumption Register, Detailed Calculations, or Critical Constraints / Operating Envelope
-- A numeric claim in `plan.md` has no `CALC-*` anchor or relies on prose-only assumptions
+- `engineering_plan.md` is missing an exact identifier mention for a declared label or selected COTS `part_id`
+- `engineering_plan.md` is missing the tightened proof sections for a binding engineering claim, such as the Assumption Register, Detailed Calculations, or Critical Constraints / Operating Envelope
+- A numeric claim in `engineering_plan.md` has no `CALC-*` anchor or relies on prose-only assumptions
 - Planner-authored evidence or technical-drawing scripts change labels, quantities, or COTS identities
 
 Likely causes:

@@ -1,6 +1,6 @@
 ---
 name: engineer-coder
-description: Problemologist engineering implementation role. Use when turning approved engineering handoffs into solution_script.py, solving engineering evals with bounded retries, selecting mechanism patterns, validating and simulating revisions, inspecting render evidence, querying render-bundle history or point-pick results, preserving planner inventory exactness, grounding work in proof-backed plan.md contracts, inspecting simulation evidence through frame-indexed `objects.parquet` sidecars, or refusing an infeasible plan with plan_refusal.md.
+description: Problemologist engineering implementation role. Use when turning approved engineering handoffs into solution_script.py, solving engineering evals with bounded retries, selecting mechanism patterns, validating and simulating revisions, inspecting render evidence, querying render-bundle history or point-pick results, preserving planner inventory exactness, grounding work in proof-backed engineering_plan.md contracts, inspecting simulation evidence through frame-indexed `objects.parquet` sidecars, or refusing an infeasible plan with plan_refusal.md.
 ---
 
 # Engineer Coder
@@ -14,7 +14,7 @@ This skill is the operating manual for the engineering implementation agent. Kee
 3. Optimize for first-pass correctness, then tighten robustness, manufacturability, and cost.
 4. Keep the authored solution import-safe, reviewable, and easy to revise.
 5. Fail closed when the handoff is inconsistent or infeasible.
-6. Treat `plan.md` as a binding engineering contract with exact-grounded inventory and proof sections.
+6. Treat `engineering_plan.md` as a binding engineering contract with exact-grounded inventory and proof sections.
 7. Treat weak geometry or physics derivations as a hard failure, not a soft warning; if the handoff cannot rigorously justify the motion or placement math, assume the downstream implementation will fail.
 
 ## Core Capabilities
@@ -72,7 +72,7 @@ from utils.preview import (
 
 Start with the handoff package:
 
-- `plan.md`
+- `engineering_plan.md`
 - `todo.md`
 - `assembly_definition.yaml`
 - `benchmark_definition.yaml`
@@ -82,16 +82,16 @@ Start with the handoff package:
 
 ## Plan Grounding
 
-When the approved handoff already pins down labels, repeated quantities, COTS identities, or interface geometry in `plan.md` or the planner-authored evidence/drawing scripts, copy that exact contract forward into `solution_script.py` instead of re-deriving it. Translating the plan into build123d is the job; renaming, normalizing, or reinterpreting the contract is not.
+When the approved handoff already pins down labels, repeated quantities, COTS identities, or interface geometry in `engineering_plan.md` or the planner-authored evidence/drawing scripts, copy that exact contract forward into `solution_script.py` instead of re-deriving it. Translating the plan into build123d is the job; renaming, normalizing, or reinterpreting the contract is not.
 Treat the planner YAML handoff as the machine-readable source of truth and the two planner scripts as the inspectable source of the approved solution geometry.
 Because the approved planner handoff has already passed collision and geometry review, treat its layout as collision-validated and preserve the exact dimensions, placements, offsets, and clearances whenever the requested solution remains physically and economically feasible.
 That collision review does not mean the plan was already manufacturability-validated or simulated; those checks still happen downstream on the implemented revision.
 Prefer selector-driven placement over free-form XYZ positioning. Use face/axis selectors, explicit mates, and fastener-based constraints to place parts relative to each other and the environment; treat any absolute coordinate anchor as an exception that should be minimal and traceable.
 
-For engineering handoffs, treat `plan.md` as the source of truth for mechanism narrative, exact inventory mentions, assumptions, calculations, and operating limits. The tightened template includes an Assumption Register, Detailed Calculations, and Critical Constraints / Operating Envelope sections; if the handoff expects those proof sections and they are missing or ungrounded, surface the defect rather than inferring missing numbers.
-When the planner template is in use, read `plan.md` as a sectioned contract with named parts: `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Assumption Register`, `## 5. Detailed Calculations`, `## 6. Critical Constraints / Operating Envelope`, `## 7. Cost & Weight Budget`, and `## 8. Risk Assessment`. The `Detailed Calculations` section is where the binding math lives, and `Risk Assessment` is where known failure modes and mitigations should be documented.
+For engineering handoffs, treat `engineering_plan.md` as the source of truth for mechanism narrative, exact inventory mentions, assumptions, calculations, and operating limits. The tightened template includes an Assumption Register, Detailed Calculations, and Critical Constraints / Operating Envelope sections; if the handoff expects those proof sections and they are missing or ungrounded, surface the defect rather than inferring missing numbers.
+When the planner template is in use, read `engineering_plan.md` as a sectioned contract with named parts: `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Assumption Register`, `## 5. Detailed Calculations`, `## 6. Critical Constraints / Operating Envelope`, `## 7. Cost & Weight Budget`, and `## 8. Risk Assessment`. The `Detailed Calculations` section is where the binding math lives, and `Risk Assessment` is where known failure modes and mitigations should be documented.
 If the geometry or physics derivation is hand-wavy instead of formula-backed, stop and treat that as a plan defect. In practice, handoffs that cannot derive the payload trajectory, contact timing, or clearance math rigorously are not reliable enough to implement.
-If `payload_trajectory_definition.yaml` is present, treat it as the engineer-owned motion envelope for the implementation pass: keep the waypoint geometry, contact windows, and terminal proof aligned with the coarse forecast, and make any timing or speed math in `plan.md` use the exact same anchors rather than a hand-waved estimate.
+If `payload_trajectory_definition.yaml` is present, treat it as the engineer-owned motion envelope for the implementation pass: keep the waypoint geometry, contact windows, and terminal proof aligned with the coarse forecast, and make any timing or speed math in `engineering_plan.md` use the exact same anchors rather than a hand-waved estimate.
 
 Then load specialist knowledge only as needed:
 
@@ -128,7 +128,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 07. Inspect render or video evidence as soon as motion is uncertain. When the question depends on bundle identity or pixel-to-world mapping, use `list_render_bundles()`, `query_render_bundle()`, or `pick_preview_pixel()` against the exact bundle before spending extra geometry effort.
 08. Fix the narrowest failure mode and repeat.
 09. Submit for review only when the latest revision is actually ready.
-10. Anchor any binding numeric claim to the tightened `plan.md` proof structure; do not implement against prose-only assumptions when `ASSUMP-*` and `CALC-*` scaffolding is expected.
+10. Anchor any binding numeric claim to the tightened `engineering_plan.md` proof structure; do not implement against prose-only assumptions when `ASSUMP-*` and `CALC-*` scaffolding is expected.
 
 ## Design Rules
 
@@ -137,14 +137,14 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 03. Every non-static DOF must map to a real mechanism, not a convenience.
 04. Keep the motion contract explicit if the design uses motors, sliders, latches, or other actuated elements.
 05. Keep benchmark-owned fixtures read-only and never reassign their ownership or pricing.
-06. Keep planner-authored evidence and technical-drawing scripts grounded in the approved inventory. The labels, repeated quantities, and COTS identities in `plan.md`, `assembly_definition.yaml`, and any drafting scripts must match exactly; missing, extra, or relabeled items are plan defects, not implementation freedom.
+06. Keep planner-authored evidence and technical-drawing scripts grounded in the approved inventory. The labels, repeated quantities, and COTS identities in `engineering_plan.md`, `assembly_definition.yaml`, and any drafting scripts must match exactly; missing, extra, or relabeled items are plan defects, not implementation freedom.
 07. Keep top-level authored labels unique and avoid reserved names such as `environment` and `zone_...`.
 08. Place parts with `Location(...)` or equivalent explicit placement.
 09. Keep COTS components intact when provenance or exact part identity matters.
 10. Keep electronics separate from mechanical guessing; only load electronics logic when the handoff explicitly demands it.
 11. Treat cost, weight, and manufacturability as design constraints, not afterthoughts.
 12. When multiple viable implementations satisfy the handoff, prefer the more stable, cheaper, simpler, and more manufacturable one.
-13. When the approved handoff uses the engineering planner template, keep every declared inventory label and selected COTS `part_id` grounded by an exact identifier mention in `plan.md`, and preserve planner-authored assumptions, calculations, operating-envelope limits, and collision-validated layout geometry without renaming, resizing, or re-spacing them.
+13. When the approved handoff uses the engineering planner template, keep every declared inventory label and selected COTS `part_id` grounded by an exact identifier mention in `engineering_plan.md`, and preserve planner-authored assumptions, calculations, operating-envelope limits, and collision-validated layout geometry without renaming, resizing, or re-spacing them.
 14. If the motion math and the precise path disagree, repair the source handoff first; do not "prove" a different path by changing only the implementation.
 15. Never use exploded views or the word `exploded` in `solution_plan_evidence_script.py`; keep any exploded or layout presentation in `solution_plan_technical_drawing_script.py` instead.
 
@@ -174,6 +174,7 @@ This role should behave like a high-confidence solver, not a wandering explorer.
 - If render history matters, use `list_render_bundles()` and `query_render_bundle()` to select the exact bundle snapshot instead of assuming the newest visible render is the right one.
 - If a simulation bundle exposes frame/object slices, inspect the sampled frame-indexed `objects.parquet` pose-history sidecar rather than treating `frames.jsonl` as pose history.
 - If a question depends on screen-space picking, use `pick_preview_pixel()` or `pick_preview_pixels()` against that bundle-local snapshot before changing geometry.
+- After any significant blocker or repeated failure on the same issue, inspect the current render or simulation evidence before the next geometry change. If the same issue has failed more than three times in a row, keep inspecting render evidence on every subsequent retry until the blocker changes; use `../render-evidence/SKILL.md` as the visual-inspection playbook.
 - If render images exist for the current revision, inspect them with `inspect_media(...)` before finishing.
 - If the solution has moving behavior and simulation video exists, inspect the dynamic evidence before approval.
 - Treat `validation_results.json`, `simulation_result.json`, and render manifests as evidence inputs, not as substitutes for reasoning.
@@ -198,7 +199,7 @@ Refuse only when the handoff is genuinely infeasible or self-contradictory.
 
 - Write `plan_refusal.md` with concrete evidence.
 - If the planner handoff is not exact-grounded or the drafting scripts drift from the inventory, surface the defect instead of compensating in `solution_script.py`.
-- If `plan.md` is missing required proof sections or calculation anchors for the engineering plan, write `plan_refusal.md` with the concrete gap rather than filling in the missing assumptions yourself.
+- If `engineering_plan.md` is missing required proof sections or calculation anchors for the engineering plan, write `plan_refusal.md` with the concrete gap rather than filling in the missing assumptions yourself.
 - If the plan's geometry or physics math is not rigorously derived, treat that as a handoff defect and refuse to compensate inside `solution_script.py`.
 - Keep the refusal specific to the blocked plan.
 - Do not silently pivot to an unrelated solution.

@@ -48,7 +48,7 @@ Use `references/index.md` for the file map, then use this document when you need
 ### `benchmark_plan_reviewer`
 
 - Dataset row: `id`, `task`, `seed_artifact_dir`, `expected_decision`, `expected_criteria`
-- Hard entry bundle: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`
+- Hard entry bundle: `benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`
 - Conditional drafting bundle: `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` when benchmark drafting mode is active
 - Reviewer gate: `.manifests/benchmark_plan_review_manifest.json`
 - Current corpus extras: `benchmark_script.py`, `journal.md`
@@ -56,7 +56,7 @@ Use `references/index.md` for the file map, then use this document when you need
 ### `benchmark_coder`
 
 - Dataset row: `id`, `task`, `seed_artifact_dir`, `expected_criteria`
-- Hard entry bundle: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`
+- Hard entry bundle: `benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`
 - Conditional drafting bundle: `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` when benchmark drafting mode is active
 - Current corpus extras: `journal.md`
 
@@ -65,13 +65,13 @@ Use `references/index.md` for the file map, then use this document when you need
 - Dataset row: `id`, `task`, `seed_artifact_dir`, `expected_decision`, `expected_criteria`
 - Hard entry bundle: `benchmark_script.py`, `validation_results.json`, `simulation_result.json`, `.manifests/benchmark_review_manifest.json`
 - Conditional drafting bundle: `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` when benchmark drafting mode is active
-- Reviewer gate also reads: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, and render evidence when present
+- Reviewer gate also reads: `benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, and render evidence when present
 - Current corpus extras: `benchmark.xml`, `journal.md`
 
 ### `engineer_planner`
 
 - Dataset row: `id`, `task`, `seed_artifact_dir`, `expected_criteria`
-- Hard entry bundle: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`
+- Hard entry bundle: `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`
 - Conditional drafting bundle: `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` when engineer drafting mode is active
 - Current corpus extras: usually just the core bundle
 
@@ -80,14 +80,14 @@ Use `references/index.md` for the file map, then use this document when you need
 - Dataset row: `id`, `task`, `seed_artifact_dir`, `expected_decision`, `expected_criteria`
 - Hard entry bundle: `benchmark_assembly_definition.yaml`, `benchmark_script.py`
 - Conditional drafting bundle: `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` when engineer drafting mode is active
-- Reviewer gate also reads: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`
+- Reviewer gate also reads: `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`
 - Reviewer-manifest gate: `.manifests/engineering_plan_review_manifest.json`
 - Current corpus extras: `journal.md`
 
 ### `engineer_coder`
 
 - Dataset row: `id`, `task`, `seed_artifact_dir`, `expected_criteria`
-- Hard entry bundle: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `solution_script.py`, `payload_trajectory_definition.yaml`
+- Hard entry bundle: `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `solution_script.py`, `payload_trajectory_definition.yaml`
 - Conditional drafting bundle: `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` when engineer drafting mode is active
 - `todo.md` for this role is one representative example of the general rule that seeded downstream rows should only list current-stage work items and should not keep prior planner/reviewer TODO history or completed bookkeeping items.
 - Current corpus extras: `.manifests/engineering_plan_review_manifest.json`, `reviews/engineering-plan-review-round-1.md` or analogous review notes, `journal.md`, seed-specific run hints such as `ec001_run_hints.md`
@@ -97,14 +97,14 @@ Use `references/index.md` for the file map, then use this document when you need
 - Dataset row: `id`, `task`, `seed_artifact_dir`, `expected_criteria`, `expected_decision`
 - Hard entry bundle: `solution_script.py`, `benchmark_script.py`, `benchmark_assembly_definition.yaml`, `validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_handoff_manifest.json`
 - Conditional drafting bundle: `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` when engineer drafting mode is active
-- Reviewer gate also reads: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `.manifests/engineering_plan_review_manifest.json`, and render evidence when present
+- Reviewer gate also reads: `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `.manifests/engineering_plan_review_manifest.json`, and render evidence when present
 - Current corpus extras: `reviews/engineering-plan-review-round-1.md` or analogous review notes, `renders/render_index.jsonl`, `solution.xml`, `journal.md`
 
 ### `electronics_reviewer`
 
 - Dataset row: `id`, `task`, `seed_artifact_dir`, `expected_decision`, `expected_criteria`
 - Hard entry bundle: `solution_script.py`, `benchmark_script.py`, `benchmark_assembly_definition.yaml`, `validation_results.json`, `simulation_result.json`, `.manifests/electronics_review_manifest.json`
-- Reviewer gate also reads: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`
+- Reviewer gate also reads: `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`
 - Current corpus extras: `solution.xml`, `journal.md`
 
 ## Notes

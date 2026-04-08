@@ -15,7 +15,9 @@ The canonical per-file acceptance criteria now live in `specs/architecture/agent
 
 | Family | Example filenames or glob | Current criteria reference | Status |
 | -- | -- | -- | -- |
-| Planner narrative | `plan.md` | `plan_md_acceptance_criteria.md` | covered |
+| Benchmark planner narrative | `benchmark_plan.md` | `benchmark_plan_md_acceptance_criteria.md` | covered |
+| Engineering planner narrative | `engineering_plan.md` | `engineering_plan_md_acceptance_criteria.md` | covered |
+| Planner narrative legacy alias | `plan.md` | `plan_md_acceptance_criteria.md` | legacy compatibility only |
 | Planner todo | `todo.md` | `todo_md_acceptance_criteria.md` | covered |
 | Planner journal | `journal.md` | `journal_md_acceptance_criteria.md` | covered |
 | Benchmark definition | `benchmark_definition.yaml` | `benchmark_definition_yaml_acceptance_criteria.md` | covered |

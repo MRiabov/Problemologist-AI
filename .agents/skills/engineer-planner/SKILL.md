@@ -129,6 +129,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 - Use them to make the draft legible, not to invent extra geometry.
 - When render images already exist, inspect at least one relevant image before finishing planner work.
 - If draft drawings are available, inspect the rendered result before submitting.
+- After any significant blocker or repeated failure on the same issue, inspect the current render or drafting evidence before the next plan revision. If the same issue has failed more than three times in a row, keep inspecting render evidence on every subsequent retry until the blocker changes; use `../render-evidence/SKILL.md` as the visual-inspection playbook.
 - Keep the plan-review gate in mind: the coder should be able to implement the handoff without re-planning.
 - For eval-seed-specific validation habits, see [Eval Seed Hygiene](references/eval-seed-hygiene.md).
 

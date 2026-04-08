@@ -10,7 +10,9 @@ The acceptance-criteria files linked from this index should prefer `References` 
 
 | Artifact | Typical roles | Main gate |
 | -- | -- | -- |
-| `plan.md` | benchmark and engineering planners, plan reviewers | Stage-specific heading schema, exact identifiers, cross-file consistency |
+| `benchmark_plan.md` | benchmark planners, benchmark plan reviewers | Benchmark-stage heading schema, exact identifiers, cross-file consistency |
+| `engineering_plan.md` | engineering and electronics planners, plan reviewers, downstream coders | Engineering-stage proof sections, exact identifiers, and cross-file consistency |
+| `plan.md` | legacy compatibility alias only | Historical replay bundles; prefer the split filenames for new seeds |
 | `todo.md` | planners, coders, reviewers | Checkbox integrity and stage-correct completion state |
 | `journal.md` | planners, coders, reviewers | Concrete attempt logging with blockers, observations, and next steps |
 | `benchmark_definition.yaml` | benchmark flow, downstream engineer intake | Strict objective geometry, randomization, benchmark-owned fixture metadata, and cap derivation agreement |

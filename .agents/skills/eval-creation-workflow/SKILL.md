@@ -112,13 +112,13 @@ Use these as the default minimums unless the target role contract requires more.
 - `benchmark_planner`:
   Usually prompt-only.
 - `benchmark_coder`:
-  Seed `plan.md`, `todo.md`, `benchmark_definition.yaml`, `journal.md`.
+  Seed `benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, `journal.md`.
 - `benchmark_reviewer`:
-  Seed `plan.md`, `todo.md`, `benchmark_definition.yaml`, `journal.md`, `script.py`, `validation_results.json`, `simulation_result.json`, `.manifests/benchmark_review_manifest.json`.
+  Seed `benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, `journal.md`, `script.py`, `validation_results.json`, `simulation_result.json`, `.manifests/benchmark_review_manifest.json`.
 - Engineering and electronics roles:
-  Follow the exact handoff contract in `specs/architecture/agents/handover-contracts.md`. Do not guess file names.
+  Seed `engineering_plan.md` and follow the exact handoff contract in `specs/architecture/agents/handover-contracts.md`. Do not guess file names.
 
-For engineering eval seeds with motion proof, keep `assembly_definition.yaml.motion_forecast` and `payload_trajectory_definition.yaml` aligned on the same moving parts, build-safe start, contact order, and terminal goal proof. If `plan.md` includes timing or speed math, derive it from the exact waypoint sequence in the precise path and state whether the result is an average-segment envelope or a measured runtime trace.
+For engineering eval seeds with motion proof, keep `assembly_definition.yaml.motion_forecast` and `payload_trajectory_definition.yaml` aligned on the same moving parts, build-safe start, contact order, and terminal goal proof. If `engineering_plan.md` includes timing or speed math, derive it from the exact waypoint sequence in the precise path and state whether the result is an average-segment envelope or a measured runtime trace.
 
 If the role consumes reviewer decisions, also seed the stage-specific review file under `reviews/`.
 

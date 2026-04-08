@@ -1,6 +1,6 @@
 ---
 name: engineer-plan-reviewer
-description: Engineer-side review workflow for validating plan and execution handoffs, review manifests, render and simulation evidence, exact inventory grounding, formula-backed motion and payload trajectory derivations, motion-contract plausibility, plan refusals, and stage-scoped review YAML outputs. Use when reviewing engineering `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_script.py`, validation or simulation artifacts, review manifests, or refusal evidence for the Engineering Plan Reviewer or Engineering Execution Reviewer roles; when inspecting simulation evidence through frame-indexed `objects.parquet` sidecars; or when applying the engineer review checklist for plan, execution, and refusal gates.
+description: Engineer-side review workflow for validating plan and execution handoffs, review manifests, render and simulation evidence, exact inventory grounding, formula-backed motion and payload trajectory derivations, motion-contract plausibility, plan refusals, and stage-scoped review YAML outputs. Use when reviewing engineering `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_script.py`, validation or simulation artifacts, review manifests, or refusal evidence for the Engineering Plan Reviewer or Engineering Execution Reviewer roles; when inspecting simulation evidence through frame-indexed `objects.parquet` sidecars; or when applying the engineer review checklist for plan, execution, and refusal gates.
 ---
 
 # Engineer Plan Reviewer
@@ -33,13 +33,14 @@ When plan or execution evidence needs visual checking, use the shared preview he
 - [ ] If final solution submission evidence exists, inspect `renders/final_solution_submission_renders/**` alongside the engineer-plan and benchmark evidence before approval.
 - [ ] If simulation evidence exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
 - [ ] If bundle identity or a pixel-to-world question matters, resolve the exact bundle with `list_render_bundles()` and query that bundle-local snapshot before making the review call.
+- [ ] After any significant blocker or repeated failure on the same issue, inspect the current render or simulation evidence before the next review decision. If the same issue has failed more than three times in a row, keep inspecting render evidence on every subsequent retry until the blocker changes; use `../render-evidence/SKILL.md` as the visual-inspection playbook.
 - [ ] Write only the stage-scoped review decision and comments YAML pair.
 - [ ] Route invalid refusals back to coding unless the refusal proves infeasibility.
 - [ ] For any motion or payload trajectory claim, verify the claim is described and formula-justified; see `references/motion-trajectory-review.md`.
 
 ### Plan Review Checklist
 
-- [ ] Read `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, and `solution_plan_technical_drawing_script.py`.
+- [ ] Read `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, and `solution_plan_technical_drawing_script.py`.
 - [ ] Treat `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` as the inspectable source of the approved plan, and inspect preview evidence with `inspect_media(...)` when present.
 - [ ] When preview evidence is bundle-scoped, use `list_render_bundles()` or `query_render_bundle()` to select the exact bundle before judging it.
 - [ ] Verify exact inventory grounding, exact identifier mentions, budget realism, and operating-envelope clarity.

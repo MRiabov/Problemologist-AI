@@ -32,7 +32,7 @@ Use this skill when:
 
 ## Red flags to remove
 
-- "Fallback bundle" writers that fabricate `plan.md` / `todo.md` / YAML outputs.
+- "Fallback bundle" writers that fabricate `benchmark_plan.md` / `engineering_plan.md` / `todo.md` / YAML outputs.
 - String contains checks like `"APPROVED" in feedback` when typed decisions exist.
 - Defaulting unknown agent types to another agent.
 - Silent session-id/default context fallbacks that can leak/isolate incorrectly.
