@@ -7,6 +7,7 @@
 - Fail closed on missing, stale, invalid, or cross-revision artifacts.
 - Use `inspect_media(...)` for render, image, or video evidence. Do not rely on filenames or text summaries alone.
 - If drafting evidence must be materialized for the current revision, call `preview_drawing()` first and inspect the persisted output.
+- Use `specs/architecture/agents/agent-artifacts/README.md` for the file-level acceptance criteria that sit underneath this review contract.
 - Keep the decision YAML as the routing source of truth. Keep the comments YAML explanatory and evidence-based.
 - Treat `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as the inspectable source of the approved benchmark contract.
 

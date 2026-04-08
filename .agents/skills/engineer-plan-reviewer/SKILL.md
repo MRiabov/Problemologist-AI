@@ -30,6 +30,7 @@ When plan or execution evidence needs visual checking, use the shared preview he
 - [ ] Confirm the latest revision and matching stage manifest.
 - [ ] Treat planner and coder artifacts as read-only.
 - [ ] Inspect render or simulation media with `inspect_media(...)` whenever they exist.
+- [ ] If final solution submission evidence exists, inspect `renders/final_solution_submission_renders/**` alongside the engineer-plan and benchmark evidence before approval.
 - [ ] If simulation evidence exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
 - [ ] If bundle identity or a pixel-to-world question matters, resolve the exact bundle with `list_render_bundles()` and query that bundle-local snapshot before making the review call.
 - [ ] Write only the stage-scoped review decision and comments YAML pair.
@@ -67,6 +68,7 @@ When plan or execution evidence needs visual checking, use the shared preview he
 
 ## References
 
+- `specs/architecture/agents/agent-artifacts/README.md` for the canonical file-level acceptance library.
 - `references/review_contracts.md`
 - `references/motion-trajectory-review.md`
 - `specs/architecture/agents/roles.md`

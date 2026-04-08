@@ -45,6 +45,7 @@ When execution evidence needs visual checking, use the shared preview helpers ex
 
 ## References
 
+- `specs/architecture/agents/agent-artifacts/README.md` for the canonical file-level acceptance library.
 - `../engineer-coder/SKILL.md`
 - `../engineer-plan-reviewer/SKILL.md`
 - `../benchmark-reviewer/SKILL.md`

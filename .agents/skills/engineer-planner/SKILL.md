@@ -33,7 +33,7 @@ Use the shared preview helpers whenever the plan needs visual evidence:
 - Treat weak geometry or physics derivations as a hard failure, not a minor gap. In practice, handoffs that cannot rigorously justify the motion or placement math have repeatedly failed downstream.
 - When a fixture moves, derive its pose from the declared axis or joint chain instead of a hand-placed coordinate.
 - Prefer selector-driven placement over free-form XYZ positioning. Use face/axis selectors, explicit mates, and joint chains to constrain parts to each other and to the environment; treat any absolute 3-coordinate anchor as an exception that needs clear justification.
-- Treat the planner handoff as YAML-backed: `assembly_definition.yaml` is the machine-readable contract, while `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` are the inspectable source of the planned solution geometry.
+- Treat the planner handoff as YAML-backed: `assembly_definition.yaml` is the machine-readable contract, `solution_plan_evidence_script.py` is the authoritative, validated source of the planned 3D solution geometry, and `solution_plan_technical_drawing_script.py` is the orthographic presentation companion for that same contract.
 
 ## What This Skill Owns
 
@@ -65,6 +65,7 @@ Start with the current handoff package:
 - `renders/**` when preview evidence exists
 - `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` when drafting mode is active
 - `references/motion-trajectory-contract.md` when a detailed trajectory derivation is needed
+- `specs/architecture/agents/agent-artifacts/README.md`
 
 Load specialist skill support only when it materially changes the plan:
 
@@ -111,7 +112,8 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 - Keep part labels unique and stable.
 - Every planner-declared inventory label and selected COTS `part_id` must appear in `plan.md` at least once as an exact identifier mention; backticks are preferred for the first mention, but the exact string match is the validation rule.
 - Keep `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` aligned with the same preserved geometry, repeated quantities, and COTS identities when drafting mode is enabled.
-- Treat `solution_plan_technical_drawing_script.py` as display-only: it should not re-author a duplicate shape tree or a second copy of the mechanism geometry, only the orthographic drawing/view scaffolding for the same approved contract.
+- Never explode, stagger, or otherwise layout-shift `solution_plan_evidence_script.py` for readability. If a review-only presentation layout is needed, keep that concern in the drawing companion, which may copy the validated geometry and apply explode/layout presentation there when it improves review readability.
+- Treat `solution_plan_technical_drawing_script.py` as a presentation companion: it may duplicate the validated shape tree for drawing purposes, but it must not invent a second geometry contract or diverge from the approved plan geometry.
 - Bind dimensions, datums, and notes to the preserved mechanism only.
 - Use `preview(...)` for live scene inspection and `preview_drawing()` for drafting packages; do not substitute one for the other.
 - Use `payload_path=True` on `preview(...)` when the live payload-path overlay is part of the inspection.

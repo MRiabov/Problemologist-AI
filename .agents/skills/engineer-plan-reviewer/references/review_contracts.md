@@ -6,6 +6,7 @@
 - Treat planner and coder artifacts as read-only.
 - Fail closed on missing, stale, or invalid reviewer manifests.
 - Use `inspect_media(...)` whenever render or video media exist.
+- Use `specs/architecture/agents/agent-artifacts/README.md` for the file-level acceptance criteria that sit underneath this review contract.
 - Let the decision YAML drive routing; keep comments YAML explanatory.
 - Keep validation strict. Unknown fields, stale files, or cross-revision artifacts invalidate the review.
 - Treat `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` as the inspectable source of the approved plan.

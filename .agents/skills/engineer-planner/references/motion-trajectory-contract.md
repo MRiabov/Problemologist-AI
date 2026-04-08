@@ -4,6 +4,8 @@ Motion and payload trajectories must always be described and justified with form
 
 Use this reference to structure any motion or payload trajectory derivation.
 
+For the file-level acceptance criteria that sit underneath the planner handoff, also read `specs/architecture/agents/agent-artifacts/README.md` and the matching contracts for `plan.md`, `todo.md`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`, and `payload_trajectory_definition.yaml`.
+
 ## Scope
 
 - Keep `assembly_definition.yaml.motion_forecast` sparse and ordered.

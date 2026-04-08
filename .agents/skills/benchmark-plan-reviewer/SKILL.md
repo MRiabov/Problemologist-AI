@@ -40,6 +40,7 @@ Treat `payload_trajectory_definition.yaml` as binding path-contract evidence whe
 - [ ] Strong reject plans that cannot state the payload trajectory clearly or that fail to derive it rigorously in `plan.md`; a missing trajectory estimate usually means downstream machinery is not grounded either.
 - [ ] Confirm `plan.md`'s detailed calculation section fully explains the numbers used to justify the precise path, including intermediate derivations for distances, timing, speeds, and clearances.
 - [ ] If render or drawing evidence exists, inspect it with `inspect_media(...)`. If drafting evidence must be materialized first, call `preview_drawing()` and inspect the persisted output.
+- [ ] If scratch evidence exists in `renders/current-episode/**`, inspect that current-episode bundle as well before deciding.
 - [ ] If a simulation bundle already exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
 - [ ] If bundle identity or a pixel-to-world question matters, resolve the exact bundle with `list_render_bundles()` and query that bundle-local snapshot before deciding.
 - [ ] Treat `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as the inspectable source of the approved benchmark solution, not just helper files.
@@ -60,4 +61,5 @@ Treat `payload_trajectory_definition.yaml` as binding path-contract evidence whe
 ## References
 
 - `references/review_contracts.md` for the detailed cross-artifact, motion, and media rules.
+- `specs/architecture/agents/agent-artifacts/README.md` for the canonical file-level acceptance library.
 - `specs/architecture/agents/handover-contracts.md` for the canonical checklist keys and output contract.

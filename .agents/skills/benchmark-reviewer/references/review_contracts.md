@@ -6,6 +6,7 @@
 - Treat benchmark-owned artifacts as read-only.
 - Fail closed on missing, stale, invalid, or cross-revision artifacts.
 - Use `inspect_media(...)` for render, image, or video evidence. Do not rely on filenames or text summaries alone.
+- Use `specs/architecture/agents/agent-artifacts/README.md` for the file-level acceptance criteria that sit underneath this review contract.
 - Require validation and simulation success for the latest revision.
 - Confirm `goal_reached` before approval.
 - If moving benchmark fixtures exist, require dynamic simulation evidence for the latest revision.

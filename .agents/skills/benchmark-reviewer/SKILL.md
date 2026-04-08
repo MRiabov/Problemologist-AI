@@ -23,6 +23,8 @@ When preview evidence or objective overlays are present, use the shared preview 
 
 - [ ] Confirm the latest revision and valid `.manifests/benchmark_review_manifest.json`.
 - [ ] Read `benchmark_script.py`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `plan.md`, `todo.md`, `validation_results.json`, `simulation_result.json`, `scene.json`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, and any `renders/benchmark_renders/**` as read-only context.
+- [ ] Read `plan_refusal.md` when present.
+- [ ] Read `renders/current-episode/**` when it exists.
 - [ ] Require validation and simulation success for the latest revision, and confirm `goal_reached` in the manifest/result.
 - [ ] Inspect render images with `inspect_media(...)` whenever they exist; if moving benchmark fixtures exist, inspect the latest dynamic simulation evidence before approval.
 - [ ] If simulation evidence exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
@@ -44,4 +46,5 @@ When preview evidence or objective overlays are present, use the shared preview 
 ## References
 
 - `references/review_contracts.md` for the detailed benchmark execution review rules and checklist fields.
+- `specs/architecture/agents/agent-artifacts/README.md` for the canonical file-level acceptance library.
 - `specs/architecture/agents/handover-contracts.md` for the canonical manifest, evidence, and output contract.

@@ -17,6 +17,8 @@ Required planner-owned files:
 
 The planner handoff is YAML-backed. Populate the YAML files so downstream roles can treat them as the machine-readable source of truth, and keep both planner scripts aligned with those YAML fields.
 
+For file-level acceptance criteria, also read `specs/architecture/agents/agent-artifacts/README.md` and the matching contracts for `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py`.
+
 ## Source Hierarchy
 
 Prefer the strictest current contract in this order:

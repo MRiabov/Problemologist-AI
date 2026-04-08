@@ -45,6 +45,7 @@ Read these before drafting or revising the handoff:
 - `specs/architecture/agents/roles.md`
 - `specs/architecture/agents/handover-contracts.md`
 - `specs/architecture/agents/artifacts-and-filesystem.md`
+- `specs/architecture/agents/agent-artifacts/README.md`
 - `../engineer-coder/SKILL.md`
 - `../build123d-cad-drafting-skill/SKILL.md`
 - `../render-evidence/SKILL.md` when render evidence already exists or preview judgment is needed
