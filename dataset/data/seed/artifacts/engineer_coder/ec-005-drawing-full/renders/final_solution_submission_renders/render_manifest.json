@@ -1,100 +1,100 @@
 {
   "version": "1.0",
-  "bundle_id": "f85f4a9d-61fc-5fb9-acc2-a9bef668a437",
-  "created_at": "2026-04-06T07:33:00.463033+00:00",
-  "episode_id": "7fc42e9c-3990-5e8e-97c4-e0be48189e4a",
-  "worker_session_id": "seed-renders-ec-005-drawing-full-0424ea69",
-  "revision": "53d6e93b05cfc7dd67a166c4ce5370c06e70f32c",
+  "bundle_id": "d47cea6c-f6b8-5137-aceb-204eee34472b",
+  "created_at": "2026-04-07T17:31:39.446746+00:00",
+  "episode_id": "4d5c9549-646a-5621-8e41-7298b18b8225",
+  "worker_session_id": "seed-renders-ec-005-drawing-full-c9cb324e",
+  "revision": "13f30ff46c3b1e0e3a295339434742b19b8779a1",
   "scene_hash": "fa7d622e74ac0c12b1b4611f9a8df4cc4df100ad1f7ead93c53828b4a1341edd",
-  "bundle_path": "renders/tmp",
+  "bundle_path": "renders/final_solution_submission_renders",
   "environment_version": "1.0",
   "drafting": false,
   "source_script_sha256": null,
   "preview_evidence_paths": [
-    "renders/tmp/benchmark_environment_render_e15_a0.png",
-    "renders/tmp/benchmark_environment_render_e15_a0_depth.png",
-    "renders/tmp/benchmark_environment_render_e15_a0_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e15_a135.png",
-    "renders/tmp/benchmark_environment_render_e15_a135_depth.png",
-    "renders/tmp/benchmark_environment_render_e15_a135_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e15_a180.png",
-    "renders/tmp/benchmark_environment_render_e15_a180_depth.png",
-    "renders/tmp/benchmark_environment_render_e15_a180_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e15_a225.png",
-    "renders/tmp/benchmark_environment_render_e15_a225_depth.png",
-    "renders/tmp/benchmark_environment_render_e15_a225_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e15_a270.png",
-    "renders/tmp/benchmark_environment_render_e15_a270_depth.png",
-    "renders/tmp/benchmark_environment_render_e15_a270_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e15_a315.png",
-    "renders/tmp/benchmark_environment_render_e15_a315_depth.png",
-    "renders/tmp/benchmark_environment_render_e15_a315_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e15_a45.png",
-    "renders/tmp/benchmark_environment_render_e15_a45_depth.png",
-    "renders/tmp/benchmark_environment_render_e15_a45_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e15_a90.png",
-    "renders/tmp/benchmark_environment_render_e15_a90_depth.png",
-    "renders/tmp/benchmark_environment_render_e15_a90_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e45_a0.png",
-    "renders/tmp/benchmark_environment_render_e45_a0_depth.png",
-    "renders/tmp/benchmark_environment_render_e45_a0_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e45_a135.png",
-    "renders/tmp/benchmark_environment_render_e45_a135_depth.png",
-    "renders/tmp/benchmark_environment_render_e45_a135_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e45_a180.png",
-    "renders/tmp/benchmark_environment_render_e45_a180_depth.png",
-    "renders/tmp/benchmark_environment_render_e45_a180_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e45_a225.png",
-    "renders/tmp/benchmark_environment_render_e45_a225_depth.png",
-    "renders/tmp/benchmark_environment_render_e45_a225_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e45_a270.png",
-    "renders/tmp/benchmark_environment_render_e45_a270_depth.png",
-    "renders/tmp/benchmark_environment_render_e45_a270_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e45_a315.png",
-    "renders/tmp/benchmark_environment_render_e45_a315_depth.png",
-    "renders/tmp/benchmark_environment_render_e45_a315_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e45_a45.png",
-    "renders/tmp/benchmark_environment_render_e45_a45_depth.png",
-    "renders/tmp/benchmark_environment_render_e45_a45_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e45_a90.png",
-    "renders/tmp/benchmark_environment_render_e45_a90_depth.png",
-    "renders/tmp/benchmark_environment_render_e45_a90_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e75_a0.png",
-    "renders/tmp/benchmark_environment_render_e75_a0_depth.png",
-    "renders/tmp/benchmark_environment_render_e75_a0_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e75_a135.png",
-    "renders/tmp/benchmark_environment_render_e75_a135_depth.png",
-    "renders/tmp/benchmark_environment_render_e75_a135_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e75_a180.png",
-    "renders/tmp/benchmark_environment_render_e75_a180_depth.png",
-    "renders/tmp/benchmark_environment_render_e75_a180_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e75_a225.png",
-    "renders/tmp/benchmark_environment_render_e75_a225_depth.png",
-    "renders/tmp/benchmark_environment_render_e75_a225_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e75_a270.png",
-    "renders/tmp/benchmark_environment_render_e75_a270_depth.png",
-    "renders/tmp/benchmark_environment_render_e75_a270_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e75_a315.png",
-    "renders/tmp/benchmark_environment_render_e75_a315_depth.png",
-    "renders/tmp/benchmark_environment_render_e75_a315_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e75_a45.png",
-    "renders/tmp/benchmark_environment_render_e75_a45_depth.png",
-    "renders/tmp/benchmark_environment_render_e75_a45_segmentation.png",
-    "renders/tmp/benchmark_environment_render_e75_a90.png",
-    "renders/tmp/benchmark_environment_render_e75_a90_depth.png",
-    "renders/tmp/benchmark_environment_render_e75_a90_segmentation.png"
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a0.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a0_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a0_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a135.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a135_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a135_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a180.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a180_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a180_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a225.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a225_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a225_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a270.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a270_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a270_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a315.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a315_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a315_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a45.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a45_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a45_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a90.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a90_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a90_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a0.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a0_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a0_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a135.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a135_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a135_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a180.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a180_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a180_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a225.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a225_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a225_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a270.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a270_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a270_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a315.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a315_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a315_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a45.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a45_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a45_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a90.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a90_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a90_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a0.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a0_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a0_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a135.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a135_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a135_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a180.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a180_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a180_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a225.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a225_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a225_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a270.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a270_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a270_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a315.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a315_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a315_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a45.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a45_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a45_segmentation.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a90.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a90_depth.png",
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a90_segmentation.png"
   ],
   "artifacts": {
-    "renders/tmp/benchmark_environment_render_e15_a0.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a0.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e15_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a0.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a0_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a0_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a0.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -103,16 +103,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e15_a0_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a0_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e15_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a0.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a0_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a0_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a0.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -121,16 +121,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e15_a0_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a0_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e15_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a0.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a0_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a0_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a0.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -155,16 +155,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e15_a45.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a45.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e15_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a45.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a45_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a45_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a45.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -173,16 +173,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e15_a45_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a45_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e15_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a45.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a45_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a45_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a45.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -191,16 +191,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e15_a45_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a45_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e15_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a45.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a45_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a45_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a45.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -225,16 +225,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e15_a90.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a90.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e15_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a90.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a90_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a90_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a90.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -243,16 +243,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e15_a90_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a90_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e15_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a90.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a90_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a90_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a90.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -261,16 +261,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e15_a90_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a90_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e15_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a90.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a90_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a90_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a90.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -295,16 +295,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e15_a135.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a135.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e15_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a135.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a135_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a135_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a135.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -313,16 +313,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e15_a135_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a135_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e15_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a135.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a135_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a135_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a135.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -331,16 +331,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e15_a135_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a135_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e15_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a135.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a135_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a135_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a135.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -365,16 +365,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e15_a180.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a180.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e15_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a180.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a180_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a180.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -383,16 +383,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e15_a180_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a180_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e15_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a180.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a180_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a180.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -401,16 +401,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e15_a180_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a180_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e15_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a180.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a180_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a180.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -435,16 +435,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e15_a225.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a225.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e15_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a225.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a225_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a225.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -453,16 +453,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e15_a225_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a225_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e15_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a225.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a225_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a225.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -471,16 +471,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e15_a225_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a225_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e15_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a225.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a225_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a225.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -505,16 +505,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e15_a270.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a270.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e15_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a270.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a270_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a270.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -523,16 +523,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e15_a270_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a270_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e15_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a270.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a270_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a270.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -541,16 +541,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e15_a270_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a270_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e15_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a270.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a270_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a270.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -575,16 +575,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e15_a315.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a315.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e15_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a315.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a315_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a315.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -593,16 +593,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e15_a315_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a315_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e15_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a315.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a315_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a315.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -611,16 +611,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e15_a315_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e15_a315_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e15_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e15_a315.png",
-        "depth": "renders/tmp/benchmark_environment_render_e15_a315_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e15_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a315.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e15_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -645,16 +645,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e45_a0.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a0.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e45_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a0.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a0_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a0_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a0.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -663,16 +663,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e45_a0_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a0_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e45_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a0.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a0_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a0_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a0.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -681,16 +681,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e45_a0_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a0_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e45_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a0.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a0_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a0_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a0.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -715,16 +715,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e45_a45.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a45.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e45_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a45.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a45_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a45_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a45.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -733,16 +733,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e45_a45_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a45_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e45_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a45.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a45_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a45_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a45.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -751,16 +751,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e45_a45_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a45_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e45_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a45.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a45_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a45_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a45.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -785,16 +785,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e45_a90.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a90.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e45_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a90.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a90_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a90_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a90.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -803,16 +803,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e45_a90_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a90_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e45_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a90.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a90_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a90_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a90.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -821,16 +821,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e45_a90_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a90_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e45_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a90.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a90_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a90_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a90.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -855,16 +855,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e45_a135.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a135.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e45_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a135.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a135_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a135_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a135.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -873,16 +873,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e45_a135_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a135_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e45_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a135.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a135_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a135_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a135.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -891,16 +891,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e45_a135_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a135_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e45_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a135.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a135_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a135_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a135.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -925,16 +925,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e45_a180.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a180.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e45_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a180.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a180_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a180.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -943,16 +943,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e45_a180_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a180_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e45_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a180.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a180_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a180.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -961,16 +961,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e45_a180_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a180_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e45_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a180.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a180_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a180.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -995,16 +995,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e45_a225.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a225.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e45_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a225.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a225_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a225.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1013,16 +1013,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e45_a225_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a225_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e45_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a225.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a225_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a225.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1031,16 +1031,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e45_a225_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a225_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e45_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a225.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a225_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a225.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1065,16 +1065,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e45_a270.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a270.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e45_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a270.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a270_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a270.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1083,16 +1083,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e45_a270_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a270_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e45_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a270.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a270_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a270.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1101,16 +1101,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e45_a270_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a270_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e45_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a270.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a270_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a270.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1135,16 +1135,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e45_a315.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a315.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e45_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a315.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a315_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a315.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1153,16 +1153,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e45_a315_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a315_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e45_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a315.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a315_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a315.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1171,16 +1171,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e45_a315_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e45_a315_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e45_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e45_a315.png",
-        "depth": "renders/tmp/benchmark_environment_render_e45_a315_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e45_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a315.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e45_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1205,16 +1205,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e75_a0.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a0.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e75_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a0.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a0_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a0_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a0.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1223,16 +1223,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e75_a0_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a0_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e75_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a0.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a0_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a0_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a0.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1241,16 +1241,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e75_a0_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a0_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e75_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a0.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a0_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a0_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a0.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a0_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1275,16 +1275,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e75_a45.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a45.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e75_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a45.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a45_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a45_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a45.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1293,16 +1293,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e75_a45_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a45_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e75_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a45.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a45_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a45_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a45.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1311,16 +1311,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e75_a45_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a45_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e75_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a45.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a45_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a45_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a45.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a45_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1345,16 +1345,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e75_a90.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a90.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e75_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a90.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a90_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a90_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a90.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1363,16 +1363,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e75_a90_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a90_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e75_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a90.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a90_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a90_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a90.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1381,16 +1381,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e75_a90_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a90_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e75_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a90.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a90_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a90_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a90.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a90_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1415,16 +1415,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e75_a135.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a135.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e75_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a135.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a135_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a135_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a135.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1433,16 +1433,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e75_a135_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a135_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e75_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a135.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a135_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a135_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a135.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1451,16 +1451,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e75_a135_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a135_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e75_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a135.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a135_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a135_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a135.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a135_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1485,16 +1485,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e75_a180.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a180.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e75_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a180.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a180_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a180.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1503,16 +1503,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e75_a180_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a180_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e75_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a180.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a180_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a180.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1521,16 +1521,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e75_a180_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a180_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e75_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a180.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a180_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a180_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a180.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a180_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1555,16 +1555,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e75_a225.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a225.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e75_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a225.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a225_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a225.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1573,16 +1573,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e75_a225_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a225_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e75_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a225.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a225_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a225.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1591,16 +1591,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e75_a225_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a225_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e75_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a225.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a225_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a225_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a225.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a225_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1625,16 +1625,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e75_a270.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a270.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e75_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a270.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a270_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a270.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1643,16 +1643,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e75_a270_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a270_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e75_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a270.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a270_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a270.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1661,16 +1661,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e75_a270_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a270_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e75_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a270.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a270_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a270_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a270.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a270_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1695,16 +1695,16 @@
         }
       ]
     },
-    "renders/tmp/benchmark_environment_render_e75_a315.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a315.png": {
       "modality": "rgb",
       "group_key": "benchmark_environment_render_e75_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a315.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a315_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a315.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1713,16 +1713,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e75_a315_depth.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a315_depth.png": {
       "modality": "depth",
       "group_key": "benchmark_environment_render_e75_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a315.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a315_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a315.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1731,16 +1731,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/tmp/benchmark_environment_render_e75_a315_segmentation.png": {
+    "renders/final_solution_submission_renders/benchmark_environment_render_e75_a315_segmentation.png": {
       "modality": "segmentation",
       "group_key": "benchmark_environment_render_e75_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/tmp/benchmark_environment_render_e75_a315.png",
-        "depth": "renders/tmp/benchmark_environment_render_e75_a315_depth.png",
-        "segmentation": "renders/tmp/benchmark_environment_render_e75_a315_segmentation.png",
+        "rgb": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a315.png",
+        "depth": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a315_depth.png",
+        "segmentation": "renders/final_solution_submission_renders/benchmark_environment_render_e75_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },

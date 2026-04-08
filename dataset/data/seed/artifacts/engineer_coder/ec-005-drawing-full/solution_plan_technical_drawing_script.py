@@ -79,20 +79,12 @@ def build():
             length=160.0,
             width=120.0,
             height=35.0,
-            x=330.0,
+            x=350.0,
             y=0.0,
             z=0.0,
             material_id="hdpe",
         ),
     ]
-
-    # Explode the orthographic sheet for review; the inventory remains the
-    # same and the offsets are display-only.
-    children[1] = children[1].moved(Location((0.0, 0.0, 10.0)))
-    children[2] = children[2].moved(Location((0.0, 0.0, 10.0)))
-    children[3] = children[3].moved(Location((0.0, -20.0, 10.0)))
-    children[4] = children[4].moved(Location((0.0, 0.0, 10.0)))
-    children[5] = children[5].moved(Location((0.0, 110.0, 160.0)))
 
     subassembly = Compound(label="routed_transfer", children=children)
     subassembly.metadata = CompoundMetadata()
