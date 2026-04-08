@@ -326,3 +326,9 @@ year={2025},
 eprint={2506.05573},
 url={https://arxiv.org/abs/2506.05573}
 }
+
+______________________________________________________________________
+
+Other references:
+VideoCAD: A Dataset and Model for Learning Long‑Horizon 3D CAD UI Interactions from Video
+https://neurips.cc/virtual/2025/loc/san-diego/poster/121820
