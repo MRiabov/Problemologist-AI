@@ -26,14 +26,17 @@ from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition, CompoundMetadata, PartMetadata
 from shared.rendering import (
     materialize_render_artifacts,
+    normalize_render_manifest,
     render_static_preview,
 )
-from shared.rendering.renderer_client import bundle_workspace_base64
+from shared.rendering.renderer_client import (
+    bundle_workspace_base64,
+)
 from shared.script_contracts import (
     BENCHMARK_SCRIPT_PATH,
-    LEGACY_SCRIPT_PATH,
     SOLUTION_SCRIPT_PATH,
     authored_script_path_for_agent,
+    technical_drawing_script_path_for_agent,
 )
 from shared.workers.loader import load_component_from_script
 from shared.workers.schema import (
@@ -109,6 +112,34 @@ _RENDER_ROLE_WITH_SCRIPT = {
 
 _RENDER_ROLE_WITH_DEFINITION_PREVIEW = {
     "engineer_coder",
+}
+
+# Render bundles are refreshed as a prefix of the workflow stage order.
+_ROLE_RENDER_STAGE_INDEX: dict[str, int] = {
+    "benchmark_planner": 0,
+    "benchmark_plan_reviewer": 0,
+    "benchmark_coder": 1,
+    "benchmark_reviewer": 1,
+    "engineer_planner": 1,
+    "engineer_plan_reviewer": 2,
+    "engineer_coder": 2,
+    "electronics_planner": 2,
+    "electronics_reviewer": 3,
+    "engineer_execution_reviewer": 3,
+}
+
+_RENDER_BUNDLE_STAGE_PREFIXES: tuple[tuple[int, str], ...] = (
+    (1, "benchmark_renders"),
+    (2, "engineer_plan_renders"),
+    (3, "final_solution_submission_renders"),
+)
+
+_MANAGED_RENDER_BUNDLES = {
+    "benchmark_renders",
+    "engineer_plan_renders",
+    "final_solution_submission_renders",
+    "engineer_renders",
+    "final_preview_renders",
 }
 
 _VIEW_ORBITS = (
@@ -237,31 +268,6 @@ def _role_name_for_artifact(artifact_dir: Path) -> str:
     return artifact_dir.parent.name
 
 
-def _resolve_render_script_path(artifact_dir: Path, role_name: str) -> Path:
-    candidates = [authored_script_path_for_agent(role_name)]
-    for fallback in (
-        BENCHMARK_SCRIPT_PATH,
-        SOLUTION_SCRIPT_PATH,
-        LEGACY_SCRIPT_PATH,
-    ):
-        candidate = Path(fallback)
-        if candidate not in candidates:
-            candidates.append(candidate)
-
-    for candidate in candidates:
-        resolved = artifact_dir / candidate
-        if resolved.exists():
-            return resolved
-
-    candidate_list = ", ".join(
-        str(artifact_dir / candidate) for candidate in candidates
-    )
-    raise FileNotFoundError(
-        f"no render script found for {role_name} in {artifact_dir}; "
-        f"checked: {candidate_list}"
-    )
-
-
 def _stage_render_bundle_root(artifact_dir: Path) -> Path:
     staging_root = Path(tempfile.mkdtemp(prefix="seed-render-bundle-"))
     for child in artifact_dir.iterdir():
@@ -280,6 +286,149 @@ def _stage_render_bundle_root(artifact_dir: Path) -> Path:
                 ignore=shutil.ignore_patterns("__pycache__"),
             )
     return staging_root
+
+
+def _seed_render_bundle_names(role_name: str) -> list[str]:
+    stage_index = _ROLE_RENDER_STAGE_INDEX.get(role_name)
+    if stage_index is None:
+        return []
+    return [
+        bundle_name
+        for required_stage_index, bundle_name in _RENDER_BUNDLE_STAGE_PREFIXES
+        if stage_index >= required_stage_index
+    ]
+
+
+def _remove_unneeded_render_bundles(renders_dir: Path, *, allowed: set[str]) -> None:
+    if not renders_dir.exists():
+        return
+    for child in sorted(renders_dir.iterdir()):
+        if not child.is_dir():
+            continue
+        if child.name == "current-episode" or child.name == "tmp":
+            continue
+        if child.name in _MANAGED_RENDER_BUNDLES and child.name not in allowed:
+            shutil.rmtree(child)
+
+
+def _rewrite_render_bundle_prefix(
+    rel_path: str, *, source_bundle: str, target_bundle: str
+) -> str:
+    source_prefix = f"renders/{source_bundle}/"
+    target_prefix = f"renders/{target_bundle}/"
+    if rel_path.startswith(source_prefix):
+        return target_prefix + rel_path[len(source_prefix) :]
+    return rel_path
+
+
+def _remap_render_bundle_artifacts(
+    artifacts, *, source_bundle: str, target_bundle: str
+):
+    remapped = artifacts.model_copy(deep=True)
+    remapped.render_paths = [
+        _rewrite_render_bundle_prefix(
+            rel_path, source_bundle=source_bundle, target_bundle=target_bundle
+        )
+        for rel_path in remapped.render_paths
+    ]
+    remapped.render_blobs_base64 = {
+        _rewrite_render_bundle_prefix(
+            rel_path, source_bundle=source_bundle, target_bundle=target_bundle
+        ): blob
+        for rel_path, blob in remapped.render_blobs_base64.items()
+    }
+    remapped.object_store_keys = {
+        _rewrite_render_bundle_prefix(
+            rel_path, source_bundle=source_bundle, target_bundle=target_bundle
+        ): object_key
+        for rel_path, object_key in remapped.object_store_keys.items()
+    }
+    return remapped
+
+
+def _refresh_benchmark_bundle(
+    *,
+    artifact_dir: Path,
+    staging_root: Path,
+    session_id: str,
+) -> list[str]:
+    from shared.rendering.renderer_client import bundle_workspace_base64
+
+    response = render_static_preview(
+        bundle_base64=bundle_workspace_base64(staging_root),
+        script_path=Path(BENCHMARK_SCRIPT_PATH).name,
+        session_id=session_id,
+        agent_role="benchmark_reviewer",
+    )
+    if not response.success:
+        raise RuntimeError(
+            response.message or response.status_text or "render regeneration failed"
+        )
+
+    return materialize_render_artifacts(response.artifacts, artifact_dir)
+
+
+def _refresh_engineer_plan_bundle(
+    *,
+    artifact_dir: Path,
+    staging_root: Path,
+    session_id: str,
+) -> list[str]:
+    response = render_static_preview(
+        bundle_base64=bundle_workspace_base64(staging_root),
+        script_path=Path(
+            technical_drawing_script_path_for_agent(AgentName.ENGINEER_PLANNER)
+        ).name,
+        session_id=session_id,
+        agent_role="benchmark_reviewer",
+    )
+    if not response.success:
+        raise RuntimeError(
+            response.message or response.status_text or "render regeneration failed"
+        )
+
+    remapped_artifacts = _remap_render_bundle_artifacts(
+        response.artifacts,
+        source_bundle="benchmark_renders",
+        target_bundle="engineer_plan_renders",
+    )
+    saved_paths = materialize_render_artifacts(remapped_artifacts, artifact_dir)
+
+    manifest = normalize_render_manifest(
+        render_paths=saved_paths,
+        workspace_root=artifact_dir,
+        episode_id=artifact_dir.name,
+        worker_session_id=artifact_dir.name,
+        bundle_path="renders/engineer_plan_renders",
+        drafting=True,
+    )
+    manifest_path = (
+        artifact_dir / "renders" / "engineer_plan_renders" / "render_manifest.json"
+    )
+    manifest_path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+    if "renders/engineer_plan_renders/render_manifest.json" not in saved_paths:
+        saved_paths.append("renders/engineer_plan_renders/render_manifest.json")
+    return saved_paths
+
+
+def _refresh_final_solution_bundle(
+    *,
+    artifact_dir: Path,
+    staging_root: Path,
+    session_id: str,
+) -> list[str]:
+    response = render_static_preview(
+        bundle_base64=bundle_workspace_base64(staging_root),
+        script_path=Path(SOLUTION_SCRIPT_PATH).name,
+        session_id=session_id,
+        agent_role="engineer_execution_reviewer",
+    )
+    if not response.success:
+        raise RuntimeError(
+            response.message or response.status_text or "render regeneration failed"
+        )
+
+    return materialize_render_artifacts(response.artifacts, artifact_dir)
 
 
 def _latest_revision() -> str:
@@ -762,39 +911,53 @@ def update_seed_artifact_renders(artifact_dir: Path) -> list[str]:
     role_name = _role_name_for_artifact(artifact_dir)
     renders_dir = artifact_dir / "renders"
     scratch_dir = renders_dir / "current-episode"
+    allowed_bundle_names = _seed_render_bundle_names(role_name)
+    allowed_bundles = set(allowed_bundle_names)
 
-    # Keep scratch previews ephemeral, but preserve any persistent buckets
-    # already present under renders/.
+    # Keep scratch previews ephemeral, and prune obsolete or target bundles
+    # before regenerating so the seed tree matches the current render contract.
     if scratch_dir.exists():
         shutil.rmtree(scratch_dir)
     legacy_scratch_dir = renders_dir / "tmp"
     if legacy_scratch_dir.exists():
         shutil.rmtree(legacy_scratch_dir)
-
-    if role_name not in _RENDER_ROLE_WITH_SCRIPT | _RENDER_ROLE_WITH_DEFINITION_PREVIEW:
-        return []
-
-    script_path = _resolve_render_script_path(artifact_dir, role_name)
+    _remove_unneeded_render_bundles(renders_dir, allowed=allowed_bundles)
+    for bundle_name in allowed_bundle_names:
+        bundle_dir = renders_dir / bundle_name
+        if bundle_dir.exists():
+            shutil.rmtree(bundle_dir)
 
     session_id = f"seed-renders-{artifact_dir.name}-{uuid.uuid4().hex[:8]}"
     staging_root = _stage_render_bundle_root(artifact_dir)
     try:
-        bundle_base64 = bundle_workspace_base64(staging_root)
-        response = render_static_preview(
-            bundle_base64=bundle_base64,
-            script_path=script_path.name,
-            session_id=session_id,
-            agent_role=role_name,
-        )
-        if not response.success:
-            raise RuntimeError(
-                response.message or response.status_text or "render regeneration failed"
-            )
-
-        saved_paths = materialize_render_artifacts(
-            response.artifacts,
-            artifact_dir,
-        )
+        saved_paths: list[str] = []
+        for bundle_name in allowed_bundle_names:
+            if bundle_name == "benchmark_renders":
+                saved_paths.extend(
+                    _refresh_benchmark_bundle(
+                        artifact_dir=artifact_dir,
+                        staging_root=staging_root,
+                        session_id=session_id,
+                    )
+                )
+                continue
+            if bundle_name == "engineer_plan_renders":
+                saved_paths.extend(
+                    _refresh_engineer_plan_bundle(
+                        artifact_dir=artifact_dir,
+                        staging_root=staging_root,
+                        session_id=session_id,
+                    )
+                )
+                continue
+            if bundle_name == "final_solution_submission_renders":
+                saved_paths.extend(
+                    _refresh_final_solution_bundle(
+                        artifact_dir=artifact_dir,
+                        staging_root=staging_root,
+                        session_id=session_id,
+                    )
+                )
         return saved_paths
     finally:
         shutil.rmtree(staging_root, ignore_errors=True)
