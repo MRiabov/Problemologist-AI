@@ -357,13 +357,13 @@ The contract is:
     - `t_s`
     - an explicit `reference_point` such as COM, another named physical point, or a justified geometric proxy
     - absolute world coordinates in millimeters
-    - optional rotation in degrees
-    - the positional tolerance band for that anchor, and rotational tolerance when rotation matters
+    - explicit rotation in degrees via `rot_deg`
+    - the positional tolerance band for that anchor, and optional rotational tolerance when the anchor admits an envelope instead of an exact pose
     - the first-contact surfaces expected to be touched by that reference point, in the order they are first encountered
 07. The first anchor must state `build_zone_valid: true`; the reviewer then checks that its coordinates actually lie inside the benchmark build zone.
 08. The terminal anchor must carry `goal_zone_contact: true` or `goal_zone_entry: true`, or an equivalent structured `terminal_event`, and the recorded position must lie inside the benchmark goal zone.
 09. Contact order is part of the contract. If the payload touches multiple surfaces before success, the first-touch order and an expected time window for each first contact must be recorded.
-10. Tolerances must be grounded in runtime jitter and contact uncertainty. The default positional tolerance on any axis should not exceed `1.2x` the runtime jitter on that axis unless a calculation subsection or risk assessment explicitly justifies a wider band.
+10. Tolerances must be grounded in runtime jitter and contact uncertainty. The default positional tolerance on any axis should not exceed `1.2x` the runtime jitter on that axis unless a calculation subsection or risk assessment explicitly justifies a wider band. Rotation is never implicit: the anchor either names an exact `rot_deg` or names a `rot_deg` plus a tolerance envelope.
 11. A plan that cannot state this payload trajectory at reviewable resolution is incomplete. The reviewer should not have to infer it from a vague mechanism description.
 12. The planner owns the forecast. The coder may refine implementation details inside the approved envelope, but may not silently rewrite the forecast when the plan is already approved.
 13. Simulation may fail fast when the realized motion leaves the tolerated corridor for a configurable number of consecutive checks or when the required contact sequence becomes impossible.

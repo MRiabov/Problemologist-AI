@@ -189,6 +189,7 @@ The validation helpers are developer tooling, not product behavior.
 - This script regenerates deterministic seed render bundles without running seed validation.
 - It uses the same seeded-dataset selection filters as `scripts/validate_eval_seed.py` and the same deterministic render regeneration helper.
 - It is the preferred maintainer-facing command for occasional render refreshes.
+- It accepts `--skip-env-up` as a compatibility alias for eval-maintenance workflows, but it never bootstraps `env_up` and always joins the shared eval lock directly.
 
 ### `scripts/validate_integration_mock_response_preflight.py`
 

@@ -12,6 +12,7 @@ It is worth being a dedicated artifact because it captures the benchmark-side mo
 - Fixture structure, labels, and quantities match the benchmark plan package exactly.
 - Moving fixtures declare explicit motion facts, including the supported motion type, bounds, and controller-visible limits.
 - One-axis motion is used per moving fixture unless the benchmark contract explicitly says otherwise.
+- Any anchor-style motion metadata names `rot_deg` explicitly instead of relying on an implied default pose.
 - The file stays read-only for downstream roles and does not import engineer-owned parts or solution-side assemblies.
 
 ## Quality Criteria

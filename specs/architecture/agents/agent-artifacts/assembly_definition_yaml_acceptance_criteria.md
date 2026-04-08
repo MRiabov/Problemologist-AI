@@ -14,6 +14,7 @@ It is worth being a dedicated agent artifact because it is the main binding betw
 - Planner-owned caps from `benchmark_definition.yaml` are copied through exactly and remain internally consistent.
 - Planner-target unit cost and weight fields are derived from validated totals, not invented later.
 - Electronics fields appear when the role explicitly requires them.
+- Motion anchors in `motion_forecast` name explicit `rot_deg` poses, and an omitted rotation is a validation failure rather than an implied identity pose.
 - The file stays internally consistent with `plan.md`, `todo.md`, and `benchmark_definition.yaml`.
 
 ## Quality Criteria
@@ -21,7 +22,7 @@ It is worth being a dedicated agent artifact because it is the main binding betw
 - The assembly is manufacturable and stable within the approved caps.
 - Exact derived totals are materialized at seed time and do not depend on later inference.
 - The solution scope is clearly separated from benchmark-owned read-only context.
-- Motion metadata is explicit enough for simulation and reviewer comparison.
+- Motion metadata is explicit enough for simulation, swept-clearance validation, and reviewer comparison.
 
 ## Reviewer Look-Fors
 

@@ -84,24 +84,32 @@ enough to prevent orientation-sensitive collisions.
 
 ## Proposed Target State
 
-1. Every path step in the payload trajectory contract states explicit
-   orientation semantics. A missing rotation is a validation failure for new
-   handoffs, not a silent default to identity orientation.
-2. If the planner wants a single pose, that pose is explicit. If the planner
-   wants freedom, the admissible rotation envelope is explicit.
-3. The validator proves clearance against all fixed parts in the composed
-   scene, where fixed means zero DOF regardless of ownership.
-4. The validator also proves that the payload stays inside the allowed
-   objective envelope and outside forbid zones at each checked pose.
-5. The validator checks every sampled path step against every admissible
-   orientation in that step's domain. A nominally safe pose is not sufficient
-   if any allowed rotation collides or leaves the objective envelope.
-6. The final decision remains conservative. If the admissible rotation domain
-   cannot be proven within the available budget, the handoff fails closed.
-7. build123d remains the source of truth for geometry, while cached trimesh
-   data may accelerate broad-phase rejection and repeated intersection checks.
-8. Planner prompts, review gates, and seeded workspaces all teach the same
-   contract so invalid plans fail before downstream users inherit them.
+01. Every path step in the payload trajectory contract states explicit
+    orientation semantics. A missing rotation is a validation failure for new
+    handoffs, not a silent default to identity orientation.
+02. If the planner wants a single pose, that pose is explicit. If the planner
+    wants freedom, the admissible rotation envelope is explicit.
+03. The validator proves clearance against all fixed parts in the composed
+    scene, where fixed means zero DOF regardless of ownership.
+04. The validator also proves that the payload stays inside the allowed
+    objective envelope and outside forbid zones at each checked pose.
+05. The validator checks every sampled path step against every admissible
+    orientation in that step's domain. A nominally safe pose is not sufficient
+    if any allowed rotation collides or leaves the objective envelope.
+06. The final decision remains conservative. If the admissible rotation domain
+    cannot be proven within the available budget, the handoff fails closed.
+07. build123d remains the source of truth for geometry, while cached trimesh
+    data may accelerate broad-phase rejection and repeated intersection checks.
+08. The swept-clearance logic stays behind a narrow validation boundary with a
+    shared validator path and optional config gate. That keeps the feature easy
+    to prune or disable later without refactoring unrelated planner, renderer,
+    or benchmark code.
+09. Planner prompts, review gates, and seeded workspaces all teach the same
+    contract so invalid plans fail before downstream users inherit them.
+10. The validator does not brute-force a dense three-axis rotation grid. It
+    treats each admissible envelope as a bounded search region, accepts or
+    rejects cells early with conservative proxies, and subdivides only
+    ambiguous cells until the exact leaf budget is reached.
 
 ## Definitions
 
@@ -123,28 +131,49 @@ enough to prevent orientation-sensitive collisions.
 
 ## Design Notes
 
-1. Temporal spacing and orientation coverage are separate concerns. The
-   existing `sample_stride_s` contract can continue to define the temporal
-   sampling density, but it must not be used as a proxy for orientation
-   completeness.
-2. The exact collision rule is conservative: if the payload overlaps a fixed
-   solid beyond modeling tolerance for any sampled step and any admissible
-   rotation, the path is invalid.
-3. The objective-envelope rule is equally conservative: if the payload leaves
-   the allowed objective bounds or enters a forbid zone at any sampled step,
-   the path is invalid.
-4. The fixed-part set should be derived from the scene graph and the zero-DOF
-   contract, not from a filename list or a hand-maintained ownership table.
-5. `trimesh` is an acceleration layer only. It may cache broad-phase bounds and
-   repeated intersection queries, but it does not replace the canonical
-   build123d geometry decision.
-6. The implementation may parallelize independent pose/orientation checks.
-   Deterministic final reporting still matters more than speculative speed.
-7. If the orientation domain is too broad to prove exactly within the budget,
-   the validator fails closed rather than silently narrowing the domain.
-8. `build123d.revolve()` is not a valid general-purpose swept-clearance proof
-   for arbitrary shapes. It may be a modeling operation in other contexts, but
-   it does not satisfy this contract.
+01. Temporal spacing and orientation coverage are separate concerns. The
+    existing `sample_stride_s` contract can continue to define the temporal
+    sampling density, but it must not be used as a proxy for orientation
+    completeness.
+02. The exact collision rule is conservative: if the payload overlaps a fixed
+    solid beyond modeling tolerance for any sampled step and any admissible
+    rotation, the path is invalid.
+03. The objective-envelope rule is equally conservative: if the payload leaves
+    the allowed objective bounds or enters a forbid zone at any sampled step,
+    the path is invalid.
+04. The fixed-part set should be derived from the scene graph and the zero-DOF
+    contract, not from a filename list or a hand-maintained ownership table.
+05. `trimesh` is an acceleration layer only. It may cache broad-phase bounds and
+    repeated intersection queries, but it does not replace the canonical
+    build123d geometry decision.
+06. The implementation may parallelize independent pose/orientation checks.
+    Deterministic final reporting still matters more than speculative speed.
+07. If the orientation domain is too broad to prove exactly within the budget,
+    the validator fails closed rather than silently narrowing the domain.
+08. `build123d.revolve()` is not a valid general-purpose swept-clearance proof
+    for arbitrary shapes. It may be a modeling operation in other contexts, but
+    it does not satisfy this contract.
+09. Broad-phase rejection should use conservative cached proxies such as AABB,
+    OBB, bounding spheres, or convex hulls. Ambiguous orientation cells should
+    be split recursively and only then promoted to exact build123d checks.
+10. Keep the implementation localized to one dedicated validation module that
+    is reached through narrow call sites from the existing gates. If the
+    feature is disabled or removed later, the change should not require
+    cross-cutting edits in planner, renderer, or benchmark code.
+11. The adaptive search should split along the widest remaining angular span
+    first so the validator spends exact geometry work where the admissible
+    envelope is still uncertain.
+12. Cache transformed payload geometry and proxy results by orientation cell
+    and job scope so repeated checks do not re-run the same geometry work.
+13. Load trimesh and build123d geometry once per validation job and keep the
+    hot path CPU-bound. Do not export meshes or reinitialize the trimesh
+    environment inside the orientation loop.
+14. The reference performance experiment is
+    `scripts/experiments/performance/payload-rotation-envelope-pruning/benchmark_payload_rotation_envelope_pruning.py`,
+    with results in
+    `scripts/experiments/performance/payload-rotation-envelope-pruning/results-20260408T095646Z.json`.
+    It loads trimesh once per scenario, keeps the search loop in-memory, and
+    records `setup_sec` separately from search timing.
 
 ## Required Work
 
@@ -164,22 +193,35 @@ validator must treat missing rotation as invalid.
 4. Keep the contract shape general enough for arbitrary build123d solids and
    compounds.
 
-### 2. Add swept-clearance validation
+### 2. Add budgeted swept-clearance validation
 
 The validator needs to prove that the payload stays clear of all fixed parts
-at every sampled step and every admissible rotation. This is the core of the
-feature.
+at every sampled step and every admissible rotation. The implementation should
+prune obvious misses cheaply, recurse only where a cell remains ambiguous, and
+reserve exact build123d work for the surviving leaf cells.
 
 1. Load the payload geometry and the fixed scene geometry once per validation
    job.
-2. For each sampled path step, rotate the payload into each admissible
-   orientation and check intersection against every fixed part.
-3. Use exact build123d intersection semantics for the final decision.
-4. Use cached trimesh data only as an acceleration path for broad-phase
-   rejection or repeated checks.
-5. Parallelize independent pose/orientation checks where practical.
-6. Reject any path whose admissible domain cannot be proven safe with the
+2. Derive conservative broad-phase proxies once per job, then evaluate the
+   full admissible orientation region as a bounded cell tree instead of a
+   dense angular grid.
+3. For each sampled path step, start with one cell that covers the whole
+   admissible envelope. If the proxy result is clearly safe, accept that cell
+   without exact geometry work. If the proxy result is clearly colliding,
+   reject that cell immediately. If the result is ambiguous, split the cell
+   along the widest remaining angular span and recurse.
+4. Use exact build123d intersection semantics only on leaf cells that survive
+   broad-phase pruning.
+5. Cache transformed payload geometry and proxy results by orientation cell
+   so repeated evaluations do not rebuild the same shape state.
+6. Keep per-anchor caps for orientation cells, recursion depth, and exact
+   booleans in config so proof cost is predictable.
+7. Parallelize independent pose/orientation checks where practical.
+8. Reject any path whose admissible domain cannot be proven safe with the
    available budget.
+9. Do not rebuild trimesh scenes, export/import STL files, or recreate mesh
+   adapters inside the cell recursion. Geometry conversion belongs at job
+   setup, not inside the search loop.
 
 ### 3. Thread the contract through the existing gates
 
@@ -194,6 +236,9 @@ already enforced. The feature should not create a second, inconsistent gate.
    path fails before execution, not after.
 4. Keep the failure deterministic and readable so the planner can correct the
    contract instead of guessing which orientation was checked.
+5. Keep the geometry checker behind a single validation entry point and a
+   dedicated module boundary so it can be disabled or pruned without
+   cross-cutting changes to unrelated code paths.
 
 ### 4. Update docs and prompt policy
 
@@ -208,9 +253,12 @@ looks plausible but is unsafe under rotation.
    implementation detail.
 3. Keep the prompt text and architecture docs aligned so the planners do not
    receive contradictory guidance about when a default pose is acceptable.
-4. If a sampling-budget knob is needed to keep the check deterministic, define
-   it in `config/agents_config.yaml` and document the fail-closed behavior
-   alongside the existing motion policy knobs.
+4. If a sampling-budget knob or feature gate is needed, define it in
+   `config/agents_config.yaml` and document the fail-closed behavior and
+   disable path alongside the existing motion policy knobs.
+5. If the validator needs cached mesh state, define the cache scope as
+   per-job and in-memory only. The implementation should never pay repeated
+   I/O costs in the inner loop.
 
 ### 5. Refresh seeds and integration tests
 
@@ -241,13 +289,15 @@ boundary.
 5. Do not broaden benchmark-side motion semantics as a side effect of this
    migration.
 6. Do not add a new agent-facing tool surface for the feature.
+7. Do not thread the swept-clearance checker through unrelated planner,
+   renderer, or benchmark flows; keep it removable behind the validation gate.
 
 ## Sequencing
 
 1. Define the explicit orientation contract and the fail-closed behavior for
    missing rotation.
-2. Implement the swept-clearance validator with cached geometry and parallel
-   sample evaluation.
+2. Implement the budgeted swept-clearance validator with cached geometry,
+   broad-phase pruning, and parallel sample evaluation.
 3. Thread the failure through node entry and submit-time validation.
 4. Update prompts, architecture docs, and config policy text.
 5. Refresh seeded workspaces, mock responses, and integration coverage.
@@ -269,3 +319,6 @@ boundary.
    orientation must be declared.
 7. Seeded workspaces and integration tests cover both the rotated-collision
    failure and the explicit-rotation success case.
+8. The swept-clearance validator can be disabled or removed by changing a
+   single configuration or call-site boundary, without editing unrelated
+   planner, renderer, or benchmark code.
