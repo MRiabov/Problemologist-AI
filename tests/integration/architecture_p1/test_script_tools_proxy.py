@@ -833,7 +833,7 @@ async def test_int_213_controller_preview_route_materializes_depth_artifact_via_
     """
     INT-213: the controller preview route must accept a live bundle, proxy the
     request through the controller script-tool boundary, and materialize a depth
-    preview bundle with an atomic manifest write.
+    render bundle with an atomic manifest write.
     """
     session_id = f"INT-213-{uuid.uuid4().hex[:8]}"
 

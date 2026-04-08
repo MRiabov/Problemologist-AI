@@ -1835,7 +1835,7 @@ async def test_int_188_validation_preview_http_preview_route_uses_vtk_renderer(
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_188_validation_preview_keeps_historical_bundles_in_render_index():
-    """INT-188: historical preview bundles stay discoverable through the append-only index."""
+    """INT-188: historical render bundles stay discoverable through the append-only index."""
     original_config = _set_render_modalities(
         rgb=True,
         depth=False,
