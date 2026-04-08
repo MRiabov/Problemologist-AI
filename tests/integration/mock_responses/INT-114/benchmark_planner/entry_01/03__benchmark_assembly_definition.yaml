@@ -9,12 +9,59 @@ constraints:
   benchmark_max_weight_g: 975.0
   planner_target_max_unit_cost_usd: 24.0
   planner_target_max_weight_g: 650.0
-manufactured_parts: []
+drafting:
+  sheet_id: sheet-1
+  title: INT-114 passive benchmark drafting
+  views:
+  - view_id: front
+    target: environment_fixture
+    projection: front
+    datums:
+    - A
+    dimensions:
+    - dimension_id: env_length
+      kind: linear
+      target: environment_fixture
+      value: 16.0
+      binding: true
+    callouts:
+    - callout_id: env_front
+      label: environment_fixture
+      target: environment_fixture
+  - view_id: top
+    target: environment_fixture
+    projection: top
+    datums:
+    - A
+    dimensions:
+    - dimension_id: env_width
+      kind: linear
+      target: environment_fixture
+      value: 8.0
+      binding: true
+    callouts:
+    - callout_id: env_top
+      label: environment_fixture
+      target: environment_fixture
+manufactured_parts:
+- part_name: environment_fixture
+  part_id: environment_fixture
+  manufacturing_method: 3DP
+  material_id: aluminum_6061
+  quantity: 1
+  part_volume_mm3: 512.0
+  stock_bbox_mm:
+    x: 16.0
+    y: 8.0
+    z: 4.0
+  stock_volume_mm3: 512.0
+  removed_volume_mm3: 0.0
+  estimated_unit_cost_usd: 10.0
 cots_parts: []
 environment_drill_operations: []
 final_assembly: []
 totals:
-  estimated_unit_cost_usd: 0.0
-  estimated_weight_g: 0.0
+  estimated_unit_cost_usd: 10.0
+  estimated_weight_g: 1.38
   estimate_confidence: high
 dfm_suggestions: []

@@ -26,27 +26,43 @@ transcript:
       overwrite: true
       content_file: INT-114/benchmark_planner/entry_01/04__benchmark_definition.yaml
     expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_plan_evidence_script.py
+      overwrite: true
+      content_file: INT-114/benchmark_planner/entry_01/05__benchmark_plan_evidence_script.py
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_plan_technical_drawing_script.py
+      overwrite: true
+      content_file: INT-114/benchmark_planner/entry_01/06__benchmark_plan_technical_drawing_script.py
+    expected_observation: success
+  - thought: Materialize the drafting preview before submitting the planner handoff.
+    tool_name: preview_drawing
+    tool_args: {}
+    expected_observation: success
   - tool_name: submit_plan
     expected_observation: submitted
   - finished: true
-    summary: INT-114 benchmark planner artifacts submitted for a passive rigid-body gravity puzzle.
+    summary: INT-114 benchmark planner artifacts submitted after drafting preview materialization.
 - node: benchmark_plan_reviewer
   steps:
   - thought: Inspect the latest revision render bundle before approval.
     tool_name: list_files
     tool_args:
-      path: renders
+      path: renders/benchmark_renders
     expected_observation: success
   - tool_name: inspect_media
     tool_args:
-      path: renders/cad_preview.png
+      path: renders/benchmark_renders/00_front.png
     expected_observation: attached_to_model
   - tool_name: inspect_media
     tool_args:
-      path: renders/simulation_preview.png
+      path: renders/benchmark_renders/01_top.png
     expected_observation: attached_to_model
   - finished: true
     review:
       decision: APPROVED
-      reason: Planner artifacts are internally consistent and ready for coding.
+      reason: Planner artifacts are internally consistent, and the drafted revision was inspected before approval.
       required_fixes: []

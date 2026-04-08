@@ -1,6 +1,6 @@
 from build123d import Box, TechnicalDrawing
 
-from utils.metadata import PartMetadata
+from shared.models.schemas import PartMetadata
 
 
 def build():

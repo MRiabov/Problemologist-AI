@@ -5,6 +5,7 @@ from pathlib import Path
 import httpx
 import pytest
 import yaml
+from build123d import Location, Plane
 
 from controller.agent.node_entry_validation import (
     validate_seeded_workspace_handoff_artifacts,
@@ -221,6 +222,8 @@ def _motion_forecast_validation_payloads(
     *,
     first_anchor_pos: tuple[float, float, float],
     terminal_anchor_pos: tuple[float, float, float],
+    first_anchor_rot_deg: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    terminal_anchor_rot_deg: tuple[float, float, float] = (0.0, 0.0, 0.0),
 ) -> tuple[dict[str, object], dict[str, object]]:
     benchmark_definition = BenchmarkDefinition(
         objectives=ObjectivesSection(
@@ -250,7 +253,7 @@ def _motion_forecast_validation_payloads(
                 t_s=0.0,
                 reference_point="build_zone_start",
                 pos_mm=first_anchor_pos,
-                rot_deg=(0.0, 0.0, 0.0),
+                rot_deg=first_anchor_rot_deg,
                 position_tolerance_mm=(0.6, 0.6, 0.6),
                 rotation_tolerance_deg=(0.1, 0.1, 2.0),
                 first_contacts=[
@@ -266,7 +269,7 @@ def _motion_forecast_validation_payloads(
                 t_s=1.5,
                 reference_point="goal_zone_contact",
                 pos_mm=terminal_anchor_pos,
-                rot_deg=(0.0, 0.0, 0.0),
+                rot_deg=terminal_anchor_rot_deg,
                 position_tolerance_mm=(0.6, 0.6, 0.6),
                 rotation_tolerance_deg=(0.1, 0.1, 2.0),
                 goal_zone_contact=True,
@@ -328,25 +331,146 @@ result = build()
     return benchmark_script, solution_script
 
 
+def _obb_world_point(
+    location: Location, local_point: tuple[float, float, float]
+) -> tuple[float, float, float]:
+    plane = Plane(location)
+    origin = tuple(float(value) for value in plane.origin)
+    x_dir = tuple(float(value) for value in plane.x_dir)
+    y_dir = tuple(float(value) for value in plane.y_dir)
+    z_dir = tuple(float(value) for value in plane.z_dir)
+    return tuple(
+        origin[index]
+        + local_point[0] * x_dir[index]
+        + local_point[1] * y_dir[index]
+        + local_point[2] * z_dir[index]
+        for index in range(3)
+    )
+
+
+def _obb_local_coords(
+    location: Location, point: tuple[float, float, float]
+) -> tuple[float, float, float]:
+    plane = Plane(location)
+    origin = tuple(float(value) for value in plane.origin)
+    x_dir = tuple(float(value) for value in plane.x_dir)
+    y_dir = tuple(float(value) for value in plane.y_dir)
+    z_dir = tuple(float(value) for value in plane.z_dir)
+    rel = tuple(point[index] - origin[index] for index in range(3))
+    return (
+        sum(rel[index] * x_dir[index] for index in range(3)),
+        sum(rel[index] * y_dir[index] for index in range(3)),
+        sum(rel[index] * z_dir[index] for index in range(3)),
+    )
+
+
+def _find_wrong_only_obstacle_point(
+    *,
+    initial_pos_mm: tuple[float, float, float],
+    initial_rot_deg: tuple[float, float, float],
+    sample_pos_mm: tuple[float, float, float],
+    sample_rot_deg: tuple[float, float, float],
+    half_sizes: tuple[float, float, float] = (4.0, 1.0, 1.0),
+) -> tuple[float, float, float]:
+    initial_location = Location(initial_pos_mm, initial_rot_deg)
+    sample_location = Location(sample_pos_mm, sample_rot_deg)
+    wrong_rot_deg = tuple(
+        sample_rot_deg[index] - initial_rot_deg[index] for index in range(3)
+    )
+    wrong_relative = Location(
+        tuple(sample_pos_mm[index] - initial_pos_mm[index] for index in range(3)),
+        wrong_rot_deg,
+    )
+    wrong_location = wrong_relative * initial_location
+    local_candidates = [
+        (
+            sx * half_sizes[0] * frac[0],
+            sy * half_sizes[1] * frac[1],
+            sz * half_sizes[2] * frac[2],
+        )
+        for sx in (-1.0, 1.0)
+        for sy in (-1.0, 1.0)
+        for sz in (-1.0, 1.0)
+        for frac in (
+            (0.95, 0.95, 0.95),
+            (0.95, 0.8, 0.7),
+            (0.9, 0.7, 0.6),
+            (0.98, 0.9, 0.4),
+            (0.9, 0.95, 0.5),
+        )
+    ]
+
+    for local_point in local_candidates:
+        world_point = _obb_world_point(wrong_location, local_point)
+        correct_local = _obb_local_coords(sample_location, world_point)
+        if all(abs(local_point[i]) < half_sizes[i] - 1e-9 for i in range(3)) and any(
+            abs(correct_local[i]) > half_sizes[i] - 0.05 for i in range(3)
+        ):
+            return world_point
+
+    raise AssertionError("Unable to derive a wrong-only obstacle witness point")
+
+
+def _rotated_swept_clearance_geometry_scripts(
+    *,
+    obstacle_center: tuple[float, float, float],
+    payload_initial_pos_mm: tuple[float, float, float],
+    payload_initial_rot_deg: tuple[float, float, float],
+) -> tuple[str, str]:
+    obstacle_x, obstacle_y, obstacle_z = obstacle_center
+    pos_x, pos_y, pos_z = payload_initial_pos_mm
+    rot_x, rot_y, rot_z = payload_initial_rot_deg
+    benchmark_script = f"""from build123d import Align, Box, Compound, Location
+
+
+def build():
+    fixture = Box(0.01, 0.01, 0.01, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    fixture = fixture.move(Location(({obstacle_x}, {obstacle_y}, {obstacle_z})))
+    return Compound(children=[fixture], label="fixture_block")
+
+
+result = build()
+"""
+    solution_script = f"""from build123d import Align, Box, Compound, Location
+
+
+def build():
+    payload = Box(8.0, 2.0, 2.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    payload = payload.move(
+        Location(({pos_x}, {pos_y}, {pos_z}), ({rot_x}, {rot_y}, {rot_z}))
+    )
+    return Compound(children=[payload], label="moving_bracket")
+
+
+result = build()
+"""
+    return benchmark_script, solution_script
+
+
 def _payload_trajectory_definition(
     *,
     first_anchor_rotation_tolerance: tuple[float, float, float] | None = None,
+    initial_pose_pos: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    first_anchor_pos: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    first_anchor_rot_deg: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    terminal_anchor_pos: tuple[float, float, float] = (12.0, 12.0, 0.0),
+    terminal_anchor_rot_deg: tuple[float, float, float] = (0.0, 0.0, 0.0),
 ) -> PayloadTrajectoryDefinition:
     return PayloadTrajectoryDefinition(
         backend=SimulatorBackendType.GENESIS,
         moving_part_names=["moving_bracket"],
         initial_pose=PayloadTrajectoryPose(
             reference_point="build_zone_start",
-            pos_mm=(0.0, 0.0, 0.0),
-            rot_deg=(0.0, 0.0, 0.0),
+            pos_mm=initial_pose_pos,
+            rot_deg=first_anchor_rot_deg,
         ),
         sample_stride_s=0.3,
         anchors=[
             MotionForecastAnchor(
                 t_s=0.0,
                 reference_point="build_zone_start",
-                pos_mm=(0.0, 0.0, 0.0),
-                rot_deg=(0.0, 0.0, 0.0),
+                pos_mm=first_anchor_pos,
+                rot_deg=first_anchor_rot_deg,
                 position_tolerance_mm=(0.1, 0.1, 0.1),
                 rotation_tolerance_deg=first_anchor_rotation_tolerance,
                 build_zone_valid=True,
@@ -354,8 +478,8 @@ def _payload_trajectory_definition(
             MotionForecastAnchor(
                 t_s=1.5,
                 reference_point="goal_zone_contact",
-                pos_mm=(12.0, 12.0, 0.0),
-                rot_deg=(0.0, 0.0, 0.0),
+                pos_mm=terminal_anchor_pos,
+                rot_deg=terminal_anchor_rot_deg,
                 position_tolerance_mm=(0.1, 0.1, 0.1),
                 goal_zone_contact=True,
             ),
@@ -1611,6 +1735,102 @@ async def test_int_184_seeded_benchmark_assembly_uses_benchmark_definition_caps_
 
     assert "benchmark_max_unit_cost_usd" not in content
     assert "benchmark_max_weight_g" not in content
+    assert not errors, errors
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_184_seeded_workspace_accepts_payload_trajectory_nonzero_initial_rotation(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """
+    INT-184: Payload trajectory handoff must validate a non-zero initial rotation
+    with correct relative transform composition.
+    """
+    drafting_config = _agents_config_with_technical_drawing_modes(
+        engineer_mode=DraftingMode.OFF,
+        benchmark_mode=DraftingMode.OFF,
+    )
+    monkeypatch.setattr(
+        "controller.agent.node_entry_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+    monkeypatch.setattr(
+        "worker_heavy.utils.file_validation.load_agents_config",
+        lambda: drafting_config,
+    )
+
+    initial_pos_mm = (-8.0, 0.0, 0.0)
+    terminal_pos_mm = (0.0, 0.0, 0.0)
+    initial_rot_deg = (30.0, 20.0, 10.0)
+    terminal_rot_deg = (40.0, 50.0, 60.0)
+    obstacle_center = _find_wrong_only_obstacle_point(
+        initial_pos_mm=initial_pos_mm,
+        initial_rot_deg=initial_rot_deg,
+        sample_pos_mm=terminal_pos_mm,
+        sample_rot_deg=terminal_rot_deg,
+    )
+
+    session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        benchmark_definition, assembly_definition = (
+            _motion_forecast_validation_payloads(
+                first_anchor_pos=initial_pos_mm,
+                terminal_anchor_pos=terminal_pos_mm,
+                first_anchor_rot_deg=initial_rot_deg,
+                terminal_anchor_rot_deg=terminal_rot_deg,
+            )
+        )
+        benchmark_definition["objectives"]["goal_zone"] = {
+            "min": [-2.0, -2.0, -2.0],
+            "max": [2.0, 2.0, 2.0],
+        }
+        benchmark_definition["objectives"]["build_zone"] = {
+            "min": [-10.0, -10.0, -2.0],
+            "max": [2.0, 10.0, 2.0],
+        }
+        benchmark_definition["simulation_bounds"] = {
+            "min": [-14.0, -14.0, -14.0],
+            "max": [14.0, 14.0, 14.0],
+        }
+        payload_definition = _payload_trajectory_definition(
+            initial_pose_pos=initial_pos_mm,
+            first_anchor_pos=initial_pos_mm,
+            first_anchor_rot_deg=initial_rot_deg,
+            terminal_anchor_pos=terminal_pos_mm,
+            terminal_anchor_rot_deg=terminal_rot_deg,
+        )
+        await _upload_swept_clearance_workspace(
+            worker,
+            benchmark_definition=benchmark_definition,
+            assembly_definition=assembly_definition,
+            payload_definition=payload_definition,
+            obstacle_center_y=1.15,
+        )
+        benchmark_script, solution_script = _rotated_swept_clearance_geometry_scripts(
+            obstacle_center=obstacle_center,
+            payload_initial_pos_mm=initial_pos_mm,
+            payload_initial_rot_deg=initial_rot_deg,
+        )
+        await worker.upload_file(
+            "benchmark_script.py",
+            benchmark_script.encode("utf-8"),
+            bypass_agent_permissions=True,
+        )
+        await worker.upload_file(
+            "solution_script.py",
+            solution_script.encode("utf-8"),
+            bypass_agent_permissions=True,
+        )
+
+        errors = await validate_seeded_workspace_handoff_artifacts(
+            worker_client=worker,
+            target_node=AgentName.ENGINEER_PLAN_REVIEWER,
+        )
+    finally:
+        await worker.aclose()
+
     assert not errors, errors
 
 
