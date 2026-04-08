@@ -1,5 +1,8 @@
 # Electronics API Reference
 
+This is a generated snapshot of the current electronics schema and helper surface.
+Refresh it from `shared/models/schemas.py` and `worker_heavy/utils/electronics.py` when fields or signatures change; do not hand-maintain the snapshot from memory.
+
 ## Current Schema Surface
 
 `shared/models/schemas.py` currently defines the planner/runtime electronics data model.
