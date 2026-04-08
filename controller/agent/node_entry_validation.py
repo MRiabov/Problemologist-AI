@@ -210,6 +210,9 @@ _DRAFTING_PROMPT_TARGETS = {
     AgentName.ENGINEER_CODER,
 }
 
+_RENDER_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+_RENDER_EVIDENCE_EXTENSIONS = _RENDER_IMAGE_EXTENSIONS | {".mp4"}
+
 
 def _technical_drawing_mode_active(mode: DraftingMode) -> bool:
     return mode in (DraftingMode.MINIMAL, DraftingMode.FULL)
@@ -959,6 +962,26 @@ def _required_render_bundle_sidecars(
     return required
 
 
+def _render_manifest_image_paths(
+    manifest: RenderManifest,
+) -> tuple[list[str], list[str]]:
+    preview_paths = sorted(
+        dict.fromkeys(
+            Path(path).as_posix().lstrip("/")
+            for path in manifest.preview_evidence_paths
+            if path and Path(path).suffix.lower() in _RENDER_IMAGE_EXTENSIONS
+        )
+    )
+    artifact_paths = sorted(
+        dict.fromkeys(
+            Path(path).as_posix().lstrip("/")
+            for path in manifest.artifacts
+            if Path(path).suffix.lower() in _RENDER_IMAGE_EXTENSIONS
+        )
+    )
+    return preview_paths, artifact_paths
+
+
 async def validate_seeded_workspace_handoff_artifacts(
     *,
     worker_client: WorkerClient,
@@ -1313,6 +1336,40 @@ async def validate_seeded_workspace_handoff_artifacts(
                 )
             )
             continue
+
+        preview_image_paths, artifact_image_paths = _render_manifest_image_paths(
+            render_manifest
+        )
+        if (
+            preview_image_paths
+            and artifact_image_paths
+            and (preview_image_paths != artifact_image_paths)
+        ):
+            errors.append(
+                _seeded_schema_error(
+                    message=(
+                        f"{rel_path}: preview evidence paths must match the "
+                        "render artifact image set"
+                    ),
+                    artifact_path=rel_path,
+                )
+            )
+
+        expected_image_paths = (
+            preview_image_paths if preview_image_paths else artifact_image_paths
+        )
+        missing_image_paths = [
+            image_path
+            for image_path in expected_image_paths
+            if not await worker_client.exists(image_path, bypass_agent_permissions=True)
+        ]
+        for image_path in missing_image_paths:
+            errors.append(
+                _seeded_schema_error(
+                    message=f"{rel_path}: render image '{image_path}' is missing.",
+                    artifact_path=image_path,
+                )
+            )
 
         for required_sidecar in _required_render_bundle_sidecars(
             manifest=render_manifest,

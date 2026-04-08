@@ -119,6 +119,34 @@ async def test_render_validation_allows_visible_rgb_seed():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+async def test_render_validation_rejects_missing_expected_render_image():
+    session_id = f"INT-195-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    evidence_path = "renders/final_solution_submission_renders/render_evidence.png"
+    try:
+        await worker.upload_file(
+            "renders/final_solution_submission_renders/render_manifest.json",
+            _render_manifest_json(evidence_path).encode("utf-8"),
+            bypass_agent_permissions=True,
+        )
+
+        errors = await validate_seeded_workspace_handoff_artifacts(
+            worker_client=worker,
+            target_node=AgentName.STEER,
+        )
+    finally:
+        await worker.aclose()
+
+    missing_image_errors = [
+        error
+        for error in errors
+        if error.artifact_path == evidence_path and "render image" in error.message
+    ]
+    assert missing_image_errors, errors
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
 async def test_render_validation_rejects_missing_benchmark_render_evidence():
     session_id = f"INT-193-{uuid.uuid4().hex[:8]}"
     worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)

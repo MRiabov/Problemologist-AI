@@ -58,10 +58,13 @@ def _resolve_seed_artifact_dir(item, *, root: Path) -> Path | None:
 
 
 _RENDER_SIDE_CAR_FILENAMES = {
+    "render_index.jsonl",
     "preview_scene.json",
     "frames.jsonl",
     "objects.parquet",
 }
+_RENDER_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+_RENDER_EVIDENCE_EXTENSIONS = _RENDER_IMAGE_EXTENSIONS | {".mp4"}
 
 
 def _discover_render_sidecars(artifact_dir: Path) -> list[str]:
@@ -77,6 +80,26 @@ def _discover_render_sidecars(artifact_dir: Path) -> list[str]:
             continue
         discovered.append(str(path.relative_to(artifact_dir)).replace("\\", "/"))
     return sorted(dict.fromkeys(discovered))
+
+
+def _render_manifest_image_paths(
+    manifest: RenderManifest,
+) -> tuple[list[str], list[str]]:
+    preview_paths = sorted(
+        dict.fromkeys(
+            Path(path).as_posix().lstrip("/")
+            for path in manifest.preview_evidence_paths
+            if path and Path(path).suffix.lower() in _RENDER_IMAGE_EXTENSIONS
+        )
+    )
+    artifact_paths = sorted(
+        dict.fromkeys(
+            Path(path).as_posix().lstrip("/")
+            for path in manifest.artifacts
+            if Path(path).suffix.lower() in _RENDER_IMAGE_EXTENSIONS
+        )
+    )
+    return preview_paths, artifact_paths
 
 
 def _validate_required_render_sidecars(
@@ -98,17 +121,44 @@ def _validate_required_render_sidecars(
             manifest_path.read_text(encoding="utf-8")
         )
         bundle_root = artifact_dir / Path(manifest.bundle_path or Path(rel_path).parent)
+        preview_image_paths, artifact_image_paths = _render_manifest_image_paths(
+            manifest
+        )
+        if (
+            preview_image_paths
+            and artifact_image_paths
+            and (preview_image_paths != artifact_image_paths)
+        ):
+            raise RuntimeError(
+                f"{manifest_path.relative_to(artifact_dir)} preview evidence paths "
+                "do not match the render artifact image set"
+            )
+
         evidence_paths = [
             Path(path)
             for path in manifest.preview_evidence_paths
-            if path and Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
+            if path and Path(path).suffix.lower() in _RENDER_EVIDENCE_EXTENSIONS
         ]
         if not evidence_paths:
             evidence_paths = [
                 Path(path)
                 for path in manifest.artifacts
-                if Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
+                if Path(path).suffix.lower() in _RENDER_EVIDENCE_EXTENSIONS
             ]
+
+        expected_image_paths = (
+            preview_image_paths if preview_image_paths else artifact_image_paths
+        )
+        missing_images = [
+            Path(path).as_posix().lstrip("/")
+            for path in expected_image_paths
+            if not (artifact_dir / path).exists()
+        ]
+        if missing_images:
+            raise RuntimeError(
+                "Rendered eval seed bundle is missing required render image "
+                f"file(s): {sorted(dict.fromkeys(missing_images))}"
+            )
 
         if any(path.suffix.lower() == ".mp4" for path in evidence_paths):
             for required_name in ("frames.jsonl", "objects.parquet"):
