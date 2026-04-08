@@ -136,7 +136,39 @@ def preview(
     return response
 
 
-def preview_drawing(
+def render_cad(
+    component: Part | Compound,
+    orbit_pitch: float | list[float] = 45.0,
+    orbit_yaw: float | list[float] = 45.0,
+    rgb: bool | None = None,
+    depth: bool | None = None,
+    segmentation: bool | None = None,
+    payload_path: bool = False,
+    drafting: bool = False,
+    rendering_type: PreviewRenderingType | str | None = None,
+    output_dir: Path | None = None,
+    objectives: BenchmarkDefinition | None = None,
+    width: int | None = None,
+    height: int | None = None,
+) -> PreviewDesignResponse:
+    return preview(
+        component,
+        orbit_pitch=orbit_pitch,
+        orbit_yaw=orbit_yaw,
+        rgb=rgb,
+        depth=depth,
+        segmentation=segmentation,
+        payload_path=payload_path,
+        drafting=drafting,
+        rendering_type=rendering_type,
+        output_dir=output_dir,
+        objectives=objectives,
+        width=width,
+        height=height,
+    )
+
+
+def render_technical_drawing(
     component: Part | Compound,
     orbit_pitch: float | list[float] = 45.0,
     orbit_yaw: float | list[float] = 45.0,
@@ -145,7 +177,7 @@ def preview_drawing(
     width: int | None = None,
     height: int | None = None,
 ) -> PreviewDesignResponse:
-    return preview(
+    return render_cad(
         component,
         orbit_pitch=orbit_pitch,
         orbit_yaw=orbit_yaw,

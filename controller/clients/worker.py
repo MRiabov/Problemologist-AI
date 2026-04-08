@@ -848,7 +848,7 @@ class WorkerClient:
             entry.path: base64.b64decode(entry.content_b64) for entry in response.files
         }
 
-    async def preview(
+    async def render_cad(
         self,
         script_path: str = "script.py",
         script_content: str | None = None,
@@ -864,7 +864,7 @@ class WorkerClient:
         smoke_test_mode: bool | None = None,
         agent_role: AgentName | str | None = None,
     ) -> PreviewDesignResponse:
-        """Trigger design preview via the controller preview workflow when available."""
+        """Trigger CAD preview via the controller preview workflow when available."""
         payload = {
             "script_path": script_path,
             "orbit_pitch": orbit_pitch,
@@ -909,6 +909,59 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
+    async def preview(
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        orbit_pitch: float | list[float] = 45.0,
+        orbit_yaw: float | list[float] = 45.0,
+        rgb: bool | None = None,
+        depth: bool | None = None,
+        segmentation: bool | None = None,
+        payload_path: bool = False,
+        drafting: bool = False,
+        rendering_type: PreviewRenderingType | str | None = None,
+        bundle_base64: str | None = None,
+        smoke_test_mode: bool | None = None,
+        agent_role: AgentName | str | None = None,
+    ) -> PreviewDesignResponse:
+        return await self.render_cad(
+            script_path=script_path,
+            script_content=script_content,
+            orbit_pitch=orbit_pitch,
+            orbit_yaw=orbit_yaw,
+            rgb=rgb,
+            depth=depth,
+            segmentation=segmentation,
+            payload_path=payload_path,
+            drafting=drafting,
+            rendering_type=rendering_type,
+            bundle_base64=bundle_base64,
+            smoke_test_mode=smoke_test_mode,
+            agent_role=agent_role,
+        )
+
+    async def render_technical_drawing(
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        orbit_pitch: float | list[float] = 45.0,
+        orbit_yaw: float | list[float] = 45.0,
+        bundle_base64: str | None = None,
+        smoke_test_mode: bool | None = None,
+        agent_role: AgentName | str | None = None,
+    ) -> PreviewDesignResponse:
+        return await self.render_cad(
+            script_path=script_path,
+            script_content=script_content,
+            orbit_pitch=orbit_pitch,
+            orbit_yaw=orbit_yaw,
+            drafting=True,
+            bundle_base64=bundle_base64,
+            smoke_test_mode=smoke_test_mode,
+            agent_role=agent_role,
+        )
+
     async def preview_drawing(
         self,
         script_path: str = "script.py",
@@ -919,12 +972,11 @@ class WorkerClient:
         smoke_test_mode: bool | None = None,
         agent_role: AgentName | str | None = None,
     ) -> PreviewDesignResponse:
-        return await self.preview(
+        return await self.render_technical_drawing(
             script_path=script_path,
             script_content=script_content,
             orbit_pitch=orbit_pitch,
             orbit_yaw=orbit_yaw,
-            drafting=True,
             bundle_base64=bundle_base64,
             smoke_test_mode=smoke_test_mode,
             agent_role=agent_role,

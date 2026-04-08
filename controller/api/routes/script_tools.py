@@ -305,7 +305,7 @@ async def preview_script(
         async with _controller_script_middleware(
             x_session_id, payload.agent_role, request, payload.episode_id
         ) as middleware:
-            result = await middleware.preview(
+            result = await middleware.render_cad(
                 payload.script_path,
                 orbit_pitch=payload.orbit_pitch,
                 orbit_yaw=payload.orbit_yaw,

@@ -44,7 +44,7 @@ configure_headless_rendering()
 import vtk
 from vtk.util.numpy_support import vtk_to_numpy
 from vtkmodules.vtkCommonTransforms import vtkTransform
-from vtkmodules.vtkFiltersCore import vtkFeatureEdges
+from vtkmodules.vtkFiltersCore import vtkExtractEdges, vtkTubeFilter
 from vtkmodules.vtkFiltersSources import vtkCubeSource
 from vtkmodules.vtkIOGeometry import vtkOBJReader
 from vtkmodules.vtkRenderingAnnotation import vtkCubeAxesActor2D
@@ -274,10 +274,13 @@ def _hex_from_rgb(color_rgb: tuple[int, int, int]) -> str:
     return "#" + "".join(f"{channel:02x}" for channel in color_rgb)
 
 
-_RGB_EDGE_COLOR = (0.08, 0.08, 0.08)
+_RGB_EDGE_COLOR = (0.14, 0.14, 0.14)
 _OVERLAY_EDGE_COLOR = (0.95, 0.68, 0.18)
 _RGB_AXES_COLOR = (0.12, 0.12, 0.12)
 _OVERLAY_AXES_COLOR = (0.94, 0.94, 0.94)
+_PREVIEW_EDGE_OPACITY = 0.96
+_PREVIEW_EDGE_LINE_WIDTH = 2.4
+_PREVIEW_EDGE_LINE_OFFSET = (1.0, 1.0)
 _DEFAULT_PREVIEW_VIEW_ANGLE_DEG = 30.0
 _DEFAULT_PREVIEW_FRAMING_MARGIN = 1.25
 _UNNAMED_PREVIEW_LABEL_PREFIX = "unnamed"
@@ -411,19 +414,42 @@ def _composite_non_black(
 def _build_feature_edges_mapper(
     source: vtkCubeSource | vtkOBJReader,
 ) -> vtkPolyDataMapper:
-    feature_edges = vtkFeatureEdges()
-    feature_edges.SetInputConnection(source.GetOutputPort())
-    feature_edges.BoundaryEdgesOn()
-    feature_edges.FeatureEdgesOn()
-    feature_edges.ManifoldEdgesOff()
-    feature_edges.NonManifoldEdgesOff()
-    feature_edges.SetFeatureAngle(45.0)
-    feature_edges.ColoringOff()
-    feature_edges.Update()
+    # Use all extracted edges, not just sharp feature edges. Many CAD preview
+    # meshes are smooth or heavily triangulated, so feature-only edges can vanish
+    # on sloped faces even when the object outline is important.
+    edge_extractor = vtkExtractEdges()
+    edge_extractor.SetInputConnection(source.GetOutputPort())
+    edge_extractor.Update()
 
     mapper = vtkPolyDataMapper()
-    mapper.SetInputConnection(feature_edges.GetOutputPort())
+    mapper.SetInputConnection(edge_extractor.GetOutputPort())
     mapper.ScalarVisibilityOff()
+    # Keep the wire-like edge pass slightly in front of the shaded surface so
+    # coincident triangles do not hide the outline on shallow viewing angles.
+    if hasattr(mapper, "SetResolveCoincidentTopologyToPolygonOffset"):
+        mapper.SetResolveCoincidentTopologyToPolygonOffset()
+        if hasattr(mapper, "SetRelativeCoincidentTopologyLineOffsetParameters"):
+            mapper.SetRelativeCoincidentTopologyLineOffsetParameters(
+                *_PREVIEW_EDGE_LINE_OFFSET
+            )
+    if hasattr(edge_extractor, "GetOutput"):
+        output = edge_extractor.GetOutput()
+        bounds = output.GetBounds() if output is not None else None
+        if bounds is not None:
+            spans = [
+                float(bounds[1] - bounds[0]),
+                float(bounds[3] - bounds[2]),
+                float(bounds[5] - bounds[4]),
+            ]
+            diagonal = math.sqrt(sum(span * span for span in spans))
+            radius = max(diagonal * 0.0035, 0.7)
+            tube_filter = vtkTubeFilter()
+            tube_filter.SetInputConnection(edge_extractor.GetOutputPort())
+            tube_filter.SetRadius(radius)
+            tube_filter.SetNumberOfSides(8)
+            tube_filter.CappingOn()
+            tube_filter.Update()
+            mapper.SetInputConnection(tube_filter.GetOutputPort())
     return mapper
 
 
@@ -511,8 +537,8 @@ def _style_preview_edge_actor(
 ) -> None:
     prop = actor.GetProperty()
     prop.SetColor(*color)
-    prop.SetOpacity(0.68)
-    prop.SetLineWidth(1.2)
+    prop.SetOpacity(1.0)
+    prop.SetLineWidth(max(_PREVIEW_EDGE_LINE_WIDTH, 2.5))
     prop.LightingOff()
 
 

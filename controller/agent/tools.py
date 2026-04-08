@@ -22,7 +22,11 @@ from shared.script_contracts import (
     plan_path_for_agent,
     technical_drawing_script_path_for_agent,
 )
-from shared.workers.schema import PlanReviewManifest, RenderManifest
+from shared.workers.schema import (
+    PlanReviewManifest,
+    PreviewRenderingType,
+    RenderManifest,
+)
 
 
 def _derived_episode_id(session_id: str) -> str:
@@ -257,15 +261,79 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """
         return await fs.inspect_topology(target_id, script_path)
 
-    async def preview_drawing(
+    async def render_cad(
+        script_path: str = default_script_path,
+        orbit_pitch: float | list[float] = 45,
+        orbit_yaw: float | list[float] = 45,
+        rgb: bool | None = None,
+        depth: bool | None = None,
+        segmentation: bool | None = None,
+        payload_path: bool = False,
+        drafting: bool = False,
+        rendering_type: PreviewRenderingType | str | None = None,
+        smoke_test_mode: bool | None = None,
+    ):
+        """Render live CAD preview evidence."""
+        return await fs.render_cad(
+            script_path,
+            orbit_pitch=orbit_pitch,
+            orbit_yaw=orbit_yaw,
+            rgb=rgb,
+            depth=depth,
+            segmentation=segmentation,
+            payload_path=payload_path,
+            drafting=drafting,
+            rendering_type=rendering_type,
+            smoke_test_mode=smoke_test_mode,
+        )
+
+    async def render_technical_drawing(
         script_path: str = default_script_path,
         orbit_pitch: float | list[float] = 45,
         orbit_yaw: float | list[float] = 45,
         smoke_test_mode: bool | None = None,
     ):
         """Render planner-authored technical drawings for inspection."""
-        return await fs.preview_drawing(
+        return await fs.render_technical_drawing(
             script_path,
+            orbit_pitch=orbit_pitch,
+            orbit_yaw=orbit_yaw,
+            smoke_test_mode=smoke_test_mode,
+        )
+
+    async def preview(
+        script_path: str = default_script_path,
+        orbit_pitch: float | list[float] = 45,
+        orbit_yaw: float | list[float] = 45,
+        rgb: bool | None = None,
+        depth: bool | None = None,
+        segmentation: bool | None = None,
+        payload_path: bool = False,
+        drafting: bool = False,
+        rendering_type: PreviewRenderingType | str | None = None,
+        smoke_test_mode: bool | None = None,
+    ):
+        return await render_cad(
+            script_path=script_path,
+            orbit_pitch=orbit_pitch,
+            orbit_yaw=orbit_yaw,
+            rgb=rgb,
+            depth=depth,
+            segmentation=segmentation,
+            payload_path=payload_path,
+            drafting=drafting,
+            rendering_type=rendering_type,
+            smoke_test_mode=smoke_test_mode,
+        )
+
+    async def preview_drawing(
+        script_path: str = default_script_path,
+        orbit_pitch: float | list[float] = 45,
+        orbit_yaw: float | list[float] = 45,
+        smoke_test_mode: bool | None = None,
+    ):
+        return await render_technical_drawing(
+            script_path=script_path,
             orbit_pitch=orbit_pitch,
             orbit_yaw=orbit_yaw,
             smoke_test_mode=smoke_test_mode,
@@ -331,7 +399,8 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         grep,
         execute_command,
         inspect_topology,
-        preview_drawing,
+        render_cad,
+        render_technical_drawing,
         verify,
         search_cots_catalog,
         invoke_cots_search_subagent,

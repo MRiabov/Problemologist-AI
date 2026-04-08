@@ -1241,17 +1241,20 @@ async def validate_seeded_workspace_handoff_artifacts(
                 _seeded_schema_error(
                     message=(
                         "prompt.md missing for drafting-enabled workspace; the "
-                        "prompt must instruct the agent to call preview_drawing()"
+                        "prompt must instruct the agent to call render_technical_drawing()"
                     ),
                     artifact_path="prompt.md",
                 )
             )
-        elif "preview_drawing()" not in prompt_text:
+        elif (
+            "render_technical_drawing()" not in prompt_text
+            and "preview_drawing()" not in prompt_text
+        ):
             errors.append(
                 _seeded_schema_error(
                     message=(
                         "prompt.md must instruct the agent to call "
-                        "preview_drawing() before submit_plan() when drafting "
+                        "render_technical_drawing() before submit_plan() when drafting "
                         "mode is active"
                     ),
                     artifact_path="prompt.md",

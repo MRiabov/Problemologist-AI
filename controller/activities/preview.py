@@ -31,7 +31,7 @@ async def preview_render_activity(
         agent_role=params.agent_role,
         light_transport=settings.worker_light_transport,
     )
-    return await client.preview(
+    return await client.render_cad(
         script_path=params.script_path,
         script_content=params.script_content,
         orbit_pitch=params.orbit_pitch,

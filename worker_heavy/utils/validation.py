@@ -147,12 +147,12 @@ def _validate_drafting_preview_gate(
     )
     if not drafting_script_path.exists():
         return (
-            f"{drafting_script_path.name} is missing; call preview_drawing() "
+            f"{drafting_script_path.name} is missing; call render_technical_drawing() "
             f"before validate()"
         )
     if not drafting_manifest_path.exists():
         return (
-            f"{drafting_manifest_path.name} is missing; call preview_drawing() "
+            f"{drafting_manifest_path.name} is missing; call render_technical_drawing() "
             f"before validate()"
         )
 

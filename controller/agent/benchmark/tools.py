@@ -28,7 +28,7 @@ from shared.script_contracts import (
     drafting_script_paths_for_agent,
     plan_path_for_agent,
 )
-from shared.workers.schema import PlanReviewManifest
+from shared.workers.schema import PlanReviewManifest, PreviewRenderingType
 
 BENCHMARK_ESTIMATE_HEADROOM_MULTIPLIER = 1.5
 
@@ -195,18 +195,82 @@ def get_benchmark_planner_tools(
     async def grep(pattern: str, path: str | None = None, glob: str | None = None):
         return await fs.grep(pattern, path, glob)
 
+    async def render_cad(
+        script_path: str = "benchmark_plan_evidence_script.py",
+        orbit_pitch: float | list[float] = 45,
+        orbit_yaw: float | list[float] = 45,
+        rgb: bool | None = None,
+        depth: bool | None = None,
+        segmentation: bool | None = None,
+        payload_path: bool = False,
+        drafting: bool = False,
+        rendering_type: PreviewRenderingType | str | None = None,
+        smoke_test_mode: bool | None = None,
+    ):
+        return await fs.client.render_cad(
+            script_path,
+            orbit_pitch=orbit_pitch,
+            orbit_yaw=orbit_yaw,
+            rgb=rgb,
+            depth=depth,
+            segmentation=segmentation,
+            payload_path=payload_path,
+            drafting=drafting,
+            rendering_type=rendering_type,
+            smoke_test_mode=smoke_test_mode,
+            agent_role=AgentName.BENCHMARK_PLANNER,
+        )
+
+    async def render_technical_drawing(
+        script_path: str = "benchmark_plan_technical_drawing_script.py",
+        orbit_pitch: float | list[float] = 45,
+        orbit_yaw: float | list[float] = 45,
+        smoke_test_mode: bool | None = None,
+    ):
+        return await fs.client.render_technical_drawing(
+            script_path,
+            orbit_pitch=orbit_pitch,
+            orbit_yaw=orbit_yaw,
+            smoke_test_mode=smoke_test_mode,
+            agent_role=AgentName.BENCHMARK_PLANNER,
+        )
+
+    async def preview(
+        script_path: str = "benchmark_plan_evidence_script.py",
+        orbit_pitch: float | list[float] = 45,
+        orbit_yaw: float | list[float] = 45,
+        rgb: bool | None = None,
+        depth: bool | None = None,
+        segmentation: bool | None = None,
+        payload_path: bool = False,
+        drafting: bool = False,
+        rendering_type: PreviewRenderingType | str | None = None,
+        smoke_test_mode: bool | None = None,
+    ):
+        return await render_cad(
+            script_path=script_path,
+            orbit_pitch=orbit_pitch,
+            orbit_yaw=orbit_yaw,
+            rgb=rgb,
+            depth=depth,
+            segmentation=segmentation,
+            payload_path=payload_path,
+            drafting=drafting,
+            rendering_type=rendering_type,
+            smoke_test_mode=smoke_test_mode,
+        )
+
     async def preview_drawing(
         script_path: str = "benchmark_plan_technical_drawing_script.py",
         orbit_pitch: float | list[float] = 45,
         orbit_yaw: float | list[float] = 45,
         smoke_test_mode: bool | None = None,
     ):
-        return await fs.client.preview_drawing(
-            script_path,
+        return await render_technical_drawing(
+            script_path=script_path,
             orbit_pitch=orbit_pitch,
             orbit_yaw=orbit_yaw,
             smoke_test_mode=smoke_test_mode,
-            agent_role=AgentName.BENCHMARK_PLANNER,
         )
 
     async def invoke_cots_search_subagent(
@@ -458,7 +522,8 @@ def get_benchmark_planner_tools(
             edit_file,
             grep,
             invoke_cots_search_subagent,
-            preview_drawing,
+            render_cad,
+            render_technical_drawing,
             submit_plan,
         ],
     )

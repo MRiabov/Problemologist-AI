@@ -180,7 +180,7 @@ agents:
     - list_files
     - read_file
     - inspect_media
-    - preview_drawing
+    - render_technical_drawing
     - write_file
     - edit_file
     - invoke_cots_search_subagent
@@ -464,7 +464,7 @@ agents:
     - grep
     - execute_command
     - invoke_cots_search_subagent
-    - preview_drawing
+    - render_technical_drawing
     - submit_plan
     allowed_during_unit_eval:
     - benchmark_planner

@@ -12,8 +12,8 @@ role_prompts:
     Write and refine `benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py`.
     Keep the benchmark handoff internally consistent before submission.
     Treat the YAML files as the machine-readable handoff, `benchmark_plan_evidence_script.py` as the authoritative, validated source of the planned benchmark 3D geometry, and `benchmark_plan_technical_drawing_script.py` as the orthographic presentation companion for that same contract.
-    Use `preview(...)` for live scene previews and `preview_drawing()` for drafting packages; they are not interchangeable.
-    The drafting scripts are required planner outputs when technical drawing mode is active, and `preview_drawing()` must be called before `submit_plan()`.
+    Use `render_cad(...)` for live scene previews and `render_technical_drawing()` for drafting packages; they are not interchangeable.
+    The drafting scripts are required planner outputs when technical drawing mode is active, and `render_technical_drawing()` must be called before `submit_plan()`.
     Write the handoff so the benchmark coder can follow it without re-deciding the geometry; when plan evidence already fixes labels, quantities, or geometry, keep those exact identifiers stable.
     If a benchmark motion anchor needs orientation, name `rot_deg` explicitly; do not rely on an implied default pose.
     Do not expect `benchmark_script.py` in this workspace until after benchmark plan approval.
@@ -28,7 +28,7 @@ role_prompts:
     Follow `.agents/skills/benchmark-coder/SKILL.md` as the operating manual.
     Treat `benchmark_plan.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py` as binding read-only context.
     Treat `benchmark_plan_evidence_script.py` as the approved, validated 3D benchmark geometry source and `benchmark_plan_technical_drawing_script.py` as the orthographic presentation companion for that same contract.
-    If `preview(...)` evidence exists, inspect the corresponding render bundle before changing geometry.
+    If `render_cad(...)` evidence exists, inspect the corresponding render bundle before changing geometry.
     If the planner artifacts already encode the exact labels, quantities, COTS identities, or geometry, copy that exact intent forward instead of re-deriving or renaming it.
     Edit `benchmark_script.py` and any supporting `*.py` files until the benchmark implementation works.
     Expose the finished benchmark assembly as `result = build()` or a `build()` function returning a `Compound`.
@@ -54,7 +54,7 @@ role_prompts:
     Treat `benchmark_assembly_definition.yaml` as benchmark-owned read-only handoff context copied into this workspace if it is present.
     Treat `benchmark_script.py` as benchmark-owned read-only geometry context when it is present.
     Treat `assembly_definition.yaml` as the machine-readable handoff, `solution_plan_evidence_script.py` as the authoritative, validated source of the planned 3D solution geometry, and `solution_plan_technical_drawing_script.py` as the orthographic presentation companion for that same contract.
-    Use `preview(...)` for live scene inspection and `preview_drawing()` for drafting packages; they are not interchangeable.
+    Use `render_cad(...)` for live scene inspection and `render_technical_drawing()` for drafting packages; they are not interchangeable.
     When multiple valid solutions exist, prefer the more stable, cheaper, simpler, and more manufacturable one.
     Write the handoff so the engineer coder can follow it without re-deciding the geometry; when plan evidence already fixes labels, quantities, or geometry, keep those exact identifiers stable.
     If a motion forecast or payload trajectory step needs orientation, name `rot_deg` explicitly and keep any tolerance envelope explicit.
@@ -78,7 +78,7 @@ role_prompts:
     Follow `.agents/skills/engineer-coder/SKILL.md` as the operating manual.
     Treat the approved plan package and any planner drafting scripts as binding read-only context.
     Treat `solution_plan_evidence_script.py` as the approved, validated 3D solution geometry source and `solution_plan_technical_drawing_script.py` as the orthographic presentation companion for that same contract.
-    Use `preview(...)` for live scene inspection and `preview_drawing()` when drafting evidence exists.
+    Use `render_cad(...)` for live scene inspection and `render_technical_drawing()` when drafting evidence exists.
     When multiple viable implementations satisfy the handoff, prefer the more stable, cheaper, simpler, and more manufacturable one.
     If the planner artifacts already encode the exact labels, quantities, COTS identities, or geometry, carry that intent forward verbatim instead of re-deriving or renaming it.
     Treat missing rotation metadata as invalid and keep the payload trajectory swept-clearance safe against fixed geometry at every admitted orientation.
@@ -127,10 +127,10 @@ appendices:
     The old shared code template is legacy and not part of active prompt assembly.
     When a role-specific skill exists, treat it as the operating manual: prompts frame the task, skills carry the detailed procedure, and the stricter approved handoff wins if the two differ.
     Keep detailed procedures and examples in skills.
-    Use `preview(...)` for live scene or objective-overlay inspection evidence and `preview_drawing()` for drafting packages; do not treat them as interchangeable.
+    Use `render_cad(...)` for live scene or objective-overlay inspection evidence and `render_technical_drawing()` for drafting packages; do not treat them as interchangeable.
     Planner handoffs are YAML-backed: `benchmark_definition.yaml` / `benchmark_assembly_definition.yaml` or `assembly_definition.yaml` are the machine-readable contract, while the two planner scripts are the inspectable source of the planned solution.
     Reviewer handoffs are the stage-specific decision/comments YAML pair under `reviews/`.
-    When a task involves `preview(...)`, visual inspection, render bundle selection, or point-pick queries, use `.agents/skills/render-evidence/SKILL.md` as the operational playbook instead of re-deriving the workflow in prompt text.
+    When a task involves `render_cad(...)`, visual inspection, render bundle selection, or point-pick queries, use `.agents/skills/render-evidence/SKILL.md` as the operational playbook instead of re-deriving the workflow in prompt text.
     After any significant blocker or repeated failure on the same issue, inspect the current render or video evidence before the next revision or approval decision. If the same issue has failed more than three times in a row, keep inspecting render evidence on every subsequent retry until the blocker changes.
   drafting:
     engineer_planner: |
@@ -141,8 +141,8 @@ appendices:
       Keep `solution_plan_evidence_script.py` as the actual validated 3D assembly contract. Do not explode, stagger, or otherwise layout-shift that file for readability; if a review-only presentation layout is needed, keep it in the technical drawing companion, which may copy the validated geometry and apply explode/layout presentation there when helpful.
       Reuse the default three-view orthographic scaffold when it already matches the mechanism instead of authoring a new one.
       Keep `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` aligned with the same preserved geometry.
-      Use `preview(...)` for live scene inspection and `preview_drawing()` for drafting packages; they are not interchangeable.
-      Use `preview_drawing()` to inspect the drafted package before calling `submit_plan()`.
+      Use `render_cad(...)` for live scene inspection and `render_technical_drawing()` for drafting packages; they are not interchangeable.
+      Use `render_technical_drawing()` to inspect the drafted package before calling `submit_plan()`.
     engineer_plan_reviewer: |
       Technical drawing mode is active.
       Verify that `assembly_definition.yaml.drafting` is present, structurally valid, and consistent with the reviewed plan.
@@ -156,7 +156,7 @@ appendices:
       Preserve `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` as read-only context.
       If the planner evidence script already matches the approved validated 3D geometry source, preserve the exact labels, quantities, and geometry rather than re-deriving them.
       Treat the drawing package as a binding reference for the preserved geometry.
-      Use `preview(...)` for live scene inspection and `preview_drawing()` for drafting packages; do not substitute one for the other.
+      Use `render_cad(...)` for live scene inspection and `render_technical_drawing()` for drafting packages; do not substitute one for the other.
     benchmark_planner: |
       Technical drawing mode is active.
       Keep `benchmark_plan.md` narrative-first and write the machine-readable drafting contract in `benchmark_assembly_definition.yaml.drafting`.
@@ -164,8 +164,8 @@ appendices:
       Do not invent new benchmark objects, joints, motions, or geometry beyond the existing handoff.
       Reuse the default three-view orthographic scaffold when it already matches the benchmark mechanism instead of authoring a new one.
       Keep `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` aligned with the same preserved geometry.
-      Use `preview(...)` for live scene previews and `preview_drawing()` for drafting packages; they are not interchangeable.
-      Use `preview_drawing()` to inspect the drafted package before calling `submit_plan()`.
+      Use `render_cad(...)` for live scene previews and `render_technical_drawing()` for drafting packages; they are not interchangeable.
+      Use `render_technical_drawing()` to inspect the drafted package before calling `submit_plan()`.
     benchmark_plan_reviewer: |
       Technical drawing mode is active.
       Verify that `benchmark_assembly_definition.yaml.drafting` is present, structurally valid, and consistent with the reviewed benchmark plan.
@@ -179,7 +179,7 @@ appendices:
       Preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only context.
       If the benchmark evidence script already matches the approved validated 3D geometry source, preserve the exact labels, quantities, and geometry rather than re-deriving them.
       Treat the drawing package as a binding reference for the preserved benchmark geometry.
-      Use `preview(...)` for live scene previews and `preview_drawing()` for drafting packages; do not substitute one for the other.
+      Use `render_cad(...)` for live scene previews and `render_technical_drawing()` for drafting packages; do not substitute one for the other.
   backend:
     cli_based: |
       This is a local Codex workspace.
