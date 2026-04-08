@@ -1,0 +1,31 @@
+summary: >
+  The benchmark plan is rejected due to multiple cross-artifact inconsistencies,
+  a missing detailed-calculations section, a token TechnicalDrawing import rather
+  than a real construction path, a payload trajectory that references a nonexistent
+  moving part (bridge_deck) contradicting the stated static benchmark, an
+  engineering-style assembly_definition.yaml used where a benchmark assembly is
+  expected, and a missing review manifest.
+
+checklist:
+  cross_artifact_consistency: fail
+  feasible_mechanism: not_applicable
+  budget_realism: pass
+  dof_minimality: pass
+
+comments:
+  - "No .manifests/benchmark_plan_review_manifest.json exists. This is a hard entry-gate failure."
+  - "benchmark_plan.md section 2 declares left_start_deck centered at x=-220, but benchmark_plan_evidence_script.py places it at x=-250. right_goal_deck is declared at x=250 in the plan but placed at x=0 in the script. bridge_reference_table is at x=70 in the plan but x=180 in the script. gap_floor_guard is at x=10 in the plan but x=280 in the script. The entire geometry layout is inconsistent between plan and evidence script."
+  - "benchmark_plan.md has no '## 5. Detailed Calculations' section. There is no derivation of distances, timing, speeds, clearance, or tolerance math. The precise-path checklist requires rigorous derivation of every trajectory claim."
+  - "benchmark_plan_technical_drawing_script.py imports TechnicalDrawing and constructs TechnicalDrawing(title='Seeded drafting') but never assigns it or builds any actual drawing output. This is a token import, not a real TechnicalDrawing construction path."
+  - "payload_trajectory_definition.yaml references moving_part 'bridge_deck', but bridge_deck is not declared in benchmark_plan.md, benchmark_definition.yaml, or benchmark_assembly_definition.yaml. The benchmark plan states all geometry is static (section 6), yet the payload trajectory describes a moving bridge_deck with anchors and a terminal event."
+  - "benchmark_assembly_definition.yaml contains manufactured_parts with CNC costing, totals, drafting section, and dfm_suggestions. This is an engineering assembly_definition.yaml, not a benchmark-owned fixture assembly. Benchmark assemblies should describe benchmark fixture structure and motion metadata, not engineer manufacturing costs."
+  - "The plan does not mention 'transfer_cube' (the moved_object label) as an exact identifier in constraint or budget sections."
+
+required_fixes:
+  - "Add .manifests/benchmark_plan_review_manifest.json for review entry."
+  - "Reconcile all part positions between benchmark_plan.md, benchmark_definition.yaml, and benchmark_plan_evidence_script.py so centers, bounds, and placements match exactly."
+  - "Add a '## 5. Detailed Calculations' section to benchmark_plan.md with index table and CALC-* subsections deriving distances, clearances, timing, and tolerance math."
+  - "Replace the token TechnicalDrawing(title='...') call in benchmark_plan_technical_drawing_script.py with a real TechnicalDrawing construction that produces actual orthographic views, dimensions, and annotations grounded in the plan."
+  - "Remove bridge_deck from payload_trajectory_definition.yaml or, if the benchmark truly needs a moving fixture, declare it in benchmark_plan.md, benchmark_definition.yaml, and benchmark_assembly_definition.yaml with an explicit motion contract. Otherwise the payload trajectory must not describe motion that the benchmark does not own."
+  - "Replace benchmark_assembly_definition.yaml with a benchmark-owned fixture assembly that describes fixture structure, material_id, fixed status, and motion metadata (all dofs: [] for static), without engineer manufacturing costing, drafting, or dfm_suggestions."
+  - "Ensure every inventory label and COTS part_id appears as an exact string mention in benchmark_plan.md."

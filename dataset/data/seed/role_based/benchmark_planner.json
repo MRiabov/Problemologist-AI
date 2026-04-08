@@ -298,5 +298,35 @@
     "technical_drawing_mode": "full",
     "split_source_task_id": "bp-010-ball-over-speed-bump",
     "expected_criteria": "Plan defines a steel spherical moved_object, a midpoint ridge or bump with realistic dimensions, start and goal zones on opposite sides of the terrain feature, feasible simulation bounds, and success criteria based on the ball finishing beyond the bump in the goal zone. Split variant for `bp-010-ball-over-speed-bump`. Technical drawing mode: full."
+  },
+  {
+    "id": "bp-014-raised-shelf-lift",
+    "task": "Create a benchmark where an ABS ball (~45mm radius) starts near floor level at approximately (-200, 0, 60) and must be moved onto a raised shelf goal zone centered around (375, 0, 260). A vertical shelf-support keepout volume between x=180 and x=280 must remain clear. The benchmark should test uphill elevation transport with a clearance constraint rather than a flat push.",
+    "complexity_level": 1,
+    "expected_criteria": "Plan defines a spherical moved_object with ABS material, an elevated goal zone roughly 160mm above the start level, a vertical forbid zone representing shelf-support clearance, realistic build and simulation bounds, planner estimate fields for cost and weight, and success criteria requiring the ball to end inside the raised goal zone."
+  },
+  {
+    "id": "bp-014-drawing-off",
+    "task": "Create a benchmark where an ABS ball (~45mm radius) starts near floor level at approximately (-200, 0, 60) and must be moved onto a raised shelf goal zone centered around (375, 0, 260). A vertical shelf-support keepout volume between x=180 and x=280 must remain clear. The benchmark should test uphill elevation transport with a clearance constraint rather than a flat push. Split variant for `bp-014-raised-shelf-lift`. Technical drawing mode: off.",
+    "complexity_level": 1,
+    "technical_drawing_mode": "off",
+    "split_source_task_id": "bp-014-raised-shelf-lift",
+    "expected_criteria": "Plan defines a spherical moved_object with ABS material, an elevated goal zone roughly 160mm above the start level, a vertical forbid zone representing shelf-support clearance, realistic build and simulation bounds, planner estimate fields for cost and weight, and success criteria requiring the ball to end inside the raised goal zone. Split variant for `bp-014-raised-shelf-lift`. Technical drawing mode: off."
+  },
+  {
+    "id": "bp-014-drawing-minimal",
+    "task": "Create a benchmark where an ABS ball (~45mm radius) starts near floor level at approximately (-200, 0, 60) and must be moved onto a raised shelf goal zone centered around (375, 0, 260). A vertical shelf-support keepout volume between x=180 and x=280 must remain clear. The benchmark should test uphill elevation transport with a clearance constraint rather than a flat push. Split variant for `bp-014-raised-shelf-lift`. Technical drawing mode: minimal.",
+    "complexity_level": 1,
+    "technical_drawing_mode": "minimal",
+    "split_source_task_id": "bp-014-raised-shelf-lift",
+    "expected_criteria": "Plan defines a spherical moved_object with ABS material, an elevated goal zone roughly 160mm above the start level, a vertical forbid zone representing shelf-support clearance, realistic build and simulation bounds, planner estimate fields for cost and weight, and success criteria requiring the ball to end inside the raised goal zone. Split variant for `bp-014-raised-shelf-lift`. Technical drawing mode: minimal."
+  },
+  {
+    "id": "bp-014-drawing-full",
+    "task": "Create a benchmark where an ABS ball (~45mm radius) starts near floor level at approximately (-200, 0, 60) and must be moved onto a raised shelf goal zone centered around (375, 0, 260). A vertical shelf-support keepout volume between x=180 and x=280 must remain clear. The benchmark should test uphill elevation transport with a clearance constraint rather than a flat push. Split variant for `bp-014-raised-shelf-lift`. Technical drawing mode: full.",
+    "complexity_level": 1,
+    "technical_drawing_mode": "full",
+    "split_source_task_id": "bp-014-raised-shelf-lift",
+    "expected_criteria": "Plan defines a spherical moved_object with ABS material, an elevated goal zone roughly 160mm above the start level, a vertical forbid zone representing shelf-support clearance, realistic build and simulation bounds, planner estimate fields for cost and weight, and success criteria requiring the ball to end inside the raised goal zone. Split variant for `bp-014-raised-shelf-lift`. Technical drawing mode: full."
   }
 ]

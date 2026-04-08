@@ -1,7 +1,7 @@
 # TODO
 
 - [x] Planner handoff approved
-- [x] Read the seeded `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `plan.md`, and `assembly_definition.yaml`
+- [x] Read the seeded `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `engineering_plan.md`, and `assembly_definition.yaml`
 - [ ] Implement `lift_base`, `left_frame`, and `right_frame` in `solution_script.py`
 - [ ] Implement the belt bed and upper tray handoff geometry
 - [ ] Keep the motor mount and cable corridor outside `shelf_support_clearance`

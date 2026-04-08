@@ -2,7 +2,7 @@
 
 ## 1. Solution Overview
 
-Use a compact single-`ServoMotor_DS3218` shelf-lift stage that keeps the drive train left of `shelf_support_clearance` while carrying the `projectile_ball` into the `goal_zone` through the `upper_tray`. The benchmark gives the broad left-to-right objective trajectory, the planner narrows it with a coarse `motion_forecast` on `shelf_lift`, and the engineer-coder tightens the same path in `payload_trajectory_definition.yaml`. The drafting package is anchored around the exact `starter_assembly` label, and the engineer-owned geometry stays inside the `build_zone`, uses a single rotate axis, and preserves the reviewed planning contract for `lift_base`, `left_frame`, `right_frame`, `belt_bed`, `upper_tray`, `shelf_lift`, and `drive_motor`.
+Use a compact single-`ServoMotor_DS3218` shelf-lift stage that keeps the drive train left of `shelf_support_clearance` while carrying the `projectile_ball` into the `goal_zone` through the upper tray. The engineer-owned geometry stays inside the `build_zone`, uses a single rotate axis, and preserves the reviewed planning contract for `lift_base`, `left_frame`, `right_frame`, `belt_bed`, and `upper_tray`.
 
 - `lift_base` anchors the stage and keeps the lift foot print stable on the floor.
 - `left_frame` and `right_frame` form the side rails that carry the inclined belt path.
@@ -10,8 +10,6 @@ Use a compact single-`ServoMotor_DS3218` shelf-lift stage that keeps the drive t
 - `upper_tray` is the capture surface that overlaps the `goal_zone`.
 - `drive_motor` is the only COTS actuator in the plan and stays left of the shelf-support keepout.
 - The final assembly `shelf_lift` uses a single `rotate_z` drive.
-- `assembly_definition.yaml.motion_forecast` keeps the coarse build-safe start and goal-contact finish reviewable.
-- `payload_trajectory_definition.yaml` narrows that same motion with a denser engineer-coder path and the same endpoint proof.
 - The benchmark-owned `environment_fixture` remains read-only context and does not change the engineer-owned motion contract.
 
 ## 2. Parts List
@@ -35,27 +33,24 @@ Use a compact single-`ServoMotor_DS3218` shelf-lift stage that keeps the drive t
 3. Place `belt_bed` between the frames and keep the `drive_motor` on the left side with its wiring corridor staying outside the forbidden shelf-support volume.
 4. Fit `upper_tray` at the top exit so it overlaps the `goal_zone` and gives the ball a short, reliable handoff.
 5. Preserve the reviewed `environment_fixture` as read-only benchmark context while keeping the engineer-owned stage to a single rotate-axis drive.
-6. Keep the coarse `motion_forecast` in `assembly_definition.yaml` aligned with the same `shelf_lift` trajectory that the engineer-coder will narrow in `payload_trajectory_definition.yaml`.
 
 ## 4. Assumption Register
 
 | ID | Assumption | Source | Used By |
 | -- | -- | -- | -- |
-| ASSUMP-001 | The `ServoMotor_DS3218` body proxy measures `40.0 x 20.0 x 40.5 mm` and is mounted at `(-205, -110, 20)` in the drafting companion. | `shared/cots/parts/motors.py`, `solution_plan_evidence_script.py` | CALC-002 |
+| ASSUMP-001 | The `ServoMotor_DS3218` body proxy measures `40.0 x 20.0 x 40.5 mm` and is mounted at `(-140, -75, 10)` in the drafting companion. | `shared/cots/parts/motors.py`, `solution_plan_evidence_script.py` | CALC-002 |
 | ASSUMP-002 | Aluminum 6061 has density `2.7 g/cm^3` and HDPE has density `0.95 g/cm^3`. | `worker_heavy/workbenches/manufacturing_config.yaml` | CALC-004 |
-| ASSUMP-003 | The drafted `upper_tray` placement at x = `370 mm` is the intended capture location and the goal zone bounds in `benchmark_definition.yaml` are authoritative. | `solution_plan_evidence_script.py`, `benchmark_definition.yaml` | CALC-003 |
+| ASSUMP-003 | The drafted `upper_tray` placement is the intended capture location and the goal zone bounds in `benchmark_definition.yaml` are authoritative. | `solution_plan_evidence_script.py`, `benchmark_definition.yaml` | CALC-003 |
 | ASSUMP-004 | The engineer solution uses one `rotate_z` drive on the lift stage, and the benchmark-owned `environment_fixture` stays fixed and read-only. | `assembly_definition.yaml`, `benchmark_definition.yaml` | CALC-001, CALC-002 |
-| ASSUMP-005 | The `shelf_lift` motion forecast starts build-zone valid in `assembly_definition.yaml`, keeps the same upper-tray contact window around 1.5 s, and then narrows to the same endpoint proof in `payload_trajectory_definition.yaml`. | `assembly_definition.yaml`, `payload_trajectory_definition.yaml` | CALC-001, CALC-003, CALC-005 |
 
 ## 5. Detailed Calculations
 
 | ID | Problem / Decision | Result | Impact |
 | -- | -- | -- | -- |
-| CALC-001 | Base, frame, and tray envelopes fit the build zone and stay clear of `shelf_support_clearance` | `lift_base` spans `x [-140, 140]`, `y [-75, 75]`, `z [0, 10]`; `left_frame` and `right_frame` stay within `x [-200, 160]` and their narrow side bands; `upper_tray` stays above the shelf-support volume at `z >= 220` | The lift occupies a narrow floor footprint and keeps the shelf-support keepout open |
-| CALC-002 | Left-side motor corridor clears the shelf-support keepout | Motor body right edge at `x = -185 mm`, so x clearance to the forbid zone starts at `180 - (-185) = 365 mm` | The actuator and cable route can stay entirely left of the forbidden shelf-support volume |
+| CALC-001 | Base, frame, and tray envelopes fit the build zone and stay clear of `shelf_support_clearance` | `lift_base` spans `x [-140, 140]`, `y [-75, 75]`, `z [0, 10]`; `left_frame` spans `y [-76.5, -58.5]`; `right_frame` spans `y [58.5, 76.5]`; `upper_tray` stays above the shelf-support volume at `z >= 220` | The lift occupies a narrow floor footprint and keeps the shelf-support keepout open |
+| CALC-002 | Left-side motor corridor clears the shelf-support keepout | Motor body right edge at `x = -120 mm`, so x clearance to the forbid zone starts at `180 - (-120) = 300 mm` | The actuator and cable route can stay entirely left of the forbidden shelf-support volume |
 | CALC-003 | Upper tray overlap with the goal zone | `upper_tray` envelope `x [270, 430]`, `y [-60, 60]`, `z [220, 244]`; goal zone overlap extents `x 110 mm`, `y 110 mm`, `z 24 mm` | The tray positively intersects the goal zone instead of sitting adjacent to it |
 | CALC-004 | Budget rollup from part masses and costs | `648.01 g` and `$68.50` total | The plan stays below the planner caps with a small but intentional weight margin |
-| CALC-005 | Motion forecast speed envelope | Waypoint segment averages for the refined path are `144.2 mm/s`, `144.2 mm/s`, `144.2 mm/s`, `134.2 mm/s`, `156.5 mm/s`, and `130.0 mm/s`; peak commanded yaw rate is `50 deg/s`, which is `0.133x` the DS3218 nominal `375 deg/s` shaft speed | The motion forecast is conservative relative to the motor envelope, but it is still an envelope, not a proof of instantaneous runtime speed |
 
 ### CALC-001: Base, frame, and tray envelopes fit the build zone and stay clear of `shelf_support_clearance`
 
@@ -72,8 +67,8 @@ The stage must fit inside the build zone while leaving the benchmark shelf-suppo
 #### Derivation
 
 - `lift_base` outer envelope = `x [-140, 140]`, `y [-75, 75]`, `z [0, 10]`
-- `left_frame` outer envelope = `x [-200, 160]`, `y [-76.5, -58.5]`, `z [10, 130]`
-- `right_frame` outer envelope = `x [-200, 160]`, `y [58.5, 76.5]`, `z [10, 130]`
+- `left_frame` outer envelope = `x [-180, 180]`, `y [-76.5, -58.5]`, `z [10, 130]`
+- `right_frame` outer envelope = `x [-180, 180]`, `y [58.5, 76.5]`, `z [10, 130]`
 - `belt_bed` outer envelope = `x [-150, 150]`, `y [-47.5, 47.5]`, `z [10, 28]`
 - `upper_tray` stays at `z [220, 244]`, above the forbid zone ceiling of `210 mm`
 
@@ -91,7 +86,7 @@ The stage must fit inside the build zone while leaving the benchmark shelf-suppo
 
 #### Cross-References
 
-- `plan.md#3-assembly-strategy`
+- `engineering_plan.md#3-assembly-strategy`
 - `benchmark_definition.yaml`
 - `assembly_definition.yaml`
 
@@ -104,15 +99,15 @@ The servo and its cable exit must stay outside the benchmark `shelf_support_clea
 #### Assumptions
 
 - `ASSUMP-001`: `ServoMotor_DS3218` uses the `40.0 x 20.0 x 40.5 mm` body proxy from `shared/cots/parts/motors.py`.
-- The drafted mount location in `solution_plan_evidence_script.py` is `(-205, -110, 20)`.
+- The drafted mount location in `solution_plan_evidence_script.py` is `(-140, -75, 10)`.
 
 #### Derivation
 
-- Motor body x envelope = `[-225, -185]`
-- Motor body y envelope = `[-120, -100]`
-- Motor body z envelope = `[20, 60.5]`
+- Motor body x envelope = `[-160, -120]`
+- Motor body y envelope = `[-85, -65]`
+- Motor body z envelope = `[10, 50.5]`
 - The keepout starts at `x = 180`.
-- The x-axis clearance from the motor body's right edge to the keepout is `180 - (-185) = 365 mm`.
+- The x-axis clearance from the motor body's right edge to the keepout is `180 - (-120) = 300 mm`.
 
 #### Worst-Case Check
 
@@ -128,7 +123,7 @@ The servo and its cable exit must stay outside the benchmark `shelf_support_clea
 
 #### Cross-References
 
-- `plan.md#3-assembly-strategy`
+- `engineering_plan.md#3-assembly-strategy`
 - `solution_plan_evidence_script.py`
 - `benchmark_definition.yaml`
 - `shared/cots/parts/motors.py`
@@ -141,12 +136,12 @@ The receiver must actually intersect the goal zone rather than just sit nearby.
 
 #### Assumptions
 
-- `ASSUMP-003`: The `upper_tray` is centered at x = 370 mm and uses the `160 x 120 x 24 mm` draft geometry from the evidence script.
+- `ASSUMP-003`: The `upper_tray` is centered at x = 350 mm and uses the `160 x 120 x 24 mm` draft geometry from the evidence script.
 - The goal zone bounds in `benchmark_definition.yaml` are authoritative.
 
 #### Derivation
 
-- `upper_tray` x envelope = `[290, 450]`
+- `upper_tray` x envelope = `[270, 430]`
 - `upper_tray` y envelope = `[-60, 60]`
 - `upper_tray` z envelope = `[220, 244]`
 - Goal zone x envelope = `[320, 430]`
@@ -165,11 +160,11 @@ The receiver must actually intersect the goal zone rather than just sit nearby.
 
 #### Design Impact
 
-- Keep the tray centered near x = 370 mm and maintain its top face at or below the goal-zone roof.
+- Keep the tray centered near x = 350 mm and maintain its top face at or below the goal-zone roof.
 
 #### Cross-References
 
-- `plan.md#3-assembly-strategy`
+- `engineering_plan.md#3-assembly-strategy`
 - `benchmark_definition.yaml`
 - `solution_plan_evidence_script.py`
 
@@ -214,55 +209,12 @@ The plan must stay under the planner target cost and weight caps.
 - `benchmark_definition.yaml`
 - `worker_heavy/workbenches/manufacturing_config.yaml`
 
-### CALC-005: Motion forecast speed envelope
-
-#### Problem Statement
-
-The precise path should be fast enough to remain realistic, but the plan must be explicit about what the forecast proves and what it does not.
-
-#### Assumptions
-
-- `payload_trajectory_definition.yaml` is the engineer-owned waypoint envelope for the `shelf_lift` motion.
-- The DS3218 catalog entry implies a nominal shaft speed of `60 deg / 0.16 s = 375 deg/s`.
-- Segment averages are computed from straight-line distance between successive anchors divided by elapsed time.
-
-#### Derivation
-
-- Segment 1: `sqrt(60^2 + 40^2) / 0.5 = 72.111 / 0.5 = 144.222 mm/s`
-- Segment 2: `sqrt(60^2 + 40^2) / 0.5 = 72.111 / 0.5 = 144.222 mm/s`
-- Segment 3: `sqrt(60^2 + 40^2) / 0.5 = 72.111 / 0.5 = 144.222 mm/s`
-- Segment 4: `sqrt(60^2 + 30^2) / 0.5 = 67.082 / 0.5 = 134.164 mm/s`
-- Segment 5: `sqrt(70^2 + 35^2) / 0.5 = 78.262 / 0.5 = 156.523 mm/s`
-- Segment 6: `sqrt(60^2 + 25^2) / 0.5 = 65.000 / 0.5 = 130.000 mm/s`
-- Peak average linear segment speed = `156.523 mm/s`
-- Peak commanded yaw rate = `25 deg / 0.5 s = 50 deg/s`
-- Servo headroom against nominal shaft speed = `375 / 50 = 7.5x`
-
-#### Worst-Case Check
-
-- The commanded yaw rate stays comfortably below the servo nominal shaft speed.
-- The waypoint speeds are average segment speeds, so they bound the forecast envelope but do not claim an exact instantaneous velocity profile.
-
-#### Result
-
-- The path is kinematically plausible for a single `ServoMotor_DS3218` driven shelf lift.
-
-#### Design Impact
-
-- The handoff should describe this as a conservative motion envelope, not as a proof of the final simulated speed trace.
-
-#### Cross-References
-
-- `payload_trajectory_definition.yaml`
-- `assembly_definition.yaml`
-- `shared/cots/parts/motors.py`
-
 ## 6. Critical Constraints / Operating Envelope
 
 | Limit ID | Limit | Bound | Basis |
 | -- | -- | -- | -- |
 | LIMIT-001 | Base plate footprint | `x [-140, 140]`, `y [-75, 75]`, `z [0, 10]` | `CALC-001` |
-| LIMIT-002 | Motor corridor clearance | Motor body right edge stays at or below `x = -185 mm`, which is `365 mm` left of the keepout | `CALC-002` |
+| LIMIT-002 | Motor corridor clearance | Motor body right edge stays at or below `x = -120 mm`, which is `300 mm` left of the keepout | `CALC-002` |
 | LIMIT-003 | Goal capture overlap | Overlap extents must stay positive in x, y, and z | `CALC-003` |
 | LIMIT-004 | Budget envelope | `<= $75.00` and `<= 1500.0 g` | `CALC-004` |
 
@@ -270,7 +222,6 @@ The precise path should be fast enough to remain realistic, but the plan must be
 - Shelf-support keepout: do not enter `shelf_support_clearance` with the motor, belt bed, or wiring.
 - Motion contract: the benchmark-owned environment fixture stays fixed; the engineer-owned stage uses one rotate-axis drive.
 - Goal zone: `upper_tray` must overlap the goal zone and absorb the released ball.
-- Motion contract: `assembly_definition.yaml.motion_forecast` starts with a build-zone-valid `shelf_lift` pose and `payload_trajectory_definition.yaml` tightens the same motion without changing the terminal goal-zone proof.
 - Budget envelope: preserve the planned cost and weight margin with one small servo-grade motor.
 
 ## 7. Cost & Weight Budget

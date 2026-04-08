@@ -86,7 +86,7 @@ The stage must fit inside the build zone while leaving the benchmark shelf-suppo
 
 #### Cross-References
 
-- `plan.md#3-assembly-strategy`
+- `engineering_plan.md#3-assembly-strategy`
 - `benchmark_definition.yaml`
 - `assembly_definition.yaml`
 
@@ -123,7 +123,7 @@ The servo and its cable exit must stay outside the benchmark `shelf_support_clea
 
 #### Cross-References
 
-- `plan.md#3-assembly-strategy`
+- `engineering_plan.md#3-assembly-strategy`
 - `solution_plan_evidence_script.py`
 - `benchmark_definition.yaml`
 - `shared/cots/parts/motors.py`
@@ -164,7 +164,7 @@ The receiver must actually intersect the goal zone rather than just sit nearby.
 
 #### Cross-References
 
-- `plan.md#3-assembly-strategy`
+- `engineering_plan.md#3-assembly-strategy`
 - `benchmark_definition.yaml`
 - `solution_plan_evidence_script.py`
 

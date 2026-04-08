@@ -4,7 +4,7 @@
   "created_at": "2026-04-08T06:53:58.458678+00:00",
   "episode_id": "23a2f239-22cb-535d-8019-5dee7dfa8821",
   "worker_session_id": "seed-renders-epr-010-diverter-gate-wiring-09b52ab1",
-  "revision": "e691b2472caf44ff025eaefde26a51009a5d8ec7",
+  "revision": "e125356f61da1dfceb46fc8090de9ef3b1b59647",
   "scene_hash": "6530b7652a5b5267d246d6a574be9d4ec76b0ed4aad326eac966a1d936074552",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",

@@ -1,0 +1,65 @@
+version: "1.0"
+units:
+  length: "mm"
+  volume: "mm3"
+  mass: "g"
+  currency: "USD"
+constraints:
+  benchmark_max_unit_cost_usd: 80.0
+  benchmark_max_weight_g: 1500.0
+  planner_target_max_unit_cost_usd: 40.0
+  planner_target_max_weight_g: 800.0
+manufactured_parts:
+  - part_name: gravity_ramp
+    part_id: gravity_ramp
+    manufacturing_method: CNC
+    material_id: aluminum_6061
+    quantity: 1
+    part_volume_mm3: 45000.0
+    stock_bbox_mm:
+      x: 150.0
+      y: 600.0
+      z: 30.0
+    stock_volume_mm3: 2700000.0
+    removed_volume_mm3: 2655000.0
+    estimated_unit_cost_usd: 15.0
+cots_parts: []
+final_assembly:
+  - name: gravity_ramp
+    config:
+      dofs: []
+motion_forecast:
+  reference_frame: world
+  reference_point: com
+  planner_sample_stride_s: 0.5
+  tolerances:
+    position_mm: [12.0, 12.0, 12.0]
+    rotation_deg: [5.0, 5.0, 5.0]
+  anchors:
+    - t_s: 0.0
+      pos_mm: [0.0, -750.0, 1500.0]
+      rot_deg: [0.0, 0.0, 0.0]
+      build_zone_valid: true
+      first_contacts:
+        - order: 1
+          surface: gravity_ramp_top
+          first_touch_window_s: [0.0, 0.1]
+    - t_s: 1.5
+      pos_mm: [0.0, 0.0, 600.0]
+      rot_deg: [0.0, 0.0, 0.0]
+      first_contacts: []
+    - t_s: 3.0
+      pos_mm: [0.0, 800.0, 150.0]
+      rot_deg: [0.0, 0.0, 0.0]
+      goal_zone_contact: true
+      first_contacts:
+        - order: 1
+          surface: gravity_ramp_exit
+          first_touch_window_s: [2.8, 3.2]
+totals:
+  estimated_unit_cost_usd: 15.0
+  estimated_weight_g: 120.0
+  estimate_confidence: high
+dfm_suggestions:
+  - Keep the ramp plate flat with a constant tilt angle for simple 3-axis CNC.
+  - Side walls can be machined from the same stock as the plate.

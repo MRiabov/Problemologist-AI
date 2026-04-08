@@ -1,0 +1,255 @@
+{
+  "component_label": "gravity_ramp_assembly",
+  "entities": [
+    {
+      "label": "gravity_ramp",
+      "semantic_label": "gravity_ramp",
+      "instance_id": "gravity_ramp",
+      "instance_name": "gravity_ramp",
+      "object_type": "part",
+      "object_id": 0,
+      "pos": [
+        0.0,
+        -375.0,
+        1050.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/gravity_ramp.obj"
+      ],
+      "box_size": null,
+      "material_id": "aluminum_6061",
+      "body_name": "gravity_ramp",
+      "geom_name": "gravity_ramp",
+      "zone_type": null,
+      "color_rgba": [
+        0.7529411764705882,
+        0.7529411764705882,
+        0.7529411764705882,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        235,
+        59,
+        59
+      ],
+      "include_in_segmentation": true
+    },
+    {
+      "label": "gravity_ramp_left_wall",
+      "semantic_label": "gravity_ramp_left_wall",
+      "instance_id": "gravity_ramp_left_wall",
+      "instance_name": "gravity_ramp_left_wall",
+      "object_type": "part",
+      "object_id": 1,
+      "pos": [
+        -60.0,
+        -375.0,
+        1054.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/gravity_ramp_left_wall.obj"
+      ],
+      "box_size": null,
+      "material_id": "aluminum_6061",
+      "body_name": "gravity_ramp_left_wall",
+      "geom_name": "gravity_ramp_left_wall",
+      "zone_type": null,
+      "color_rgba": [
+        0.7529411764705882,
+        0.7529411764705882,
+        0.7529411764705882,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        59,
+        110,
+        235
+      ],
+      "include_in_segmentation": true
+    },
+    {
+      "label": "gravity_ramp_right_wall",
+      "semantic_label": "gravity_ramp_right_wall",
+      "instance_id": "gravity_ramp_right_wall",
+      "instance_name": "gravity_ramp_right_wall",
+      "object_type": "part",
+      "object_id": 2,
+      "pos": [
+        60.0,
+        -375.0,
+        1054.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/gravity_ramp_right_wall.obj"
+      ],
+      "box_size": null,
+      "material_id": "aluminum_6061",
+      "body_name": "gravity_ramp_right_wall",
+      "geom_name": "gravity_ramp_right_wall",
+      "zone_type": null,
+      "color_rgba": [
+        0.7529411764705882,
+        0.7529411764705882,
+        0.7529411764705882,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        161,
+        235,
+        59
+      ],
+      "include_in_segmentation": true
+    },
+    {
+      "label": "zone_goal",
+      "semantic_label": "zone_goal",
+      "instance_id": "zone_goal",
+      "instance_name": "zone_goal",
+      "object_type": "zone",
+      "object_id": 3,
+      "pos": [
+        0.0,
+        1750.0,
+        250.0
+      ],
+      "euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mesh_paths": [],
+      "box_size": [
+        500.0,
+        250.0,
+        250.0
+      ],
+      "material_id": null,
+      "body_name": null,
+      "geom_name": null,
+      "zone_type": "goal",
+      "color_rgba": [
+        0.2,
+        0.72,
+        0.34,
+        0.22
+      ],
+      "segmentation_color_rgb": [
+        235,
+        59,
+        213
+      ],
+      "include_in_segmentation": false
+    },
+    {
+      "label": "zone_forbid_0_center_forbid",
+      "semantic_label": "zone_forbid_0_center_forbid",
+      "instance_id": "zone_forbid_0_center_forbid",
+      "instance_name": "zone_forbid_0_center_forbid",
+      "object_type": "zone",
+      "object_id": 4,
+      "pos": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mesh_paths": [],
+      "box_size": [
+        250.0,
+        250.0,
+        250.0
+      ],
+      "material_id": null,
+      "body_name": null,
+      "geom_name": null,
+      "zone_type": "forbid",
+      "color_rgba": [
+        0.83,
+        0.2,
+        0.2,
+        0.2
+      ],
+      "segmentation_color_rgb": [
+        59,
+        235,
+        205
+      ],
+      "include_in_segmentation": false
+    },
+    {
+      "label": "zone_build",
+      "semantic_label": "zone_build",
+      "instance_id": "zone_build",
+      "instance_name": "zone_build",
+      "object_type": "zone",
+      "object_id": 5,
+      "pos": [
+        0.0,
+        500.0,
+        1000.0
+      ],
+      "euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mesh_paths": [],
+      "box_size": [
+        500.0,
+        1500.0,
+        1000.0
+      ],
+      "material_id": null,
+      "body_name": null,
+      "geom_name": null,
+      "zone_type": "build",
+      "color_rgba": [
+        0.55,
+        0.55,
+        0.55,
+        0.14
+      ],
+      "segmentation_color_rgb": [
+        235,
+        154,
+        59
+      ],
+      "include_in_segmentation": false
+    }
+  ],
+  "bounds_min": [
+    -500.0,
+    -1000.0,
+    -250.0
+  ],
+  "bounds_max": [
+    500.0,
+    2000.0,
+    2000.0
+  ],
+  "center": [
+    0.0,
+    500.0,
+    875.0
+  ],
+  "diagonal": 3881.043674065006
+}

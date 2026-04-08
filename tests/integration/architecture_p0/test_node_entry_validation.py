@@ -1788,7 +1788,7 @@ async def test_int_184_seeded_workspace_accepts_payload_trajectory_nonzero_initi
         }
         benchmark_definition["objectives"]["build_zone"] = {
             "min": [-10.0, -10.0, -2.0],
-            "max": [2.0, 10.0, 2.0],
+            "max": [2.0, 10.0, 10.0],
         }
         benchmark_definition["simulation_bounds"] = {
             "min": [-14.0, -14.0, -14.0],

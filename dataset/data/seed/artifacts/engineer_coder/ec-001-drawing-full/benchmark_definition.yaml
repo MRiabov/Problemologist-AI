@@ -1,0 +1,55 @@
+objectives:
+  goal_zone:
+    min: [-500.0, 550.0, 0.0]
+    max: [500.0, 1050.0, 500.0]
+  forbid_zones:
+    - name: center_forbid
+      min: [-250.0, -500.0, 0.0]
+      max: [250.0, 500.0, 500.0]
+  build_zone:
+    min: [-500.0, -1000.0, 0.0]
+    max: [500.0, 2000.0, 2000.0]
+  fluid_objectives: []
+  stress_objectives: []
+benchmark_parts:
+  - part_id: floor_slab
+    label: floor_slab
+    metadata:
+      fixed: true
+      material_id: aluminum_6061
+  - part_id: forbid_wall_left
+    label: forbid_wall_left
+    metadata:
+      fixed: true
+      material_id: aluminum_6061
+  - part_id: forbid_wall_right
+    label: forbid_wall_right
+    metadata:
+      fixed: true
+      material_id: aluminum_6061
+
+physics:
+  backend: GENESIS
+  fem_enabled: false
+  compute_target: auto
+fluids: []
+simulation_bounds:
+  min: [-500.0, -1000.0, -100.0]
+  max: [500.0, 1000.0, 2100.0]
+moved_object:
+  label: payload_ball
+  shape: sphere
+  material_id: abs
+  static_randomization:
+    radius: [15.0, 20.0]
+  start_position: [0.0, -750.0, 1500.0]
+  runtime_jitter: [10.0, 10.0, 10.0]
+constraints:
+  estimated_solution_cost_usd: 15.0
+  estimated_solution_weight_g: 120.0
+  max_unit_cost: 80.0
+  max_weight_g: 1500.0
+randomization:
+  static_variation_id: engineer_coder_ec001_smoke_v1
+  runtime_jitter_enabled: true
+electronics_requirements: null
