@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import math
 import shutil
 import sys
@@ -374,6 +375,10 @@ def _refresh_engineer_plan_bundle(
     staging_root: Path,
     session_id: str,
 ) -> list[str]:
+    source_script_path = artifact_dir / technical_drawing_script_path_for_agent(
+        AgentName.ENGINEER_PLANNER
+    )
+    source_script_sha256 = hashlib.sha256(source_script_path.read_bytes()).hexdigest()
     response = render_static_preview(
         bundle_base64=bundle_workspace_base64(staging_root),
         script_path=Path(
@@ -392,20 +397,35 @@ def _refresh_engineer_plan_bundle(
         source_bundle="benchmark_renders",
         target_bundle="engineer_plan_renders",
     )
-    saved_paths = materialize_render_artifacts(remapped_artifacts, artifact_dir)
+    renders_root = artifact_dir / "renders"
+    renders_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix="engineer_plan_renders_", dir=str(renders_root)
+    ) as tmpdir:
+        tmp_root = Path(tmpdir)
+        saved_paths = materialize_render_artifacts(remapped_artifacts, tmp_root)
+        if not saved_paths:
+            raise RuntimeError(
+                "render regeneration produced no materialized drafting artifacts"
+            )
 
-    manifest = normalize_render_manifest(
-        render_paths=saved_paths,
-        workspace_root=artifact_dir,
-        episode_id=artifact_dir.name,
-        worker_session_id=artifact_dir.name,
-        bundle_path="renders/engineer_plan_renders",
-        drafting=True,
-    )
-    manifest_path = (
-        artifact_dir / "renders" / "engineer_plan_renders" / "render_manifest.json"
-    )
-    manifest_path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+        manifest = normalize_render_manifest(
+            render_paths=saved_paths,
+            workspace_root=tmp_root,
+            episode_id=artifact_dir.name,
+            worker_session_id=artifact_dir.name,
+            bundle_path="renders/engineer_plan_renders",
+            drafting=True,
+            source_script_sha256=source_script_sha256,
+        )
+        manifest_path = (
+            tmp_root / "renders" / "engineer_plan_renders" / "render_manifest.json"
+        )
+        manifest_path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+        target_bundle_dir = renders_root / "engineer_plan_renders"
+        if target_bundle_dir.exists():
+            shutil.rmtree(target_bundle_dir)
+        shutil.copytree(manifest_path.parent, target_bundle_dir)
     if "renders/engineer_plan_renders/render_manifest.json" not in saved_paths:
         saved_paths.append("renders/engineer_plan_renders/render_manifest.json")
     return saved_paths
@@ -914,18 +934,14 @@ def update_seed_artifact_renders(artifact_dir: Path) -> list[str]:
     allowed_bundle_names = _seed_render_bundle_names(role_name)
     allowed_bundles = set(allowed_bundle_names)
 
-    # Keep scratch previews ephemeral, and prune obsolete or target bundles
-    # before regenerating so the seed tree matches the current render contract.
+    # Keep scratch previews ephemeral, and prune obsolete bundles before
+    # regenerating so the seed tree matches the current render contract.
     if scratch_dir.exists():
         shutil.rmtree(scratch_dir)
     legacy_scratch_dir = renders_dir / "tmp"
     if legacy_scratch_dir.exists():
         shutil.rmtree(legacy_scratch_dir)
     _remove_unneeded_render_bundles(renders_dir, allowed=allowed_bundles)
-    for bundle_name in allowed_bundle_names:
-        bundle_dir = renders_dir / bundle_name
-        if bundle_dir.exists():
-            shutil.rmtree(bundle_dir)
 
     session_id = f"seed-renders-{artifact_dir.name}-{uuid.uuid4().hex[:8]}"
     staging_root = _stage_render_bundle_root(artifact_dir)

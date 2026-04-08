@@ -88,6 +88,8 @@ Manifest ownership summary:
 
 Scratch preview files in `renders/current-episode/` are not published bundles and do not create entries in `renders/render_index.jsonl`.
 
+Published render bundles may also contain bundle-local `preview_scene.json` snapshots and, for video-backed evidence, `frames.jsonl` and `objects.parquet` sidecars. These files are backend-owned bundle contents and follow the render artifact contract in [renders acceptance criteria](./agent-artifacts/renders_acceptance_criteria.md).
+
 <!-- FIXME: consider moving render metadata manifests into `.manifests/` in a future refactor so render metadata and handoff metadata share one backend-owned manifest bucket. The root renders/render_manifest.json path stays a compatibility alias only. -->
 
 | Benchmark plan-review manifest | backend runtime utility invoked by `submit_plan()` | Successful `Benchmark Planner` `submit_plan()` | `.manifests/benchmark_plan_review_manifest.json` |

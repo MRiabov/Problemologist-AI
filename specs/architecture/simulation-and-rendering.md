@@ -23,6 +23,8 @@ The physics backends do not own the controller-facing render process state for p
 The render worker is containerized in every environment, including development, so the graphics stack stays isolated from simulation and from the controller process. That is intentional even when the other workers are launched as bare FastAPI processes during local development: the renderer is the one worker that must not inherit host Wayland/X11 state or ambient EGL quirks.
 The renderer worker is the only service that owns VTK, EGL, OpenGL, and related graphics backend dependencies.
 
+Preview rendering is a blocking agent-facing operation, so the renderer hot path should prefer safe in-process fan-out for independent work that is easy to parallelize, especially per-view and per-modality work. It should also minimize repeated bundle reconstruction, temporary-file churn, and unnecessary I/O-bound byte copying or serialization inside the render loop.
+
 ### Headless backend selection
 
 The renderer worker selects its VTK OpenGL window class explicitly rather than relying on whatever the host process happens to expose.

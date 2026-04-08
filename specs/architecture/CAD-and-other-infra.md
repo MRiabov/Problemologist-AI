@@ -116,13 +116,15 @@ The simulation backend still exposes a typed render-capability record so the run
 
 For the RGB preview image, manufactured-part material colors come from the manufacturing material configuration associated with each part's `material_id`. The preview is therefore expected to preserve meaningful color differences between materials, not flatten everything to the same neutral shade.
 
-Persistent render outputs are published as immutable bundle directories under `renders/benchmark_renders/`, `renders/engineer_plan_renders/`, and `renders/final_solution_submission_renders/`. Each bundle carries a bundle-local render manifest plus any sidecars needed for later lookup. The append-only discovery surface is `renders/render_index.jsonl`, which records `bundle_id`, `created_at`, `revision`, `scene_hash`, bundle path, and primary media paths for each published bundle. `renders/current-episode/` is scratch-only and does not enter the index. `renders/render_manifest.json` may remain as a latest-bundle compatibility alias for current-revision tooling, but the bundle-local manifest and history index are the source of truth for historical lookup.
+Persistent render outputs are published as immutable bundle directories under `renders/benchmark_renders/`, `renders/engineer_plan_renders/`, and `renders/final_solution_submission_renders/`. Each bundle carries a bundle-local render manifest plus any sidecars needed for later lookup. Any PNG/JPG path declared by the manifest must exist in the same bundle, and the manifest image set must stay consistent with `preview_evidence_paths`. The append-only discovery surface is `renders/render_index.jsonl`, which records `bundle_id`, `created_at`, `revision`, `scene_hash`, bundle path, and primary media paths for each published bundle. `renders/current-episode/` is scratch-only and does not enter the index. `renders/render_manifest.json` may remain as a latest-bundle compatibility alias for current-revision tooling, but the bundle-local manifest and history index are the source of truth for historical lookup.
 
 Bundle-local sidecars are allowed when they help agent tooling resolve the exact render state:
 
 1. `preview_scene.json` stores the exact scene snapshot used for preview rendering.
 2. `frames.jsonl` stores sparse frame metadata for video evidence.
 3. `objects.parquet` stores dense, frame-indexed object pose tables for query helpers. The active `PhysicsBackend` export path samples poses at the video-capture cadence and produces this file without per-step logging overhead, so both MuJoCo and Genesis can emit it.
+
+When the manifest advertises MP4 evidence, the matching `frames.jsonl` and `objects.parquet` sidecars are required rather than optional.
 
 The worker-light render-query helper family resolves against these bundle-local artifacts when it needs a point coordinate from a render. It does not infer coordinates from the video bytes alone.
 
