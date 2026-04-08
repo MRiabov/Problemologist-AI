@@ -22,6 +22,7 @@ if str(ROOT) not in sys.path:
 import colorsys
 
 from shared.agents import get_image_render_resolution
+from shared.agents.config import DraftingMode
 from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition, CompoundMetadata, PartMetadata
@@ -32,6 +33,7 @@ from shared.rendering import (
 )
 from shared.rendering.renderer_client import (
     bundle_workspace_base64,
+    render_technical_drawing,
 )
 from shared.script_contracts import (
     BENCHMARK_SCRIPT_PATH,
@@ -300,6 +302,10 @@ def _seed_render_bundle_names(role_name: str) -> list[str]:
     ]
 
 
+def _technical_drawing_mode_active(mode: DraftingMode) -> bool:
+    return mode in (DraftingMode.MINIMAL, DraftingMode.FULL)
+
+
 def _remove_unneeded_render_bundles(renders_dir: Path, *, allowed: set[str]) -> None:
     if not renders_dir.exists():
         return
@@ -352,21 +358,72 @@ def _refresh_benchmark_bundle(
     artifact_dir: Path,
     staging_root: Path,
     session_id: str,
+    technical_drawing_mode: DraftingMode,
 ) -> list[str]:
-    from shared.rendering.renderer_client import bundle_workspace_base64
-
-    response = render_static_preview(
-        bundle_base64=bundle_workspace_base64(staging_root),
-        script_path=Path(BENCHMARK_SCRIPT_PATH).name,
-        session_id=session_id,
-        agent_role="benchmark_reviewer",
+    bundle_base64 = bundle_workspace_base64(staging_root)
+    benchmark_drafting_script = artifact_dir / technical_drawing_script_path_for_agent(
+        AgentName.BENCHMARK_PLANNER
     )
+    if _technical_drawing_mode_active(technical_drawing_mode) and (
+        benchmark_drafting_script.exists()
+    ):
+        response = render_technical_drawing(
+            bundle_base64=bundle_base64,
+            script_path=benchmark_drafting_script.name,
+            orbit_pitch=45.0,
+            orbit_yaw=45.0,
+            session_id=session_id,
+            agent_role="benchmark_planner",
+        )
+        if not response.success:
+            raise RuntimeError(
+                response.message or response.status_text or "render regeneration failed"
+            )
+        renders_root = artifact_dir / "renders"
+        renders_root.mkdir(parents=True, exist_ok=True)
+        bundle_dir = renders_root / "benchmark_renders"
+        with tempfile.TemporaryDirectory(
+            prefix="benchmark_renders_", dir=str(renders_root)
+        ) as tmpdir:
+            tmp_root = Path(tmpdir)
+            saved_paths = materialize_render_artifacts(response.artifacts, tmp_root)
+            if not saved_paths:
+                raise RuntimeError(
+                    "render regeneration produced no materialized drafting artifacts"
+                )
+            source_bundle_dir = tmp_root / "renders" / "benchmark_renders"
+            if bundle_dir.exists():
+                shutil.rmtree(bundle_dir)
+            shutil.copytree(source_bundle_dir, bundle_dir)
+        return saved_paths
+    else:
+        response = render_static_preview(
+            bundle_base64=bundle_base64,
+            script_path=Path(BENCHMARK_SCRIPT_PATH).name,
+            session_id=session_id,
+            agent_role="benchmark_reviewer",
+        )
     if not response.success:
         raise RuntimeError(
             response.message or response.status_text or "render regeneration failed"
         )
-
-    return materialize_render_artifacts(response.artifacts, artifact_dir)
+    renders_root = artifact_dir / "renders"
+    renders_root.mkdir(parents=True, exist_ok=True)
+    bundle_dir = renders_root / "benchmark_renders"
+    with tempfile.TemporaryDirectory(
+        prefix="benchmark_renders_", dir=str(renders_root)
+    ) as tmpdir:
+        tmp_root = Path(tmpdir)
+        saved_paths = materialize_render_artifacts(response.artifacts, tmp_root)
+        if not saved_paths:
+            raise RuntimeError(
+                "render regeneration produced no materialized drafting artifacts"
+            )
+        source_bundle_dir = tmp_root / "renders" / "benchmark_renders"
+        if bundle_dir.exists():
+            shutil.rmtree(bundle_dir)
+        shutil.copytree(source_bundle_dir, bundle_dir)
+    return saved_paths
 
 
 def _refresh_engineer_plan_bundle(
@@ -374,13 +431,48 @@ def _refresh_engineer_plan_bundle(
     artifact_dir: Path,
     staging_root: Path,
     session_id: str,
+    technical_drawing_mode: DraftingMode,
 ) -> list[str]:
     source_script_path = artifact_dir / technical_drawing_script_path_for_agent(
         AgentName.ENGINEER_PLANNER
     )
     source_script_sha256 = hashlib.sha256(source_script_path.read_bytes()).hexdigest()
+    bundle_base64 = bundle_workspace_base64(staging_root)
+    if _technical_drawing_mode_active(technical_drawing_mode):
+        response = render_technical_drawing(
+            bundle_base64=bundle_base64,
+            script_path=Path(
+                technical_drawing_script_path_for_agent(AgentName.ENGINEER_PLANNER)
+            ).name,
+            orbit_pitch=45.0,
+            orbit_yaw=45.0,
+            session_id=session_id,
+            agent_role="engineer_planner",
+        )
+        if not response.success:
+            raise RuntimeError(
+                response.message or response.status_text or "render regeneration failed"
+            )
+        renders_root = artifact_dir / "renders"
+        renders_root.mkdir(parents=True, exist_ok=True)
+        bundle_dir = renders_root / "engineer_plan_renders"
+        with tempfile.TemporaryDirectory(
+            prefix="engineer_plan_renders_", dir=str(renders_root)
+        ) as tmpdir:
+            tmp_root = Path(tmpdir)
+            saved_paths = materialize_render_artifacts(response.artifacts, tmp_root)
+            if not saved_paths:
+                raise RuntimeError(
+                    "render regeneration produced no materialized drafting artifacts"
+                )
+            source_bundle_dir = tmp_root / "renders" / "engineer_plan_renders"
+            if bundle_dir.exists():
+                shutil.rmtree(bundle_dir)
+            shutil.copytree(source_bundle_dir, bundle_dir)
+        return saved_paths
+
     response = render_static_preview(
-        bundle_base64=bundle_workspace_base64(staging_root),
+        bundle_base64=bundle_base64,
         script_path=Path(
             technical_drawing_script_path_for_agent(AgentName.ENGINEER_PLANNER)
         ).name,
@@ -926,7 +1018,11 @@ def _manifest_for_render_paths(
     )
 
 
-def update_seed_artifact_renders(artifact_dir: Path) -> list[str]:
+def update_seed_artifact_renders(
+    artifact_dir: Path,
+    *,
+    technical_drawing_mode: DraftingMode,
+) -> list[str]:
     artifact_dir = Path(artifact_dir)
     role_name = _role_name_for_artifact(artifact_dir)
     renders_dir = artifact_dir / "renders"
@@ -954,6 +1050,7 @@ def update_seed_artifact_renders(artifact_dir: Path) -> list[str]:
                         artifact_dir=artifact_dir,
                         staging_root=staging_root,
                         session_id=session_id,
+                        technical_drawing_mode=technical_drawing_mode,
                     )
                 )
                 continue
@@ -963,6 +1060,7 @@ def update_seed_artifact_renders(artifact_dir: Path) -> list[str]:
                         artifact_dir=artifact_dir,
                         staging_root=staging_root,
                         session_id=session_id,
+                        technical_drawing_mode=technical_drawing_mode,
                     )
                 )
                 continue

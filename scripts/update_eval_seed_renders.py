@@ -260,6 +260,7 @@ def _update_item(
     agent: AgentName,
     item,
     *,
+    technical_drawing_mode: DraftingMode,
     errors_only: bool,
 ) -> tuple[bool, bool, str]:
     artifact_dir = _resolve_seed_artifact_dir(item, root=ROOT)
@@ -270,7 +271,10 @@ def _update_item(
 
     from scripts.internal.eval_seed_renders import update_seed_artifact_renders
 
-    saved_paths = update_seed_artifact_renders(artifact_dir)
+    saved_paths = update_seed_artifact_renders(
+        artifact_dir,
+        technical_drawing_mode=technical_drawing_mode,
+    )
     saved_paths.extend(_discover_render_sidecars(artifact_dir))
     saved_paths = sorted(dict.fromkeys(saved_paths))
     _validate_required_render_sidecars(artifact_dir, render_paths=saved_paths)
@@ -329,6 +333,7 @@ async def _async_main(args: argparse.Namespace) -> int:
                 ok, rendered, detail = _update_item(
                     agent,
                     item,
+                    technical_drawing_mode=technical_drawing_mode,
                     errors_only=args.errors_only,
                 )
             except Exception as exc:

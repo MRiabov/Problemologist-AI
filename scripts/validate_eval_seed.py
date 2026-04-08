@@ -323,7 +323,11 @@ async def _validate_item(
         if update_renders and item.seed_artifact_dir is not None:
             artifact_dir = _resolve_seed_artifact_dir(item, root=ROOT)
             if artifact_dir is not None:
-                update_seed_artifact_renders(artifact_dir)
+                update_seed_artifact_renders(
+                    artifact_dir,
+                    technical_drawing_mode=item.technical_drawing_mode
+                    or DraftingMode.OFF,
+                )
         snapshot_client = InMemorySeedWorkspaceClient(session_id=session_id)
         await materialize_seed_workspace_snapshot(
             item=item,
