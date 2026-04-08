@@ -46,6 +46,7 @@ When plan or execution evidence needs visual checking, use the shared preview he
 - [ ] Verify exact inventory grounding, exact identifier mentions, budget realism, and operating-envelope clarity.
 - [ ] Reject invented materials, unsupported mechanisms, hidden DOFs, or a technical-drawing script without a real `TechnicalDrawing` construction path.
 - [ ] Reject plans that exceed benchmark caps or leave the solution mechanically ambiguous.
+- [ ] For moving engineer-owned parts, do not treat static payload-trajectory proof as runtime evidence; the plan must stay compatible with the fail-closed simulation monitor and its anchor, contact-order, and terminal-goal expectations.
 
 ### Execution Review Checklist
 

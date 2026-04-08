@@ -36,6 +36,7 @@ When execution evidence needs visual checking, use the shared preview helpers ex
 - [ ] After any significant blocker or repeated failure on the same issue, inspect the current render or simulation evidence before the next review decision. If the same issue has failed more than three times in a row, keep inspecting render evidence on every subsequent retry until the blocker changes; use `../render-evidence/SKILL.md` as the visual-inspection playbook.
 - [ ] Verify plan fidelity, exact inventory grounding, robustness, manufacturability, cost/weight compliance, and motion plausibility against the approved contract and evidence.
 - [ ] Reject flaky runtime-jitter behavior, excessive or unjustified DOFs, or any render/video evidence that was not inspected.
+- [ ] Treat the simulation monitor as authoritative runtime evidence; static payload-trajectory proof is not sufficient if the latest run fails closed on anchor drift, impossible first-contact ordering, or unreachable terminal goal proof.
 - [ ] Write only the stage-scoped execution review decision and comments YAML pair.
 - [ ] Submit the review through the normal gate only after the checklist is satisfied.
 
