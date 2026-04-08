@@ -49,7 +49,11 @@ def _tool_name(tool: Callable) -> str:
 
 
 def _runtime_skill_script_path(*relative_parts: str) -> Path:
-    return Path(__file__).resolve().parents[2].joinpath(*relative_parts)
+    repo_root = Path(__file__).resolve().parents[2]
+    skill_root = repo_root / ".agents" / "skills"
+    if skill_root.exists():
+        return skill_root.joinpath(*relative_parts)
+    return repo_root.joinpath(*relative_parts)
 
 
 def _engineer_planner_drafting_required() -> bool:

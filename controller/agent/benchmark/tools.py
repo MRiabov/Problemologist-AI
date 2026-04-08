@@ -6,6 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import yaml
+from sqlalchemy import select
 
 from controller.agent.tools import (
     _invoke_cots_search_subagent,
@@ -15,6 +16,9 @@ from controller.agent.tools import (
     run_validate_and_price_script,
 )
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from controller.persistence.db import get_sessionmaker
+from controller.persistence.models import Asset
+from controller.utils import resolve_episode_id
 from shared.agents.config import DraftingMode, load_agents_config
 from shared.enums import AgentName
 from shared.git_utils import repo_revision
@@ -262,14 +266,35 @@ def get_benchmark_planner_tools(
         artifacts: dict[str, str] = {}
         missing_files: list[str] = []
 
-        for rel_path in required_files:
+        async def _read_required_text(rel_path: str) -> str | None:
             content = await fs.client.read_file_optional(
                 rel_path, bypass_agent_permissions=True
             )
+            if isinstance(content, str) and content.strip():
+                return content
+
+            try:
+                episode_uuid = resolve_episode_id(fs.episode_id)
+            except Exception:
+                return None
+
+            session_factory = get_sessionmaker()
+            async with session_factory() as db:
+                result = await db.execute(
+                    select(Asset.content).where(
+                        Asset.episode_id == episode_uuid,
+                        Asset.s3_path == rel_path,
+                    )
+                )
+                persisted_content = result.scalar_one_or_none()
+
+            if isinstance(persisted_content, str) and persisted_content.strip():
+                return persisted_content
+            return None
+
+        for rel_path in required_files:
+            content = await _read_required_text(rel_path)
             if content is None:
-                missing_files.append(rel_path)
-                continue
-            if not content.strip():
                 missing_files.append(rel_path)
                 continue
             artifacts[rel_path] = content
@@ -283,8 +308,8 @@ def get_benchmark_planner_tools(
             )
             return result.model_dump(mode="json")
 
-        manufacturing_config_text = await fs.client.read_file_optional(
-            "manufacturing_config.yaml", bypass_agent_permissions=True
+        manufacturing_config_text = await _read_required_text(
+            "manufacturing_config.yaml"
         )
         if manufacturing_config_text is None:
             result = PlannerSubmissionResult(

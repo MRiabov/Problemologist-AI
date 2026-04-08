@@ -45,8 +45,9 @@ from controller.observability.langfuse import (
     report_usage_to_current_observation,
 )
 from controller.observability.tracing import record_worker_events
-from controller.persistence.models import Trace
-from controller.utils import EpisodeIdentity
+from controller.persistence.db import get_sessionmaker
+from controller.persistence.models import Asset, Trace
+from controller.utils import EpisodeIdentity, resolve_episode_id
 from shared.agents.config import load_agents_config
 from shared.enums import AgentName, TraceType
 from shared.git_utils import repo_revision
@@ -2544,14 +2545,42 @@ class BaseNode:
                             output_obj=prediction,
                         )
 
+                    async def _read_validation_artifact(path: str) -> str | None:
+                        content = await self.ctx.fs.read_file_optional(
+                            path, bypass_agent_permissions=True
+                        )
+                        if isinstance(content, str) and content.strip():
+                            return content
+
+                        try:
+                            episode_uuid = resolve_episode_id(episode_id)
+                        except Exception:
+                            return None
+
+                        session_factory = get_sessionmaker()
+                        async with session_factory() as db:
+                            result = await db.execute(
+                                select(Asset.content).where(
+                                    Asset.episode_id == episode_uuid,
+                                    Asset.s3_path == path,
+                                )
+                            )
+                            persisted_content = result.scalar_one_or_none()
+
+                        if (
+                            isinstance(persisted_content, str)
+                            and persisted_content.strip()
+                        ):
+                            return persisted_content
+                        return None
+
                     results = await asyncio.gather(
-                        *[self.ctx.fs.read_file(f) for f in validate_files],
-                        return_exceptions=True,
+                        *[_read_validation_artifact(f) for f in validate_files]
                     )
                     artifacts = {
                         f: res
                         for f, res in zip(validate_files, results, strict=False)
-                        if not isinstance(res, Exception)
+                        if res
                     }
 
                     is_valid, validation_errors = validate_node_output(
