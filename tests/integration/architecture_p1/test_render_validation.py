@@ -9,6 +9,11 @@ from controller.agent.node_entry_validation import (
 )
 from controller.clients.worker import WorkerClient
 from shared.enums import AgentName
+from shared.workers.schema import (
+    RenderArtifactMetadata,
+    RenderManifest,
+    RenderSiblingPaths,
+)
 
 WORKER_LIGHT_URL = "http://127.0.0.1:18001"
 
@@ -22,6 +27,23 @@ def _png_bytes(
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     return buffer.getvalue()
+
+
+def _render_manifest_json(evidence_path: str) -> str:
+    manifest = RenderManifest(
+        bundle_path="renders/final_solution_submission_renders",
+        preview_evidence_paths=[evidence_path],
+        artifacts={
+            evidence_path: RenderArtifactMetadata(
+                modality="unknown",
+                group_key="render_evidence",
+                siblings=RenderSiblingPaths(
+                    rgb=evidence_path,
+                ),
+            )
+        },
+    )
+    return manifest.model_dump_json(indent=2)
 
 
 @pytest.mark.integration_p1
@@ -115,3 +137,43 @@ async def test_render_validation_rejects_missing_benchmark_render_evidence():
         or "required render root missing" in error.message
         for error in render_errors
     ), render_errors
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_render_validation_requires_motion_sidecars_for_video_evidence():
+    session_id = f"INT-194-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    evidence_path = "renders/final_solution_submission_renders/render_evidence.mp4"
+    try:
+        await worker.upload_file(
+            "renders/final_solution_submission_renders/render_manifest.json",
+            _render_manifest_json(evidence_path).encode("utf-8"),
+            bypass_agent_permissions=True,
+        )
+        await worker.upload_file(
+            evidence_path,
+            b"not-a-real-video-but-good-enough-for-contract-checking",
+            bypass_agent_permissions=True,
+        )
+
+        errors = await validate_seeded_workspace_handoff_artifacts(
+            worker_client=worker,
+            target_node=AgentName.STEER,
+        )
+    finally:
+        await worker.aclose()
+
+    missing_sidecar_paths = {
+        error.artifact_path
+        for error in errors
+        if error.artifact_path
+        in {
+            "renders/final_solution_submission_renders/frames.jsonl",
+            "renders/final_solution_submission_renders/objects.parquet",
+        }
+    }
+    assert missing_sidecar_paths == {
+        "renders/final_solution_submission_renders/frames.jsonl",
+        "renders/final_solution_submission_renders/objects.parquet",
+    }, errors
