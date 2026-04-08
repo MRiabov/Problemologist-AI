@@ -15,10 +15,9 @@ Use these sheets when revising a prompt or a skill. They answer the question the
 
 ## How To Use
 
-1. Read `../roles.md` for the quick cross-role map and the shared contract.
-2. Read the sheet that matches the active role before changing `config/prompts.yaml` or the role skill.
-3. Update this sheet first when a role changes, then sync the skill file and the prompt.
-4. Keep `config/agents_config.yaml` and the sheet in agreement whenever the role's tool surface changes.
+1. Read the sheet that matches the active role before changing `config/prompts.yaml` or the role skill.
+2. Update this sheet first when a role changes, then sync the skill file and the prompt.
+3. Keep `config/agents_config.yaml` and the sheet in agreement whenever the role's tool surface changes.
 
 ## Shared Revision Checklist
 

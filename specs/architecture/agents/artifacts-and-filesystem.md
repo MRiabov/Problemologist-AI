@@ -35,6 +35,11 @@ Role-specific planner scaffolds remain in `shared/assets/template_repos/` and ar
 Template files are intentional source artifacts, not ad hoc runtime defaults
 or symlinks.
 
+## Artifact Contract Library
+
+Detailed per-file acceptance criteria live in [agent-artifacts/README.md](./agent-artifacts/README.md).
+Use that library when you need the file-specific hard checks, quality bar, or reviewer look-fors for a seeded eval artifact.
+
 ## Initial files for each agent and read-write permissions
 
 The agent-specific workspace surface is role-scoped.

@@ -19,14 +19,15 @@ The Benchmark Planner turns a problem brief into a benchmark handoff package. It
 
 ## What It Reads
 
-- `specs/architecture/agents/roles.md`
 - `.agents/skills/benchmark-planner/SKILL.md`
 - `benchmark_definition.yaml`
 - `benchmark_assembly_definition.yaml`
 - `manufacturing_config.yaml`
 - `renders/benchmark_renders/**` when they exist
 - `renders/current-episode/**` when it exists
-- the shared benchmark-runtime docs for objectives, motion, and file ownership
+- `specs/architecture/primary-system-objectives.md`
+- `specs/architecture/simulation-and-rendering.md`
+- `specs/architecture/agents/artifacts-and-filesystem.md`
 
 ## Native Tool Surface
 

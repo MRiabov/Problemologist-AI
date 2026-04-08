@@ -47,7 +47,7 @@ The Electronics Reviewer checks explicit electromechanical implementation work a
 - Inspect media when it exists.
 - If the task has moving parts, check the latest dynamic evidence before approval.
 - Keep the review read-only and stage-scoped.
-- Follow the shared reviewer gate in `../roles.md`.
+- Write only the stage-owned decision/comments YAML pair, then finish with `bash scripts/submit_review.sh`.
 
 ## Acceptance Checklist
 

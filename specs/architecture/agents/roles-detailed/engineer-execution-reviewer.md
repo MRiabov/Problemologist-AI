@@ -51,7 +51,7 @@ The Engineering Execution Reviewer decides whether the implemented solution is r
 - Inspect the sampled `objects.parquet` sidecar when motion evidence exists.
 - Verify plan fidelity, robustness, manufacturability, cost/weight compliance, and motion plausibility.
 - Keep the review read-only and stage-scoped.
-- Follow the shared reviewer gate in `../roles.md`.
+- Write only the stage-owned decision/comments YAML pair, then finish with `bash scripts/submit_review.sh`.
 
 ## Acceptance Checklist
 

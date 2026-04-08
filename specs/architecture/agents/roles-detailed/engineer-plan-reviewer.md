@@ -52,7 +52,7 @@ The Engineering Plan Reviewer checks the plan before engineering implementation 
 - Use `verify` only when the workspace already contains a concrete candidate that needs runtime-randomization evidence.
 - If render images exist, inspect them before approval.
 - If a refusal artifact exists, confirm whether it is a valid plan refusal or a coder failure artifact.
-- Follow the shared reviewer gate in `../roles.md`.
+- Write only the stage-owned decision/comments YAML pair, then finish with `bash scripts/submit_review.sh`.
 
 ## Acceptance Checklist
 

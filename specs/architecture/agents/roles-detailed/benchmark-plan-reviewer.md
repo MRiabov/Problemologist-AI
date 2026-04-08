@@ -37,11 +37,11 @@ The Benchmark Plan Reviewer checks the planner handoff before implementation sta
 - Review the latest planner revision only.
 - Check exact inventory grounding across the markdown, YAML, and planner scripts.
 - Reject unsupported geometry claims, hidden motion, and free-form XYZ placement as the primary layout mechanism.
-- Follow the shared technical-drawing rule in `../roles.md`.
+- The technical-drawing companion is presentation-only; it must preserve the same labels, repeated quantities, and COTS identities as the planner handoff and cannot define a second geometry contract.
 - If render images exist, inspect at least one before approval.
 - If the benchmark has moving fixtures, require motion-visible handoff facts, not just prose.
 - Keep the review output limited to the stage-owned YAML pair.
-- Follow the shared reviewer gate in `../roles.md`.
+- Write the stage-owned YAML pair and finish with `bash scripts/submit_review.sh`.
 
 ## Acceptance Checklist
 

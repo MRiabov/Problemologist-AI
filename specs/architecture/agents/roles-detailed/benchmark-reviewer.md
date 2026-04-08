@@ -46,7 +46,7 @@ The Benchmark Reviewer decides whether the implemented benchmark is ready to han
 - Verify exact inventory grounding, geometry validity, solvability, randomization, and motion plausibility against the approved contract.
 - If moving benchmark fixtures exist, inspect the latest simulation video and the sampled `objects.parquet` sidecar before approval.
 - Keep the review read-only.
-- Follow the shared reviewer gate in `../roles.md`.
+- Write only the stage-owned decision/comments YAML pair, then finish with `bash scripts/submit_review.sh`.
 
 ## Acceptance Checklist
 

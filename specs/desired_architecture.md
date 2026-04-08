@@ -20,12 +20,14 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 
 - [Agents overview](./architecture/agents/overview.md): high-level map of benchmark generator and engineer graphs.
 - [Agent roles](./architecture/agents/roles.md): role responsibilities, required artifacts, and planner/implementer/reviewer behavior.
+- [Detailed role sheets](./architecture/agents/roles-detailed/README.md): per-role inputs, outputs, native tools, runtime helpers, and prompt/skill revision checklists.
 - [Agent handovers and contracts](./architecture/agents/handover-contracts.md): file-level handoff contracts and refusal/review routing.
 - [Agent harness](./architecture/agents/agent-harness.md): DSPy/LangGraph runtime, debug CLI-provider backend, workspace/prompt/runner contract, and skill-loading policy.
 - [Prompt management](./architecture/agents/prompt-management.md): unified prompt-source model, backend appendices, shared template context, and the skills-versus-prompts boundary.
 - [Engineering planner technical drawings](./architecture/agents/engineering-planner-technical-drawings.md): planner drafting contract, technical drawing review rules, and `preview_drawing()` expectations.
 - [Agent skills](./architecture/agents/agent-skill.md): canonical skill-tree source, authoring contract, workspace materialization, and skill-improvement loop.
 - [Agent artifacts and filesystem](./architecture/agents/artifacts-and-filesystem.md): artifact surfaces, file ownership, and path-permission policy.
+- [Agent artifact contracts](./architecture/agents/agent-artifacts/README.md): file-level acceptance criteria for seeded workspace artifacts, including hard checks, quality bars, and reviewer look-fors.
 - [Agent tools](./architecture/agents/tools.md): ReAct-callable tool surface, Python utility functions, checked-in shell-script bridges for custom command-like operations, and reviewer/planner submission gates. Custom command-like behavior is defined by shell scripts, not newly invented ReAct endpoints.
 - [Auxiliary agent tools](./architecture/agents/auxiliary-agent-tools.md): secondary wrappers, diagnostics, and experimental helper surfaces that do not belong in the main tool contract.
 - [Definitions of success and failure](./architecture/agents/definitions-of-success-and-failure.md): objective AABB rules, runtime randomization, benchmark-side motion exception, and failure taxonomy.
