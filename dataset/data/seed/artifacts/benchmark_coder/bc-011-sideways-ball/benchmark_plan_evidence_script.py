@@ -15,10 +15,14 @@ from utils.metadata import CompoundMetadata, PartMetadata
 # the manufactured_parts inventory.
 
 # manufactured_parts (from benchmark_assembly_definition.yaml):
+#   ground_plane       qty=1
 #   floor_plate        qty=1
 #   support_tower      qty=1
 #   raised_goal_shelf  qty=1
 #   lift_carriage      qty=1
+
+GROUND_PLANE_POS = (0.0, 0.0, 0.005)
+GROUND_PLANE_SIZE = (1.16, 0.2, 0.01)
 
 FLOOR_PLATE_POS = (0.0, 0.0, 0.005)
 FLOOR_PLATE_SIZE = (0.2, 0.06, 0.01)
@@ -36,6 +40,13 @@ LIFT_CARRIAGE_SIZE = (0.04, 0.04, 0.02)
 def build() -> Compound:
     """Return a preview compound matching the approved planner inventory."""
     children: list = []
+
+    # ground_plane x1
+    gp = Box(*GROUND_PLANE_SIZE, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    gp = gp.move(Location(GROUND_PLANE_POS))
+    gp.label = "ground_plane"
+    gp.metadata = PartMetadata(material_id="hdpe", fixed=True)
+    children.append(gp)
 
     # floor_plate x1
     fp = Box(*FLOOR_PLATE_SIZE, align=(Align.CENTER, Align.CENTER, Align.CENTER))

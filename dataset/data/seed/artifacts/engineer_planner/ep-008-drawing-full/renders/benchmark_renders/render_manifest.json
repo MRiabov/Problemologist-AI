@@ -4,7 +4,7 @@
   "created_at": "2026-04-08T06:37:27.550991+00:00",
   "episode_id": "5dd096e0-5f02-5d3a-bbc9-eea638cf6eb5",
   "worker_session_id": "seed-renders-ep-008-drawing-full-b7208d3c",
-  "revision": "8fab3ec1ff59674e08876b05311e032c3b1e6182",
+  "revision": "5300c3b2fb547fb0a8295f181e98286d206f299e",
   "scene_hash": "7968f26b8361b5e5183001d8db54d5f752c3b144be7e5769b56e5c7fa64882fc",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",
