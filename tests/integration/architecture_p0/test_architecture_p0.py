@@ -209,7 +209,7 @@ result = part
 @pytest.mark.int_id("INT-209")
 async def test_int_209_validate_and_preview_delegate_to_renderer_worker():
     """INT-209: Validate/preview paths keep contract while delegating render work."""
-    session_id = f"INT-209-{uuid.uuid4().hex[:8]}"
+    session_id = f"INT-217-{uuid.uuid4().hex[:8]}"
     script_content = """
 from build123d import Align, Box
 from shared.models.schemas import PartMetadata
@@ -314,6 +314,154 @@ def build():
         assert "Saved renders to" in preview_data.message
         assert preview_data.render_manifest_json is not None
         assert "artifacts" in preview_data.render_manifest_json
+
+        static_preview_resp = await client.post(
+            f"{WORKER_RENDERER_URL}/benchmark/static-preview",
+            json=BenchmarkToolRequest(
+                script_path="script.py",
+                bundle_base64=bundle64,
+                smoke_test_mode=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=300.0,
+        )
+        assert static_preview_resp.status_code == 200, static_preview_resp.text
+        static_preview_data = BenchmarkToolResponse.model_validate(
+            static_preview_resp.json()
+        )
+        assert static_preview_data.success, static_preview_data.message
+        assert static_preview_data.artifacts is not None
+        assert static_preview_data.artifacts.render_paths, static_preview_data
+        assert all(
+            path.startswith("renders/benchmark_renders/")
+            for path in static_preview_data.artifacts.render_paths
+        ), static_preview_data.artifacts.render_paths
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_217_static_preview_prefers_benchmark_bucket_when_workspace_also_contains_assembly_definition():
+    """
+    INT-217 regression: benchmark static-preview routing must not flip to the
+    engineer bucket just because assembly_definition.yaml is also present.
+    """
+    session_id = f"INT-209-{uuid.uuid4().hex[:8]}"
+
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        benchmark_definition = BenchmarkDefinition(
+            objectives=ObjectivesSection(
+                goal_zone=BoundingBox(min=(0.5, 0.5, 0.0), max=(1.5, 1.5, 1.5)),
+                forbid_zones=[],
+                build_zone=BoundingBox(min=(-2.0, -2.0, -2.0), max=(2.0, 2.0, 2.0)),
+            ),
+            benchmark_parts=_default_benchmark_parts(),
+            simulation_bounds=BoundingBox(
+                min=(-5.0, -5.0, -5.0),
+                max=(5.0, 5.0, 5.0),
+            ),
+            moved_object=MovedObject(
+                label="delegate_preview_box",
+                shape="box",
+                material_id="aluminum_6061",
+                start_position=(0.0, 0.0, 0.0),
+                runtime_jitter=(0.0, 0.0, 0.0),
+            ),
+            constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+            physics=PhysicsConfig(backend=SimulatorBackendType.MUJOCO),
+        )
+
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="script.py",
+                content="""
+from build123d import Align, Box
+from shared.models.schemas import PartMetadata
+
+def build():
+    part = Box(1, 1, 1, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    part.label = "delegate_preview_box"
+    part.metadata = PartMetadata(material_id="aluminum_6061", fixed=False)
+    return part
+""",
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="benchmark_definition.yaml",
+                content=yaml.safe_dump(
+                    benchmark_definition.model_dump(mode="json"), sort_keys=False
+                ),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="benchmark_assembly_definition.yaml",
+                content=(
+                    "version: '1.0'\n"
+                    "constraints:\n"
+                    "  benchmark_max_unit_cost_usd: 100\n"
+                    "  benchmark_max_weight_g: 1000\n"
+                    "  planner_target_max_unit_cost_usd: 90\n"
+                    "  planner_target_max_weight_g: 900\n"
+                    "totals:\n"
+                    "  estimated_unit_cost_usd: 10\n"
+                    "  estimated_weight_g: 100\n"
+                    "  estimate_confidence: high\n"
+                ),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="plan.md",
+                content="Benchmark plan.\n",
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="todo.md",
+                content="- [ ] benchmark task\n",
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="assembly_definition.yaml",
+                content=(
+                    "version: '1.0'\n"
+                    "constraints:\n"
+                    "  benchmark_max_unit_cost_usd: 100\n"
+                    "  benchmark_max_weight_g: 1000\n"
+                    "  planner_target_max_unit_cost_usd: 90\n"
+                    "  planner_target_max_weight_g: 900\n"
+                    "totals:\n"
+                    "  estimated_unit_cost_usd: 10\n"
+                    "  estimated_weight_g: 100\n"
+                    "  estimate_confidence: high\n"
+                    "manufactured_parts: []\n"
+                    "cots_parts: []\n"
+                    "final_assembly: []\n"
+                ),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+
+        bundle64 = await get_bundle(client, session_id)
 
         static_preview_resp = await client.post(
             f"{WORKER_RENDERER_URL}/benchmark/static-preview",

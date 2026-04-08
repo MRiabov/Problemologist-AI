@@ -18,6 +18,10 @@ from shared.models.schemas import (
     BoundingBox,
     Constraints,
     CostTotals,
+    DraftingCallout,
+    DraftingDimension,
+    DraftingSheet,
+    DraftingView,
     MovedObject,
     ObjectivesSection,
 )
@@ -27,6 +31,7 @@ from shared.workers.schema import (
     BenchmarkToolResponse,
     ExecuteRequest,
     ExecuteResponse,
+    ListFilesRequest,
     PreviewDesignResponse,
     ReadFileRequest,
     RenderManifest,
@@ -302,6 +307,44 @@ print(f"CAP_MESSAGE={over_cap.message}")
 """
 
 
+def _benchmark_drafting_script() -> str:
+    return """
+from build123d import Align, Box
+from shared.models.schemas import PartMetadata
+
+
+def build():
+    part = Box(2.0, 2.0, 2.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    part.label = "benchmark_preview_box"
+    part.metadata = PartMetadata(material_id="aluminum_6061", fixed=False)
+    return part
+
+
+result = build()
+"""
+
+
+def _benchmark_drafting_probe_script() -> str:
+    return """
+from benchmark_plan_technical_drawing_script import result
+from utils import render_technical_drawing
+
+
+response = render_technical_drawing(
+    result,
+    orbit_pitch=-35.0,
+    orbit_yaw=45.0,
+)
+print(f"PREVIEW_DRAWING_SUCCESS={response.success}")
+print(f"PREVIEW_DRAWING_STATUS={response.status_text}")
+print(f"PREVIEW_DRAWING_MESSAGE={response.message}")
+print(f"PREVIEW_DRAWING_RENDERING_TYPE={response.rendering_type.value}")
+print(f"PREVIEW_DRAWING_DRAFTING={response.drafting}")
+print(f"PREVIEW_DRAWING_ARTIFACT_PATH={response.artifact_path}")
+print(f"PREVIEW_DRAWING_MANIFEST_PATH={response.manifest_path}")
+"""
+
+
 async def _write_session_workspace(
     client: httpx.AsyncClient, session_id: str, script_path: str
 ) -> None:
@@ -408,6 +451,73 @@ async def _write_preview_workspace(
         headers=headers,
     )
     assert probe_resp.status_code == 200, probe_resp.text
+
+
+async def _write_benchmark_drafting_workspace(
+    client: httpx.AsyncClient, session_id: str
+) -> None:
+    headers = {"X-Session-ID": session_id}
+
+    workspace_files = {
+        "benchmark_plan.md": "Benchmark plan.\n",
+        "benchmark_assembly_definition.yaml": yaml.safe_dump(
+            AssemblyDefinition(
+                constraints=AssemblyConstraints(
+                    planner_target_max_unit_cost_usd=100.0,
+                    planner_target_max_weight_g=1000.0,
+                ),
+                totals=CostTotals(
+                    estimated_unit_cost_usd=1.0,
+                    estimated_weight_g=1.0,
+                    estimate_confidence="high",
+                ),
+                drafting=DraftingSheet(
+                    sheet_id="sheet-1",
+                    title="Benchmark Preview Drawing",
+                    views=[
+                        DraftingView(
+                            view_id="front",
+                            target="benchmark_preview_box",
+                            projection="front",
+                            scale=1.0,
+                            datums=["A"],
+                            dimensions=[
+                                DraftingDimension(
+                                    dimension_id="width",
+                                    kind="linear",
+                                    target="benchmark_preview_box",
+                                    value=2.0,
+                                    binding=True,
+                                )
+                            ],
+                            callouts=[
+                                DraftingCallout(
+                                    callout_id="1",
+                                    label="Benchmark preview box",
+                                    target="benchmark_preview_box",
+                                )
+                            ],
+                        )
+                    ],
+                ),
+            ).model_dump(mode="json", by_alias=True, exclude_none=True),
+            sort_keys=False,
+        ),
+        "benchmark_plan_technical_drawing_script.py": _benchmark_drafting_script(),
+        "benchmark_preview_drawing_probe.py": _benchmark_drafting_probe_script(),
+    }
+
+    for path, content in workspace_files.items():
+        resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path=path,
+                content=content,
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text
 
 
 async def _collect_preview_status_phases(
@@ -981,6 +1091,107 @@ async def test_int_214_utils_preview_normalizes_multi_view_requests_and_rejects_
             if metadata.view_index is not None
         )
         assert view_indices == [0, 1], view_indices
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_int_216_utils_render_technical_drawing_uses_benchmark_drafting_script():
+    """
+    INT-216: utils.render_technical_drawing() must use the benchmark-owned
+    technical drawing script and persist drafting sidecars in the benchmark
+    render bucket.
+    """
+    session_id = f"INT-216-{uuid.uuid4().hex[:8]}"
+
+    async with httpx.AsyncClient(timeout=1000.0) as client:
+        await _write_benchmark_drafting_workspace(client, session_id)
+
+        exec_write_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="benchmark_preview_drawing_probe.py",
+                content=_benchmark_drafting_probe_script(),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+        assert exec_write_resp.status_code == 200, exec_write_resp.text
+
+        exec_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/runtime/execute",
+            json=ExecuteRequest(
+                code="python benchmark_preview_drawing_probe.py",
+                timeout=180,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=240.0,
+        )
+        assert exec_resp.status_code == 200, exec_resp.text
+        exec_data = ExecuteResponse.model_validate(exec_resp.json())
+        assert exec_data.exit_code == 0, exec_data.stderr
+        assert "PREVIEW_DRAWING_SUCCESS=True" in exec_data.stdout, exec_data.stdout
+        assert "PREVIEW_DRAWING_STATUS=Preview generated successfully" in (
+            exec_data.stdout
+        )
+        assert "PREVIEW_DRAWING_RENDERING_TYPE=rgb" in exec_data.stdout, (
+            exec_data.stdout
+        )
+        assert "PREVIEW_DRAWING_DRAFTING=True" in exec_data.stdout, exec_data.stdout
+
+        artifact_line = next(
+            line
+            for line in exec_data.stdout.splitlines()
+            if line.startswith("PREVIEW_DRAWING_ARTIFACT_PATH=")
+        )
+        artifact_path = artifact_line.split("=", 1)[1]
+        assert artifact_path.startswith("renders/benchmark_renders/"), artifact_path
+        assert artifact_path.endswith(".png"), artifact_path
+
+        manifest_line = next(
+            line
+            for line in exec_data.stdout.splitlines()
+            if line.startswith("PREVIEW_DRAWING_MANIFEST_PATH=")
+        )
+        manifest_path = manifest_line.split("=", 1)[1]
+        assert manifest_path == "renders/benchmark_renders/render_manifest.json", (
+            manifest_path
+        )
+
+        manifest_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/read",
+            json=ReadFileRequest(path=manifest_path).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+        assert manifest_resp.status_code == 200, manifest_resp.text
+        manifest = RenderManifest.model_validate_json(manifest_resp.json()["content"])
+        assert manifest.drafting is True
+        assert manifest.source_script_sha256 is not None
+        assert manifest.preview_evidence_paths == [artifact_path], (
+            manifest.preview_evidence_paths
+        )
+        assert artifact_path in manifest.artifacts
+        artifact_metadata = manifest.artifacts[artifact_path]
+        assert artifact_metadata.siblings.svg.endswith(".svg")
+        assert artifact_metadata.siblings.dxf.endswith(".dxf")
+
+        ls_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/ls",
+            json=ListFilesRequest(path="renders/benchmark_renders").model_dump(
+                mode="json"
+            ),
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+        assert ls_resp.status_code == 200, ls_resp.text
+        render_names = [
+            entry["name"] for entry in ls_resp.json() if not entry["is_dir"]
+        ]
+        assert any(name.endswith(".png") for name in render_names), render_names
+        assert any(name.endswith(".svg") for name in render_names), render_names
+        assert any(name.endswith(".dxf") for name in render_names), render_names
+        assert "render_manifest.json" in render_names, render_names
 
 
 @pytest.mark.integration_p1
