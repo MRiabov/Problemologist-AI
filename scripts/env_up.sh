@@ -46,13 +46,6 @@ if [ "$STACK_PROFILE" = "eval" ] && [ "${PROBLEMOLOGIST_EVAL_LOCK_HELD:-0}" != "
     exit 1
   fi
   export PROBLEMOLOGIST_EVAL_LOCK_HELD=1
-  python3 - <<'PY'
-import fcntl
-
-fd = 9
-flags = fcntl.fcntl(fd, fcntl.F_GETFD)
-fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
-PY
 fi
 
 # Networking for local services (infra is still in Docker but exposed on host).
@@ -164,12 +157,20 @@ fi
 # Clean up archives older than 24 hours
 find "$ARCHIVE_DIR" -maxdepth 1 -name "run_*" -mmin +1440 -exec rm -rf {} + 2>/dev/null || true
 
+start_detached_service() {
+  local log_path="$1"
+  shift
+  # Close fd 9 in the child before exec so the eval lock stays owned by this
+  # launcher shell instead of leaking into long-lived service processes.
+  setsid bash -lc 'exec 9>&-; exec "$@"' _ "$@" > "$log_path" 2>&1 &
+  echo $!
+}
+
 # Start Worker Light (port 18001)
 export PYTHONPATH=$PYTHONPATH:.
 export WORKER_TYPE=light
 export EXTRA_DEBUG_LOG="$LOG_DIR/worker_light_debug.log"
-setsid .venv/bin/python -m uvicorn worker_light.app:app --host 0.0.0.0 --port "$WORKER_LIGHT_HOST_PORT" > "$LOG_DIR/worker_light.log" 2>&1 &
-WORKER_LIGHT_PID=$!
+WORKER_LIGHT_PID=$(start_detached_service "$LOG_DIR/worker_light.log" .venv/bin/python -m uvicorn worker_light.app:app --host 0.0.0.0 --port "$WORKER_LIGHT_HOST_PORT")
 echo $WORKER_LIGHT_PID > "$STACK_PID_DIR/worker_light.pid"
 echo "Worker Light started (PID: $WORKER_LIGHT_PID)"
 
@@ -193,30 +194,26 @@ echo "Worker Renderer container started (ID: $WORKER_RENDERER_CONTAINER_ID)"
 # Start Worker Heavy (port 18002)
 export WORKER_TYPE=heavy
 export EXTRA_DEBUG_LOG="$LOG_DIR/worker_heavy_debug.log"
-setsid .venv/bin/python -m uvicorn worker_heavy.app:app --host 0.0.0.0 --port "$WORKER_HEAVY_HOST_PORT" > "$LOG_DIR/worker_heavy.log" 2>&1 &
-WORKER_HEAVY_PID=$!
+WORKER_HEAVY_PID=$(start_detached_service "$LOG_DIR/worker_heavy.log" .venv/bin/python -m uvicorn worker_heavy.app:app --host 0.0.0.0 --port "$WORKER_HEAVY_HOST_PORT")
 echo $WORKER_HEAVY_PID > "$STACK_PID_DIR/worker_heavy.pid"
 echo "Worker Heavy started (PID: $WORKER_HEAVY_PID)"
 
 # Start Controller (port 18000)
 export EXTRA_DEBUG_LOG="$LOG_DIR/controller_debug.log"
-setsid .venv/bin/python -m uvicorn controller.api.main:app --host 0.0.0.0 --port "$CONTROLLER_HOST_PORT" > "$LOG_DIR/controller.log" 2>&1 &
-CONTROLLER_PID=$!
+CONTROLLER_PID=$(start_detached_service "$LOG_DIR/controller.log" .venv/bin/python -m uvicorn controller.api.main:app --host 0.0.0.0 --port "$CONTROLLER_HOST_PORT")
 echo $CONTROLLER_PID > "$STACK_PID_DIR/controller.pid"
 echo "Controller started (PID: $CONTROLLER_PID)"
 
 # Start Temporal Worker
 export PYTHONPATH=$PYTHONPATH:.
 export EXTRA_DEBUG_LOG="$LOG_DIR/temporal_worker_debug.log"
-setsid .venv/bin/python -m controller.temporal_worker > "$LOG_DIR/temporal_worker.log" 2>&1 &
-TEMP_WORKER_PID=$!
+TEMP_WORKER_PID=$(start_detached_service "$LOG_DIR/temporal_worker.log" .venv/bin/python -m controller.temporal_worker)
 echo $TEMP_WORKER_PID > "$STACK_PID_DIR/temporal_worker.pid"
 echo "Temporal Worker started (PID: $TEMP_WORKER_PID)"
 
 # Start Heavy Temporal Worker (separate from worker-heavy API process)
 export EXTRA_DEBUG_LOG="$LOG_DIR/worker_heavy_temporal_debug.log"
-setsid .venv/bin/python -m worker_heavy.temporal_worker > "$LOG_DIR/worker_heavy_temporal.log" 2>&1 &
-HEAVY_TEMP_WORKER_PID=$!
+HEAVY_TEMP_WORKER_PID=$(start_detached_service "$LOG_DIR/worker_heavy_temporal.log" .venv/bin/python -m worker_heavy.temporal_worker)
 echo $HEAVY_TEMP_WORKER_PID > "$STACK_PID_DIR/worker_heavy_temporal.pid"
 echo "Heavy Temporal Worker started (PID: $HEAVY_TEMP_WORKER_PID)"
 
@@ -236,8 +233,8 @@ elif [ "$STACK_START_FRONTEND" = "1" ]; then
   echo "Starting Frontend dev server on port ${FRONTEND_PORT}..."
   (
     cd frontend
-    setsid npm run dev > "../$LOG_DIR/frontend.log" 2>&1 &
-    echo $! > "$STACK_PID_DIR/frontend.pid"
+    FRONTEND_PID=$(start_detached_service "../$LOG_DIR/frontend.log" npm run dev)
+    echo "$FRONTEND_PID" > "$STACK_PID_DIR/frontend.pid"
   )
   FRONTEND_STARTED=true
   echo "Frontend dev server started (PID: $(cat "$STACK_PID_DIR/frontend.pid"))"
