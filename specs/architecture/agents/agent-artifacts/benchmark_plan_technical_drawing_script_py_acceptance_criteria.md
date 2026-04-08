@@ -11,7 +11,7 @@ It is worth being a dedicated artifact because it turns the benchmark handoff in
 - The script remains grounded in the benchmark contract.
 - The script does not invent extra geometry, labels, views, or dimensions.
 - The script structurally constructs build123d `TechnicalDrawing` at least once; comments or string literals do not satisfy that requirement.
-- The script is suitable for `preview_drawing()` before submission.
+- The script is suitable for `render_technical_drawing()` before submission.
 
 ## Quality Criteria
 

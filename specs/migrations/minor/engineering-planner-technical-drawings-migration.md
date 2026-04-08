@@ -34,7 +34,7 @@ The target contract is:
    carry the engineering drafting evidence and drawing companion, while
    `benchmark_plan_evidence_script.py` / `benchmark_plan_technical_drawing_script.py`
    carry the benchmark mirror,
-5. `preview_drawing()` renders the drafting package for inspection,
+5. `render_technical_drawing()` renders the drafting package for inspection,
 6. the drafting layer is enabled or suppressed by prompt policy in
    `config/agents_config.yaml`,
 7. `inspect_media(...)` remains the only visual-evidence tool,
@@ -116,13 +116,13 @@ new CAD language.
     structured geometry contract, and the separate planner inventory exactness
     migration enforces label, quantity, and COTS identity matching across
     planner and coder handoffs.
-04. `preview_drawing()` renders the drafting package, produces reviewable
+04. `render_technical_drawing()` renders the drafting package, produces reviewable
     image output and vector sidecars, and persists them under the same
     role-scoped preview bucket model used for other evidence.
 05. The implementation may use build123d technical drawing primitives,
     `TechnicalDrawing`, `ExportSVG`, `ExportDXF`, and `project_to_viewport()`
     as implementation details.
-06. If the build123d export path is sufficient, `preview_drawing()` may stay
+06. If the build123d export path is sufficient, `render_technical_drawing()` may stay
     thin and act mostly as a conversion and attachment bridge. It does not
     need to become a second authoring surface.
 07. The starter workspace may include a default 3-view technical-drawing
@@ -165,7 +165,7 @@ new CAD language.
 
 ### 3. Add the 2D preview path
 
-- Add `preview_drawing()` as the planner-facing companion to `preview()`.
+- Add `render_technical_drawing()` as the planner-facing companion to `render_cad()`.
 - The helper may be a thin render or convert bridge if build123d exports are
   sufficient.
 - If SVG or DXF output is enough, keep the implementation thin and let the
@@ -269,7 +269,7 @@ The safe order is:
 
 1. Add the architecture and prompt contract for planner drafting.
 2. Wire the config-gated appendix into PromptManager.
-3. Add `preview_drawing()` and the vector and raster evidence path.
+3. Add `render_technical_drawing()` and the vector and raster evidence path.
 4. Tighten validation and reviewer checks.
 5. Refresh the eval suite.
 6. Refresh the integration suite and then tune the prompt policy by mode.
@@ -281,7 +281,7 @@ The safe order is:
 2. When drafting is on, the planner emits valid drafting scripts and a valid
    `assembly_definition.yaml.drafting` or `benchmark_assembly_definition.yaml.drafting`
    section as appropriate.
-3. `preview_drawing()` produces inspectable image output and vector sidecars.
+3. `render_technical_drawing()` produces inspectable image output and vector sidecars.
 4. The reviewer can reject unsupported or contradictory drafting content.
 5. The coder can read the drafting layer as read-only context and still
    implement the handoff.
@@ -307,7 +307,7 @@ the plumbing items.
 ### Contract and docs
 
 - [x] Add the architecture spec for planner technical drawings.
-- [x] Add the prompt-side `preview_drawing()` contract to the tools doc.
+- [x] Add the prompt-side `render_technical_drawing()` contract to the tools doc.
 - [x] Add the desired-architecture index link for the new planner drafting
   spec.
 - [x] Keep the prompt, tool, and architecture docs aligned with the drafting
@@ -331,7 +331,7 @@ the plumbing items.
 
 ### 2D preview plumbing
 
-- [x] Add `preview_drawing()` to the runtime tool surface.
+- [x] Add `render_technical_drawing()` to the runtime tool surface.
 - [x] Decide whether the implementation is a dedicated renderer branch or a
   thin conversion bridge over build123d export output.
 - [x] Persist raster inspection images and vector sidecars for drawing

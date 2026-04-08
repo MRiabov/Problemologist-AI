@@ -17,7 +17,7 @@ added_at: '2026-03-31T20:20:26Z'
 This document investigates a major refactor that turns preview rendering into an
 on-demand helper instead of a validation-time side effect.
 
-The target is a direct `preview(...)` surface that can inspect a live
+The target is a direct `render_cad(...)` surface that can inspect a live
 `build123d.Part` or `build123d.Compound` at a chosen angle and modality without
 requiring the heavy validation/simulation path first.
 
@@ -47,9 +47,9 @@ This migration sits on top of the existing split architecture in
 - `renders/render_manifest.json` remains the assumed companion artifact and is
   runtime-owned, read-only to agents, rewritten atomically, and keyed by view
   index plus pose metadata as preview outputs are added.
-- `preview_design(...)` is not kept as a long-term alias; `preview(...)`
+- `preview_design(...)` is not kept as a long-term alias; `render_cad(...)`
   replaces it.
-- The helper is exposed by the public `utils` package, alongside `preview(...)`
+- The helper is exposed by the public `utils` package, alongside `render_cad(...)`
   and `validate(...)`.
 - Validation does not generate preview artifacts by default; preview evidence
   is produced only through explicit preview requests.
@@ -58,7 +58,7 @@ This migration sits on top of the existing split architecture in
   supplies the objective overlays reconstructed from the `objectives` section
   of `benchmark_definition.yaml`.
   The caller composes both into a `Compound(children=[...])`, or an equivalent
-  composed component, before calling `preview(...)`.
+  composed component, before calling `render_cad(...)`.
 
 ## Why This Exists
 
@@ -86,10 +86,10 @@ The repository already contains several partial preview implementations:
   worker.
 - `worker_heavy/utils/preview.py` already contains a single-view preview helper,
   but it is RGB-only and still lives under the heavy-worker namespace.
-- `controller/middleware/remote_fs.py` currently exposes `preview(...)`, but it
+- `controller/middleware/remote_fs.py` currently exposes `render_cad(...)`, but it
   routes through Temporal and `worker-heavy`.
 
-What is missing is the worker-light-facing, modality-aware `preview(...)`
+What is missing is the worker-light-facing, modality-aware `render_cad(...)`
 surface that the agent/runtime can call directly when it wants one live shot of
 the current model.
 
@@ -113,7 +113,7 @@ The refactor should make the preview path explicit, direct, and cheap:
 
 ## Proposed Target State
 
-1. Introduce a canonical `preview(...)` helper on the authoring/runtime surface
+1. Introduce a canonical `render_cad(...)` helper on the authoring/runtime surface
    that accepts a live `Part | Compound`.
 2. Support explicit camera control with `orbit_pitch` and `orbit_yaw`, using
    scalar-or-list inputs that normalize into view bundles.
@@ -132,7 +132,7 @@ The refactor should make the preview path explicit, direct, and cheap:
 ### Proposed signature
 
 ```py
-async def preview(
+async def render_cad(
     component: Part | Compound,
     orbit_pitch: float | list[float] = 45.0,
     orbit_yaw: float | list[float] = 45.0,
@@ -265,9 +265,9 @@ Target on-demand flow:
 
 ### Phase 1: Add the canonical helper
 
-- Introduce the `preview(...)` helper in the script/runtime utility surface.
+- Introduce the `render_cad(...)` helper in the script/runtime utility surface.
 - Re-export it from `utils/__init__.py`.
-- Replace `preview_design(...)` with `preview(...)`; do not keep a compatibility
+- Replace `preview_design(...)` with `render_cad(...)`; do not keep a compatibility
   alias.
 - Reuse the existing preview-scene bundling machinery instead of inventing a new
   renderer format.
@@ -344,11 +344,11 @@ context comes from the benchmark geometry source contract defined in
 - `utils.objectives_geometry()` is the zero-argument utility that reconstructs
   the objective overlays declared in the `objectives` section of
   `benchmark_definition.yaml` for the current workspace. It is exposed through
-  the public `utils` package, alongside `preview(...)` and `validate(...)`, so
+  the public `utils` package, alongside `render_cad(...)` and `validate(...)`, so
   callers import it rather than defining an agent-local geometry helper.
 - The caller combines `build()` output with `objectives_geometry()` output into
   a `Compound(children=[...])`, or an equivalent composed component, before
-  calling `preview(...)`.
+  calling `render_cad(...)`.
 - This keeps the public helper singular while still rendering the benchmark
   assembly and objectives together in the same view bundle.
 
@@ -419,7 +419,7 @@ validation paths.
 
 ### Workflow and routing
 
-- [x] Add the worker-light-facing `preview(...)` helper to the public utils
+- [x] Add the worker-light-facing `render_cad(...)` helper to the public utils
   surface and keep the boundary geometry-only.
 - [x] Add or update the controller preview entrypoint so preview requests flow
   through controller orchestration instead of calling the renderer directly.
@@ -483,7 +483,7 @@ validation paths.
 ### Prompts and permissions
 
 - [x] Update `utils/__init__.py` and the `shared/utils/agent` export layer so
-  `preview(...)` and `utils.objectives_geometry()` are both importable from the
+  `render_cad(...)` and `utils.objectives_geometry()` are both importable from the
   agent surface.
 - [ ] Update `config/prompts.yaml` and `config/agents_config.yaml` so roles that
   need preview access can discover the async, multi-view helper without stale
@@ -502,7 +502,7 @@ validation paths.
   `INT-181`, `INT-182`, `INT-183`, `INT-185`, `INT-186`, `INT-188`,
   `INT-189`, `INT-190`, `INT-203`, `INT-204`, `INT-205`, `INT-207`,
   `INT-208`, `INT-209`, `INT-212`, `INT-213`, `INT-214`, and `INT-215`.
-  Key updates: `INT-033`/`INT-034` add explicit `preview(...)` before
+  Key updates: `INT-033`/`INT-034` add explicit `render_cad(...)` before
   `inspect_media(...)`; `INT-188` stays render-free; `INT-212`-`INT-215`
   cover list-normalized multi-view preview, manifest identity, and websocket
   status streaming; `INT-204`/`INT-074`/`INT-075` keep the latest-revision

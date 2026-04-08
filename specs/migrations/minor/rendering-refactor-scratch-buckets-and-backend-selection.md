@@ -73,7 +73,7 @@ and collector surfaces still need to converge on it.
 
 ## Proposed Target State
 
-1. `preview(...)` and `preview_drawing(...)` write live inspection evidence
+1. `render_cad(...)` and `render_technical_drawing(...)` write live inspection evidence
    into `renders/current-episode/` only.
 2. `renders/current-episode/` is deleted at handoff and never enters the persisted bundle
    index or handoff payload as a durable artifact.

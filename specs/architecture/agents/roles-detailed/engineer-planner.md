@@ -40,7 +40,7 @@ The Engineering Planner turns benchmark context into an implementation-ready eng
 - `read_file`
 - `inspect_media`
 - `inspect_topology`
-- `preview_drawing`
+- `render_technical_drawing`
 - `write_file`
 - `edit_file`
 - `invoke_cots_search_subagent`
@@ -49,8 +49,8 @@ The Engineering Planner turns benchmark context into an implementation-ready eng
 
 ## Runtime Helpers To Use From Scripts
 
-- `preview(...)` for live solution-scene inspection
-- `preview_drawing()` for the drafting package
+- `render_cad(...)` for live solution-scene inspection
+- `render_technical_drawing()` for the drafting package
 - `objectives_geometry()` when objective overlays are needed in a preview
 
 ## What Humans Must Tell It

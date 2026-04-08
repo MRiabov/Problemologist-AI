@@ -40,14 +40,14 @@ The Benchmark Planner turns a problem brief into a benchmark handoff package. It
 - `execute_command`
 - `inspect_topology`
 - `invoke_cots_search_subagent`
-- `preview_drawing`
+- `render_technical_drawing`
 - `submit_plan`
 
 ## Runtime Helpers To Use From Scripts
 
-- `preview(...)` for a live benchmark scene with objective overlays
+- `render_cad(...)` for a live benchmark scene with objective overlays
 - `objectives_geometry()` for reconstructed objective bodies
-- `preview_drawing()` when inspecting the drafted drawing package
+- `render_technical_drawing()` when inspecting the drafted drawing package
 
 ## What Humans Must Tell It
 
@@ -67,7 +67,7 @@ The Benchmark Planner turns a problem brief into a benchmark handoff package. It
 - The benchmark is solvable in principle.
 - The geometry is valid and the objective bodies do not overlap the forbidden or spawn regions.
 - The planner scripts preserve the same labels, repeated quantities, and COTS identities as the plan.
-- Drafting mode, when enabled, has been inspected with `preview_drawing()`.
+- Drafting mode, when enabled, has been inspected with `render_technical_drawing()`.
 - The planner wrote realistic estimated cost and weight values before submission.
 
 ## Related Skills

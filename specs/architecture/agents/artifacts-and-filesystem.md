@@ -63,7 +63,7 @@ Representative examples:
     - Benchmark Reviewer: `renders/benchmark_renders/**`, `renders/current-episode/**`
     - Engineering Plan Reviewer: `renders/benchmark_renders/**`, `renders/engineer_plan_renders/**`, `renders/final_solution_submission_renders/**`, `renders/current-episode/**`
     - Engineering Execution Reviewer: `renders/benchmark_renders/**`, `renders/final_solution_submission_renders/**`, `renders/current-episode/**`
-  - write: stage-scoped `reviews/*.yaml` files only; when a reviewer calls `preview(...)` or `preview_drawing(...)`, the scratch preview is written into `renders/current-episode/**`
+  - write: stage-scoped `reviews/*.yaml` files only; when a reviewer calls `render_cad(...)` or `render_technical_drawing(...)`, the scratch preview is written into `renders/current-episode/**`
 - COTS Search subagent:
   - read: `parts.db`, COTS query helpers/CLI, and the caller-provided request string
   - write: structured COTS result payload returned to the caller

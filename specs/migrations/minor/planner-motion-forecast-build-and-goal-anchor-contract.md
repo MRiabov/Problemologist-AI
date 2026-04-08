@@ -123,7 +123,7 @@ while still leaving the start or end conditions ambiguous.
    tolerance budget, so downstream engineering intake sees a course rather than
    a replay.
 7. Static preview may optionally carry a motion-path overlay when
-   `preview(..., payload_path=True)` is requested. The renderer selects the
+   `render_cad(..., payload_path=True)` is requested. The renderer selects the
    finest available motion artifact for the current workflow, and the overlay
    is display-only review context rather than validation evidence.
 
