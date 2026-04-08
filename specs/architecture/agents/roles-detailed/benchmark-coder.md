@@ -16,7 +16,7 @@ The Benchmark Coder turns an approved benchmark handoff into `benchmark_script.p
 
 ## What It Reads
 
-- `plan.md`
+- `benchmark_plan.md`
 - `todo.md`
 - `benchmark_definition.yaml`
 - `benchmark_assembly_definition.yaml`

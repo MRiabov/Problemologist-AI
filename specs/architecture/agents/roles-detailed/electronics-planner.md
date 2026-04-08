@@ -6,7 +6,7 @@ The Electronics Planner is a companion planner for explicit electromechanical ha
 
 ## What It Owns
 
-- `plan.md`
+- `engineering_plan.md`
 - `todo.md`
 - `benchmark_definition.yaml`
 - `assembly_definition.yaml`
@@ -16,7 +16,7 @@ The Electronics Planner is a companion planner for explicit electromechanical ha
 
 ## What It Reads
 
-- `plan.md`
+- `engineering_plan.md`
 - `todo.md`
 - `benchmark_definition.yaml`
 - `benchmark_assembly_definition.yaml`

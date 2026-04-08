@@ -11,7 +11,7 @@ The Engineering Plan Reviewer checks the plan before engineering implementation 
 
 ## What It Reads
 
-- `plan.md`
+- `engineering_plan.md`
 - `todo.md`
 - `benchmark_definition.yaml`
 - `benchmark_assembly_definition.yaml`

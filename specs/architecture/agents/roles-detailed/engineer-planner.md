@@ -6,7 +6,7 @@ The Engineering Planner turns benchmark context into an implementation-ready eng
 
 ## What It Owns
 
-- `plan.md`
+- `engineering_plan.md`
 - `todo.md`
 - `benchmark_definition.yaml`
 - `assembly_definition.yaml`
@@ -26,7 +26,7 @@ The Engineering Planner turns benchmark context into an implementation-ready eng
 - `benchmark_plan_technical_drawing_script.py` when it exists
 - `solution_plan_evidence_script.py` when it exists
 - `solution_plan_technical_drawing_script.py` when it exists
-- `plan.md`
+- `engineering_plan.md`
 - `todo.md`
 - `manufacturing_config.yaml`
 - `renders/benchmark_renders/**`

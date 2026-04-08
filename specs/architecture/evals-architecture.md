@@ -114,7 +114,7 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
 
 ##### Medium evals - Benchmark Plan Reviewer
 
-1. Given a benchmark planner handoff package, the Benchmark Plan Reviewer correctly identifies nonexistent benchmark objects or inconsistent object references across `plan.md`, `benchmark_definition.yaml`, and benchmark-owned `benchmark_assembly_definition.yaml` in at least 90% of seeded cases.
+1. Given a benchmark planner handoff package, the Benchmark Plan Reviewer correctly identifies nonexistent benchmark objects or inconsistent object references across `benchmark_plan.md`, `benchmark_definition.yaml`, and benchmark-owned `benchmark_assembly_definition.yaml` in at least 90% of seeded cases.
 2. Given a benchmark planner handoff package, the Benchmark Plan Reviewer rejects ambiguous, infeasible, or incomplete plans in at least 85% of seeded bad-plan cases.
 3. Given a benchmark planner handoff package with renders available, the Benchmark Plan Reviewer inspects at least the config-driven minimum number of images through the dedicated media-inspection tool before approval. Current production policy is `min_images=1`.
 4. Reviewer efficacy: benchmark plan-review feedback should lead to a corrected planner handoff in at least 60% of failed first submissions.

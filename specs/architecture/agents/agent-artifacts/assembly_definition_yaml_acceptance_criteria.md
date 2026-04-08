@@ -15,7 +15,7 @@ It is worth being a dedicated agent artifact because it is the main binding betw
 - Planner-target unit cost and weight fields are derived from validated totals, not invented later.
 - Electronics fields appear when the role explicitly requires them.
 - Motion anchors in `motion_forecast` name explicit `rot_deg` poses, and an omitted rotation is a validation failure rather than an implied identity pose.
-- The file stays internally consistent with `plan.md`, `todo.md`, and `benchmark_definition.yaml`.
+- The file stays internally consistent with `engineering_plan.md`, `todo.md`, and `benchmark_definition.yaml`.
 
 ## Quality Criteria
 

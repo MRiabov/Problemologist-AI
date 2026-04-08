@@ -35,10 +35,10 @@ I propose the dataset generation to be more or less aligned with how the user wo
 
 ### Inputs to the system
 
-The inputs to each model are as described in @desired_architecture.md document. What this means for dataset generation is that the system must supply and persist the dataset in and out from the system. E.g., a benchmark coder would have in each dataset row (quoted verbatim from desired architecture):
+The inputs to each model are as described in @desired_architecture.md document. What this means for dataset generation is that the system must supply and persist the dataset in and out from the system. E.g., a benchmark coder would have in each dataset row:
 
 ```md
-- plan.md (read)
+- benchmark_plan.md (read)
 - todo.md (read/write)
 - benchmark_definition.yaml (read)
 - assembly_definition.yaml (read)
@@ -48,6 +48,8 @@ The inputs to each model are as described in @desired_architecture.md document. 
 - benchmark_script.py / solution_script.py / template-backed implementation file(s) (role-appropriate read/write; `benchmark_script.py` appears only after benchmark implementation exists; plus additional *.py)
 - plan_refusal.md (write only, when refusing plan)
 ```
+
+Engineering and electronics rows use `engineering_plan.md` in the equivalent slot.
 
 Note that skills and utils files are loaded at runtime (currently from the most recent version, to avoid git work)
 

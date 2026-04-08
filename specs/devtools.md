@@ -176,7 +176,7 @@ The validation helpers are developer tooling, not product behavior.
 
 - This script validates seeded eval entry contracts without running the full eval loop.
 - It seeds the local workspace through the real helper path and validates the row against the current contract set.
-- For planner rows, that contract includes exact inventory preservation, exact identifier mention coverage in `plan.md`, and the latest handoff cross-contract checks from the controller validation path.
+- For planner rows, that contract includes exact inventory preservation, exact identifier mention coverage in `benchmark_plan.md` or `engineering_plan.md`, and the latest handoff cross-contract checks from the controller validation path.
 - It can refresh deterministic seed manifests when asked; render bundles are handled by `scripts/update_eval_seed_renders.py`.
 - It can optionally run the eval runner in judge mode after validation, using the local CLI-provider backend by default.
 - Validation-only `--skip-env-up` runs join the shared validation lock so multiple seed checks can proceed in parallel while still preventing eval teardown during an active validation consumer.

@@ -6,7 +6,7 @@ The Benchmark Planner turns a problem brief into a benchmark handoff package. It
 
 ## What It Owns
 
-- `plan.md`
+- `benchmark_plan.md`
 - `todo.md`
 - `benchmark_definition.yaml`
 - `benchmark_assembly_definition.yaml`
@@ -53,7 +53,7 @@ The Benchmark Planner turns a problem brief into a benchmark handoff package. It
 
 - The benchmark objective geometry, build zone, forbid zones, and runtime jitter are authoritative.
 - Benchmark-owned fixtures, input objects, and objective markers are read-only context, not engineer-owned deliverables.
-- The benchmark handoff must stay exact across `plan.md`, the YAML files, and both planner scripts.
+- The benchmark handoff must stay exact across `benchmark_plan.md`, the YAML files, and both planner scripts.
 - `moved_object.material_id` must resolve to a known material from `manufacturing_config.yaml`.
 - Moving benchmark-owned fixtures need explicit, reviewer-visible motion facts.
 - If render images already exist for the current revision, inspect them with `inspect_media()` before submission.

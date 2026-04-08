@@ -13,7 +13,7 @@ The Engineering Execution Reviewer decides whether the implemented solution is r
 
 - `solution_script.py`
 - supporting `*.py` implementation files
-- `plan.md`
+- `engineering_plan.md`
 - `todo.md`
 - `assembly_definition.yaml`
 - `benchmark_definition.yaml`

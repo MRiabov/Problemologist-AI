@@ -16,7 +16,7 @@ The Engineering Coder turns the approved engineering handoff into `solution_scri
 
 ## What It Reads
 
-- `plan.md`
+- `engineering_plan.md`
 - `todo.md`
 - `assembly_definition.yaml`
 - `benchmark_definition.yaml`

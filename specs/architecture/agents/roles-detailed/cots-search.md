@@ -11,7 +11,7 @@ The COTS Search subagent returns catalog-backed part candidates with exact ident
 ## What It Reads
 
 - the caller-provided query string
-- `plan.md` when the caller passes file context
+- `benchmark_plan.md` or `engineering_plan.md` when the caller passes file context
 - `todo.md` when the caller passes file context
 - `benchmark_definition.yaml` when the caller passes file context
 - `benchmark_assembly_definition.yaml` when the caller passes file context

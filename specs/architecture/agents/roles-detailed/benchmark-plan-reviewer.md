@@ -11,7 +11,7 @@ The Benchmark Plan Reviewer checks the planner handoff before implementation sta
 
 ## What It Reads
 
-- `plan.md`
+- `benchmark_plan.md`
 - `todo.md`
 - `benchmark_definition.yaml`
 - `benchmark_assembly_definition.yaml`

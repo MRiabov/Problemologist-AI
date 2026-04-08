@@ -9,7 +9,7 @@ It is worth being a dedicated artifact because it captures the benchmark-side mo
 
 - The file schema-validates as a full `AssemblyDefinition` artifact.
 - Every referenced benchmark-owned object exists in `benchmark_definition.yaml`.
-- Fixture structure, labels, and quantities match the benchmark plan package exactly.
+- Fixture structure, labels, and quantities match `benchmark_plan.md` and the benchmark planner scripts exactly.
 - Moving fixtures declare explicit motion facts, including the supported motion type, bounds, and controller-visible limits.
 - One-axis motion is used per moving fixture unless the benchmark contract explicitly says otherwise.
 - Any anchor-style motion metadata names `rot_deg` explicitly instead of relying on an implied default pose.

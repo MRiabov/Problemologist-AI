@@ -11,7 +11,7 @@ The Electronics Reviewer checks explicit electromechanical implementation work a
 
 ## What It Reads
 
-- `plan.md`
+- `engineering_plan.md`
 - `todo.md`
 - `benchmark_definition.yaml`
 - `benchmark_assembly_definition.yaml`

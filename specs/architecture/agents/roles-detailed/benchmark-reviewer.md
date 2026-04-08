@@ -14,7 +14,7 @@ The Benchmark Reviewer decides whether the implemented benchmark is ready to han
 - `benchmark_script.py`
 - `benchmark_definition.yaml`
 - `benchmark_assembly_definition.yaml`
-- `plan.md`
+- `benchmark_plan.md`
 - `todo.md`
 - `plan_refusal.md` when present
 - `validation_results.json`

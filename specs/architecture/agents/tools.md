@@ -92,7 +92,7 @@ Importantly, we have all these methods as async functions, their names with `are
 Rules:
 
 1. The command string is interpreted as a shell command, exactly as an agent would type it in a terminal.
-2. Workspace-relative paths such as `solution_script.py`, `benchmark_script.py` once created by `Benchmark Coder`, `plan.md`, and `renders/` remain the canonical path contract inside that shell session.
+2. Workspace-relative paths such as `solution_script.py`, `benchmark_script.py` once created by `Benchmark Coder`, `benchmark_plan.md`, `engineering_plan.md`, and `renders/` remain the canonical path contract inside that shell session.
 3. Shell usage such as `python -c ...`, `python solution_script.py`, `python benchmark_script.py` once created by `Benchmark Coder`, `bash -lc ...`, `uv run ...`, `ls`, `cat`, and similar terminal invocations is valid if it stays within filesystem policy.
 4. Any implementation that accepts only raw Python source for `execute_command(...)` is a runtime bug or temporary drift, not the intended architecture contract.
 5. If we want a raw-Python helper in the future, it should be a separate tool with a separate name and spec, not an overload of `execute_command(...)`.
@@ -194,6 +194,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
   - `visual_inspection.required`: whether the role must inspect render images when available.
   - `visual_inspection.min_images`: minimum number of distinct render images the role must inspect.
   - `visual_inspection.reminder_interval`: how often runtime injects reminder messages while the role keeps operating without satisfying the image requirement.
+  - When a role keeps failing the same blocker, it should inspect the exact render or video evidence before the next attempt; after three consecutive failures on the same issue, inspect render evidence on every subsequent retry until the blocker changes. This is the visual-inspection discipline expected by the render-evidence skill, not a substitute for the config gate.
 - Current required roles are:
   - `benchmark_plan_reviewer`
   - `benchmark_reviewer`

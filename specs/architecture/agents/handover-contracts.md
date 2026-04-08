@@ -107,8 +107,8 @@ Rules:
 04. The planner must self-validate this exactness before `submit_plan()`; if the evidence or drawing script drifts, the handoff is invalid.
 05. The coder and reviewer must compare the implemented model against the approved inventory and reject missing, extra, or relabeled items.
 06. The technical-drawing companion may be a convenience template, but it may not add, remove, or rename inventory items.
-07. Every planner-declared inventory label and selected COTS `part_id` must appear at least once in `plan.md` as an exact identifier mention. Backticks are preferred for the first mention, but the exact string match is what matters for validation.
-08. For drafting-mode handoffs, the exact-mention rule also applies to the planner-authored drafting scripts: the labels and COTS identities they reference must already be grounded in `plan.md`.
+07. Every planner-declared inventory label and selected COTS `part_id` must appear at least once in the stage-specific plan file as an exact identifier mention. Backticks are preferred for the first mention, but the exact string match is what matters for validation.
+08. For drafting-mode handoffs, the exact-mention rule also applies to the planner-authored drafting scripts: the labels and COTS identities they reference must already be grounded in the matching stage-specific plan file.
 09. Every planner-authored technical-drawing script, including `solution_plan_technical_drawing_script.py` and `benchmark_plan_technical_drawing_script.py`, must structurally import and use build123d `TechnicalDrawing` at least once. Validation must resolve the Python AST or symbol graph, not raw substrings; comments and string literals do not satisfy the contract.
 10. If a technical-drawing script cannot be proven to contain a real `TechnicalDrawing` construction path, the handoff is invalid and routes back to the producing planner.
 
@@ -118,7 +118,7 @@ The Benchmark Generator Planner will submit multiple files to the CAD implementi
 
 The plan will have the following bullet points. The plan will be validated for consistency, and will not be accepted until the markdown passes strict formatting criteria, and will ensure that the bullet points are there:
 
-1. `plan.md`:
+1. `benchmark_plan.md`:
    - Learning objective (summary of what the agents needs to or will learn as a result of this challenge);
    - The geometry of the environment:
      - coordinates of all major shapes in the environment + randomization.
@@ -148,7 +148,7 @@ If the user provides explicit benchmark objective overrides (for example `max_un
 
 `Benchmark Plan Reviewer` gate requirements:
 
-- Source of truth contract: benchmark planner handoff artifacts are `plan.md`, `todo.md`, `benchmark_definition.yaml`, benchmark-owned `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py`. Those scripts must preserve the benchmark inventory labels, repeated quantities, and COTS identities exactly. `benchmark_script.py` is created later by `Benchmark Coder` after plan approval.
+- Source of truth contract: benchmark planner handoff artifacts are `benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, benchmark-owned `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py`. Those scripts must preserve the benchmark inventory labels, repeated quantities, and COTS identities exactly. `benchmark_script.py` is created later by `Benchmark Coder` after plan approval.
 - Reviewer-stage manifest: `.manifests/benchmark_plan_review_manifest.json`.
 - Entry guard behavior:
   - Reject when the manifest is missing, stale for the latest planner revision, or schema-invalid.
@@ -158,12 +158,12 @@ If the user provides explicit benchmark objective overrides (for example `max_un
   - Reject when benchmark-owned DOF/control metadata is missing, contradictory, or unsupported by the declared fixture motion.
   - Reject when moving benchmark fixtures are missing motion-visible handoff data needed by engineering intake, such as actuation mode, axis/path or equivalent reference, motion limits or operating envelope, and whether the engineer may rely on the motion.
   - Reject when benchmark-side motion is impossible, unstable, non-deterministic, or cannot be reconstructed from the handoff artifacts and evidence.
-  - Reject when `benchmark_plan_technical_drawing_script.py` introduces unsupported views, callouts, datums, or dimensions that are not grounded in `plan.md`, `benchmark_definition.yaml`, or `benchmark_assembly_definition.yaml`.
+  - Reject when `benchmark_plan_technical_drawing_script.py` introduces unsupported views, callouts, datums, or dimensions that are not grounded in `benchmark_plan.md`, `benchmark_definition.yaml`, or `benchmark_assembly_definition.yaml`.
 
 <!-- Future work: if benchmark input arrives as STEP, infer candidate motion constraints from the source geometry before explicit benchmark handoff materialization. -->
 
 - Review-stage behavior:
-  - `Benchmark Plan Reviewer` is read-only with respect to planner-owned artifacts. It inspects, validates, and decides; it does not rewrite `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, or `benchmark_plan_technical_drawing_script.py`.
+  - `Benchmark Plan Reviewer` is read-only with respect to planner-owned artifacts. It inspects, validates, and decides; it does not rewrite `benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, or `benchmark_plan_technical_drawing_script.py`.
 - Approval effect:
   - Only an approved benchmark plan reviewer handoff is allowed to pause in `PLANNED` state and unblock `Benchmark Coder`.
 
@@ -287,7 +287,7 @@ For explicit-electronics tasks, there is also a specialist review gate between c
 
 Engineer sends the planner handoff files to the coder agent who has to implement the plan:
 
-1. A `plan.md` file. The plan.md is a structured document (much like the benchmark generator plan) outlining:
+1. A `engineering_plan.md` file. `engineering_plan.md` is a structured document (much like the benchmark generator plan) outlining:
 2. A stripped down `benchmark_definition.yaml` file, except the max price and weight are set by the planner now and remain under the benchmark/customer caps.
 3. A `todo.md` TODO-list.
 4. A `assembly_definition.yaml` file with per-part pricing inputs, `final_assembly` structure, assembly totals produced by `validate_costing_and_price.py`, and a planner-authored `motion_forecast` section whenever the approved solution includes moving engineer-owned parts. That forecast describes the payload trajectory: it must start build-zone valid, name explicit `rot_deg` orientation on every anchor, and end with an explicit goal-zone proof.
@@ -300,7 +300,7 @@ The planner forecast is intentionally coarse and config-driven, while the engine
 Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
 
 - Source of truth contract: `ENGINEER_PLANNER_HANDOFF_ARTIFACTS` in node-entry validation.
-- Required artifacts: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`
+- Required artifacts: `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`
 - Those planner-authored scripts must preserve the same labels, repeated quantities, and COTS identities as the approved inventory, and the planner must self-validate that exactness before `submit_plan()`.
 - If the approved solution includes moving engineer-owned parts, `assembly_definition.yaml` must also carry a reviewable `motion_forecast` section with ordered world-frame anchors, explicit `rot_deg` pose data, a build-zone-valid first anchor, an explicit goal-zone terminal proof, tolerance bands, and first-contact order.
 - Reviewer-stage manifest: `.manifests/engineering_plan_review_manifest.json` (planner handoff materialization for the plan-review stage)
@@ -325,7 +325,7 @@ Unified coder contract:
 - `Engineering Coder` may implement both mechanical and electrical details in one pass when the task requires electronics.
 - `Engineering Coder` must not assume that electronics can be deferred to a later dedicated implementation node.
 
-### `plan.md` structure for the engineering plan
+### `engineering_plan.md` structure for the engineering plan
 
 ```markdown
 # Engineering Plan
@@ -514,7 +514,7 @@ Minimum motion metadata fields inside `final_assembly.parts` entries:
 - For motorized parts: `control.mode`, plus required control params (e.g. `speed`, `frequency`) per mode
 - DOF minimization contract:
   - `dofs: []` is the default for non-moving parts.
-  - Non-empty `dofs` must be explicitly justified in `plan.md` (`## 3. Assembly Strategy`, `## 5. Detailed Calculations`, `## 6. Critical Constraints / Operating Envelope`, or `## 8. Risk Assessment`) with objective-linked rationale.
+  - Non-empty `dofs` must be explicitly justified in `engineering_plan.md` (`## 3. Assembly Strategy`, `## 5. Detailed Calculations`, `## 6. Critical Constraints / Operating Envelope`, or `## 8. Risk Assessment`) with objective-linked rationale.
   - Deterministic suspicion threshold: `len(dofs) > 3` is suspicious over-actuation and is rejected unless reviewer receives explicit mechanism-level justification and accepts it.
   - Unjustified or excessive DOF assignments are plan-review rejection criteria.
 

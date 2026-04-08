@@ -47,16 +47,16 @@ The agent-specific workspace surface is role-scoped.
 Representative examples:
 
 - Engineering Planner:
-  - read: `.agents/skills/**`, `utils/**`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`, `plan.md`, `todo.md`, `journal.md`, `renders/benchmark_renders/**`, `renders/engineer_plan_renders/**`, `renders/current-episode/**`
-  - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml`, `benchmark_definition.yaml`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`, `renders/current-episode/**`
+  - read: `.agents/skills/**`, `utils/**`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`, `engineering_plan.md`, `todo.md`, `journal.md`, `renders/benchmark_renders/**`, `renders/engineer_plan_renders/**`, `renders/current-episode/**`
+  - write: `engineering_plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml`, `benchmark_definition.yaml`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`, `renders/current-episode/**`
 - Engineering Coder:
-  - read: `.agents/skills/**`, `utils/**`, `benchmark_script.py`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/benchmark_renders/**`, `renders/engineer_plan_renders/**`, `renders/current-episode/**`
+  - read: `.agents/skills/**`, `utils/**`, `benchmark_script.py`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`, `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/benchmark_renders/**`, `renders/engineer_plan_renders/**`, `renders/current-episode/**`
   - write: `solution_script.py`, additional `*.py` implementation files, `todo.md`, `journal.md`, `renders/current-episode/**`, `plan_refusal.md`
 - Benchmark Planner:
-  - read: `.agents/skills/**`, `utils/**`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `plan.md`, `todo.md`, `journal.md`, `renders/benchmark_renders/**`, `renders/current-episode/**`
-  - write: `plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `renders/current-episode/**`
+  - read: `.agents/skills/**`, `utils/**`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `benchmark_plan.md`, `todo.md`, `journal.md`, `renders/benchmark_renders/**`, `renders/current-episode/**`
+  - write: `benchmark_plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `renders/current-episode/**`
 - Benchmark Coder:
-  - read: `.agents/skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `reviews/**`, `renders/benchmark_renders/**`, `renders/current-episode/**`
+  - read: `.agents/skills/**`, `utils/**`, `benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, `reviews/**`, `renders/benchmark_renders/**`, `renders/current-episode/**`
   - write: `benchmark_script.py`, additional `*.py` implementation files, `todo.md`, `journal.md`, `renders/current-episode/**`, `plan_refusal.md`
 - Reviewer roles:
   - read:
@@ -181,12 +181,14 @@ Control-file ownership split:
 03. `benchmark_script.py` owns benchmark-owned geometry composition and read-only benchmark preview context.
 04. `benchmark_plan_evidence_script.py` owns benchmark planner drafting evidence geometry.
 05. `benchmark_plan_technical_drawing_script.py` owns benchmark planner technical-drawing exports.
-06. `solution_script.py` owns engineer-planned solution geometry and implementation code.
-07. `solution_plan_evidence_script.py` owns engineering planner drafting evidence geometry.
-08. `solution_plan_technical_drawing_script.py` owns engineering planner technical-drawing exports.
-09. `assembly_definition.yaml` owns engineer-planned solution structure, costing inputs, and motion metadata.
-10. `payload_trajectory_definition.yaml` owns engineer-coder higher-resolution payload trajectory and contact proof; it refines the coarse planner forecast, must not contradict it, must declare explicit rotation on every step, and must preserve the approved build-zone start and goal-zone finish semantics while remaining swept-clearance safe against fixed geometry.
-11. We do not duplicate engineer solution metadata into `benchmark_definition.yaml`.
+06. `benchmark_plan.md` owns benchmark planner narrative and exact inventory grounding.
+07. `solution_script.py` owns engineer-planned solution geometry and implementation code.
+08. `solution_plan_evidence_script.py` owns engineering planner drafting evidence geometry.
+09. `solution_plan_technical_drawing_script.py` owns engineering planner technical-drawing exports.
+10. `engineering_plan.md` owns engineering planner narrative, proof structure, and exact inventory grounding.
+11. `assembly_definition.yaml` owns engineer-planned solution structure, costing inputs, and motion metadata.
+12. `payload_trajectory_definition.yaml` owns engineer-coder higher-resolution payload trajectory and contact proof; it refines the coarse planner forecast, must not contradict it, must declare explicit rotation on every step, and must preserve the approved build-zone start and goal-zone finish semantics while remaining swept-clearance safe against fixed geometry.
+13. We do not duplicate engineer solution metadata into `benchmark_definition.yaml`.
 
 ## File updates
 

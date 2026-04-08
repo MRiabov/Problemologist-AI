@@ -5,7 +5,7 @@
 - Primary focus: a planner-authored technical-drawing layer for the Engineering Planner.
 - The same drafting artifact pattern is mirrored for the Benchmark Planner with benchmark-prefixed filenames.
 - Defines when the planner produces drawings, what the drawing package must say, and how the reviewer validates it.
-- Treats technical drawings as a derived planning artifact, not as a replacement for `plan.md`, `todo.md`, or `assembly_definition.yaml`.
+- Treats technical drawings as a derived planning artifact, not as a replacement for `engineering_plan.md`, `todo.md`, or `assembly_definition.yaml`.
 - Uses build123d-native projection and export capabilities as implementation details, not as architecture terminology.
 - Migration mechanics live in [Engineering Planner Technical Drawings Migration](../../migrations/minor/engineering-planner-technical-drawings-migration.md).
 
@@ -56,7 +56,7 @@ The switch is intentionally boring:
 
 The source of truth remains the existing handoff package:
 
-1. `plan.md`
+1. `engineering_plan.md`
 2. `todo.md`
 3. `benchmark_definition.yaml`
 4. `assembly_definition.yaml`
@@ -65,11 +65,11 @@ The source of truth remains the existing handoff package:
 
 The technical drawing layer is a structured extension of `assembly_definition.yaml`, not a competing source of truth.
 
-The benchmark mirror uses `benchmark_assembly_definition.yaml` as the analogous structured contract, with `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` replacing the `solution_`-prefixed files.
+The benchmark mirror uses `benchmark_plan.md` and `benchmark_assembly_definition.yaml` as the analogous structured contract, with `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` replacing the `solution_`-prefixed files.
 
 Planner drafting is therefore treated as derived intent:
 
-- `plan.md` explains the mechanism and the rationale.
+- `engineering_plan.md` explains the mechanism and the rationale.
 - `assembly_definition.yaml` carries the machine-readable structure and budgets.
 - `assembly_definition.yaml.drafting` carries the technical-drawing intent.
 - `preview_drawing()` renders that intent for inspection.
@@ -93,7 +93,7 @@ The drafting layer must be explicit about the following items:
 - which callouts correspond to plan statements,
 - which geometry is intended to be revised by the engineer and which geometry is fixed by the planner.
 
-The drafting layer must not invent geometric claims that are absent from `plan.md` or `assembly_definition.yaml`.
+The drafting layer must not invent geometric claims that are absent from `engineering_plan.md` or `assembly_definition.yaml`.
 
 If the drawing says a face is at a given angle, that angle must already be supported by the planner handoff.
 If the drawing says a hole pattern exists, the hole pattern must already exist in the machine-readable assembly intent.
@@ -132,7 +132,7 @@ drafting:
       callouts:
         - id: 1
           label: "critical slope"
-          plan_ref: "plan.md#assembly-strategy"
+          plan_ref: "engineering_plan.md#assembly-strategy"
           target: "ramp_main.slope_face"
 ```
 
@@ -201,25 +201,25 @@ Binding rules:
 
 The planner may use the drafting layer to say "this slope must be steep enough" or "this hole center must align with the bracket datum", but the planner must still provide the numerical value or bound.
 
-## Relationship to plan.md
+## Relationship to engineering_plan.md
 
-`plan.md` remains the human-readable explanation.
+`engineering_plan.md` remains the human-readable explanation.
 The planner should expose source-backed assumptions, detailed calculations, and the distilled operating envelope so the drafting layer can reference the exact basis for any binding numeric claim.
 
-The drafting layer does three things that `plan.md` does not:
+The drafting layer does three things that `engineering_plan.md` does not:
 
 1. It binds the geometry to named drawing views.
 2. It exposes the few dimensions that are actually decisive.
 3. It makes later review easier because the intended geometry is not only described in prose.
 
-The drawing layer should not duplicate every sentence from `plan.md`.
+The drawing layer should not duplicate every sentence from `engineering_plan.md`.
 It should extract the geometry-relevant statements and restate them as a structured interface contract.
 
-Every planner-authored object label and selected COTS `part_id` that appears in the drafting package must also appear in `plan.md` as an exact identifier mention. Backticks are preferred for the first mention, but the exact string match is the validator input.
+Every planner-authored object label and selected COTS `part_id` that appears in the drafting package must also appear in `engineering_plan.md` as an exact identifier mention. Backticks are preferred for the first mention, but the exact string match is the validator input.
 
 Recommended cross-reference style:
 
-- `plan.md` references `CALC-001`, `ASSUMP-001`, `callout 1`, `callout 2`, or `section A-A`.
+- `engineering_plan.md` references `CALC-001`, `ASSUMP-001`, `callout 1`, `callout 2`, or `section A-A`.
 - The drafting section references the same labels.
 - The reviewer checks that the references match.
 
@@ -295,7 +295,7 @@ The Engineering Plan Reviewer validates the drafting layer when the mode is not 
 
 Reviewer responsibilities:
 
-1. Reject drawings that contradict `plan.md` or the assembly inventory, including labels, repeated quantities, and COTS identities.
+1. Reject drawings that contradict `engineering_plan.md` or the assembly inventory, including labels, repeated quantities, and COTS identities.
 2. Reject drawings that introduce unsupported geometry or unstated interfaces.
 3. Reject drawings that omit binding dimensions for critical interfaces.
 4. Reject drawings that claim datums, views, or sections that do not map to the actual assembly intent.
@@ -344,7 +344,7 @@ Minimum validation checks:
 10. Every binding dimension is measurable against authored geometry: dimension endpoints, faces, edges, or datums must resolve to real drawing targets, and numeric values must be finite and positive where the dimension type requires it.
 11. Every section or detail view must reference a real cut, parent view, or target region, and the referenced view must actually reveal geometry that is hidden or ambiguous in the base view.
 12. Every stated clearance, fit, or envelope note must be consistent with the geometry it describes; the drawing may be approximate, but it may not claim a gap or interface that the projected geometry cannot support.
-13. Drafting geometry must not contradict the source assembly bounds, part counts, motion limits, or datum references already declared in `plan.md` and `assembly_definition.yaml`.
+13. Drafting geometry must not contradict the source assembly bounds, part counts, motion limits, or datum references already declared in `engineering_plan.md` and `assembly_definition.yaml`.
 14. Units, scale, and handedness are explicit and consistent across all views, dimensions, and drafting metadata.
 15. The drawing is generated from a recorded source snapshot or revision hash so the 2D package can be tied back to the exact 3D model it projected.
 16. If the handoff declares static randomization, runtime jitter, or motion envelopes, the source geometry is validated at the declared extremes rather than only at nominal pose.
@@ -393,7 +393,7 @@ Minimum 3D checks:
 4. Section and detail views must be anchored to real 3D cut planes or feature regions and must produce non-empty geometry in the intended area of the source model.
 5. Binding dimensions that reference a feature in the drawing must map back to a measurable 3D relationship in the source model, such as face-to-face distance, hole-center spacing, axis alignment, or feature extent.
 6. Claimed clearances, fits, envelopes, and motion envelopes are validated against the 3D source geometry, not only against the projected 2D outline.
-7. The drawing must be generated from the same 3D source snapshot that the planner claims in `plan.md` and `assembly_definition.yaml`; a cleaner surrogate model with different topology is not acceptable.
+7. The drawing must be generated from the same 3D source snapshot that the planner claims in `engineering_plan.md` and `assembly_definition.yaml`; a cleaner surrogate model with different topology is not acceptable.
 
 ## Constraint Parity
 
