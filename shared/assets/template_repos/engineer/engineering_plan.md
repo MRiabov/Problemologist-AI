@@ -73,8 +73,8 @@
 
 #### Cross-References
 
-- `plan.md#4-assumption-register`
-- `plan.md#6-critical-constraints--operating-envelope`
+- `engineering_plan.md#4-assumption-register`
+- `engineering_plan.md#6-critical-constraints--operating-envelope`
 
 ## 6. Critical Constraints / Operating Envelope
 

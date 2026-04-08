@@ -1,6 +1,6 @@
 from build123d import Align, Box, Compound, Location, TechnicalDrawing
 
-from utils.metadata import CompoundMetadata, PartMetadata
+from shared.models.schemas import CompoundMetadata, PartMetadata
 
 
 def _make_box(label: str, size: tuple[float, float, float], center: tuple[float, float, float]):

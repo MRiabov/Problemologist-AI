@@ -3,7 +3,7 @@
 ## Phase 1: Setup
 
 - [ ] Read `benchmark_definition.yaml` and extract key constraints
-- [ ] Read `plan.md` and understand the bridge-span solution approach
+- [ ] Read `engineering_plan.md` and understand the bridge-span solution approach
 - [ ] Note the goal zone, build zone, spawn position, and jitter values
 
 ## Phase 2: Build Parts

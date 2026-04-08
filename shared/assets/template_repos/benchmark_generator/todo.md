@@ -5,7 +5,7 @@
 - [ ] Confirm the benchmark stays in the simple rigid-body, gravity-only
   family.
 - [ ] Define the bridge-gap static geometry and the sphere input object in
-  `plan.md`.
+  `benchmark_plan.md`.
 - [ ] Write the goal zone, forbid zone, and build zone so the bridge span is
   unambiguous.
 - [ ] Record the cost and weight envelope for the passive fixture family.
