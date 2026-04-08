@@ -116,4 +116,4 @@ GPT-5
 
 ## Change Log
 
-- 2026-03-23: Added immutable bundle lineage metadata to review and render manifests, tightened latest-revision preview bundle validation, and refreshed integration coverage for persisted bundle traceability.
+- 2026-03-23: Added immutable bundle lineage metadata to review and render manifests, tightened latest-revision render bundle validation, and refreshed integration coverage for persisted bundle traceability.

@@ -94,7 +94,7 @@ GPT-5
 ### Completion Notes List
 
 - Added a repo-root git revision helper and used it for latest-revision review manifests so the benchmark handoff is tied to the repository HEAD, not an empty session repo.
-- Validated `renders/render_manifest.json` against the static preview bundle and kept benchmark-reviewer manifest fields benchmark-stage appropriate.
+- Validated `renders/render_manifest.json` against the static render bundle and kept benchmark-reviewer manifest fields benchmark-stage appropriate.
 - Refreshed integration assertions so the benchmark workflow and handoff tests now check manifest revision, session linkage, and render-manifest traceability.
 - Reused the existing stale-manifest regression coverage in INT-188 rather than introducing a second stale-artifact path.
 
@@ -113,7 +113,7 @@ GPT-5
 
 ### Change Log
 
-- 2026-03-23: Enforced latest-revision review-manifest validation, synchronized render manifests with the preview bundle, scoped benchmark-reviewer manifests to benchmark-stage evidence, and refreshed integration coverage for reproducible handoff artifacts.
+- 2026-03-23: Enforced latest-revision review-manifest validation, synchronized render manifests with the render bundle, scoped benchmark-reviewer manifests to benchmark-stage evidence, and refreshed integration coverage for reproducible handoff artifacts.
 
 ### Status
 
