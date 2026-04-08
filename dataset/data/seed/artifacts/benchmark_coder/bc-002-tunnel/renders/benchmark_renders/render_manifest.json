@@ -4,7 +4,7 @@
   "created_at": "2026-04-08T06:30:52.588244+00:00",
   "episode_id": "14aa38ca-052e-52b8-898c-e98627fa74f3",
   "worker_session_id": "seed-renders-bc-002-tunnel-881a85ba",
-  "revision": "ad5015bd136ff7ad3ce5affa541873fec80859bc",
+  "revision": "0b27bb856f0e15001b2da880fc3c09393880d1c7",
   "scene_hash": "2fef81787b3d2213eab24e67acada05499a9ba6dfb774206dc4049565c855955",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",
