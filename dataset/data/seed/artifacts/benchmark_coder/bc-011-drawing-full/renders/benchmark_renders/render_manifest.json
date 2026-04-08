@@ -2,7 +2,7 @@
   "version": "1.0",
   "bundle_id": "bc-011-drawing-full-preview",
   "created_at": "2026-04-04T00:00:00Z",
-  "revision": "13c84a649358675abe0205c9a88292c9bc6399a8",
+  "revision": "f534bfc086e00ee03f6cbb65553faaa87a53b85d",
   "bundle_path": "renders/benchmark_renders",
   "drafting": true,
   "preview_evidence_paths": [
