@@ -39,7 +39,7 @@ from utils.preview import (
     objectives_geometry,
     pick_preview_pixel,
     pick_preview_pixels,
-    preview,
+    render_cad,
     render_technical_drawing,
     query_render_bundle,
 )

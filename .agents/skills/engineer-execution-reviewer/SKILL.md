@@ -16,7 +16,7 @@ When execution evidence needs visual checking, use the shared preview helpers ex
 - `objectives_geometry()` when a preview scene needs benchmark objective overlays reconstructed
 - `list_render_bundles()` when exact bundle identity matters
 - `query_render_bundle()` when you need bundle metadata or frame/object slices without the full media payload
-- `pick_preview_pixel()` / `pick_preview_pixels()` when a preview bundle needs click-to-world evidence
+- `pick_preview_pixel()` / `pick_preview_pixels()` when a render bundle needs click-to-world evidence
 - Prefer `utils.preview` for new code paths; `utils.visualize` is compatibility-only
 
 ## Motion Review

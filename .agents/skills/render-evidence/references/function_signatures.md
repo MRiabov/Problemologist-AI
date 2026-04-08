@@ -11,7 +11,7 @@ from utils.preview import (
     objectives_geometry,
     pick_preview_pixel,
     pick_preview_pixels,
-    preview,
+    render_cad,
     render_technical_drawing,
     query_render_bundle,
 )
@@ -61,4 +61,4 @@ from utils.preview import (
 
 - [bundle-history.md](bundle-history.md) for bundle selection and history rules.
 - [point-pick.md](point-pick.md) for the click-to-world workflow and result fields.
-- `from utils.visualize import preview as visualize_preview` remains a compatibility alias; prefer `utils.preview` for new code.
+- `from utils.visualize import render_cad as visualize_render_cad` remains a compatibility alias; prefer `utils.preview` for new code.

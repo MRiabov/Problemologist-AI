@@ -14,7 +14,7 @@ When planner drafts or evidence need visual checking, use the shared preview hel
 - `objectives_geometry()` when a preview scene needs benchmark objective overlays reconstructed
 - `list_render_bundles()` when exact bundle identity matters
 - `query_render_bundle()` when you need bundle metadata without the full media payload or frame/object slices from a simulation bundle
-- `pick_preview_pixel()` / `pick_preview_pixels()` when a preview bundle needs click-to-world evidence
+- `pick_preview_pixel()` / `pick_preview_pixels()` when a render bundle needs click-to-world evidence
 - Prefer `utils.preview` for new code paths; `utils.visualize` is compatibility-only
 
 ## Precise Path Review
@@ -39,7 +39,7 @@ Treat `payload_trajectory_definition.yaml` as binding path-contract evidence whe
 - [ ] Compare `assembly_definition.yaml.motion_forecast` to `payload_trajectory_definition.yaml`; reject a precise path that invents a different moving-part set or impossible speed profile.
 - [ ] Strong reject plans that cannot state the payload trajectory clearly or that fail to derive it rigorously in `benchmark_plan.md`; a missing trajectory estimate usually means downstream machinery is not grounded either.
 - [ ] Confirm `benchmark_plan.md`'s detailed calculation section fully explains the numbers used to justify the precise path, including intermediate derivations for distances, timing, speeds, and clearances.
-- [ ] If render or drawing evidence exists, inspect it with `inspect_media(...)`. If drafting evidence must be materialized first, call `render_technical_drawing()` and inspect the persisted output.
+- [ ] If render or drawing evidence exists, inspect it with `inspect_media(...)`. If technical drawing evidence must be materialized first, call `render_technical_drawing()` and inspect the persisted output.
 - [ ] If scratch evidence exists in `renders/current-episode/**`, inspect that current-episode bundle as well before deciding.
 - [ ] If a simulation bundle already exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
 - [ ] If bundle identity or a pixel-to-world question matters, resolve the exact bundle with `list_render_bundles()` and query that bundle-local snapshot before deciding.

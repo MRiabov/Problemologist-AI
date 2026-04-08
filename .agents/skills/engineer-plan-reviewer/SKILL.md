@@ -16,7 +16,7 @@ When plan or execution evidence needs visual checking, use the shared preview he
 - `objectives_geometry()` when a preview scene needs benchmark objective overlays reconstructed
 - `list_render_bundles()` when exact bundle identity matters
 - `query_render_bundle()` when you need bundle metadata without the full media payload or frame/object slices from a simulation bundle
-- `pick_preview_pixel()` / `pick_preview_pixels()` when a preview bundle needs click-to-world evidence
+- `pick_preview_pixel()` / `pick_preview_pixels()` when a render bundle needs click-to-world evidence
 - Prefer `utils.preview` for new code paths; `utils.visualize` is compatibility-only
 
 ## Motion Review
@@ -41,8 +41,8 @@ When plan or execution evidence needs visual checking, use the shared preview he
 ### Plan Review Checklist
 
 - [ ] Read `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, and `solution_plan_technical_drawing_script.py`.
-- [ ] Treat `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` as the inspectable source of the approved plan, and inspect preview evidence with `inspect_media(...)` when present.
-- [ ] When preview evidence is bundle-scoped, use `list_render_bundles()` or `query_render_bundle()` to select the exact bundle before judging it.
+- [ ] Treat `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` as the inspectable source of the approved plan, and inspect render evidence with `inspect_media(...)` when present.
+- [ ] When render evidence is bundle-scoped, use `list_render_bundles()` or `query_render_bundle()` to select the exact bundle before judging it.
 - [ ] Verify exact inventory grounding, exact identifier mentions, budget realism, and operating-envelope clarity.
 - [ ] Reject invented materials, unsupported mechanisms, hidden DOFs, or a technical-drawing script without a real `TechnicalDrawing` construction path.
 - [ ] Reject plans that exceed benchmark caps or leave the solution mechanically ambiguous.

@@ -20,7 +20,7 @@ from utils.preview import (
     list_render_bundles,
     pick_preview_pixel,
     pick_preview_pixels,
-    preview,
+    render_cad,
     render_technical_drawing,
     query_render_bundle,
 )
@@ -47,7 +47,7 @@ The current callable signatures and request shapes live in [function_signatures.
 
 ## Preview Contract
 
-- Use `render_cad(...)` for live scene, objective-overlay, or render-bundle preview evidence.
+- Use `render_cad(...)` for live scene, objective-overlay, or render-bundle render evidence.
 - Use `render_technical_drawing()` for drafting packages and technical-drawing evidence.
 - Do not treat `render_cad(...)` and `render_technical_drawing()` as interchangeable.
 

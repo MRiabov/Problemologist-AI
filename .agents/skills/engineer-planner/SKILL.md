@@ -23,7 +23,7 @@ Use the shared preview helpers whenever the plan needs visual evidence:
 - `objectives_geometry()` when the preview scene needs benchmark objective overlays reconstructed
 - `list_render_bundles()` when the current or historical render bundle matters
 - `query_render_bundle()` when you need compact bundle metadata or frame/object slices from a simulation bundle; use the sampled frame-indexed `objects.parquet` pose-history sidecar instead of treating `frames.jsonl` as pose data
-- `pick_preview_pixel()` / `pick_preview_pixels()` when a preview bundle needs click-to-world evidence
+- `pick_preview_pixel()` / `pick_preview_pixels()` when a render bundle needs click-to-world evidence
 - Prefer `utils.preview` for new code paths; `utils.visualize` is compatibility-only
 
 ## Geometry Contract
@@ -62,7 +62,7 @@ Start with the current handoff package:
 - `assembly_definition.yaml` if it already exists
 - `benchmark_assembly_definition.yaml` if present
 - `benchmark_script.py` if present
-- `renders/**` when preview evidence exists
+- `renders/**` when render evidence exists
 - `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` when drafting mode is active
 - `references/motion-trajectory-contract.md` when a detailed trajectory derivation is needed
 - `specs/architecture/agents/agent-artifacts/README.md`
@@ -129,7 +129,7 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 - Use them to make the draft legible, not to invent extra geometry.
 - When render images already exist, inspect at least one relevant image before finishing planner work.
 - If draft drawings are available, inspect the rendered result before submitting.
-- After any significant blocker or repeated failure on the same issue, inspect the current render or drafting evidence before the next plan revision. If the same issue has failed more than three times in a row, keep inspecting render evidence on every subsequent retry until the blocker changes; use `../render-evidence/SKILL.md` as the visual-inspection playbook.
+- After any significant blocker or repeated failure on the same issue, inspect the current render or technical drawing evidence before the next plan revision. If the same issue has failed more than three times in a row, keep inspecting render evidence on every subsequent retry until the blocker changes; use `../render-evidence/SKILL.md` as the visual-inspection playbook.
 - Keep the plan-review gate in mind: the coder should be able to implement the handoff without re-planning.
 - For eval-seed-specific validation habits, see [Eval Seed Hygiene](references/eval-seed-hygiene.md).
 

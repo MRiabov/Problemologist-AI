@@ -149,7 +149,7 @@ First response:
 
 ## Render history and point-pick
 
-Use when you need to interpret preview bundles, drafting packages, or screen-space queries.
+Use when you need to interpret render bundles, drafting packages, or screen-space queries.
 
 Common forms:
 
@@ -162,7 +162,7 @@ Common forms:
 Drafting cues:
 
 - Select the exact bundle that matches the revision under test before inspecting media.
-- Use `payload_path=True` only when verifying the live payload-path overlay in a preview bundle.
+- Use `payload_path=True` only when verifying the live payload-path overlay in a render bundle.
 - Keep `render_cad(...)` and `render_technical_drawing()` separate; they answer different questions.
 - Treat bundle-local history as authoritative; do not infer a world point from image bytes or a stale filename.
 - Use batch point-picks when you need to compare several candidate pixels against the same bundle snapshot.

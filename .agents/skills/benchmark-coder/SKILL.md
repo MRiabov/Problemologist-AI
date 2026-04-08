@@ -26,7 +26,7 @@ from utils.preview import (
     objectives_geometry,
     pick_preview_pixel,
     pick_preview_pixels,
-    preview,
+    render_cad,
     render_technical_drawing,
     query_render_bundle,
 )
@@ -91,7 +91,7 @@ When the benchmark planner uses its structured template, read `benchmark_plan.md
 Load sibling skill guidance only when it changes the implementation outcome:
 
 - [engineer-coder](../engineer-coder/SKILL.md) for shared implementation discipline such as import safety, validation strategy, and evidence handling.
-- [render-evidence](../render-evidence/SKILL.md) when media inspection or preview bundle handling is needed.
+- [render-evidence](../render-evidence/SKILL.md) when media inspection or render bundle handling is needed.
 - [runtime-script-contract](../runtime-script-contract/SKILL.md)
 - [build123d-cad-drafting-skill](../build123d-cad-drafting-skill/SKILL.md)
 - [mechanical-engineering](../mechanical-engineering/SKILL.md)

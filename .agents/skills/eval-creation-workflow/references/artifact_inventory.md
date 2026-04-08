@@ -25,9 +25,9 @@ The canonical per-file acceptance criteria now live in `specs/architecture/agent
 | Engineer assembly context | `assembly_definition.yaml` | `assembly_definition_yaml_acceptance_criteria.md` | covered |
 | Benchmark implementation source | `benchmark_script.py` | `benchmark_script_py_acceptance_criteria.md` | covered |
 | Engineer implementation source | `solution_script.py` | `solution_script_py_acceptance_criteria.md` | covered |
-| Benchmark drafting evidence | `benchmark_plan_evidence_script.py` | `benchmark_plan_evidence_script_py_acceptance_criteria.md` | covered |
+| Benchmark technical drawing evidence | `benchmark_plan_evidence_script.py` | `benchmark_plan_evidence_script_py_acceptance_criteria.md` | covered |
 | Benchmark drafting drawing | `benchmark_plan_technical_drawing_script.py` | `benchmark_plan_technical_drawing_script_py_acceptance_criteria.md` | covered |
-| Engineer drafting evidence | `solution_plan_evidence_script.py` | `solution_plan_evidence_script_py_acceptance_criteria.md` | covered |
+| Engineer technical drawing evidence | `solution_plan_evidence_script.py` | `solution_plan_evidence_script_py_acceptance_criteria.md` | covered |
 | Engineer drafting drawing | `solution_plan_technical_drawing_script.py` | `solution_plan_technical_drawing_script_py_acceptance_criteria.md` | covered |
 | Deterministic validation output | `validation_results.json` | `validation_results_json_acceptance_criteria.md` | covered |
 | Deterministic simulation output | `simulation_result.json` | `simulation_result_json_acceptance_criteria.md` | covered |

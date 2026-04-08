@@ -23,7 +23,7 @@ Use the shared preview helpers when evidence or objective overlays are part of t
 - `objectives_geometry()` when a benchmark preview needs reconstructed objective overlays
 - `list_render_bundles()` when the task depends on the exact bundle revision
 - `query_render_bundle()` when you need compact bundle metadata or frame/object slices from a simulation bundle; use the sampled frame-indexed `objects.parquet` pose-history sidecar instead of treating `frames.jsonl` as pose data
-- `pick_preview_pixel()` / `pick_preview_pixels()` when a preview bundle needs click-to-world evidence
+- `pick_preview_pixel()` / `pick_preview_pixels()` when a render bundle needs click-to-world evidence
 - Prefer `utils.preview` for new import paths; `utils.visualize` is compatibility-only
 
 ## Geometry Contract
