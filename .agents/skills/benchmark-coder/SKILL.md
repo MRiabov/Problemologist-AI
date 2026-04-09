@@ -136,6 +136,15 @@ Do not invent fallback behavior to paper over contradictions. If the approved pl
 - Use COTS only when exact part identity matters, and preserve the concrete part instance.
 - Keep scripts import-safe. The final benchmark assembly must be exposed as `result = build()` or as a `build()` function returning a `Compound`.
 
+### Ball-Transfer Benchmarks
+
+When the benchmark involves a spawned payload ball rolling along a transfer surface:
+
+- **Do NOT include the moved object in `build()`** — the simulation system spawns `benchmark_moved_object__projectile_ball` independently from `benchmark_definition.yaml`. Returning it from `build()` creates a duplicate body at the same position; the two balls collide and explode apart, causing instant `OUT_OF_BOUNDS`. The evidence script (`benchmark_plan_evidence_script.py`) returns fixtures only — match that pattern.
+- **Ball drop distance controls bounce** — a drop of ≤ 2 mm onto the transfer surface minimises bounce. If the ball bounces wildly, the surface is too far below the spawn point. Raise the surface until the gap is small; do not widen walls or add mass to compensate.
+- **Forbid-zone ceiling constraint** — the ball centre must stay above the forbid zone's max-Z while crossing the forbid zone's X,Y bounds. For a sphere of radius *r*, the surface height *h* at any point inside the forbid zone must satisfy *h + r > forbid_zone_max_z*. With *r* ∈ [4, 6] mm and a forbid zone ceiling at Z = 14, the surface needs *h* > 8–10 mm at the crossing point.
+- **Lateral containment is valid** — thin side walls placed outside the forbid zone Y-bounds are a legitimate strategy for keeping the ball on a sloped surface. Verify walls do not intersect the forbid zone, existing fixtures, or the gap floor guard.
+
 ## Retry Discipline
 
 - Change one dominant failure mode at a time.
@@ -153,6 +162,27 @@ Do not invent fallback behavior to paper over contradictions. If the approved pl
 - After any significant blocker or repeated failure on the same issue, inspect the current render or simulation evidence before the next geometry change. If the same issue has failed more than three times in a row, keep inspecting render evidence on every subsequent retry until the blocker changes; use `../render-evidence/SKILL.md` as the visual-inspection playbook.
 - Treat screenshots and video as evidence, not as text summaries.
 - Keep review readiness tied to the current revision, not a stale earlier run.
+
+### Simulation Trajectory Diagnostics
+
+When a simulation fails with `OUT_OF_BOUNDS` or `FORBID_ZONE_HIT`, inspect the frame-indexed `objects.parquet` sidecar before changing geometry:
+
+```python
+import pandas as pd
+from pathlib import Path
+
+# Find the latest simulation parquet
+parquet_files = sorted(Path('.').rglob('objects.parquet'))
+df = pd.read_parquet(parquet_files[-1])
+ball = df[df['label'].astype(str).str.contains('projectile_ball')]
+for _, row in ball.iterrows():
+    print(f'  frame={row.frame_index} pos={row.position}')
+```
+
+- **1–2 frames captured, position jumps to ~±48**: the ball never landed on any surface. It either fell through a gap or was launched by a collision with a duplicate body. Check: (a) the moved object is NOT in `build()`, (b) every fixture that should catch the ball actually exists and is positioned correctly.
+- **Many frames, gradual drift off an edge**: the ball is on a surface but the slope or exit trajectory carries it past the bounds. Adjust the bridge end height or add lateral containment.
+- **`FORBID_ZONE_HIT`**: the ball centre entered the forbid zone. Raise the transfer surface at the crossing point so that `surface_height + ball_radius > forbid_max_z`.
+- **`PHYSICS_INSTABILITY` with `[Errno 111] Connection refused`**: the physics engine crashed, often due to intersecting geometry or extreme velocities. Run validation first — geometric intersections in the fixture set cause this.
 
 ## Refusal Path
 

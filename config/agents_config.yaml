@@ -255,6 +255,10 @@ agents:
     allowed_during_unit_eval:
     - engineer_coder
     - engineer_execution_reviewer
+    visual_inspection:
+      required: true
+      min_images: 1
+      reminder_interval: 2
   benchmark_coder:
     reasoning_effort: high
     filesystem_permissions:
@@ -312,7 +316,7 @@ agents:
     - benchmark_coder
     - benchmark_reviewer
     visual_inspection:
-      required: false
+      required: true
       min_images: 1
       reminder_interval: 2
   engineer_plan_reviewer:

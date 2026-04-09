@@ -13,10 +13,13 @@ from controller.utils import get_episode_id
 from shared.enums import AgentName, EpisodeStatus
 from shared.models.schemas import (
     BenchmarkDefinition,
+    BenchmarkPartDefinition,
+    BenchmarkPartMetadata,
     BoundingBox,
     Constraints,
     MovedObject,
     ObjectivesSection,
+    StaticRandomization,
 )
 from shared.workers.schema import ExecuteRequest, ExecuteResponse, WriteFileRequest
 
@@ -253,6 +256,102 @@ print(f"VALIDATE_MESSAGE={message}")
         assert valid_data.exit_code == 0
         assert "VALIDATE_SUCCESS=True" in valid_data.stdout
         assert "Temporary failure in name resolution" not in valid_data.stdout
+
+
+@pytest.mark.integration_p0
+@pytest.mark.xdist_group(name="physics_sims")
+@pytest.mark.asyncio
+async def test_int_024_runtime_execute_rejects_startup_overlap_with_spawned_payload():
+    """
+    INT-024: benchmark validation must fail closed when a benchmark fixture
+    overlaps the runtime-spawned moved object at startup.
+    """
+    session_id = f"INT-024-OVR-{uuid.uuid4().hex[:8]}"
+    headers = {"X-Session-ID": session_id}
+
+    overlap_script = """
+from build123d import Box, Location
+from utils.submission import validate
+
+def build():
+    p = Box(12, 12, 12)
+    p = p.move(Location((0, 0, 5)))
+    p.label = "startup_fixture"
+    return p
+
+result = build()
+success, message = validate(result)
+print(f"VALIDATE_SUCCESS={success}")
+print(f"VALIDATE_MESSAGE={message}")
+"""
+
+    overlap_objectives = BenchmarkDefinition(
+        objectives=ObjectivesSection(
+            goal_zone=BoundingBox(min=(20.0, 20.0, 0.0), max=(24.0, 24.0, 4.0)),
+            forbid_zones=[],
+            build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)),
+        ),
+        benchmark_parts=[
+            BenchmarkPartDefinition(
+                part_id="environment_fixture",
+                label="environment_fixture",
+                metadata=BenchmarkPartMetadata(
+                    fixed=True,
+                    material_id="aluminum_6061",
+                ),
+            )
+        ],
+        simulation_bounds=BoundingBox(
+            min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
+        ),
+        moved_object=MovedObject(
+            label="projectile_ball",
+            shape="sphere",
+            material_id="abs",
+            static_randomization=StaticRandomization(radius=(0.25, 0.25)),
+            start_position=(0.0, 0.0, 5.0),
+            runtime_jitter=(0.0, 0.0, 0.0),
+        ),
+        constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+    )
+
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        write_script = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="solution_script.py",
+                content=overlap_script,
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert write_script.status_code == 200, write_script.text
+
+        write_objectives = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="benchmark_definition.yaml",
+                content=yaml.dump(overlap_objectives.model_dump(mode="json")),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert write_objectives.status_code == 200, write_objectives.text
+
+        exec_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/runtime/execute",
+            json=ExecuteRequest(
+                code=_runtime_validate_command(),
+                timeout=120,
+            ).model_dump(mode="json"),
+            headers=headers,
+            timeout=180.0,
+        )
+        assert exec_resp.status_code == 200, exec_resp.text
+        data = ExecuteResponse.model_validate(exec_resp.json())
+        assert data.exit_code == 0
+        assert "VALIDATE_SUCCESS=False" in data.stdout
+        assert "moved_object start pose intersects benchmark geometry" in data.stdout
 
 
 @pytest.mark.integration_p0

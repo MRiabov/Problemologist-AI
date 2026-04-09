@@ -769,6 +769,49 @@ def _validate_top_level_location_contract(component: Compound) -> str | None:
     )
 
 
+def _build_moved_object_start_geometry(moved_object: Any) -> Any:
+    """Materialize the benchmark payload at its declared startup pose."""
+    from build123d import Location
+
+    from worker_heavy.simulation.builder import _build_moved_object_geometry
+
+    geometry = _build_moved_object_geometry(moved_object)
+    start_position = tuple(float(value) for value in moved_object.start_position)
+    return geometry.move(Location(start_position))
+
+
+def _validate_moved_object_start_clearance(
+    component: Compound, objectives: BenchmarkDefinition | None
+) -> str | None:
+    """Reject benchmark fixtures that overlap the runtime-spawned payload."""
+    if objectives is None or getattr(objectives, "moved_object", None) is None:
+        return None
+
+    try:
+        moved_object_geometry = _build_moved_object_start_geometry(
+            objectives.moved_object
+        )
+    except Exception as exc:
+        return f"Unable to materialize moved_object startup geometry: {exc}"
+
+    for index, solid in enumerate(component.solids()):
+        label = getattr(solid, "label", None) or f"solid_{index}"
+        try:
+            intersection = moved_object_geometry.intersect(solid)
+        except Exception as exc:
+            return (
+                "Unable to evaluate moved_object startup clearance against "
+                f"{label}: {exc}"
+            )
+        if _shape_volume(intersection) > 1e-6:
+            return (
+                "moved_object start pose intersects benchmark geometry "
+                f"(offending solid: {label})"
+            )
+
+    return None
+
+
 def _validate_unique_top_level_labels(component: Compound) -> str | None:
     """Reject repeated or reserved top-level labels before MJCF generation."""
     children = getattr(component, "children", None) or [component]
@@ -2205,6 +2248,11 @@ def validate(
                     )
                     if location_contract_error:
                         return (False, location_contract_error)
+                    moved_object_clearance_error = (
+                        _validate_moved_object_start_clearance(component, obj_model)
+                    )
+                    if moved_object_clearance_error:
+                        return False, moved_object_clearance_error
                     effective_build_zone = obj_model.objectives.build_zone.model_dump()
             except Exception:
                 pass
