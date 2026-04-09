@@ -61,7 +61,7 @@ def build():
                 "build_zone": {"min": [-10, -10, -10], "max": [10, 10, 10]},
             },
             "simulation_bounds": {"min": [-10, -10, -10], "max": [10, 10, 10]},
-            "moved_object": {
+            "payload": {
                 "label": "test_obj",
                 "shape": "sphere",
                 "start_position": [0, 0, 5],
@@ -93,7 +93,7 @@ def build():
                 "build_zone": {"min": [-100, -100, -10], "max": [100, 100, 100]},
             },
             "simulation_bounds": {"min": [-120, -120, -20], "max": [120, 120, 120]},
-            "moved_object": {
+            "payload": {
                 "label": "obj",
                 "shape": "sphere",
                 "start_position": [0, 0, 0],

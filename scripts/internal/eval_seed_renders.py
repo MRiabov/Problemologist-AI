@@ -221,7 +221,7 @@ def _load_benchmark_assembly_definition(artifact_dir: Path) -> dict[str, object]
 
 
 def _build_moved_object_component(definition: BenchmarkDefinition) -> Compound:
-    moved = definition.moved_object
+    moved = definition.payload
     radius_range = moved.static_randomization.radius
     radius = float(max(radius_range)) if radius_range else 10.0
     shape = moved.shape.strip().lower()
@@ -239,7 +239,7 @@ def _build_moved_object_component(definition: BenchmarkDefinition) -> Compound:
         )
     else:
         raise ValueError(
-            f"Unsupported moved_object.shape '{moved.shape}'. "
+            f"Unsupported payload.shape '{moved.shape}'. "
             "Expected sphere, box, cube, or cylinder."
         )
 
@@ -360,13 +360,16 @@ def _refresh_benchmark_bundle(
     session_id: str,
     technical_drawing_mode: DraftingMode,
 ) -> list[str]:
-    bundle_base64 = bundle_workspace_base64(staging_root)
     benchmark_drafting_script = artifact_dir / technical_drawing_script_path_for_agent(
         AgentName.BENCHMARK_PLANNER
     )
+    bundle_base64 = bundle_workspace_base64(staging_root)
     if _technical_drawing_mode_active(technical_drawing_mode) and (
         benchmark_drafting_script.exists()
     ):
+        source_script_sha256 = hashlib.sha256(
+            benchmark_drafting_script.read_bytes()
+        ).hexdigest()
         response = render_technical_drawing(
             bundle_base64=bundle_base64,
             script_path=benchmark_drafting_script.name,
@@ -409,6 +412,21 @@ def _refresh_benchmark_bundle(
                 raise RuntimeError(
                     "render regeneration produced no materialized drafting artifacts"
                 )
+            manifest = normalize_render_manifest(
+                render_paths=saved_paths,
+                workspace_root=tmp_root,
+                episode_id=artifact_dir.name,
+                worker_session_id=artifact_dir.name,
+                bundle_path="renders/benchmark_renders",
+                drafting=True,
+                source_script_sha256=source_script_sha256,
+            )
+            manifest_path = (
+                tmp_root / "renders" / "benchmark_renders" / "render_manifest.json"
+            )
+            manifest_path.write_text(
+                manifest.model_dump_json(indent=2), encoding="utf-8"
+            )
             source_bundle_dir = tmp_root / "renders" / "benchmark_renders"
             if bundle_dir.exists():
                 shutil.rmtree(bundle_dir)
