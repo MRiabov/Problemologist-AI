@@ -143,6 +143,123 @@ the sheet pleasant or consistently useful for demos and review.
 - Assert the render bundle contents, not just that `TechnicalDrawing(...)` was
   constructed.
 
+## Implementation Checklist
+
+Use this checklist to track the migration from schema through rendering,
+prompt gating, and integration coverage. Do not close the migration until
+every unchecked item is completed or explicitly waived with a written
+rationale.
+
+### 1. Shape the drafting schema
+
+- [ ] Resolve whether the new layout block belongs on `DraftingSheet` or
+  `DraftingView`, then implement that choice in `shared/models/schemas.py`.
+- [ ] Add a typed presentation/layout submodel that stays display-only and
+  cannot create parts, joints, motions, inventory labels, or other authored
+  geometry.
+- [ ] Keep exploded or staggered review presentation as metadata that
+  changes sheet presentation only.
+- [ ] Preserve the existing validation for `views`, `datums`, `dimensions`,
+  `callouts`, `notes`, `section_marker`, and `detail_target`.
+- [ ] Reject empty layout definitions, duplicate layout identifiers, and
+  unsupported layout modes.
+- [ ] Verify that planner and benchmark drafting YAML round-trip through the
+  updated model without silent field drops.
+
+### 2. Render the review sheet
+
+- [ ] Extend `worker_renderer/utils/technical_drawing.py` so a minimal
+  drafting package renders the default orthographic trio when richer
+  presentation is absent.
+- [ ] Render datum tags, binding dimensions, callout labels, section markers,
+  detail targets, and notes as visible review annotations.
+- [ ] Apply exploded or staggered offsets only to presentation geometry, not
+  to the authored evidence geometry.
+- [ ] Keep the PNG, SVG, and DXF sidecar bundle structure, bundle identity,
+  and manifest shape intact.
+- [ ] Fail closed when the drafting package is missing, malformed, or
+  references unresolved targets.
+- [ ] Keep vector sidecars authoritative and preserve raster output as the
+  inspection surface.
+
+### 3. Make the starter templates useful
+
+- [ ] Update `shared/assets/template_repos/benchmark_generator/drafting/benchmark_plan_technical_drawing_script.py`
+  and `shared/assets/template_repos/engineer/drafting/solution_plan_technical_drawing_script.py`
+  so the common case emits a readable orthographic trio instead of a mostly
+  empty stub.
+- [ ] Keep `benchmark_plan_evidence_script.py` and
+  `solution_plan_evidence_script.py` compact, inventory-faithful, and free of
+  presentation-only layout.
+- [ ] Preserve the rule that any review-only explode or stagger behavior
+  lives in the technical-drawing companion, not in the evidence script.
+- [ ] Keep the benchmark and engineer drafting scripts aligned with the same
+  preserved geometry and naming rules.
+- [ ] Confirm the default starter remains reusable across runs instead of
+  being tailored to one seeded workspace.
+
+### 4. Wire prompts and review expectations
+
+- [ ] Update `config/prompts.yaml` so drafting mode tells planners to produce
+  a demo-useful sheet, not merely a schema-valid one.
+- [ ] Update `controller/agent/prompt_manager.py` so the drafting appendix
+  appears only when the planner's technical drawing mode is active.
+- [ ] Keep the drafting appendix out of `off` mode entirely.
+- [ ] Keep benchmark and engineer drafting language aligned so both prompt
+  paths share the same review vocabulary.
+- [ ] Update reviewer guidance so technically valid but unreadable sheets are
+  rejected before approval.
+- [ ] Keep `render_technical_drawing()` and `render_cad(...)` framed as
+  separate inspection tools in the prompt text.
+
+### 5. Tighten validation and handoff gates
+
+- [ ] Update `controller/agent/node_entry_validation.py` so drafting-enabled
+  entries fail closed on missing, malformed, or unsupported drafting
+  artifacts.
+- [ ] Update `controller/agent/tools.py`, `controller/agent/benchmark/tools.py`,
+  `controller/agent/review_handover.py`, and `worker_heavy/utils/file_validation.py`
+  if the new sheet contract changes the required preview evidence, manifest
+  checks, or sidecar checks.
+- [ ] Preserve the current bundle publication and manifest revision checks
+  when the drafting render is promoted out of `renders/current-episode/`.
+- [ ] Keep the existing `render_technical_drawing()` usage gate intact so
+  drafting-enabled roles still inspect the current revision before
+  submission or approval.
+- [ ] Make sure `inspect_media(...)` remains the inspection path for
+  persisted drawing evidence.
+- [ ] Keep the planner drafting scripts read-only for downstream coder and
+  reviewer roles.
+- [ ] Keep the handoff contract strict enough that unknown targets, duplicate
+  datums, and unsupported projections are rejected instead of guessed
+  through.
+
+### 6. Add integration coverage
+
+- [ ] Add one narrow engineer-path drafting test that proves the reusable
+  trio and render sidecar contents.
+- [ ] Add one narrow benchmark-path drafting test that proves the same
+  reusable trio on the mirrored benchmark contract.
+- [ ] Add a mode-off test that proves the drafting appendix is omitted and
+  the contract stays prompt-gated.
+- [ ] Add malformed-drafting cases that reject unsupported projections,
+  duplicate datums, undeclared callout targets, and undeclared dimension
+  targets.
+- [ ] Assert bundle contents, manifest fields, and render paths, not only
+  that `TechnicalDrawing(...)` was constructed.
+- [ ] Re-run the narrowest drafting-related integration slice first, then
+  widen only if the new assertions stay green.
+
+### 7. Sync docs and contract language
+
+- [ ] Update `specs/architecture/agents/engineering-planner-technical-drawings.md`
+  so the reusable demo sheet, default orthographic trio, and review-only
+  layout rules match the implemented contract.
+- [ ] Keep the benchmark and engineer paths aligned on the same drafting
+  vocabulary in the architecture docs and prompt text.
+- [ ] Confirm the migration narrative, the runtime validation, and the
+  file-level change set describe the same fail-closed behavior.
+
 ## Non-Goals
 
 - No full GD&T.
@@ -197,5 +314,10 @@ the reusable sheet contract:
 - `shared/assets/template_repos/engineer/drafting/solution_plan_evidence_script.py`
 - `config/prompts.yaml`
 - `controller/agent/prompt_manager.py`
+- `controller/agent/tools.py`
+- `controller/agent/benchmark/tools.py`
+- `controller/agent/node_entry_validation.py`
+- `controller/agent/review_handover.py`
+- `worker_heavy/utils/file_validation.py`
 - `tests/integration/**`
 - `specs/architecture/agents/engineering-planner-technical-drawings.md`

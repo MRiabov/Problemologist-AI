@@ -1568,6 +1568,41 @@ class DraftingNote(StrictContractModel):
         return text
 
 
+class DraftingLayoutView(StrictContractModel):
+    """One display-only layout transform for an authored drafting view."""
+
+    view_id: str
+    display_offset_mm: CoercedTuple2D = (0.0, 0.0)
+    exploded: bool = False
+
+    @field_validator("view_id")
+    @classmethod
+    def validate_non_empty_strings(cls, value: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError("must be a non-empty string")
+        return text
+
+
+class DraftingLayout(StrictContractModel):
+    """Display-only layout metadata for a drafting sheet."""
+
+    mode: Literal["orthographic_trio", "exploded", "staggered"] = "orthographic_trio"
+    views: list[DraftingLayoutView] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_contract(self) -> "DraftingLayout":
+        if self.mode in {"exploded", "staggered"} and not self.views:
+            raise ValueError(
+                "drafting.layout.views must contain at least one view when a non-orthographic layout is requested"
+            )
+
+        view_ids = [view.view_id for view in self.views]
+        if len(set(view_ids)) != len(view_ids):
+            raise ValueError("drafting.layout.views must not repeat view_id values")
+        return self
+
+
 class DraftingView(StrictContractModel):
     """A single drafting view in the planner-authored package."""
 
@@ -1637,6 +1672,7 @@ class DraftingSheet(StrictContractModel):
     projection_standard: Literal["orthographic"] = "orthographic"
     views: list[DraftingView] = Field(default_factory=list)
     notes: list[DraftingNote] = Field(default_factory=list)
+    layout: DraftingLayout | None = None
 
     @field_validator("sheet_id", "title")
     @classmethod
@@ -1654,6 +1690,14 @@ class DraftingSheet(StrictContractModel):
         view_ids = [view.view_id for view in self.views]
         if len(set(view_ids)) != len(view_ids):
             raise ValueError("drafting.views must not contain duplicate view_id values")
+
+        if self.layout is not None:
+            authored_view_ids = {view.view_id for view in self.views}
+            for layout_view in self.layout.views:
+                if layout_view.view_id not in authored_view_ids:
+                    raise ValueError(
+                        f"drafting.layout.views references unknown authored view_id '{layout_view.view_id}'"
+                    )
         return self
 
 
