@@ -1,7 +1,7 @@
 [
   {
     "id": "git-001-initial-commit",
-    "task": "Initialize a workspace repository, commit one deterministic workspace note, and verify the repository ends clean.",
+    "task": "Confirm `.manifests/current_role.json` names `git_agent` before using the seeded artifacts. Initialize a workspace repository, commit one deterministic workspace note, and verify the repository ends clean.",
     "git_eval": {
       "commit_message": "chore: add deterministic git eval note",
       "expect_commit_hash": true,
@@ -11,12 +11,12 @@
         "conflicts": []
       }
     },
-    "expected_criteria": "Git workflow succeeds with an initial deterministic commit and a clean post-commit status.",
+    "expected_criteria": "Requires `.manifests/current_role.json` to name `git_agent` and the seeded workspace to match that role. Git workflow succeeds with an initial deterministic commit and a clean post-commit status.",
     "complexity_level": 0
   },
   {
     "id": "git-002-noop-commit",
-    "task": "Start from a seeded repository snapshot, create a baseline commit, then verify a second commit reports no changes and leaves the repository clean.",
+    "task": "Confirm `.manifests/current_role.json` names `git_agent` before using the seeded artifacts. Start from a seeded repository snapshot, create a baseline commit, then verify a second commit reports no changes and leaves the repository clean.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/git_agent/git-002-noop-commit",
     "git_eval": {
       "setup_commands": [
@@ -31,12 +31,12 @@
         "conflicts": []
       }
     },
-    "expected_criteria": "Git workflow recognizes a clean repository and returns a successful no-op commit without creating a new commit hash.",
+    "expected_criteria": "Requires `.manifests/current_role.json` to name `git_agent` and the seeded workspace to match that role. Git workflow recognizes a clean repository and returns a successful no-op commit without creating a new commit hash.",
     "complexity_level": 0
   },
   {
     "id": "git-003-resolve-conflict-ours",
-    "task": "Create a deterministic two-branch merge conflict on a seeded markdown file, resolve the conflict with the local version, complete the merge, and verify the repository ends clean.",
+    "task": "Confirm `.manifests/current_role.json` names `git_agent` before using the seeded artifacts. Create a deterministic two-branch merge conflict on a seeded markdown file, resolve the conflict with the local version, complete the merge, and verify the repository ends clean.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/git_agent/git-003-resolve-conflict-ours",
     "git_eval": {
       "setup_commands": [
@@ -67,12 +67,12 @@
         "conflicts": []
       }
     },
-    "expected_criteria": "Git workflow can detect a merge conflict, resolve it with the local version, complete the merge, and report a clean repository.",
+    "expected_criteria": "Requires `.manifests/current_role.json` to name `git_agent` and the seeded workspace to match that role. Git workflow can detect a merge conflict, resolve it with the local version, complete the merge, and report a clean repository.",
     "complexity_level": 0
   },
   {
     "id": "git-004-abort-conflict-merge",
-    "task": "Create a deterministic merge conflict from a seeded planning note, abort the merge instead of resolving it, and verify the repository returns to a clean non-merging state.",
+    "task": "Confirm `.manifests/current_role.json` names `git_agent` before using the seeded artifacts. Create a deterministic merge conflict from a seeded planning note, abort the merge instead of resolving it, and verify the repository returns to a clean non-merging state.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/git_agent/git-004-abort-conflict-merge",
     "git_eval": {
       "setup_commands": [
@@ -96,7 +96,7 @@
         "conflicts": []
       }
     },
-    "expected_criteria": "Git workflow can detect a merge conflict, abort the merge cleanly, and restore the repository to a clean non-merging state.",
+    "expected_criteria": "Requires `.manifests/current_role.json` to name `git_agent` and the seeded workspace to match that role. Git workflow can detect a merge conflict, abort the merge cleanly, and restore the repository to a clean non-merging state.",
     "complexity_level": 0
   }
 ]
