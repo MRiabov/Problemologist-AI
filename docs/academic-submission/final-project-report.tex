@@ -195,16 +195,18 @@ We update skills during rollouts, self-reflectively. We use an agent going throu
 
 \subsection{Experiments and optimization beyond optimizing propmts}
 
-After a number of experiments on evaluation dataset containing minimal problems, some involving one or two prompts, we find that the models are unable to solve even the simplest problems.
+Over the last week, we found that prompt tuning alone did not make the agents reliable enough.
 
-We found that failures could be attributed to unclear planning. Planner agents would present a plausible, yet very unspecific plans on how an environment could be solved. As such, during the implementation, the `coder` agents have struggled to define the geometry in such a way that would consistently work; and later during implementation, disregarded the plan as binding and started coming up with own attempts.
-
-As such, we run a conducted a set of experiments of improving the agent intermediate outputs - the exchange (plan handoff) between planner and execution (coder) agents and added plan validation infrastructure in attempt to make the final submission easier to work with. In particular:
-\begin{enumerate}
-    \item Planners now define a trajectory of the payload - planners have to calculate the exact trajectory of the payload object including its rotations.
-    \item Planners must define a valid geometry (but not yet manufacturable)
-    \item Planners must define a
-\end{enumerate}
+The main failures came from weak handoffs: planners produced plausible but underspecified plans, and coders then improvised geometry instead of treating the plan as binding. We therefore tightened the agent-facing contracts around planning, handoff validation, and submission:
+\begin{itemize}
+    \item \textbf{Planning precision and inventory consistency.} We made planner handoffs more exact about the parts, components, and quantities involved, so the next stage could verify the plan against the same inventory. We also asked for explicit assumptions and supporting calculations so numerical claims could be reviewed before implementation started.
+    \item \textbf{Endpoint constraints for motion plans.} We tightened the motion-planning contract so the start state had to be safe and the intended end state had to be stated explicitly. That removed the ambiguity where a path looked plausible without making its endpoints reviewable.
+    \item \textbf{Rotation safety and clearance checks.} We made the planned motion explicit about orientation and required clearance checks across the allowed range of motion. This closed the gap where a path could look valid in one pose but fail in another permitted pose.
+    \item \textbf{Runtime fail-fast monitoring.} We added a runtime monitor that stops simulation as soon as the realized motion drifts outside the approved corridor or can no longer satisfy the required contact sequence or terminal state. Static validation alone was not enough once execution could diverge from the handoff.
+    \item \textbf{Planner-facing technical drawings.} We introduced a planner-authored drafting layer so the geometry contract is visible before implementation. The drawing artifacts complement the narrative plan and give reviewers a concrete target to approve or reject.
+    \item \textbf{Explicit role state and file separation.} We split benchmark and engineering plan filenames and introduced an explicit current-role record for workspace state. That reduced role guessing from filenames and environment variables and made submission and validation more deterministic.
+    \item \textbf{Submission and refusal paths.} We investigated role-scoped submission helpers and a first-class refusal path for coders. The goal was to make both success and refusal explicit, validated outcomes rather than ad hoc file side effects.
+\end{itemize}
 
 \subsection{Scalability and adaptability}
 We engineered our solution with extensibility and training scalability in mind.
