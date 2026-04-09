@@ -1071,6 +1071,7 @@ class WorkerClient:
     ) -> BenchmarkToolResponse:
         """Trigger physics simulation via worker."""
         resolved_backend = backend or get_default_simulator_backend()
+        role_family = self._role_family()
         ensure_smoke_test_mode_allowed(
             smoke_test_mode, integration_enabled=settings.is_integration_test
         )
@@ -1109,7 +1110,7 @@ class WorkerClient:
             await self._add_bundle_to_payload(payload)
 
             response = await client.post(
-                f"{self.heavy_url}/benchmark/simulate",
+                f"{self.heavy_url}/{role_family}/simulate",
                 json=payload,
                 headers=self._request_headers(stage=self.agent_role),
                 timeout=1000.0,
@@ -1141,6 +1142,7 @@ class WorkerClient:
         bundle_base64: str | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger geometric validation via worker."""
+        role_family = self._role_family()
         if self.controller_url:
             payload = {
                 "script_path": script_path,
@@ -1166,7 +1168,7 @@ class WorkerClient:
                 payload["script_content"] = script_content
 
             response = await client.post(
-                f"{self.light_url}/benchmark/validate",
+                f"{self.light_url}/{role_family}/validate",
                 json=payload,
                 headers=self._request_headers(stage=self.agent_role),
                 timeout=60.0,
@@ -1304,6 +1306,7 @@ class WorkerClient:
         effective_stage = reviewer_stage or self._default_reviewer_stage(
             self.agent_role
         )
+        role_family = self._role_family()
         if self.controller_url:
             payload = {
                 "script_path": script_path,
@@ -1337,7 +1340,7 @@ class WorkerClient:
             await self._add_bundle_to_payload(payload)
 
             response = await client.post(
-                f"{self.heavy_url}/benchmark/submit",
+                f"{self.heavy_url}/{role_family}/submit",
                 json=payload,
                 headers=self._request_headers(
                     stage=effective_stage or self.agent_role,
@@ -1351,6 +1354,110 @@ class WorkerClient:
             return parsed
         finally:
             await self._close_client(client)
+
+    async def validate_benchmark(
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        bundle_base64: str | None = None,
+    ) -> BenchmarkToolResponse:
+        if self._role_family() != "benchmark":
+            raise ValueError("Current worker role is not benchmark-side")
+        return await self.validate(
+            script_path=script_path,
+            script_content=script_content,
+            bundle_base64=bundle_base64,
+        )
+
+    async def validate_engineering(
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        bundle_base64: str | None = None,
+    ) -> BenchmarkToolResponse:
+        if self._role_family() != "engineering":
+            raise ValueError("Current worker role is not engineering-side")
+        return await self.validate(
+            script_path=script_path,
+            script_content=script_content,
+            bundle_base64=bundle_base64,
+        )
+
+    async def simulate_benchmark(
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        backend: SimulatorBackendType | None = None,
+        smoke_test_mode: bool | None = None,
+        episode_id: str | None = None,
+        stream_render_frames: bool = False,
+    ) -> BenchmarkToolResponse:
+        if self._role_family() != "benchmark":
+            raise ValueError("Current worker role is not benchmark-side")
+        return await self.simulate(
+            script_path=script_path,
+            script_content=script_content,
+            backend=backend,
+            smoke_test_mode=smoke_test_mode,
+            episode_id=episode_id,
+            stream_render_frames=stream_render_frames,
+        )
+
+    async def simulate_engineering(
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        backend: SimulatorBackendType | None = None,
+        smoke_test_mode: bool | None = None,
+        episode_id: str | None = None,
+        stream_render_frames: bool = False,
+    ) -> BenchmarkToolResponse:
+        if self._role_family() != "engineering":
+            raise ValueError("Current worker role is not engineering-side")
+        return await self.simulate(
+            script_path=script_path,
+            script_content=script_content,
+            backend=backend,
+            smoke_test_mode=smoke_test_mode,
+            episode_id=episode_id,
+            stream_render_frames=stream_render_frames,
+        )
+
+    async def submit_benchmark_for_review(
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        bundle_base64: str | None = None,
+        reviewer_stage: ReviewerStage | None = None,
+        episode_id: str | None = None,
+    ) -> BenchmarkToolResponse:
+        if self._role_family() != "benchmark":
+            raise ValueError("Current worker role is not benchmark-side")
+        return await self.submit(
+            script_path=script_path,
+            script_content=script_content,
+            bundle_base64=bundle_base64,
+            reviewer_stage=reviewer_stage,
+            episode_id=episode_id,
+        )
+
+    async def submit_engineering_for_review(
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        bundle_base64: str | None = None,
+        reviewer_stage: ReviewerStage | None = None,
+        episode_id: str | None = None,
+    ) -> BenchmarkToolResponse:
+        if self._role_family() != "engineering":
+            raise ValueError("Current worker role is not engineering-side")
+        return await self.submit(
+            script_path=script_path,
+            script_content=script_content,
+            bundle_base64=bundle_base64,
+            reviewer_stage=reviewer_stage,
+            episode_id=episode_id,
+        )
 
     async def get_health(self) -> dict[str, str]:
         """Check the health of the worker service."""

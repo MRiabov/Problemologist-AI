@@ -293,6 +293,7 @@ async def api_verify(
 
 
 @heavy_router.post("/benchmark/simulate", response_model=BenchmarkToolResponse)
+@heavy_router.post("/engineering/simulate", response_model=BenchmarkToolResponse)
 async def api_simulate(
     request: BenchmarkToolRequest,
     x_session_id: str = Header(...),
@@ -656,6 +657,7 @@ async def api_build(
 
 
 @heavy_router.post("/benchmark/submit", response_model=BenchmarkToolResponse)
+@heavy_router.post("/engineering/submit", response_model=BenchmarkToolResponse)
 async def api_submit(
     request: BenchmarkToolRequest,
     x_session_id: str = Header(...),
@@ -679,7 +681,7 @@ async def api_submit(
                     raise HTTPException(
                         status_code=400,
                         detail=(
-                            "reviewer_stage is required for /benchmark/submit. "
+                            "reviewer_stage is required for the submit route. "
                             "Pass one of: benchmark_reviewer, "
                             "engineering_execution_reviewer, electronics_reviewer."
                         ),

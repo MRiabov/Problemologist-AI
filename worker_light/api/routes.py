@@ -402,6 +402,7 @@ async def api_preview(
 
 
 @light_router.post("/benchmark/validate", response_model=BenchmarkToolResponse)
+@light_router.post("/engineering/validate", response_model=BenchmarkToolResponse)
 async def api_validate(
     request: BenchmarkToolRequest,
     x_session_id: str = Header(...),

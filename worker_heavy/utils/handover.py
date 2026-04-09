@@ -7,6 +7,7 @@ import structlog
 from build123d import Compound, export_step
 
 from shared.agents.config import DraftingMode, load_agents_config
+from shared.current_role import current_role_agent_name
 from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition
@@ -299,6 +300,24 @@ def _planner_role_for_reviewer_stage(reviewer_stage: ReviewerStage) -> AgentName
     return AgentName.ENGINEER_PLANNER
 
 
+def _expected_submission_stage_for_current_role(
+    current_role: AgentName,
+) -> ReviewerStage | None:
+    if current_role in {
+        AgentName.BENCHMARK_CODER,
+        AgentName.BENCHMARK_REVIEWER,
+    }:
+        return "benchmark_reviewer"
+    if current_role in {
+        AgentName.ENGINEER_CODER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+    }:
+        return "engineering_execution_reviewer"
+    if current_role == AgentName.ELECTRONICS_REVIEWER:
+        return "electronics_reviewer"
+    return None
+
+
 def _drafting_mode_for_reviewer_stage(reviewer_stage: ReviewerStage) -> DraftingMode:
     planner_role = _planner_role_for_reviewer_stage(reviewer_stage)
     try:
@@ -332,6 +351,20 @@ def submit_for_review(
     }
     if normalized_stage not in allowed_stages:
         raise ValueError(f"Unsupported reviewer_stage: {reviewer_stage}")
+
+    current_role = current_role_agent_name(cwd)
+    expected_stage = _expected_submission_stage_for_current_role(current_role)
+    if expected_stage is None:
+        raise ValueError(
+            "Current-role manifest names an unsupported submission role: "
+            f"{current_role.value}"
+        )
+    if expected_stage != normalized_stage:
+        raise ValueError(
+            "Current-role manifest mismatch for submission: "
+            f"expected reviewer_stage={expected_stage}, found {normalized_stage} "
+            f"for current_role={current_role.value}"
+        )
 
     renders_dir = cwd / os.getenv("RENDERS_DIR", "renders")
     manifests_dir = cwd / ".manifests"
@@ -514,7 +547,7 @@ def submit_for_review(
     if not validation_results_path.exists():
         logger.warning("prior_validation_missing", session_id=session_id)
         raise ValueError(
-            "Prior validation missing. Call /benchmark/validate before submission."
+            "Prior validation missing. Call /benchmark/validate or /engineering/validate before submission."
         )
     validation_record = ValidationResultRecord.model_validate_json(
         validation_results_path.read_text(encoding="utf-8")
@@ -716,7 +749,9 @@ def submit_for_review(
     simulation_results_path = cwd / "simulation_result.json"
     if not simulation_results_path.exists():
         logger.warning("prior_simulation_missing", session_id=session_id)
-        raise ValueError("Prior simulation missing. Call /benchmark/simulate first.")
+        raise ValueError(
+            "Prior simulation missing. Call /benchmark/simulate or /engineering/simulate first."
+        )
     simulation_result = SimulationResult.model_validate_json(
         simulation_results_path.read_text(encoding="utf-8")
     )

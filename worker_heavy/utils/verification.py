@@ -102,6 +102,7 @@ async def run_verification_job(
                 status_code=422,
                 detail=(
                     "validation_results.json missing; run /benchmark/validate "
+                    "or /engineering/validate "
                     "before requesting runtime verification."
                 ),
             )
