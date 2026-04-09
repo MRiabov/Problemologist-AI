@@ -35,6 +35,7 @@ Use this library when a role must seed or judge a concrete workspace file rather
 | [validation_results.json](./validation_results_json_acceptance_criteria.md) | Deterministic validation evidence | Revision accuracy and parseable failure reasons |
 | [simulation_result.json](./simulation_result_json_acceptance_criteria.md) | Deterministic simulation evidence | Motion fidelity and latest-revision consistency |
 | [plan_refusal.md](./plan_refusal_md_acceptance_criteria.md) | Structured infeasibility proof | Concrete evidence and role-specific refusal reasons |
+| [current_role.json](./current_role_json_acceptance_criteria.md) | Active role marker for the current workspace node | Stage match, node-transition freshness, and fail-closed role lookup |
 | [workbench_report.md](./workbench_report_md_acceptance_criteria.md) | Short outcome summary | Consistency with validation, simulation, and review |
 | [scene.json](./scene_json_acceptance_criteria.md) | Serialized scene snapshot | Exact identities and revision fidelity |
 | [payload_trajectory_definition.yaml](./payload_trajectory_definition_yaml_acceptance_criteria.md) | Higher-resolution motion and contact proof | Build-safe start, goal contact, and waypoint coherence |

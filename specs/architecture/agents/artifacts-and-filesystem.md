@@ -75,12 +75,17 @@ Render-bucket policy: `renders/current-episode/` is the only agent-writable rend
 `.manifests/**` is reserved for deterministic handover/state metadata written
 by backend utilities.
 
+The current role manifest belongs to the same system-owned bucket. It records
+which agent role is actively running the workspace node and is rewritten by
+backend utilities when a workspace is handed to a new node.
+
 Manifest ownership summary:
 
 | Artifact | Writer / owner | Trigger | Path |
 | -- | -- | -- | -- |
 | Render bundle index | rendering producer | Render job completion for a published preview or simulation evidence bundle | `renders/render_index.jsonl` |
 | Render metadata manifest | rendering producer | Render job completion for a published preview or simulation evidence bundle | `renders/<bundle>/render_manifest.json` |
+| Current role manifest | backend runtime utility | Workspace materialization and node-transition refresh | `.manifests/current_role.json` |
 | Benchmark plan evidence script | Benchmark Planner | planner drafting submission | `benchmark_plan_evidence_script.py` |
 | Benchmark technical drawing script | Benchmark Planner | planner drafting submission | `benchmark_plan_technical_drawing_script.py` |
 | Engineering plan evidence script | Engineering Planner | planner drafting submission | `solution_plan_evidence_script.py` |
@@ -101,6 +106,10 @@ Published render bundles may also contain bundle-local `preview_scene.json` snap
 The agent-facing tools are the submission triggers. The actual manifest write
 happens in the backend runtime utility, and `.manifests/**` remains
 inaccessible to LLM roles.
+
+The current role manifest is the authoritative active-role marker for the
+workspace node. Backend utilities write it before a node starts and refresh it
+when the same workspace is reused by a different role.
 
 The engineering execution-review manifest is the same file on both sides of
 the handoff:

@@ -55,6 +55,17 @@ Validation rule:
 - The stage-specific manifest must carry valid revision/session metadata and `reviewer_stage`; mismatch is a fail-closed handover error.
 - Review-content validation and `plan_refusal.md` checks must run against the worker filesystem session (`metadata.worker_session_id` when present, otherwise `episode_id` fallback) to prevent cross-session artifact lookups.
 
+## Current Role Manifest Contract
+
+`.manifests/current_role.json` records the role that is currently running the
+workspace node.
+Backend workspace materialization writes the file before node entry and
+rewrites it when the same workspace is handed to another node.
+Node-entry validation compares the file against the node being entered and
+fails closed on mismatch.
+The file is backend-owned metadata under `.manifests/**`; agent roles do not
+write it directly.
+
 ## Reviewer persistence naming contract
 
 Reviewer outputs are persisted as reviewer-scoped YAML file pairs. We do not use shared review filenames or shared per-round folders. Local CLI-provider submission helpers may also accept a single markdown review document with YAML frontmatter, but routing still keys off the stage-scoped reviewer files.

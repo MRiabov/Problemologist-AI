@@ -106,6 +106,7 @@ It preserves the same runtime intent as a direct tool call, but it keeps the con
 Reviewer submission and planner/coder submission both use this shell-script pattern when a role needs an explicit command-like completion gate.
 For reviewer roles, the local bridge is `scripts/submit_review.sh`.
 Prompts may also reference the underlying Python utility (`utils.submission.submit_for_review(...)`) as an alternative completion path when a supporting script is clearer for the role; the shell bridge remains the default command-like surface.
+These submission bridges read `.manifests/current_role.json` to decide which stage contract is active; they do not infer role from `AGENT_NAME` or workspace file shape.
 
 Input handling follows a simple split:
 

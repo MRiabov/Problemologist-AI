@@ -68,8 +68,9 @@ The workspace contract is:
 07. Reviewer workspaces include `scripts/submit_review.sh` from `shared/agent_templates/codex/`.
 08. Benchmark planner workspaces do not receive `benchmark_script.py`. Benchmark coder and benchmark reviewer workspaces copy `benchmark_script.py` as read-only geometry context after plan approval, and engineer workspaces copy `solution_script.py` as the authored implementation source. Runtime-owned wrappers remain separate from both.
 09. Seed-row artifacts are copied into the workspace before prompt generation.
-10. Shared starter templates also include `.admin/clear_env.py`, a local helper that wipes and re-materializes the same seeded row in place so the conversation can continue after a retry.
-11. The materialized workspace remains local to the run and is not promoted into a canonical shared root.
+10. The backend writes `.manifests/current_role.json` with the active role before the prompt is rendered and refreshes it whenever the workspace enters a new node.
+11. Shared starter templates also include `.admin/clear_env.py`, a local helper that wipes and re-materializes the same seeded row in place so the conversation can continue after a retry.
+12. The materialized workspace remains local to the run and is not promoted into a canonical shared root.
 
 The workspace materializer in `dataset/evals/materialize_seed_workspace.py` is the inspection helper for this same workspace contract.
 
@@ -139,7 +140,7 @@ The submission contract is:
 
 1. The helper validates the required planner files for the active agent role.
 2. Benchmark planner submissions canonicalize benchmark constraints before validation.
-3. The helper infers the planner variant from the workspace files and does not require `AGENT_NAME`, so the local launch environment stays generic.
+3. The helper reads `.manifests/current_role.json` and does not infer the planner variant from workspace files or `AGENT_NAME`, so the local launch environment stays generic.
 4. A successful submission writes the stage manifest to `.manifests/`.
 5. The helper returns structured `PlannerSubmissionResult` JSON on stdout.
 6. Success requires `ok=true` and `status=submitted`.

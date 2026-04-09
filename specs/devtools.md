@@ -135,7 +135,7 @@ The eval tooling mirrors the integration tooling, but it owns a separate lock, a
 ### `dataset/evals/materialize_seed_workspace.py`
 
 - `dataset/evals/materialize_seed_workspace.py` is an inspection helper for a single seeded eval row.
-- It materializes the row into a temp workspace under `/tmp/problemologist-evals/<agent>/`, writes the provider prompt to `prompt.md`, and prints the copied file list for inspection.
+- It materializes the row into a temp workspace under `/tmp/problemologist-evals/<agent>/`, writes the provider prompt to `prompt.md`, writes `.manifests/current_role.json` with the active role, and prints the copied file list for inspection.
 - It is not the eval runner and should not be treated as the owner of the eval loop.
 - It can optionally bootstrap the `eval` profile, launch the configured CLI provider, or open the interactive UI through that provider backend. The current supported concrete providers are Codex and `QwenCliProvider`.
 - When `--provider` is omitted, the helper defaults to `qwen`; pass `--provider codex` to use the Codex backend explicitly.
@@ -184,6 +184,7 @@ The validation helpers are developer tooling, not product behavior.
 
 - This script validates seeded eval entry contracts without running the full eval loop.
 - It seeds the local workspace through the real helper path and validates the row against the current contract set.
+- For role-based rows, that contract includes the current-role manifest as the authoritative role marker for the seeded workspace.
 - For planner rows, that contract includes exact inventory preservation, exact identifier mention coverage in `benchmark_plan.md` or `engineering_plan.md`, and the latest handoff cross-contract checks from the controller validation path.
 - It can refresh deterministic seed manifests when asked; render bundles are handled by `scripts/update_eval_seed_renders.py`.
 - It can optionally run the eval runner in judge mode after validation, using the local CLI-provider backend by default.
