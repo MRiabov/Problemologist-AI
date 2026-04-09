@@ -59,13 +59,15 @@ multiple places.
    it off.
 7. The benchmark motion contract is already explicit in the architecture, but
    it is about benchmark-owned fixture behavior and motion evidence, not about
-   a benchmark-side terminal goal event.
+   a benchmark-side terminal goal event. Moving benchmark payloads also need a
+   short observation window so the runtime can distinguish initial launch
+   instability from later out-of-bounds drift.
 
 ## Current-State Inventory
 
 | Area | Current behavior | Why it must change |
 | -- | -- | -- |
-| `worker_heavy/simulation/loop.py` | When a scene has goal sites, the simulation loop marks success only if the tracked body reaches the goal. | Benchmark-side simulation should be able to stop on stability and benchmark-contract compliance without requiring a solved goal state. |
+| `worker_heavy/simulation/loop.py` | When a scene has goal sites, the simulation loop marks success only if the tracked body reaches the goal, and it does not distinguish an initial benchmark-payload observation window from later out-of-bounds drift. | Benchmark-side simulation should be able to stop on stability and benchmark-contract compliance without requiring a solved goal state, while preserving the payload-specific observation window. |
 | `worker_heavy/utils/validation.py` | The summary text becomes `Goal achieved.` when the loop reports success, which reinforces the solve-oriented meaning. | Benchmark-side success text should distinguish stability from engineer goal completion. |
 | `worker_heavy/utils/handover.py` | Benchmark submission rejects unless `_goal_reached(simulation_result.summary)` is true, and the persisted benchmark review manifest stores `goal_reached`. | Benchmark handoff should not require the benchmark creator to prove a solve. |
 | `controller/agent/review_handover.py` | Benchmark review entry rejects if the simulation summary or review manifest does not confirm goal completion. | Review routing must validate benchmark stability and evidence, not engineer-style goal completion. |
@@ -85,7 +87,9 @@ multiple places.
 2. `simulate_benchmark()` becomes a benchmark-stability and evidence pass.
    It confirms that the benchmark scene runs without physics failure and, when
    benchmark-owned motion exists, that the declared motion is reproduced in the
-   evidence artifacts.
+   evidence artifacts. For moving benchmark payloads, it applies a short
+   observation window so early out-of-bounds remains fail-closed while later
+   out-of-bounds is preserved as evidence.
 3. Benchmark-side simulation success no longer depends on goal-zone completion
    or any terminal-event proof copied from the engineer motion-forecast
    contract.
@@ -114,6 +118,9 @@ multiple places.
 - Introduce an explicit benchmark-side simulation mode or equivalent contract
   flag in the shared submission helper and the worker-heavy simulation entry
   point.
+- Add a benchmark-payload observation window to the benchmark simulation path
+  so early out-of-bounds is a hard failure and late out-of-bounds is recorded
+  as benchmark evidence rather than a benchmark-simulation failure.
 - Make that benchmark mode evaluate stability, fail-fast physics errors, and
   benchmark motion evidence without requiring goal completion.
 - Keep engineer-side simulation behavior unchanged.
@@ -217,6 +224,9 @@ The safe implementation order is:
 6. `goal_reached` does not appear in benchmark review approval logic, and any
    retained machine-readable benchmark motion status is benchmark-neutral rather
    than solve-oriented.
+7. Moving benchmark payloads use the configured observation window so early
+   out-of-bounds fails closed, while late out-of-bounds is preserved as
+   benchmark evidence instead of a benchmark-simulation failure.
 
 ## Migration Checklist
 
@@ -234,13 +244,15 @@ The safe implementation order is:
 - [ ] Thread that intent through the controller RPC and the heavy-worker
   simulation entrypoint so benchmark simulation can choose a stability/evidence
   mode without copying engineer solve semantics.
-- [ ] Add a benchmark-payload observation window to the benchmark simulation
-  path, with a policy default of 1.5 seconds, so payload out-of-bounds before
-  that window is a hard failure and payload out-of-bounds after that window is
-  recorded as benchmark evidence rather than a benchmark-simulation failure.
-- [ ] Keep that grace-window exception scoped to the benchmark payload only;
+- [x] Add a benchmark-payload observation window to the benchmark simulation
+  path, sourced from `config/agents_config.yaml` with a default of 1.5
+  seconds, so payload out-of-bounds before that window is a hard failure and
+  payload out-of-bounds after that window is recorded as benchmark evidence
+  rather than a benchmark-simulation failure.
+- [x] Keep that grace-window exception scoped to the benchmark payload only;
   benchmark-owned fixtures and simulation bounds remain fail-closed at all
-  times.
+  times, and the configured window must remain policy-driven rather than
+  hardcoded in the simulation loop.
 - [x] Update `worker_heavy/simulation/loop.py` so benchmark mode records
   stability and benchmark motion evidence without converting goal-zone reach
   into benchmark approval success.
@@ -284,7 +296,7 @@ The safe implementation order is:
   evidence is present even if the summary does not mention goal completion.
 - [x] Add regressions that still reject invalid geometry, missing motion
   metadata, stale simulations, and contradictory evidence.
-- [ ] Add regression coverage for early benchmark-payload out-of-bounds
+- [x] Add regression coverage for early benchmark-payload out-of-bounds
   failing benchmark simulation and late benchmark-payload out-of-bounds not
   failing benchmark simulation after the configured grace window.
 - [x] Refresh benchmark-side mock responses, seeded episodes, and review

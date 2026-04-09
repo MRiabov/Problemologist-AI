@@ -11,6 +11,7 @@ It is worth being a first-class agent artifact because downstream roles, validat
 - Goal-zone, forbid-zone, and build-zone geometry are exact and internally consistent.
 - The moved object has a top-level `start_position`, stable labels, and a `material_id` that resolves to a known material from `manufacturing_config.yaml`.
 - The moved object’s declared start pose is collision-free against benchmark-owned fixture geometry; startup overlap is a hard validation failure.
+- The moved-object contract stays explicit enough for the runtime to apply the benchmark-payload observation window from `config/agents_config.yaml` (`benchmark_payload_observation.window_s`, default `1.5s`) without guessing hidden benchmark behavior.
 - Static and runtime randomization ranges are exact, bounded, and materialized at seed time.
 - Benchmark caps, estimate fields, and other numeric fields are exact, not deferred to later inference.
 - Any benchmark-owned moving fixture is declared explicitly and remains motion-visible to downstream roles.
@@ -21,14 +22,16 @@ It is worth being a first-class agent artifact because downstream roles, validat
 - The contract creates a real challenge without hidden contradictions or degenerate geometry.
 - The randomization is bounded enough to remain reproducible and broad enough to exercise robustness.
 - Exact identifiers are repeated across the handoff package so later roles do not have to guess names or counts.
-- The geometry and cap data are legible enough that reviewers can reason about solvability without reconstructing intent from scratch.
+- The geometry and cap data are legible enough that reviewers can reason about benchmark validity and challenge level without reconstructing intent from scratch.
 
 ## Reviewer Look-Fors
 
 - Goal, forbid, and build geometry intersect the moved object at spawn or after stated randomization.
 - Benchmark-owned fixture geometry intersects the moved object at its declared start_position before runtime jitter is applied.
+- The benchmark definition omits or contradicts the payload start pose / goal objective needed for the observation-window contract.
 - `moved_object.material_id` is missing, empty, or unknown to `manufacturing_config.yaml`.
 - Runtime or static randomization pushes the object out of bounds or into an impossible start state.
+- The benchmark definition relies on late rescue behavior to stay valid instead of declaring a clear start pose and goal objective.
 - Hidden benchmark motion or unsupported fixture declarations appear in the file.
 - Cap, estimate, or label drift appears across the handoff package.
 

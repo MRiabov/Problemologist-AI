@@ -23,7 +23,7 @@ Use this library when a role must seed or judge a concrete workspace file rather
 | [plan.md](./plan_md_acceptance_criteria.md) | Legacy compatibility alias for historical bundles only | Transitional replay support and stage mapping |
 | [todo.md](./todo_md_acceptance_criteria.md) | Execution-order checklist for the current stage | Ordered, actionable, stage-correct items |
 | [journal.md](./journal_md_acceptance_criteria.md) | Debugging and attempt log | Concrete blockers, probes, and next steps |
-| [benchmark_definition.yaml](./benchmark_definition_yaml_acceptance_criteria.md) | Benchmark task geometry and caps | Geometry validity, randomization, and solvability |
+| [benchmark_definition.yaml](./benchmark_definition_yaml_acceptance_criteria.md) | Benchmark task geometry and caps | Geometry validity, randomization, and benchmark-contract fidelity |
 | [benchmark_assembly_definition.yaml](./benchmark_assembly_definition_yaml_acceptance_criteria.md) | Benchmark-owned fixture and motion contract | Read-only motion visibility and geometry fidelity |
 | [assembly_definition.yaml](./assembly_definition_yaml_acceptance_criteria.md) | Engineer-owned solution contract | Cost, weight, final assembly, and motion consistency |
 | [benchmark_plan_evidence_script.py](./benchmark_plan_evidence_script_py_acceptance_criteria.md) | Benchmark evidence scene source | Inventory preservation and readability |

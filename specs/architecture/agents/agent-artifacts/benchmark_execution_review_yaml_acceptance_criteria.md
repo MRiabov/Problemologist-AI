@@ -17,7 +17,7 @@ It is worth being a dedicated artifact because it captures the post-implementati
 
 - The comments identify concrete implementation mismatches or confirmations, not generic praise or criticism.
 - The checklist gives later replanning a clear path to repair specific failures.
-- The verdict aligns with the benchmark geometry, motion, and validation evidence.
+- The verdict aligns with the benchmark geometry, motion, validation evidence, and the config-driven benchmark-payload observation window from `config/agents_config.yaml` (`benchmark_payload_observation.window_s`, default `1.5s`).
 
 ## Reviewer Look-Fors
 
@@ -25,6 +25,7 @@ It is worth being a dedicated artifact because it captures the post-implementati
 - The package relies on stale benchmark evidence or an old manifest.
 - The checklist invents keys or omits required stage-canonical fields.
 - The comments do not explain the actual implementation evidence that drove the decision.
+- The comments treat late benchmark-payload drift after the configured observation window as a benchmark-simulation failure.
 
 ## Cross-References
 

@@ -80,6 +80,9 @@ Failure is achieved via either of:
 
 2. Any of components going out of bounds of the workspace
 
+   - Benchmark payloads use the config-driven observation window in `config/agents_config.yaml` (`benchmark_payload_observation.window_s`, default `1.5s`): payload out-of-bounds before the window is a failure, while payload out-of-bounds after the window is benchmark evidence rather than a benchmark-simulation failure.
+   - This exception applies only to the benchmark payload; benchmark-owned fixtures still fail on out-of-bounds at any time.
+
 3. Instability in simulation (e.g. NaNs, parts interference)
 
 4. Any part going into forbid zones.

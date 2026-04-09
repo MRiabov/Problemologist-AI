@@ -158,7 +158,8 @@ This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asy
    - runs the selected physics backend,
    - remains the runtime path for Genesis-specific behavior when Genesis is selected,
    - produces dynamic render/video artifacts through the worker-heavy simulation pipeline when simulation evidence is needed,
-   - serves as the benchmark-side stability/evidence run for benchmark-owned fixtures rather than a solve gate.
+   - serves as the benchmark-side stability/evidence run for benchmark-owned fixtures rather than a solve gate,
+   - uses the benchmark payload observation window from `config/agents_config.yaml` (`benchmark_payload_observation.window_s`, default `1.5s`) so payload out-of-bounds before the window is a hard failure and payload out-of-bounds after the window is benchmark evidence rather than a benchmark-simulation failure.
 
 Genesis-specific runtime behavior is therefore established by actual Genesis simulation runs where Genesis behavior is required, not by duplicating a Genesis render/build check inside fast validation.
 
@@ -205,7 +206,7 @@ The low-frequency simulation-time frame sync path is now supported as an opt-in 
 
 We operate in a real-world-like scenario, with rigid bodies, gravity, real-world materials, and standard properties like friction and restitution (bounciness).
 
-Benchmark-owned fixtures may be fixed, partially constrained, motorized, or fully free when they are part of the benchmark contract. That benchmark-side contract can be weaker than the engineer-solution contract, but it still must stay deterministic, reviewable, and compatible with the simulation evidence path. Benchmark-side simulation validates the declared fixture motion and stability; it does not ask the benchmark generator to solve the benchmark. Engineer-authored objects remain physically realistic and must satisfy the normal constraint rules.
+Benchmark-owned fixtures may be fixed, partially constrained, motorized, or fully free when they are part of the benchmark contract. That benchmark-side contract can be weaker than the engineer-solution contract, but it still must stay deterministic, reviewable, and compatible with the simulation evidence path. Benchmark-side simulation validates the declared fixture motion and stability; it does not ask the benchmark generator to solve the benchmark. The benchmark payload observation window is policy-driven through `config/agents_config.yaml`, and the late-drift exception applies only to the payload, not to benchmark-owned fixtures or simulation bounds. Engineer-authored objects remain physically realistic and must satisfy the normal constraint rules.
 
 Benchmarked time of execution for Genesis, simulating one-two FEM parts - 20s on dev mode.
 

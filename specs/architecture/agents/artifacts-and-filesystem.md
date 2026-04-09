@@ -175,8 +175,8 @@ Rules:
 05. Reviewer roles get `write/edit` tools, but policy only allows writes to their stage-specific persisted review YAML pairs.
 06. `.manifests/**` is non-overridable deny for all LLM agent roles; only backend runtime utilities may access it.
 07. No agent role may be granted access to filesystem paths outside its sandbox/workspace root.
-08. `config/agents_config.yaml` also owns preview-render modality policy under top-level `render: {rgb, depth, segmentation}` and the motion cadence/tolerance policy for benchmark planner, engineer planner, and engineer coder layers.
-09. Those flags control whether renderer-backed preview artifacts are emitted into `renders/current-episode/` during the active stage and into the stage-owned persistent handoff bundles for each modality; they do not change worker routing or backend selection policy. The motion policy controls waypoint frequency and tolerance budgets but does not relocate the contract structure out of the YAML artifacts. The persistent bundle subdirectory still reflects the workflow that produced it.
+08. `config/agents_config.yaml` also owns preview-render modality policy under top-level `render: {rgb, depth, segmentation}`, the motion cadence/tolerance policy for benchmark planner, engineer planner, and engineer coder layers, and the benchmark payload observation window used by benchmark simulation.
+09. Those flags control whether renderer-backed preview artifacts are emitted into `renders/current-episode/` during the active stage and into the stage-owned persistent handoff bundles for each modality; they do not change worker routing or backend selection policy. The motion policy controls waypoint frequency and tolerance budgets, while the benchmark payload observation window controls the initial payload out-of-bounds grace period. The persistent bundle subdirectory still reflects the workflow that produced it.
 10. `renders/current-episode/` is the only agent-writable render tree. The persistent render bundle directories are backend-owned read-only paths and must not be writable by agent roles.
 
 ## Immutability validation
