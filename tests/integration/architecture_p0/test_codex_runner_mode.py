@@ -45,7 +45,7 @@ from shared.agents.config import (
     AgentsConfig,
     DraftingMode,
 )
-from shared.current_role import parse_current_role_manifest
+from shared.current_role import current_role_manifest_json, parse_current_role_manifest
 from shared.enums import AgentName, ManufacturingMethod, ReviewDecision
 from shared.eval_artifacts import plan_artifacts_for_agent
 from shared.models.schemas import (
@@ -58,8 +58,12 @@ from shared.models.schemas import (
     PartMetadata,
     PlannerSubmissionResult,
 )
+from shared.workers.bundling import extract_bundle_base64
 from shared.workers.schema import ValidationResultRecord
-from worker_renderer.utils.build123d_rendering import render_preview_view
+from worker_renderer.utils.build123d_rendering import (
+    export_preview_scene_bundle,
+    render_preview_view,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 AGENTS_CONFIG_PATH = Path("config/agents_config.yaml")
@@ -2247,6 +2251,47 @@ def test_run_evals_codex_vtk_preview_renders_headlessly(tmp_path, monkeypatch):
     assert rendered_path == output_path
     assert output_path.exists(), output_path
     assert output_path.stat().st_size > 0
+
+
+@pytest.mark.integration_p0
+def test_preview_scene_bundle_carries_current_role_manifest(tmp_path):
+    workspace_root = tmp_path / "workspace"
+    workspace_root.mkdir()
+    manifest_path = workspace_root / ".manifests" / "current_role.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
+        current_role_manifest_json(AgentName.ENGINEER_CODER),
+        encoding="utf-8",
+    )
+
+    with BuildPart() as builder:
+        Box(1, 1, 1)
+    component = builder.part
+    component.label = "bundle_box"
+    component.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC,
+        material_id="aluminum_6061",
+        fixed=True,
+    )
+
+    bundle_base64 = export_preview_scene_bundle(
+        component,
+        objectives=None,
+        workspace_root=workspace_root,
+    )
+
+    extracted_root = tmp_path / "extracted"
+    extracted_root.mkdir()
+    extract_bundle_base64(bundle_base64, extracted_root)
+
+    extracted_manifest = extracted_root / ".manifests" / "current_role.json"
+    assert extracted_manifest.is_file(), extracted_manifest
+    assert (
+        parse_current_role_manifest(
+            extracted_manifest.read_text(encoding="utf-8")
+        ).agent_name
+        == AgentName.ENGINEER_CODER
+    )
 
 
 @pytest.mark.integration_p0

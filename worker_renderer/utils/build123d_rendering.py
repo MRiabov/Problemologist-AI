@@ -1018,6 +1018,11 @@ def export_preview_scene_bundle(
         bundle_root = Path(tmpdir)
         mesh_root = bundle_root / "meshes"
         mesh_root.mkdir(parents=True, exist_ok=True)
+        current_role_path = workspace_root / ".manifests" / "current_role.json"
+        if current_role_path.exists() and current_role_path.is_file():
+            bundle_current_role_path = bundle_root / ".manifests" / "current_role.json"
+            bundle_current_role_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(current_role_path, bundle_current_role_path)
         for rel_path in (
             "benchmark_definition.yaml",
             "assembly_definition.yaml",
