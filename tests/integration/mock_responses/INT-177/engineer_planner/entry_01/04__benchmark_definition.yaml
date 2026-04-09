@@ -1,7 +1,7 @@
 objectives:
   goal_zone: {min: [5,5,5], max: [10,10,10]}
   build_zone: {min: [-50,-50,0], max: [50,50,50]}
-moved_object:
+payload:
   label: "projectile_ball"
   shape: "sphere"
   material_id: abs

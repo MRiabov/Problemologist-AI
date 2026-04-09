@@ -39,7 +39,7 @@ fluids: []
 simulation_bounds:
   min: [-380.0, -220.0, -20.0]
   max: [420.0, 220.0, 320.0]
-moved_object:
+payload:
   label: transfer_cube
   shape: cube
   material_id: abs

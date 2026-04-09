@@ -11,7 +11,7 @@ INT-033 engineering full-loop deterministic plan.
 
 ## 3. Assembly Strategy
 
-1. Place the moved object `projectile_ball` directly in the goal zone.
+1. Place the payload `projectile_ball` directly in the goal zone.
 2. Keep `environment_fixture` fixed and leave `solution_plan_evidence` as the
    drafted planner artifact.
 

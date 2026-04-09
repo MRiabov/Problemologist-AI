@@ -76,7 +76,7 @@ def _seed_engineer_handoff(client: httpx.Client, *, session_id: str) -> None:
         simulation_bounds=BoundingBox(
             min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="target_box",
             shape="sphere",
             material_id="aluminum_6061",

@@ -589,7 +589,7 @@ objectives:
   forbid_zones: []
   build_zone: {min: [-10, -10, -10], max: [10, 10, 10]}
 simulation_bounds: {min: [-20, -20, -20], max: [20, 20, 20]}
-moved_object:
+payload:
   label: target_box
   shape: sphere
   material_id: abs

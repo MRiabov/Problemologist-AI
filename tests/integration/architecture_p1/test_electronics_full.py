@@ -105,7 +105,7 @@ def _base_benchmark_definition_yaml(
                 "build_zone": {"min": [-100, -100, -10], "max": [100, 100, 100]},
             },
             "simulation_bounds": {"min": [-120, -120, -20], "max": [120, 120, 120]},
-            "moved_object": {
+            "payload": {
                 "label": "projectile_ball",
                 "shape": "sphere",
                 "material_id": "abs",

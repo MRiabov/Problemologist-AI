@@ -191,7 +191,7 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert benchmark_definition.objectives.fluid_objectives == []
         assert benchmark_definition.objectives.stress_objectives == []
         assert benchmark_definition.electronics_requirements is None
-        assert benchmark_definition.moved_object.material_id
+        assert benchmark_definition.payload.material_id
         assert isinstance(
             benchmark_definition.benchmark_parts[
                 0

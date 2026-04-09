@@ -45,5 +45,5 @@ def test_benchmark_creation_flow(
         f"plan.md missing goal context. Content:\n{plan_text}"
     )
     assert re.search(r"steel ball|sphere", plan_text, re.IGNORECASE), (
-        f"plan.md missing moved object context. Content:\n{plan_text}"
+        f"plan.md missing payload context. Content:\n{plan_text}"
     )

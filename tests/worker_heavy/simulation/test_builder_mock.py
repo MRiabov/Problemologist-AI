@@ -55,7 +55,7 @@ def test_genesis_builder_generates_msh_when_fem_enabled(
         ),
         physics=PhysicsConfig(backend="genesis", fem_enabled=True),
         simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="test_part",
             material_id="aluminum_6061",
             start_position=(0, 0, 0),
@@ -107,7 +107,7 @@ def test_genesis_builder_no_msh_when_fem_disabled(
         ),
         physics=PhysicsConfig(backend="genesis", fem_enabled=False),
         simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="test_part",
             material_id="aluminum_6061",
             start_position=(0, 0, 0),

@@ -38,5 +38,5 @@
 
 - Keep the drafted benchmark grounded in a single passive environment fixture.
 - The benchmark_definition file will carry the copied customer caps and the
-  exact moved-object contract.
+  exact payload contract.
 - No moving benchmark-owned fixtures, motors, or fluids are needed.

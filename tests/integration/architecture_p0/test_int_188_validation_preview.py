@@ -131,7 +131,7 @@ def _default_objectives() -> BenchmarkDefinition:
         simulation_bounds=BoundingBox(
             min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="target_box",
             shape="sphere",
             material_id="aluminum_6061",
@@ -362,7 +362,7 @@ def build():
             simulation_bounds=BoundingBox(
                 min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
             ),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="target_box",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -584,7 +584,7 @@ async def test_int_188_engineer_planner_submit_plan_rejects_empty_drafting_manif
             simulation_bounds=BoundingBox(
                 min=(-100.0, -100.0, 0.0), max=(100.0, 100.0, 100.0)
             ),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="ball",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -751,7 +751,7 @@ async def test_int_188_benchmark_planner_submit_plan_publishes_scratch_drafting_
         "## 5. Implementation Notes\n"
         "- Keep the drafted benchmark grounded in a single passive environment fixture.\n"
         "- The benchmark_definition file will carry the copied customer caps and the "
-        "exact moved-object contract.\n"
+        "exact payload contract.\n"
         "- No moving benchmark-owned fixtures, motors, or fluids are needed.\n"
     )
     benchmark_todo_text = "- [x] Test benchmark\n"
@@ -771,7 +771,7 @@ async def test_int_188_benchmark_planner_submit_plan_publishes_scratch_drafting_
         simulation_bounds=BoundingBox(
             min=(-30.0, -30.0, -30.0), max=(30.0, 30.0, 30.0)
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="projectile_ball",
             shape="sphere",
             material_id="abs",
@@ -1057,7 +1057,7 @@ def build():
                 simulation_bounds=BoundingBox(
                     min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
                 ),
-                moved_object=MovedObject(
+                payload=MovedObject(
                     label="target_box",
                     shape="sphere",
                     material_id="aluminum_6061",
@@ -1846,7 +1846,7 @@ async def test_int_188_validation_preview_rejects_stale_render_manifest_bundle()
             simulation_bounds=BoundingBox(
                 min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
             ),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label=unique_label,
                 shape="sphere",
                 material_id="aluminum_6061",

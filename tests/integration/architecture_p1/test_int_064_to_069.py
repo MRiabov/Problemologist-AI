@@ -145,7 +145,7 @@ objectives:
   goal_zone: {{min: [0.5,0.5,0.5], max: [0.6,0.6,0.6]}}
   build_zone: {{min: [-1,-1,-1], max: [1,1,1]}}
 simulation_bounds: {{min: [-1,-1,-1], max: [1,1,1]}}
-moved_object: {{label: "obj", shape: "sphere", material_id: "abs", start_position: [0,0,0], runtime_jitter: [0,0,0]}}
+payload: {{label: "obj", shape: "sphere", material_id: "abs", start_position: [0,0,0], runtime_jitter: [0,0,0]}}
 benchmark_parts:
   - part_id: environment_fixture
     label: environment_fixture

@@ -75,7 +75,7 @@ def _benchmark_definition() -> BenchmarkDefinition:
         simulation_bounds=BoundingBox(
             min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="target_box",
             shape="sphere",
             material_id="aluminum_6061",

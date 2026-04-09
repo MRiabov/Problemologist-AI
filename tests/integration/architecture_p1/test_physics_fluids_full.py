@@ -142,7 +142,7 @@ async def test_int_131_full_fluid_objective_path():
                 ],
             ),
             simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="obj",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -219,7 +219,7 @@ async def test_int_133_unified_electromechanical_conflict_signal():
                 build_zone=BoundingBox(min=(-100, -100, -10), max=(100, 100, 100)),
             ),
             simulation_bounds=BoundingBox(min=(-120, -120, -20), max=(120, 120, 120)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="obj",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -336,7 +336,7 @@ async def test_int_134_stress_heatmap_render_artifact():
                 build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
             ),
             simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="target_box",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -440,7 +440,7 @@ async def test_int_135_wire_clearance_validation():
                 build_zone=BoundingBox(min=(-100, -100, -10), max=(100, 100, 100)),
             ),
             simulation_bounds=BoundingBox(min=(-120, -120, -20), max=(120, 120, 120)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="obj",
                 shape="sphere",
                 material_id="aluminum_6061",

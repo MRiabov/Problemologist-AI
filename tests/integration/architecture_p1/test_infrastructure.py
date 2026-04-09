@@ -82,7 +82,7 @@ def _zone_video_objectives() -> BenchmarkDefinition:
         simulation_bounds=BoundingBox(
             min=(-40.0, -40.0, -10.0), max=(40.0, 40.0, 40.0)
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="target_ball",
             shape="sphere",
             material_id="aluminum_6061",

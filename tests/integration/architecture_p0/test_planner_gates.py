@@ -169,7 +169,7 @@ def valid_objectives():
         simulation_bounds=BoundingBox(
             min=(-100.0, -100.0, 0.0), max=(100.0, 100.0, 100.0)
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="ball",
             shape="sphere",
             material_id="aluminum_6061",
@@ -736,7 +736,7 @@ async def test_int_114_benchmark_planner_flow_emits_submit_benchmark_plan_trace(
         assert benchmark_definition.objectives.fluid_objectives == []
         assert benchmark_definition.objectives.stress_objectives == []
         assert benchmark_definition.electronics_requirements is None
-        assert benchmark_definition.moved_object.material_id
+        assert benchmark_definition.payload.material_id
 
         assembly_paths = [
             p for p in artifact_paths if p == Path("benchmark_assembly_definition.yaml")
@@ -1289,9 +1289,9 @@ async def test_int_008_objectives_validation(
         data = BenchmarkToolResponse.model_validate(resp.json())
         assert "benchmark_definition.yaml invalid" in data.message
 
-        # 3. Blank moved_object label must fail closed.
+        # 3. Blank payload label must fail closed.
         blank_label_obj = valid_objectives.model_dump(mode="json")
-        blank_label_obj["moved_object"]["label"] = ""
+        blank_label_obj["payload"]["label"] = ""
         await setup_workspace(
             client,
             base_headers,
@@ -1306,7 +1306,7 @@ async def test_int_008_objectives_validation(
         assert "benchmark_definition.yaml invalid" in data.message
         assert "label must be a non-empty string" in data.message
 
-        # 4. Authored labels must not occupy the moved-object namespace.
+        # 4. Authored labels must not occupy the payload namespace.
         reserved_label_script = """
 from build123d import *
 from shared.models.schemas import PartMetadata
@@ -2711,7 +2711,7 @@ equivalent natural-language motion descriptions.
         simulation_bounds=BoundingBox(
             min=(-100.0, -100.0, 0.0), max=(100.0, 100.0, 100.0)
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="ball",
             shape="sphere",
             material_id="aluminum_6061",

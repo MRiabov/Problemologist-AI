@@ -36,7 +36,7 @@ simulation_bounds:
   - 30
   - 30
   - 30
-moved_object:
+payload:
   label: projectile_ball
   shape: sphere
   material_id: abs

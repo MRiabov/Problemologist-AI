@@ -71,5 +71,5 @@
 
 - `environment_fixture` must be static (`fixed: true`) and carry a known
   `material_id`.
-- The moved object uses `material_id: abs`.
+- The payload uses `material_id: abs`.
 - No part in this family should introduce powered or deformable behavior.

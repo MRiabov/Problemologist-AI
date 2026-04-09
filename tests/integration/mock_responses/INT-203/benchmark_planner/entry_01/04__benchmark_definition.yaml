@@ -12,7 +12,7 @@ physics:
 simulation_bounds:
   min: [-20.0, -10.0, 0.0]
   max: [20.0, 10.0, 12.0]
-moved_object:
+payload:
   label: projectile_ball
   shape: sphere
   material_id: abs

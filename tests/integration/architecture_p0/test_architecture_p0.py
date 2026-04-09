@@ -232,7 +232,7 @@ def build():
             min=(-5.0, -5.0, -5.0),
             max=(5.0, 5.0, 5.0),
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="delegate_preview_box",
             shape="box",
             material_id="aluminum_6061",
@@ -359,7 +359,7 @@ async def test_int_217_static_preview_prefers_benchmark_bucket_when_workspace_al
                 min=(-5.0, -5.0, -5.0),
                 max=(5.0, 5.0, 5.0),
             ),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="delegate_preview_box",
                 shape="box",
                 material_id="aluminum_6061",
@@ -823,7 +823,7 @@ async def test_int_020_simulation_failure_taxonomy():
             simulation_bounds=BoundingBox(
                 min=(-20.5, -20.5, -20.5), max=(20.5, 20.5, 20.5)
             ),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="target_box",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -976,7 +976,7 @@ async def test_int_021_runtime_randomization_robustness():
             ),
             benchmark_parts=_default_benchmark_parts(),
             simulation_bounds=BoundingBox(min=(-20, -20, -20), max=(20, 20, 20)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="target_box",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -1194,7 +1194,7 @@ def build():
             simulation_bounds=BoundingBox(
                 min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
             ),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="target_box",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -1243,7 +1243,7 @@ def build():
                         max=(20.0, 20.0, 30.0),
                     ),
                 ),
-                "moved_object": MovedObject(
+                "payload": MovedObject(
                     label="target_box",
                     shape="sphere",
                     material_id="aluminum_6061",
@@ -1271,7 +1271,7 @@ def build():
         assert jitter_resp.status_code == 200
         jitter_data = BenchmarkToolResponse.model_validate(jitter_resp.json())
         assert jitter_data.success is False
-        assert "moved_object runtime envelope intersects forbid zone" in (
+        assert "payload runtime envelope intersects forbid zone" in (
             jitter_data.message or ""
         )
 
@@ -1316,7 +1316,7 @@ def build():
             simulation_bounds=BoundingBox(
                 min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
             ),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="target_box",
                 shape="sphere",
                 material_id="aluminum_6061",

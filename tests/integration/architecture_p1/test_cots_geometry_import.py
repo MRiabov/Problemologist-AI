@@ -76,8 +76,8 @@ def _benchmark_definition_yaml() -> str:
                 "build_zone": {"min": [-140, -140, -20], "max": [140, 140, 140]},
             },
             "simulation_bounds": {"min": [-160, -160, -40], "max": [160, 160, 160]},
-            "moved_object": {
-                "label": "moved_object",
+            "payload": {
+                "label": "payload",
                 "shape": "sphere",
                 "material_id": "abs",
                 "start_position": [0, 0, 60],
@@ -709,7 +709,7 @@ def test_int_130_inventory_expected_tokens_do_not_double_count_final_assembly():
                 "min": [-200.0, -200.0, -50.0],
                 "max": [200.0, 200.0, 200.0],
             },
-            "moved_object": {
+            "payload": {
                 "label": "target_ball",
                 "shape": "sphere",
                 "material_id": "abs",

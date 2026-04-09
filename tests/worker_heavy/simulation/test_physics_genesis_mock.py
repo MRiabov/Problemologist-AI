@@ -101,7 +101,7 @@ def test_fluid_containment_integration(mock_genesis_backend, tmp_path):
         ),
         physics=PhysicsConfig(backend="genesis"),
         simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="target",
             material_id="aluminum_6061",
             start_position=(0, 0, 0),
@@ -173,7 +173,7 @@ def test_fluid_containment_failure(mock_genesis_backend, tmp_path):
         ),
         physics=PhysicsConfig(backend="genesis"),
         simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="target",
             material_id="aluminum_6061",
             start_position=(0, 0, 0),

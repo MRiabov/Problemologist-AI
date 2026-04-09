@@ -73,7 +73,7 @@ objectives:
   goal_zone: {{min: [10,10,10], max: [12,12,12]}}
   build_zone: {{min: [-100,-100,-100], max: [100,100,100]}}
 simulation_bounds: {{min: [-100,-100,-100], max: [100,100,100]}}
-moved_object: {{label: "obj", shape: "sphere", material_id: "abs", start_position: [0,0,0], runtime_jitter: [0,0,0]}}
+payload: {{label: "obj", shape: "sphere", material_id: "abs", start_position: [0,0,0], runtime_jitter: [0,0,0]}}
 benchmark_parts:
   - part_id: environment_fixture
     label: environment_fixture
@@ -143,7 +143,7 @@ objectives:
   goal_zone: {{min: [10,10,10], max: [12,12,12]}}
   build_zone: {{min: [-100,-100,-100], max: [100,100,100]}}
 simulation_bounds: {{min: [-100,-100,-100], max: [100,100,100]}}
-moved_object: {{label: "obj", shape: "sphere", material_id: "abs", start_position: [0,0,0], runtime_jitter: [0,0,0]}}
+payload: {{label: "obj", shape: "sphere", material_id: "abs", start_position: [0,0,0], runtime_jitter: [0,0,0]}}
 benchmark_parts:
   - part_id: environment_fixture
     label: environment_fixture
@@ -239,7 +239,7 @@ async def test_int_221_frame_indexed_object_pose_capture_history():
                 build_zone=BoundingBox(min=(-50, -50, -50), max=(50, 50, 50)),
             ),
             simulation_bounds=BoundingBox(min=(-50, -50, -50), max=(50, 50, 50)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="frame_history_box",
                 shape="box",
                 material_id="aluminum_6061",

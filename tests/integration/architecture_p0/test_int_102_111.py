@@ -101,7 +101,7 @@ async def test_int_102_111_fem_material_validation(session_id, base_headers):
                 build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
             ),
             simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="obj",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -229,7 +229,7 @@ async def test_int_103_part_breakage_detection(session_id, base_headers):
                 build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
             ),
             simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="target_box",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -322,7 +322,7 @@ async def test_int_104_stress_reporting(session_id, base_headers):
                 build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
             ),
             simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="target_box",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -393,7 +393,7 @@ async def test_int_107_stress_objective_evaluation(session_id, base_headers):
                 ],
             ),
             simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="target_box",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -480,7 +480,7 @@ async def test_int_109_physics_instability_abort(session_id, base_headers):
                 build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
             ),
             simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="target_box",
                 shape="sphere",
                 material_id="aluminum_6061",

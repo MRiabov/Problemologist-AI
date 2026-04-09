@@ -2444,7 +2444,7 @@ result = build()
             min=(-50.0, -50.0, -10.0),
             max=(50.0, 50.0, 50.0),
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="test_box",
             shape="box",
             material_id="aluminum_6061",

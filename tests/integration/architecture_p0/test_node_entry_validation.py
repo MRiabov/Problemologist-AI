@@ -160,7 +160,7 @@ def _drafting_validation_payloads(
         simulation_bounds=BoundingBox(
             min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="target_box",
             shape="sphere",
             material_id="aluminum_6061",
@@ -244,7 +244,7 @@ def _motion_forecast_validation_payloads(
         simulation_bounds=BoundingBox(
             min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="target_box",
             shape="sphere",
             material_id="aluminum_6061",
@@ -796,7 +796,7 @@ async def test_int_184_seeded_workspace_rejects_mismatched_benchmark_caps():
                 min=(-100.0, -100.0, 0.0),
                 max=(100.0, 100.0, 100.0),
             ),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="ball",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -900,7 +900,7 @@ async def test_int_184_seeded_workspace_requires_drafting_when_mode_enabled(
             simulation_bounds=BoundingBox(
                 min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
             ),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="target_box",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -1057,7 +1057,7 @@ async def test_int_184_seeded_workspace_rejects_unknown_drafting_targets(
             simulation_bounds=BoundingBox(
                 min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
             ),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="target_box",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -1244,7 +1244,7 @@ async def test_int_184_seeded_benchmark_workspace_requires_drafting_when_mode_en
             simulation_bounds=BoundingBox(
                 min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
             ),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="target_box",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -1403,7 +1403,7 @@ async def test_int_184_seeded_benchmark_workspace_rejects_unknown_drafting_targe
             simulation_bounds=BoundingBox(
                 min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
             ),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="target_box",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -1846,7 +1846,7 @@ async def test_int_190_seeded_benchmark_workspace_requires_benchmark_script():
             simulation_bounds=BoundingBox(
                 min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
             ),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="target_box",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -1946,7 +1946,7 @@ async def test_int_184_seeded_benchmark_assembly_uses_benchmark_definition_caps_
                     min=(-100.0, -100.0, 0.0),
                     max=(100.0, 100.0, 100.0),
                 ),
-                moved_object=MovedObject(
+                payload=MovedObject(
                     label="ball",
                     shape="sphere",
                     material_id="aluminum_6061",

@@ -117,7 +117,7 @@ fluids: []
 simulation_bounds:
   min: [-10.0, -10.0, 0.0]
   max: [10.0, 10.0, 20.0]
-moved_object:
+payload:
   label: projectile_ball
   shape: sphere
   material_id: abs
@@ -269,7 +269,7 @@ fluids: []
 simulation_bounds:
   min: [-0.4, -0.12, 0.0]
   max: [0.4, 0.12, 0.12]
-moved_object:
+payload:
   label: projectile_ball
   shape: sphere
   material_id: abs
@@ -459,7 +459,7 @@ async def test_int_018_benchmark_payload_out_of_bounds_after_grace_window_is_evi
 async def test_int_018_simulation_bounds_ignore_fixed_benchmark_fixtures():
     """
     INT-018: simulation_bounds apply to moving bodies, not fixed benchmark
-    fixtures. A fixed obstacle outside the moved-object envelope must not
+    fixtures. A fixed obstacle outside the payload envelope must not
     trigger OUT_OF_BOUNDS on its own.
     """
     session_id = f"INT-018-BOUNDS-{uuid.uuid4().hex[:8]}"
@@ -510,7 +510,7 @@ fluids: []
 simulation_bounds:
   min: [-0.2, -0.12, 0.0]
   max: [0.2, 0.12, 0.12]
-moved_object:
+payload:
   label: projectile_ball
   shape: sphere
   material_id: abs

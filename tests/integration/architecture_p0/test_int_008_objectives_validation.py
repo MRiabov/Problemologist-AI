@@ -114,7 +114,7 @@ def _objective_validation_payload(
             "min": simulation_bounds_min or [-30.0, -30.0, -10.0],
             "max": simulation_bounds_max or [30.0, 30.0, 30.0],
         },
-        "moved_object": {
+        "payload": {
             "label": "projectile_ball",
             "shape": "sphere",
             "material_id": "abs",
@@ -284,7 +284,7 @@ def build():
             "min": [-30.0, -30.0, -10.0],
             "max": [30.0, 30.0, 30.0],
         },
-        "moved_object": {
+        "payload": {
             "label": "projectile_ball",
             "shape": "sphere",
             "material_id": "abs",
@@ -335,7 +335,7 @@ def build():
 async def test_int_008_objectives_semantic_validation_rejects_runtime_envelope_forbid_zone_collision():
     """
     INT-008: benchmark_definition.yaml validation must fail closed when the
-    moved-object runtime envelope intersects a forbid zone.
+    payload runtime envelope intersects a forbid zone.
     """
     session_id = f"INT-008-OBJ-{uuid.uuid4().hex[:8]}"
     headers = {"X-Session-ID": session_id}
@@ -508,7 +508,7 @@ async def test_int_008_objectives_semantic_validation_rejects_build_zone_outside
 async def test_int_008_objectives_semantic_validation_rejects_runtime_envelope_exceeding_build_zone():
     """
     INT-008: benchmark_definition.yaml validation must fail closed when the
-    moved-object runtime envelope exceeds the declared build zone.
+    payload runtime envelope exceeds the declared build zone.
     """
     session_id = f"INT-008-OBJ-{uuid.uuid4().hex[:8]}"
     headers = {"X-Session-ID": session_id}
@@ -700,7 +700,7 @@ def build():
             "min": [-30.0, -30.0, -10.0],
             "max": [30.0, 30.0, 30.0],
         },
-        "moved_object": {
+        "payload": {
             "label": "projectile_ball",
             "shape": "sphere",
             "material_id": "abs",
@@ -808,7 +808,7 @@ def build():
             "min": [-30.0, -30.0, -10.0],
             "max": [30.0, 30.0, 30.0],
         },
-        "moved_object": {
+        "payload": {
             "label": "projectile_ball",
             "shape": "sphere",
             "material_id": "abs",
@@ -907,7 +907,7 @@ def build():
             "min": [-30.0, -30.0, -10.0],
             "max": [30.0, 30.0, 30.0],
         },
-        "moved_object": {
+        "payload": {
             "label": "projectile_ball",
             "shape": "sphere",
             "material_id": "abs",
@@ -1063,7 +1063,7 @@ def build():
             "min": [-30.0, -30.0, -10.0],
             "max": [30.0, 30.0, 30.0],
         },
-        "moved_object": {
+        "payload": {
             "label": "projectile_ball",
             "shape": "sphere",
             "material_id": "abs",
@@ -1262,7 +1262,7 @@ def build():
             "min": [-30.0, -30.0, -10.0],
             "max": [30.0, 30.0, 30.0],
         },
-        "moved_object": {
+        "payload": {
             "label": "projectile_ball",
             "shape": "sphere",
             "material_id": "abs",
@@ -1377,7 +1377,7 @@ async def test_int_008_benchmark_drafting_cots_id_is_rejected():
 
 - Keep the drafted benchmark grounded in a single passive environment fixture.
 - The benchmark_definition file will carry the copied customer caps and the
-  exact moved-object contract.
+  exact payload contract.
 - No moving benchmark-owned fixtures, motors, or fluids are needed.
 """
     valid_todo = "# TODO\n\n- [x] Planner handoff seeded\n"
@@ -1505,7 +1505,7 @@ def build():
 async def test_int_008_objectives_semantic_validation_rejects_runtime_envelope_forbid_collision():
     """
     INT-008: benchmark_definition.yaml validation must fail closed when the
-    moved object's runtime envelope intersects a forbid zone.
+    payload's runtime envelope intersects a forbid zone.
     """
     session_id = f"INT-008-FORBID-{uuid.uuid4().hex[:8]}"
     headers = {"X-Session-ID": session_id}
@@ -1568,7 +1568,7 @@ def build():
             "min": [-30.0, -30.0, -10.0],
             "max": [30.0, 30.0, 30.0],
         },
-        "moved_object": {
+        "payload": {
             "label": "projectile_ball",
             "shape": "sphere",
             "material_id": "abs",
@@ -1678,7 +1678,7 @@ def build():
             "min": [-30.0, -30.0, -10.0],
             "max": [30.0, 30.0, 30.0],
         },
-        "moved_object": {
+        "payload": {
             "label": "projectile_ball",
             "shape": "sphere",
             "material_id": "abs",
@@ -1697,7 +1697,7 @@ def build():
     async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Negative runtime jitter must fail closed.
         negative_jitter = yaml.safe_load(yaml.safe_dump(base_objectives))
-        negative_jitter["moved_object"]["runtime_jitter"] = [-0.5, 0.5, 0.5]
+        negative_jitter["payload"]["runtime_jitter"] = [-0.5, 0.5, 0.5]
         await _write_workspace_file(client, headers, "plan.md", valid_plan)
         await _write_workspace_file(client, headers, "todo.md", valid_todo)
         await _write_workspace_file(
@@ -1724,7 +1724,7 @@ def build():
 
         # 2. Negative static randomization radius must also fail closed.
         negative_radius = yaml.safe_load(yaml.safe_dump(base_objectives))
-        negative_radius["moved_object"]["static_randomization"]["radius"] = [
+        negative_radius["payload"]["static_randomization"]["radius"] = [
             -0.25,
             0.25,
         ]
@@ -1792,7 +1792,7 @@ def _drillable_benchmark_definition(benchmark_parts: list[dict]) -> dict:
             "min": [-30.0, -30.0, -10.0],
             "max": [30.0, 30.0, 30.0],
         },
-        "moved_object": {
+        "payload": {
             "label": "projectile_ball",
             "shape": "sphere",
             "material_id": "abs",

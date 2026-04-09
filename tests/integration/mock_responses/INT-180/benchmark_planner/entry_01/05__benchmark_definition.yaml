@@ -26,7 +26,7 @@ simulation_bounds:
   - 20
   - 20
   - 20
-moved_object:
+payload:
   label: obj
   shape: sphere
   material_id: abs

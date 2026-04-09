@@ -64,7 +64,7 @@ async def test_int_110_gpu_oom_retry(session_id, base_headers):
                 build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
             ),
             simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="obj",
                 shape="sphere",
                 material_id="aluminum_6061",

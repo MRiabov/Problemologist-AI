@@ -116,7 +116,7 @@ async def test_int_026_mandatory_event_families():
                 build_zone=BoundingBox(min=(0, 0, 0), max=(20, 20, 20)),
             ),
             simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(30, 30, 30)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="test_obj",
                 shape="sphere",
                 material_id="aluminum_6061",

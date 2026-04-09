@@ -91,7 +91,7 @@ async def test_int_101_physics_backend_selection():
                 build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
             ),
             simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="test_obj",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -177,7 +177,7 @@ async def test_int_101b_explicit_genesis_backend_is_respected_without_fem():
                 build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
             ),
             simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="test_obj",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -278,7 +278,7 @@ async def test_int_105_fluid_containment_evaluation():
                 ],
             ),
             simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="obj",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -389,7 +389,7 @@ async def test_int_106_flow_rate_evaluation():
                 ],
             ),
             simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="obj",
                 shape="sphere",
                 material_id="aluminum_6061",
@@ -465,7 +465,7 @@ async def test_int_112_mujoco_backward_compat():
                 ],
             ),
             simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
-            moved_object=MovedObject(
+            payload=MovedObject(
                 label="obj",
                 shape="sphere",
                 material_id="aluminum_6061",

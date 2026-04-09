@@ -162,7 +162,7 @@ print(f"VALIDATE_MESSAGE={message}")
         simulation_bounds=BoundingBox(
             min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="target_box",
             shape="sphere",
             material_id="aluminum_6061",
@@ -182,7 +182,7 @@ print(f"VALIDATE_MESSAGE={message}")
         simulation_bounds=BoundingBox(
             min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="target_box",
             shape="sphere",
             material_id="aluminum_6061",
@@ -264,7 +264,7 @@ print(f"VALIDATE_MESSAGE={message}")
 async def test_int_024_runtime_execute_rejects_startup_overlap_with_spawned_payload():
     """
     INT-024: benchmark validation must fail closed when a benchmark fixture
-    overlaps the runtime-spawned moved object at startup.
+    overlaps the runtime-spawned payload at startup.
     """
     session_id = f"INT-024-OVR-{uuid.uuid4().hex[:8]}"
     headers = {"X-Session-ID": session_id}
@@ -304,7 +304,7 @@ print(f"VALIDATE_MESSAGE={message}")
         simulation_bounds=BoundingBox(
             min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="projectile_ball",
             shape="sphere",
             material_id="abs",
@@ -351,7 +351,7 @@ print(f"VALIDATE_MESSAGE={message}")
         data = ExecuteResponse.model_validate(exec_resp.json())
         assert data.exit_code == 0
         assert "VALIDATE_SUCCESS=False" in data.stdout
-        assert "moved_object start pose intersects benchmark geometry" in data.stdout
+        assert "payload start pose intersects benchmark geometry" in data.stdout
 
 
 @pytest.mark.integration_p0
@@ -462,7 +462,7 @@ print(f"VALIDATE_MESSAGE={message}")
         simulation_bounds=BoundingBox(
             min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="target_box",
             shape="box",
             material_id="aluminum_6061",
@@ -569,7 +569,7 @@ print(f"VALIDATE_MESSAGE={message}")
         simulation_bounds=BoundingBox(
             min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="target_box",
             shape="box",
             material_id="aluminum_6061",
@@ -722,7 +722,7 @@ print(f"VALIDATE_MESSAGE={message}")
         simulation_bounds=BoundingBox(
             min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
         ),
-        moved_object=MovedObject(
+        payload=MovedObject(
             label="ground_plane",
             shape="box",
             material_id="aluminum_6061",
