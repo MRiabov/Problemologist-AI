@@ -531,6 +531,24 @@ class CurrentRoleManifest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class BugReportArchiveManifest(BaseModel):
+    """System-owned manifest for an archived bug report."""
+
+    archived_at: StrictStr
+    agent_name: AgentName
+    session_id: StrictStr | None = None
+    episode_id: StrictStr | None = None
+    workspace_dir: StrictStr
+    source_path: StrictStr
+    archive_root: StrictStr
+    archive_dir: StrictStr
+    archived_report_path: StrictStr
+    source_sha256: StrictStr | None = None
+    bug_report_size_bytes: StrictInt | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class COTSReproducibilityManifest(BaseModel):
     """System-owned catalog provenance snapshot for the current workspace session."""
 

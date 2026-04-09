@@ -101,6 +101,11 @@ class BenchmarkPayloadObservationPolicy(BaseModel):
     window_s: float = Field(default=1.5, gt=0)
 
 
+class BugReportsConfig(BaseModel):
+    enabled: bool = False
+    archive_root: Path = Field(default_factory=lambda: Path("logs/bug_reports"))
+
+
 class AgentPolicy(BaseModel):
     filesystem_permissions: FilesystemPermissions = Field(
         default_factory=FilesystemPermissions
@@ -309,6 +314,7 @@ class AgentsConfig(BaseModel):
     llm: LLMPolicyConfig = Field(default_factory=LLMPolicyConfig)
     render: RenderPolicyConfig = Field(default_factory=RenderPolicyConfig)
     execution: AgentExecutionConfig = Field(default_factory=AgentExecutionConfig)
+    bug_reports: BugReportsConfig = Field(default_factory=BugReportsConfig)
     motion_forecast: MotionForecastPolicy = Field(default_factory=MotionForecastPolicy)
     payload_trajectory_monitor: PayloadTrajectoryMonitorPolicy = Field(
         default_factory=PayloadTrajectoryMonitorPolicy

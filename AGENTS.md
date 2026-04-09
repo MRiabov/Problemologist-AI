@@ -48,6 +48,8 @@ When you need to verify, reproduce, or debug behavior at the system boundary, us
 
 When implementing new logic, verify it against the narrowest relevant integration slice first, then widen only if needed. The integration-test rules live at @specs/integration-test-rules.md and the canonical test catalog lives at @specs/integration-test-list.md
 
+When asked to edit, fix, or add evaluation seeds, use `.agents/skills/eval-creation-workflow` for writing and debugging the seeds, and validate them with `scripts/validate_eval_seed.py`.
+
 ______________________________________________________________________
 
 This is all for the critical rules.

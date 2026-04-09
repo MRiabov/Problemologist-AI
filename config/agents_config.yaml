@@ -90,6 +90,9 @@ execution:
       timeout_seconds: 120
       max_turns: 150
       max_total_tokens: 400000
+bug_reports:
+  enabled: false
+  archive_root: logs/bug_reports
 motion_forecast:
   benchmark_planner:
     sample_stride_s: 2.0

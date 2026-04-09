@@ -113,6 +113,18 @@ class FilesystemPolicy:
 
         p_str = self._normalize_virtual_path(path)
 
+        if action == "write" and p_str == "bug_report.md":
+            if not self.config.bug_reports.enabled:
+                return False
+            agent_rules = self.config.agents.get(role)
+            if agent_rules is None:
+                return False
+            if not agent_rules.write.allow:
+                return False
+            if self._match_path(p_str, agent_rules.write.deny):
+                return False
+            return True
+
         # Get rules for agent, fallback to defaults
         agent_rules = self.config.agents.get(role)
 

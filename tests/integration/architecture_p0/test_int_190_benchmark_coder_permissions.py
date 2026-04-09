@@ -3,6 +3,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from shared.workers.filesystem.policy import FilesystemPolicy
+
 
 @pytest.mark.integration
 @pytest.mark.integration_p0
@@ -131,3 +133,33 @@ def test_int_190_agent_execution_timeouts_are_role_specific():
     assert execution_agents["benchmark_reviewer"]["timeout_seconds"] == 90
     assert execution_agents["engineer_execution_reviewer"]["timeout_seconds"] == 90
     assert execution_agents["electronics_reviewer"]["timeout_seconds"] == 90
+
+
+@pytest.mark.integration
+@pytest.mark.integration_p0
+def test_int_190_bug_report_mode_gates_workspace_root_bug_report_write(
+    tmp_path: Path,
+):
+    disabled_policy = FilesystemPolicy()
+    assert (
+        disabled_policy.check_permission("benchmark_coder", "write", "bug_report.md")
+        is False
+    )
+
+    cfg = yaml.safe_load(Path("config/agents_config.yaml").read_text(encoding="utf-8"))
+    cfg.setdefault("bug_reports", {})["enabled"] = True
+    enabled_config_path = tmp_path / "agents_config.yaml"
+    enabled_config_path.write_text(
+        yaml.safe_dump(cfg, sort_keys=False),
+        encoding="utf-8",
+    )
+    enabled_policy = FilesystemPolicy(config_path=enabled_config_path)
+
+    assert enabled_policy.check_permission("benchmark_coder", "write", "bug_report.md")
+    assert enabled_policy.check_permission(
+        "engineer_execution_reviewer", "write", "bug_report.md"
+    )
+    assert not enabled_policy.check_permission("cots_search", "write", "bug_report.md")
+    assert not enabled_policy.check_permission(
+        "benchmark_coder", "write", "notes/bug_report.md"
+    )
