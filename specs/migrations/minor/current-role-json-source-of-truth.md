@@ -321,6 +321,7 @@ The smallest realistic file set for this migration is:
 - `specs/architecture/agents/handover-contracts.md`
 - `specs/architecture/agents/agent-artifacts/README.md`
 - `specs/architecture/agents/agent-artifacts/current_role_json_acceptance_criteria.md`
+- `specs/devtools.md`
 - `tests/integration/architecture_p0/test_codex_runner_mode.py`
 - `tests/integration/architecture_p0/test_node_entry_validation.py`
 - `tests/integration/architecture_p0/test_planner_gates.py`
@@ -331,4 +332,3 @@ The smallest realistic file set for this migration is:
 - `tests/integration/architecture_p1/test_reviewer_evidence.py`
 - `tests/integration/mock_responses/**`
 - `dataset/data/seed/role_based/**`
-
