@@ -80,7 +80,7 @@ Cube stays centered in the channel without rubbing walls excessively.
 #### Cross-References
 
 - left_guide/right_guide dimensions: 350 x 12 x 30 mm
-- moved_object runtime_jitter from benchmark_definition.yaml
+- payload runtime_jitter from benchmark_definition.yaml
 
 ### CALC-002: Forbid-zone clearance
 

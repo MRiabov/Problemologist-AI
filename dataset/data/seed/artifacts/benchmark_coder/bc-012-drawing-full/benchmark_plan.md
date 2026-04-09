@@ -42,7 +42,7 @@ The fixed simulation context that anchors all benchmark fixtures. Provides the r
 - Control mode: `ON_OFF`, speed `1.0` (units/s for slide_z actuation).
 - Engineer must not modify or reposition this fixture.
 
-### `projectile_ball` (moved object, ABS plastic)
+### `projectile_ball` (payload, ABS plastic)
 
 - Shape: `sphere`
 - Radius range (static randomization): `[44, 46]` mm

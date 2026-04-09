@@ -30,7 +30,7 @@ goal shelf.
    and `drive_motor`.
 2. Instantiate the drive motor through the catalog path:
    `ServoMotor.from_catalog_id("ServoMotor_DS3218")`.
-3. Build the moved object from `benchmark_definition.yaml.moved_object`.
+3. Build the payload from `benchmark_definition.yaml.payload`.
 4. Reconstruct objective zones through `objectives_geometry()`.
 5. Validate geometry, simulate, and submit for review via external shell
    self-checks (not in-module calls).

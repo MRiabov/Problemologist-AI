@@ -37,7 +37,7 @@ Test whether an engineer can receive a ball from a benchmark-owned moving lift p
 ## 7. Success Criteria
 
 - Success if the ball can transfer from the moving platform into `goal_zone` without entering `platform_travel_clearance`.
-- Fail if the moved object exits `simulation_bounds` or if benchmark geometry requires undeclared motion beyond the platform lift axis.
+- Fail if the payload exits `simulation_bounds` or if benchmark geometry requires undeclared motion beyond the platform lift axis.
 
 ## 8. Planner Artifacts
 

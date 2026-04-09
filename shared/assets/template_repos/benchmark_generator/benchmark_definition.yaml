@@ -43,7 +43,7 @@ fluids: []
 simulation_bounds:
   min: [-48.0, -36.0, 0.0]
   max: [48.0, 36.0, 60.0]
-moved_object:
+payload:
   label: projectile_ball
   shape: sphere
   material_id: abs

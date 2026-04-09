@@ -69,7 +69,7 @@ simulation_bounds:
   - 450.0
   - 180.0
   - 220.0
-moved_object:
+payload:
   label: slider_cube
   shape: cube
   material_id: abs

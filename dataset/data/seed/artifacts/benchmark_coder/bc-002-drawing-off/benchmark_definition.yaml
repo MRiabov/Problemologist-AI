@@ -26,7 +26,7 @@ fluids: []
 simulation_bounds:
   min: [-0.6, -0.12, 0.0]
   max: [0.6, 0.12, 0.4]
-moved_object:
+payload:
   label: tunnel_ball
   shape: sphere
   material_id: abs

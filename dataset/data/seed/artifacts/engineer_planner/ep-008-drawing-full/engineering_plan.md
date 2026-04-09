@@ -86,7 +86,7 @@ Gentle slope sufficient to overcome static friction on HDPE for ABS ball; shallo
 #### Cross-References
 
 - ramp_surface dimensions: 560 x 80 x 8 mm
-- moved_object.start_position: [-80, 0, 145]
+- payload.start_position: [-80, 0, 145]
 
 ### CALC-002: Ball retention wall height
 
@@ -119,7 +119,7 @@ Walls are tall enough to retain the ball across the full jitter envelope.
 #### Cross-References
 
 - left_wall, right_wall: 560 x 14 x 28 mm
-- moved_object.runtime_jitter: [10, 10, 5]
+- payload.runtime_jitter: [10, 10, 5]
 
 ### CALC-003: Funnel capture geometry
 

@@ -11,7 +11,7 @@ All dimensions in mm. Positions are world-frame centers unless noted.
 - `raised_goal_shelf`: raised target shelf centered near `(375, 0, 235)`, size `150 × 120 × 30`.
 - `lift_carriage`: moving plate centered near `(-130, 0, 60)`, size `120 × 110 × 18`, single `slide_z` axis.
 - `drive_motor`: benchmark-owned servo fixture imported through `ServoMotor.from_catalog_id("ServoMotor_DS3218")`, mounting center `(-130, 0, 10)`, catalog size `40 × 20 × 40.5` mm.
-- `projectile_ball`: moved object, sphere, ABS plastic, radius `[44, 46]` mm, spawn position `(-200, 0, 60)`, runtime jitter `±[10, 8, 6]` mm.
+- `projectile_ball`: payload, sphere, ABS plastic, radius `[44, 46]` mm, spawn position `(-200, 0, 60)`, runtime jitter `±[10, 8, 6]` mm.
 
 ## 3. Objectives
 

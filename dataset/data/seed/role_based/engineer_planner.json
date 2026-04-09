@@ -205,14 +205,14 @@
   },
   {
     "id": "ep-007",
-    "task": "Confirm `.manifests/current_role.json` names `engineer_planner` before using the seeded artifacts. Use the seeded benchmark handoff in `benchmark_definition.yaml` to plan a mechanism that receives the moved object from an external lift platform and guides it into the elevated goal zone. The plan should describe the handoff strategy clearly, stay inside the build zone, and avoid adding unnecessary actuation on top of the moving benchmark fixture.",
+    "task": "Confirm `.manifests/current_role.json` names `engineer_planner` before using the seeded artifacts. Use the seeded benchmark handoff in `benchmark_definition.yaml` to plan a mechanism that receives the payload from an external lift platform and guides it into the elevated goal zone. The plan should describe the handoff strategy clearly, stay inside the build zone, and avoid adding unnecessary actuation on top of the moving benchmark fixture.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_planner/ep-007-lift-platform-handoff",
     "expected_criteria": "Requires `.manifests/current_role.json` to name `engineer_planner` and the seeded workspace to match that role. Planner artifacts explain the platform handoff, keep the mechanism mostly passive unless motion is justified, and produce valid budgets and assembly data under the benchmark caps."
   },
   {
     "id": "ep-007-drawing-off",
-    "task": "Confirm `.manifests/current_role.json` names `engineer_planner` before using the seeded artifacts. Use the seeded benchmark handoff in `benchmark_definition.yaml` to plan a mechanism that receives the moved object from an external lift platform and guides it into the elevated goal zone. The plan should describe the handoff strategy clearly, stay inside the build zone, and avoid adding unnecessary actuation on top of the moving benchmark fixture. Split variant for `ep-007`. Technical drawing mode: off.",
+    "task": "Confirm `.manifests/current_role.json` names `engineer_planner` before using the seeded artifacts. Use the seeded benchmark handoff in `benchmark_definition.yaml` to plan a mechanism that receives the payload from an external lift platform and guides it into the elevated goal zone. The plan should describe the handoff strategy clearly, stay inside the build zone, and avoid adding unnecessary actuation on top of the moving benchmark fixture. Split variant for `ep-007`. Technical drawing mode: off.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_planner/ep-007-drawing-off",
     "technical_drawing_mode": "off",
@@ -221,7 +221,7 @@
   },
   {
     "id": "ep-007-drawing-minimal",
-    "task": "Confirm `.manifests/current_role.json` names `engineer_planner` before using the seeded artifacts. Use the seeded benchmark handoff in `benchmark_definition.yaml` to plan a mechanism that receives the moved object from an external lift platform and guides it into the elevated goal zone. The plan should describe the handoff strategy clearly, stay inside the build zone, and avoid adding unnecessary actuation on top of the moving benchmark fixture. Split variant for `ep-007`. Technical drawing mode: minimal.",
+    "task": "Confirm `.manifests/current_role.json` names `engineer_planner` before using the seeded artifacts. Use the seeded benchmark handoff in `benchmark_definition.yaml` to plan a mechanism that receives the payload from an external lift platform and guides it into the elevated goal zone. The plan should describe the handoff strategy clearly, stay inside the build zone, and avoid adding unnecessary actuation on top of the moving benchmark fixture. Split variant for `ep-007`. Technical drawing mode: minimal.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_planner/ep-007-drawing-minimal",
     "technical_drawing_mode": "minimal",
@@ -230,7 +230,7 @@
   },
   {
     "id": "ep-007-drawing-full",
-    "task": "Confirm `.manifests/current_role.json` names `engineer_planner` before using the seeded artifacts. Use the seeded benchmark handoff in `benchmark_definition.yaml` to plan a mechanism that receives the moved object from an external lift platform and guides it into the elevated goal zone. The plan should describe the handoff strategy clearly, stay inside the build zone, and avoid adding unnecessary actuation on top of the moving benchmark fixture. Split variant for `ep-007`. Technical drawing mode: full.",
+    "task": "Confirm `.manifests/current_role.json` names `engineer_planner` before using the seeded artifacts. Use the seeded benchmark handoff in `benchmark_definition.yaml` to plan a mechanism that receives the payload from an external lift platform and guides it into the elevated goal zone. The plan should describe the handoff strategy clearly, stay inside the build zone, and avoid adding unnecessary actuation on top of the moving benchmark fixture. Split variant for `ep-007`. Technical drawing mode: full.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_planner/ep-007-drawing-full",
     "technical_drawing_mode": "full",

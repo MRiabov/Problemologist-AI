@@ -113,7 +113,7 @@ Ball reliably enters the chute across all spawn variations.
 #### Cross-References
 
 - capture_funnel dimensions: 160 x 140 x 40 mm
-- moved_object start_position and runtime_jitter from benchmark_definition.yaml
+- payload start_position and runtime_jitter from benchmark_definition.yaml
 
 ### CALC-003: Weight budget
 

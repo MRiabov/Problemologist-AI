@@ -1,7 +1,7 @@
 ## 1. Learning Objective
 
 - Train passive gravity-first rigid-body routing reasoning with a seeded central obstacle that forces the projectile to route around a forbid zone before reaching the goal.
-- Keep the benchmark fully passive: no actuators, no motors, no FEM, no fluids. The only energy source is gravity acting on the moved object.
+- Keep the benchmark fully passive: no actuators, no motors, no FEM, no fluids. The only energy source is gravity acting on the payload.
 - Test engineer robustness to runtime jitter on spawn position and input-object radius.
 
 ## 2. Static Geometry
@@ -47,13 +47,13 @@
 
 - Static: the benchmark variant `engineer_coder_forbid_route_v1` defines the geometry family. The environment fixture may be scaled slightly at generation time while preserving objective clearance.
 - Runtime: use the declared position jitter `[14.0, 10.0, 6.0]` on the sphere spawn position to test robustness. The engineer solution must handle all positions within that envelope without re-tuning.
-- The moved object radius varies between `[28.0, 30.0]` mm across static variants, which affects clearance requirements.
+- The payload radius varies between `[28.0, 30.0]` mm across static variants, which affects clearance requirements.
 
 ## 7. Build123d Strategy
 
 - Use simple CSG primitives for the benchmark environment: slabs for the floor and walls, a large block for the central blocker obstacle.
 - Keep the geometry readable and aligned to world axes so the gravity path and blocker geometry are obvious to the reviewer.
-- The moved object is materialized from `benchmark_definition.yaml` using the declared shape (sphere), radius range, and start position.
+- The payload is materialized from `benchmark_definition.yaml` using the declared shape (sphere), radius range, and start position.
 - Objective overlays (goal zone, forbid zones, build zone) are reconstructed through `objectives_geometry()` for preview rendering.
 - Materialize a compact drafting package for the passive fixture and inspect it with `preview_drawing()` before submission.
 
@@ -69,7 +69,7 @@
 ## 9. Part Metadata
 
 - `environment_fixture` must be static (`fixed: true`) and carry `material_id: aluminum_6061`.
-- The moved object (`projectile_ball`) uses `material_id: abs`.
+- The payload (`projectile_ball`) uses `material_id: abs`.
 - No part in this family should introduce powered or deformable behavior.
 - Top-level authored labels must be unique and must not be `environment` or start with `zone_`.
 
@@ -78,5 +78,5 @@
 - The goal zone is positioned at `[420-520, -60 to 60, 15-110]`, which is downstream and to the far side of the central blocker.
 - The spawn position at `[-180, 0, 110]` with runtime jitter `[14, 10, 6]` ensures the ball starts well clear of the blocker and has elevation to build momentum.
 - The build zone extends from `[-240, -180, 0]` to `[560, 180, 240]`, providing ample space for the engineer to create a routing path around either side of the blocker.
-- Under static variation plus runtime jitter, the moved object must remain inside the build zone at spawn and must not intersect the forbid zone or goal zone at spawn.
+- Under static variation plus runtime jitter, the payload must remain inside the build zone at spawn and must not intersect the forbid zone or goal zone at spawn.
 - The benchmark is solvable via passive routing: a properly angled chute or rail system can guide the ball around the blocker using gravity alone.

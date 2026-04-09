@@ -38,7 +38,7 @@ Test whether an engineer can handle a fast lateral transfer benchmark that inclu
 ## 7. Success Criteria
 
 - Success if the ball reaches `goal_zone` while clearing the `center_speed_bump` forbid volume.
-- Fail if the moved object exits `simulation_bounds` or if the benchmark requires undeclared motion beyond the single driven roller.
+- Fail if the payload exits `simulation_bounds` or if the benchmark requires undeclared motion beyond the single driven roller.
 
 ## 8. Planner Artifacts
 

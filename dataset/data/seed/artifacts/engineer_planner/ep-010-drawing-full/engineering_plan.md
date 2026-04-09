@@ -86,7 +86,7 @@ Moderate slope provides good ball acceleration without excessive speed or bounci
 #### Cross-References
 
 - ramp_surface dimensions: 300 x 100 x 8 mm
-- moved_object.start_position: [-20, 0, 220]
+- payload.start_position: [-20, 0, 220]
 
 ### CALC-002: Forbid zone clearance
 
@@ -152,7 +152,7 @@ Walls are just tall enough to retain the ball; consider increasing to 34 mm for 
 #### Cross-References
 
 - left_wall, right_wall: 300 x 16 x 32 mm
-- moved_object.runtime_jitter: [8, 8, 6]
+- payload.runtime_jitter: [8, 8, 6]
 
 ### CALC-004: Weight budget
 

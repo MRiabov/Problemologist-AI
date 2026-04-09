@@ -1,0 +1,74 @@
+{
+  "version": "1.0",
+  "bundle_id": "61761b4d-9e18-569f-ac04-b9246ba4d69f",
+  "created_at": "2026-04-09T15:48:21.885747+00:00",
+  "episode_id": "f7af6d95-29aa-5646-81e8-408e3c3612ba",
+  "worker_session_id": "seed-renders-bc-012-drawing-full-ec85ca60",
+  "revision": "71b43f709b0154815505d4283de095ba448c83ad",
+  "scene_hash": "99f5d3f010aaaedeb675f6d2cea998eb2de0930c5b988b1515ba989dc9d23bf8",
+  "bundle_path": "renders/current-episode",
+  "environment_version": "1.0",
+  "drafting": true,
+  "source_script_sha256": "ed000fbc4133bfd465a84e308454c62945e3c8cd1f01df9f544acce74a3c194a",
+  "preview_evidence_paths": [
+    "renders/current-episode/00_front.png",
+    "renders/current-episode/01_top.png",
+    "renders/current-episode/02_side.png"
+  ],
+  "artifacts": {
+    "renders/current-episode/00_front.png": {
+      "modality": "unknown",
+      "group_key": "00_front",
+      "view_index": 0,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/current-episode/00_front.png",
+        "depth": null,
+        "segmentation": null,
+        "svg": "renders/current-episode/00_front.svg",
+        "dxf": "renders/current-episode/00_front.dxf"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/current-episode/01_top.png": {
+      "modality": "unknown",
+      "group_key": "01_top",
+      "view_index": 1,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/current-episode/01_top.png",
+        "depth": null,
+        "segmentation": null,
+        "svg": "renders/current-episode/01_top.svg",
+        "dxf": "renders/current-episode/01_top.dxf"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    },
+    "renders/current-episode/02_side.png": {
+      "modality": "unknown",
+      "group_key": "02_side",
+      "view_index": 2,
+      "orbit_pitch": null,
+      "orbit_yaw": null,
+      "siblings": {
+        "rgb": "renders/current-episode/02_side.png",
+        "depth": null,
+        "segmentation": null,
+        "svg": "renders/current-episode/02_side.svg",
+        "dxf": "renders/current-episode/02_side.dxf"
+      },
+      "depth_min_m": null,
+      "depth_max_m": null,
+      "depth_interpretation": null,
+      "segmentation_legend": []
+    }
+  }
+}

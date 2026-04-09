@@ -7,7 +7,7 @@ Test whether an engineer can design a mechanism that moves a payload from floor 
 All dimensions in mm. Positions are world-frame centers unless noted.
 
 - `environment_fixture`: fixed benchmark-owned floor plate centered near `(105, 0, 5)`, size `730 × 360 × 10`. Provides the mounting surface and reference frame for the benchmark.
-- `projectile_ball`: moved object, sphere, ABS plastic, radius `[44, 46]` mm, spawn position `(-200, 0, 60)`, runtime jitter `±[10, 8, 6]` mm.
+- `projectile_ball`: payload, sphere, ABS plastic, radius `[44, 46]` mm, spawn position `(-200, 0, 60)`, runtime jitter `±[10, 8, 6]` mm.
 - **Goal zone**: elevated shelf region, AABB min `(320, -55, 220)`, max `(430, 55, 300)`. Success when the projectile ball center enters this volume.
 - **Forbid zone** `shelf_support_clearance`: vertical keepout volume, AABB min `(180, -95, 0)`, max `(280, 95, 210)`. Any contact = failure. Represents the structural support volume for a raised shelf that the engineer must not occupy.
 - **Build zone**: AABB min `(-260, -180, 0)`, max `(470, 180, 340)`. Engineer solutions must stay within these bounds.

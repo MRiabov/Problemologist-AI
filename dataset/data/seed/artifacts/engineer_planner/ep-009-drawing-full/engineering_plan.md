@@ -88,7 +88,7 @@ Very gentle slope; ball rolls smoothly without bouncing. May need low-friction s
 #### Cross-References
 
 - ramp_surface dimensions: 800 x 100 x 8 mm
-- moved_object.start_position: [-400, 0, 105]
+- payload.start_position: [-400, 0, 105]
 
 ### CALC-002: Bridge clearance
 
@@ -154,7 +154,7 @@ Walls are tall enough to retain the ball across the full jitter envelope.
 #### Cross-References
 
 - left_wall, right_wall: 800 x 16 x 30 mm
-- moved_object.runtime_jitter: [8, 6, 4]
+- payload.runtime_jitter: [8, 6, 4]
 
 ### CALC-004: Weight budget
 

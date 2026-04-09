@@ -651,7 +651,7 @@
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_plan_reviewer/bpr-018-narrow-goal-throat-mismatch",
     "expected_decision": "REJECT_PLAN",
-    "expected_criteria": "Requires `.manifests/current_role.json` to name `benchmark_plan_reviewer` and the seeded workspace to match that role. Benchmark plan reviewer rejects the seeded handoff because the narrowed funnel throat is below the declared worst-case moved-object envelope."
+    "expected_criteria": "Requires `.manifests/current_role.json` to name `benchmark_plan_reviewer` and the seeded workspace to match that role. Benchmark plan reviewer rejects the seeded handoff because the narrowed funnel throat is below the declared worst-case payload envelope."
   },
   {
     "id": "bpr-018-drawing-off",
@@ -661,7 +661,7 @@
     "technical_drawing_mode": "off",
     "split_source_task_id": "bpr-018-narrow-goal-throat-mismatch",
     "expected_decision": "REJECT_PLAN",
-    "expected_criteria": "Requires `.manifests/current_role.json` to name `benchmark_plan_reviewer` and the seeded workspace to match that role. Benchmark plan reviewer rejects the seeded handoff because the narrowed funnel throat is below the declared worst-case moved-object envelope. Split variant for `bpr-018-narrow-goal-throat-mismatch`. Technical drawing mode: off."
+    "expected_criteria": "Requires `.manifests/current_role.json` to name `benchmark_plan_reviewer` and the seeded workspace to match that role. Benchmark plan reviewer rejects the seeded handoff because the narrowed funnel throat is below the declared worst-case payload envelope. Split variant for `bpr-018-narrow-goal-throat-mismatch`. Technical drawing mode: off."
   },
   {
     "id": "bpr-018-drawing-minimal",
@@ -671,7 +671,7 @@
     "technical_drawing_mode": "minimal",
     "split_source_task_id": "bpr-018-narrow-goal-throat-mismatch",
     "expected_decision": "REJECT_PLAN",
-    "expected_criteria": "Requires `.manifests/current_role.json` to name `benchmark_plan_reviewer` and the seeded workspace to match that role. Benchmark plan reviewer rejects the seeded handoff because the narrowed funnel throat is below the declared worst-case moved-object envelope. Split variant for `bpr-018-narrow-goal-throat-mismatch`. Technical drawing mode: minimal."
+    "expected_criteria": "Requires `.manifests/current_role.json` to name `benchmark_plan_reviewer` and the seeded workspace to match that role. Benchmark plan reviewer rejects the seeded handoff because the narrowed funnel throat is below the declared worst-case payload envelope. Split variant for `bpr-018-narrow-goal-throat-mismatch`. Technical drawing mode: minimal."
   },
   {
     "id": "bpr-018-drawing-full",
@@ -681,7 +681,7 @@
     "technical_drawing_mode": "full",
     "split_source_task_id": "bpr-018-narrow-goal-throat-mismatch",
     "expected_decision": "REJECT_PLAN",
-    "expected_criteria": "Requires `.manifests/current_role.json` to name `benchmark_plan_reviewer` and the seeded workspace to match that role. Benchmark plan reviewer rejects the seeded handoff because the narrowed funnel throat is below the declared worst-case moved-object envelope. Split variant for `bpr-018-narrow-goal-throat-mismatch`. Technical drawing mode: full."
+    "expected_criteria": "Requires `.manifests/current_role.json` to name `benchmark_plan_reviewer` and the seeded workspace to match that role. Benchmark plan reviewer rejects the seeded handoff because the narrowed funnel throat is below the declared worst-case payload envelope. Split variant for `bpr-018-narrow-goal-throat-mismatch`. Technical drawing mode: full."
   },
   {
     "id": "bpr-019-fast-transfer-hidden-brake-axis",

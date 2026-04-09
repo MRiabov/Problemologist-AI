@@ -4,7 +4,7 @@
   "created_at": "2026-04-08T07:36:46.881125+00:00",
   "episode_id": "bbecd7c7-6bfe-57ac-94a9-ce044cf0d29c",
   "worker_session_id": "seed-renders-ec-003-timed-gate-chute-ca6fa6b5",
-  "revision": "c56b80d809e74a0c51d95499eadc0502fde80c64",
+  "revision": "71b43f709b0154815505d4283de095ba448c83ad",
   "scene_hash": "273f0dc8ffdbe41f69ab99430437df74f3654cc2719d1d207be2422df17a37c5",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",

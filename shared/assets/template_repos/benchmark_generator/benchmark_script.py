@@ -37,14 +37,14 @@ def _build_static_fixtures() -> Compound:
 def _build_moved_object(moved: dict):
     label = str(moved.get("label", "")).strip()
     if not label:
-        raise ValueError("moved_object.label must be a non-empty string")
+        raise ValueError("payload.label must be a non-empty string")
     start = moved.get("start_position", [0.0, 0.0, 0.0])
     radius_range = moved.get("static_randomization", {}).get("radius", [0.01, 0.01])
     radius = float(max(radius_range)) if radius_range else 0.01
     shape = str(moved.get("shape", "sphere")).strip().lower()
     material_id = str(moved.get("material_id", "abs")).strip()
     if not material_id:
-        raise ValueError("moved_object.material_id must be a non-empty string")
+        raise ValueError("payload.material_id must be a non-empty string")
 
     if shape == "sphere":
         moved_part = Sphere(
@@ -63,7 +63,7 @@ def _build_moved_object(moved: dict):
         )
     else:
         raise ValueError(
-            f"Unsupported moved_object.shape '{shape}'. Expected sphere, cube, box, or cylinder."
+            f"Unsupported payload.shape '{shape}'. Expected sphere, cube, box, or cylinder."
         )
 
     moved_part = moved_part.move(
@@ -78,8 +78,8 @@ def build() -> Compound:
     """Return the benchmark assembly geometry for this workspace."""
 
     payload = _load_yaml("benchmark_definition.yaml")
-    moved_object = payload.get("moved_object", {})
-    moved_part = _build_moved_object(moved_object if isinstance(moved_object, dict) else {})
+    payload = payload.get("payload", {})
+    moved_part = _build_moved_object(payload if isinstance(payload, dict) else {})
     environment = Compound(children=[_build_static_fixtures(), moved_part])
     environment.label = "benchmark_environment"
     environment.metadata = CompoundMetadata()

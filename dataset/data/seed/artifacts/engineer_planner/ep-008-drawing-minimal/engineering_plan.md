@@ -10,7 +10,7 @@ Think mechanically: slopes guide gravity, walls channel flow, motors provide ene
 
 <!--
 Describe your mechanical solution strategy in 2-3 sentences.
-Focus on the CORE MECHANISM that guides the moved_object to the goal_zone.
+Focus on the CORE MECHANISM that guides the payload to the goal_zone.
 
 EXAMPLE (Ball-to-Funnel Problem):
 > A sloped ramp guides the ball from the spawn position toward a central funnel.
@@ -59,7 +59,7 @@ The CAD agent will need precise coordinates to position parts.
 
 EXAMPLE:
 1. Position the funnel CENTERED ABOVE the goal_zone, with bottom edge at goal_zone.max.z + 5mm
-2. Attach main_ramp to funnel rim, sloping UP toward moved_object.start_position
+2. Attach main_ramp to funnel rim, sloping UP toward payload.start_position
 3. Place left_wall along -X edge of main_ramp, extending 20mm above ramp surface
 4. Place right_wall along +X edge of main_ramp, extending 20mm above ramp surface
 5. Verify all parts are WITHIN build_zone boundaries
@@ -124,7 +124,7 @@ EXAMPLE:
 ### Jitter Robustness Check
 
 <!--
-The moved_object has runtime_jitter and static_randomization.
+The payload has runtime_jitter and static_randomization.
 Your solution MUST work across ALL possible spawn variations.
 
 CALCULATION:

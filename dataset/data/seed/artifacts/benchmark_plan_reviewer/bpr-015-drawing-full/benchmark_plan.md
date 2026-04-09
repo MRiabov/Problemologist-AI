@@ -35,7 +35,7 @@ Test whether an engineer can solve a freestanding transfer benchmark where the e
 ## 7. Success Criteria
 
 - Success if the ball ends within `goal_zone` while the freestanding benchmark geometry remains inside `build_zone`.
-- Fail if any solution depends on undeclared environment attachment or if the moved object exits `simulation_bounds`.
+- Fail if any solution depends on undeclared environment attachment or if the payload exits `simulation_bounds`.
 
 ## 8. Planner Artifacts
 

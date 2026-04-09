@@ -36,7 +36,7 @@ Test whether an engineer can redirect a falling ball into a lower bin while avoi
 
 ## 7. Success Criteria
 
-- Success if the moved object reaches `goal_zone` without entering `direct_drop_dead_zone`, despite the revised geometry relying on a very aggressive first redirection into the lower bin approach.
+- Success if the payload reaches `goal_zone` without entering `direct_drop_dead_zone`, despite the revised geometry relying on a very aggressive first redirection into the lower bin approach.
 - Fail if the ball exits `simulation_bounds` or if planner artifacts imply undeclared active redirection hardware.
 
 ## 8. Planner Artifacts

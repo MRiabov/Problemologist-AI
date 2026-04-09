@@ -37,7 +37,7 @@ Test whether an engineer can meter a falling ball through a timed rotating gate 
 
 ## 7. Success Criteria
 
-- Success if the moved object reaches `goal_zone` without entering `gate_swing_keepout`.
+- Success if the payload reaches `goal_zone` without entering `gate_swing_keepout`.
 - Fail if the ball exits `simulation_bounds`, clips through undeclared gate geometry, or the benchmark relies on extra motion not declared in `benchmark_assembly_definition.yaml`.
 
 ## 8. Planner Artifacts

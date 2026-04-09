@@ -36,8 +36,8 @@ Test whether an engineer can receive a ball near floor height and lift it onto a
 
 ## 7. Success Criteria
 
-- Success if the moved object's center enters `goal_zone` without entering `shelf_support_clearance`, even though the tower face and shelf lip now sit close to the left side of that capture region.
-- Fail if the moved object leaves `simulation_bounds` or requires any undeclared benchmark-side motion.
+- Success if the payload's center enters `goal_zone` without entering `shelf_support_clearance`, even though the tower face and shelf lip now sit close to the left side of that capture region.
+- Fail if the payload leaves `simulation_bounds` or requires any undeclared benchmark-side motion.
 
 ## 8. Planner Artifacts
 
