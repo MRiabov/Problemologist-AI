@@ -1088,13 +1088,24 @@ def materialize_seed_workspace(
             _write_template_files(workspace_dir, load_codex_template_files())
         )
     elif is_coder_agent(agent_name):
+        codex_template_files = load_codex_template_files()
+        if agent_name == AgentName.BENCHMARK_CODER:
+            helper_prefixes = (
+                "scripts/submit_benchmark_for_review.",
+                "scripts/submit_for_review.",
+            )
+        else:
+            helper_prefixes = (
+                "scripts/submit_solution_for_review.",
+                "scripts/submit_for_review.",
+            )
         copied_paths.extend(
             _write_template_files(
                 workspace_dir,
                 {
                     rel_path: content
-                    for rel_path, content in load_codex_template_files().items()
-                    if rel_path.startswith("scripts/submit_for_review.")
+                    for rel_path, content in codex_template_files.items()
+                    if rel_path.startswith(helper_prefixes)
                 },
             )
         )

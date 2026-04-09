@@ -3119,6 +3119,8 @@ async def test_codex_materialized_planner_workspace_submits(
     assert not any(path.endswith("result.py") for path in materialized.copied_paths)
     for rel_path in expected_files:
         assert (workspace_dir / rel_path).exists(), rel_path
+    for rel_path in expected_helper_scripts:
+        assert (workspace_dir / rel_path).exists(), rel_path
     current_role_path = workspace_dir / ".manifests" / "current_role.json"
     assert current_role_path.exists()
     assert (
@@ -3517,6 +3519,8 @@ async def test_codex_seed_workspace_materialization_is_role_specific_and_determi
     for fragment in prompt_fragments:
         assert fragment in materialized.prompt_text
     for rel_path in expected_files:
+        assert (workspace_dir / rel_path).exists(), rel_path
+    for rel_path in expected_helper_scripts:
         assert (workspace_dir / rel_path).exists(), rel_path
 
 
