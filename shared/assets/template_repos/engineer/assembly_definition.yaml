@@ -119,6 +119,7 @@ final_assembly:
 drafting:
   sheet_id: sheet-1
   title: Seeded engineer drafting
+  goal_zone_overlap_intents: []
   views:
     - view_id: front
       target: bridge_deck

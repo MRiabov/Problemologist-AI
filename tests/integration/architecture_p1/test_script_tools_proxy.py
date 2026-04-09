@@ -238,17 +238,36 @@ def _engineer_planner_goal_overlap_benchmark_definition_yaml() -> str:
     return yaml.safe_dump(data, sort_keys=False)
 
 
+def _engineer_planner_assembly_definition_yaml(
+    *, allow_goal_zone_overlap: bool
+) -> str:
+    data = yaml.safe_load(
+        (ENGINEER_PLANNER_FIXTURE_DIR / "03__assembly_definition.yaml").read_text()
+    )
+    drafting = data.setdefault("drafting", {})
+    if allow_goal_zone_overlap:
+        drafting["goal_zone_overlap_intents"] = [
+            {"zone_name": "goal_zone", "target": "solution_plan_evidence"}
+        ]
+    else:
+        drafting.pop("goal_zone_overlap_intents", None)
+    return yaml.safe_dump(data, sort_keys=False)
+
+
 async def _write_engineer_planner_drafting_workspace(
-    client: httpx.AsyncClient, session_id: str
+    client: httpx.AsyncClient,
+    session_id: str,
+    *,
+    allow_goal_zone_overlap: bool = False,
 ) -> None:
     headers = {"X-Session-ID": session_id}
 
     workspace_files = {
         "plan.md": (ENGINEER_PLANNER_FIXTURE_DIR / "01__plan.md").read_text(),
         "todo.md": (ENGINEER_PLANNER_FIXTURE_DIR / "02__todo.md").read_text(),
-        "assembly_definition.yaml": (
-            ENGINEER_PLANNER_FIXTURE_DIR / "03__assembly_definition.yaml"
-        ).read_text(),
+        "assembly_definition.yaml": _engineer_planner_assembly_definition_yaml(
+            allow_goal_zone_overlap=allow_goal_zone_overlap
+        ),
         "benchmark_definition.yaml": _engineer_planner_goal_overlap_benchmark_definition_yaml(),
         "solution_plan_evidence_script.py": (
             ENGINEER_PLANNER_FIXTURE_DIR / "05__solution_plan_evidence_script.py"
@@ -724,8 +743,8 @@ async def test_int_192_controller_script_tools_validate_waits_through_temporal_q
 async def test_int_208_controller_script_tools_validate_rejects_planner_goal_zone_overlap():
     """
     INT-208: controller script-tools validate must reject planner drafting geometry
-    when the evidence script overlaps the benchmark goal zone without explicit
-    capture/occupy/reference intent.
+    when the evidence script overlaps the benchmark goal zone without a matching
+    drafting.goal_zone_overlap_intents YAML entry.
     """
     session_id = f"INT-208-{uuid.uuid4().hex[:8]}"
 
@@ -760,6 +779,51 @@ async def test_int_208_controller_script_tools_validate_rejects_planner_goal_zon
         assert validate_data.message is not None
         assert "goal zone" in validate_data.message.lower(), validate_data.message
         assert "solution_plan_evidence_script.py" in validate_data.message
+        assert validate_data.artifacts is not None
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+@pytest.mark.int_id("INT-224")
+async def test_int_224_controller_script_tools_validate_accepts_yaml_goal_zone_overlap():
+    """
+    INT-224: controller script-tools validate must accept planner drafting
+    geometry when the YAML drafting contract declares the goal-zone overlap.
+    """
+    session_id = f"INT-224-{uuid.uuid4().hex[:8]}"
+
+    async with httpx.AsyncClient(timeout=1000.0) as client:
+        await _write_engineer_planner_drafting_workspace(
+            client,
+            session_id,
+            allow_goal_zone_overlap=True,
+        )
+
+        create_episode_resp = await client.post(
+            f"{CONTROLLER_URL}/api/test/episodes",
+            json=AgentRunRequest(
+                task="INT-224 controller planner drafting overlap acceptance",
+                session_id=session_id,
+                agent_name=AgentName.ENGINEER_PLANNER,
+            ).model_dump(mode="json"),
+            timeout=120.0,
+        )
+        assert create_episode_resp.status_code == 201, create_episode_resp.text
+        EpisodeCreateResponse.model_validate(create_episode_resp.json())
+
+        validate_resp = await client.post(
+            f"{CONTROLLER_URL}/api/script-tools/validate",
+            json={
+                "script_path": "solution_plan_evidence_script.py",
+                "agent_role": AgentName.ENGINEER_PLANNER.value,
+            },
+            headers={"X-Session-ID": session_id},
+            timeout=1000.0,
+        )
+
+        assert validate_resp.status_code == 200, validate_resp.text
+        validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
+        assert validate_data.success, validate_data.message
         assert validate_data.artifacts is not None
 
 

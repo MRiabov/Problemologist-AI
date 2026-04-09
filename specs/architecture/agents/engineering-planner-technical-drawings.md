@@ -72,6 +72,8 @@ Planner drafting is therefore treated as derived intent:
 - `engineering_plan.md` explains the mechanism and the rationale.
 - `assembly_definition.yaml` carries the machine-readable structure and budgets.
 - `assembly_definition.yaml.drafting` carries the technical-drawing intent.
+- `assembly_definition.yaml.drafting.goal_zone_overlap_intents` carries any
+  explicit goal-zone overlap allowance for drafted geometry.
 - `render_technical_drawing()` renders that intent for inspection.
 
 ## Planner-owned drafting contract
@@ -408,7 +410,9 @@ Minimum parity checks:
 2. The 3D source geometry must remain inside the applicable build zone or workspace envelope for the handoff.
 3. Any moving part, swept feature, or motion envelope must clear all forbid zones across its declared operating range.
 4. Any interface that is meant to be preserved by the downstream coder must be identifiable in the drawing and must correspond to a stable 3D feature, datum, edge, face, or axis.
-5. Goal-zone or target-zone overlap is only acceptable when the plan explicitly states that the geometry is intended to capture, occupy, or reference that zone.
+5. Goal-zone or target-zone overlap is only acceptable when the drafting YAML
+   declares a matching `goal_zone_overlap_intents` entry for the target and
+   zone.
 6. Benchmark-owned read-only fixtures and objective markers may be referenced, but the drafting layer may not redefine them or move them into a different spatial contract.
 
 Recommended parity checks:

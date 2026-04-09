@@ -33,6 +33,7 @@ from shared.models.schemas import (
     BenchmarkDefinition,
     CotsPartEstimate,
     ManufacturedPartEstimate,
+    DraftingSheet,
     MotionForecast,
     PartConfig,
     PayloadTrajectoryDefinition,
@@ -863,52 +864,34 @@ def _zone_body_from_bounds(
     return zone
 
 
-def _plan_explicitly_allows_goal_zone_overlap(
-    plan_text: str | None,
+def _drafting_explicitly_allows_goal_zone_overlap(
+    drafting: DraftingSheet | None,
     zone_name: str,
+    target_name: str,
 ) -> bool:
-    if not plan_text:
+    if drafting is None:
         return False
 
-    lower_text = plan_text.lower()
-    normalized_zone = zone_name.strip().lower().replace("_", " ")
-    if not normalized_zone:
-        normalized_zone = "goal zone"
-
-    intent_terms = ("capture", "occupy", "reference")
-    zone_terms = {
-        normalized_zone,
-        normalized_zone.replace(" ", "-"),
-        "goal zone",
-        "target zone",
-    }
-
-    if not any(term in lower_text for term in zone_terms):
+    normalized_zone_name = zone_name.strip().lower()
+    normalized_target_name = target_name.strip().lower()
+    if not normalized_zone_name or not normalized_target_name:
         return False
 
-    for intent_term in intent_terms:
-        for zone_term in zone_terms:
-            if re.search(
-                rf"\b{re.escape(intent_term)}\b.{{0,80}}\b{re.escape(zone_term)}\b",
-                lower_text,
-                flags=re.DOTALL,
-            ):
-                return True
-            if re.search(
-                rf"\b{re.escape(zone_term)}\b.{{0,80}}\b{re.escape(intent_term)}\b",
-                lower_text,
-                flags=re.DOTALL,
-            ):
-                return True
+    for allowance in drafting.goal_zone_overlap_intents:
+        if (
+            allowance.zone_name.strip().lower() == normalized_zone_name
+            and allowance.target.strip().lower() == normalized_target_name
+        ):
+            return True
     return False
 
 
 def validate_planner_drafting_geometry_contract(
     *,
     benchmark_definition: BenchmarkDefinition,
+    drafting: DraftingSheet | None,
     component: Any,
     artifact_name: str,
-    plan_text: str | None = None,
     session_id: str | None = None,
 ) -> list[str]:
     """Validate planner drafting geometry against backing objective zones."""
@@ -950,20 +933,21 @@ def validate_planner_drafting_geometry_contract(
 
     goal_zone = benchmark_definition.objectives.goal_zone
     goal_zone_body = _zone_body_from_bounds(goal_zone, inflation_mm=1e-6)
-    goal_zone_allowed = _plan_explicitly_allows_goal_zone_overlap(
-        plan_text, "goal_zone"
-    )
     for solid in solids:
         try:
             goal_intersection = solid.intersect(goal_zone_body)
         except Exception as exc:
             return [f"{artifact_name}: unable to evaluate goal-zone overlap: {exc}"]
-        if _shape_volume(goal_intersection) > 0.0 and not goal_zone_allowed:
+        if _shape_volume(goal_intersection) > 0.0:
             solid_label = getattr(solid, "label", None) or "<unlabeled>"
+            if _drafting_explicitly_allows_goal_zone_overlap(
+                drafting, "goal_zone", solid_label
+            ):
+                continue
             return [
                 f"{artifact_name}: 3D backing geometry overlaps goal zone "
-                f"(offending solid: {solid_label}); explicit capture, occupy, "
-                f"or reference intent is required in {artifact_name}"
+                f"(offending solid: {solid_label}); declare a matching "
+                f"drafting.goal_zone_overlap_intents entry in assembly_definition.yaml"
             ]
 
     for zone in benchmark_definition.objectives.forbid_zones:
@@ -2369,9 +2353,9 @@ def validate_planner_handoff_cross_contract(
             errors.extend(
                 validate_planner_drafting_geometry_contract(
                     benchmark_definition=benchmark_definition,
+                    drafting=assembly_definition.drafting,
                     component=component,
                     artifact_name=artifact_name,
-                    plan_text=plan_text,
                     session_id=None,
                 )
             )

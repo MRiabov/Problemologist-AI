@@ -70,6 +70,9 @@ environment_drill_operations: []
 drafting:
   sheet_id: sheet-1
   title: Seeded benchmark drafting
+  goal_zone_overlap_intents:
+    - zone_name: goal_zone
+      target: right_goal_deck
   views:
     - view_id: front
       target: left_start_deck
