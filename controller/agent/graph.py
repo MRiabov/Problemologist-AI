@@ -37,6 +37,7 @@ from controller.config.settings import settings as controller_settings
 from controller.graph.steerability_node import check_steering, steerability_node
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode
+from shared.current_role import current_role_manifest_json
 from shared.enums import AgentName, GenerationKind
 from shared.models.schemas import EpisodeMetadata
 from shared.observability.events import emit_event
@@ -57,6 +58,47 @@ from .state import AgentState, AgentStatus
 logger = structlog.get_logger(__name__)
 
 ENGINEER_NODE_CONTRACTS = build_engineer_node_contracts()
+
+
+async def _refresh_current_role_manifest(
+    state: AgentState, agent_name: AgentName
+) -> None:
+    worker_client = state.worker_client
+    created_worker_client = False
+    if worker_client is None:
+        session_id = (state.session_id or "").strip()
+        if not session_id:
+            logger.warning(
+                "current_role_manifest_refresh_skipped",
+                agent_name=agent_name.value,
+                reason="missing_session_id",
+            )
+            return
+        worker_client = WorkerClient(
+            base_url=controller_settings.worker_light_url,
+            heavy_url=controller_settings.worker_heavy_url,
+            session_id=session_id,
+        )
+        created_worker_client = True
+
+    try:
+        await worker_client.write_file(
+            ".manifests/current_role.json",
+            current_role_manifest_json(agent_name),
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+    except Exception as exc:
+        logger.warning(
+            "current_role_manifest_refresh_failed",
+            agent_name=agent_name.value,
+            episode_id=state.episode_id,
+            session_id=str(state.session_id),
+            error=str(exc),
+        )
+    finally:
+        if created_worker_client:
+            await worker_client.aclose()
 
 
 async def _engineer_plan_reviewer_handover_with_layout(*, contract, state):  # noqa: ANN001
@@ -297,6 +339,7 @@ def _guarded_node(target_node: AgentName, node_callable):
     async def _run(state: AgentState):
         # Entry validation is intentionally scoped to first-class graph transitions.
         # Tool-invoked helper subagents are out of scope for this contract.
+        await _refresh_current_role_manifest(state, target_node)
         validation = await _evaluate_engineer_node_entry(target_node, state)
         validation = await _normalize_engineer_reroute_target(
             target_node, state, validation

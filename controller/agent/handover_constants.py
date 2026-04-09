@@ -80,6 +80,7 @@ SCHEMA_BACKED_HANDOFF_PATHS: tuple[str, ...] = (
     "assembly_definition.yaml",
     PAYLOAD_TRAJECTORY_DEFINITION_PATH,
     "benchmark_assembly_definition.yaml",
+    ".manifests/current_role.json",
     "benchmark_plan_evidence_script.py",
     "benchmark_plan_technical_drawing_script.py",
     "solution_plan_evidence_script.py",

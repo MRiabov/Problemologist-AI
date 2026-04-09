@@ -58,6 +58,7 @@ from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode, Trace
+from shared.current_role import current_role_manifest_json
 from shared.enums import (
     AgentName,
     EpisodePhase,
@@ -123,6 +124,44 @@ async def _sidecars_disabled_for_state(state: BenchmarkGeneratorState) -> bool:
 
 
 BENCHMARK_NODE_CONTRACTS = build_benchmark_node_contracts()
+
+
+async def _refresh_current_role_manifest(
+    state: BenchmarkGeneratorState, agent_name: AgentName
+) -> None:
+    from controller.config.settings import settings as global_settings
+
+    session_id = _effective_benchmark_worker_session_id(state)
+    if not session_id:
+        logger.warning(
+            "current_role_manifest_refresh_skipped",
+            agent_name=agent_name.value,
+            reason="missing_session_id",
+        )
+        return
+
+    client = WorkerClient(
+        base_url=global_settings.worker_light_url,
+        heavy_url=global_settings.worker_heavy_url,
+        session_id=session_id,
+    )
+    try:
+        await client.write_file(
+            ".manifests/current_role.json",
+            current_role_manifest_json(agent_name),
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+    except Exception as exc:
+        logger.warning(
+            "current_role_manifest_refresh_failed",
+            agent_name=agent_name.value,
+            episode_id=state.episode_id,
+            session_id=session_id,
+            error=str(exc),
+        )
+    finally:
+        await client.aclose()
 
 
 async def _get_latest_planner_submission_result(
@@ -576,6 +615,7 @@ def _guarded_node(target_node: AgentName, node_callable):
     async def _run(state: BenchmarkGeneratorState):
         # Only first-class graph transitions are entry-guarded here.
         # Tool-invoked helper subagents remain explicitly out of scope.
+        await _refresh_current_role_manifest(state, target_node)
         validation = await _evaluate_benchmark_node_entry(target_node, state)
         if validation.ok:
             state.entry_validation_rejected = False
@@ -1919,6 +1959,7 @@ async def _persist_session_assets(
                     ".manifests/engineering_plan_review_manifest.json",
                     ".manifests/engineering_execution_handoff_manifest.json",
                     ".manifests/electronics_review_manifest.json",
+                    ".manifests/current_role.json",
                 ):
                     if await asyncio.wait_for(
                         client.exists(manifest_path, bypass_agent_permissions=True),

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import uuid
 from collections.abc import Mapping, Sequence
@@ -50,6 +51,7 @@ from controller.config.settings import settings as controller_settings
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode
 from shared.agents.config import DraftingMode, load_agents_config
+from shared.current_role import parse_current_role_manifest
 from shared.enums import AgentName, EntryFailureDisposition, EntryValidationSource
 from shared.models.schemas import (
     AssemblyDefinition,
@@ -1196,6 +1198,13 @@ async def validate_seeded_workspace_handoff_artifacts(
     benchmark_assembly_definition_model: AssemblyDefinition | None = None
     manufacturing_config_model = None
 
+    errors.extend(
+        await _current_role_manifest_errors(
+            worker_client=worker_client,
+            target_node=target_node,
+        )
+    )
+
     if target_node in {
         AgentName.BENCHMARK_PLANNER,
         AgentName.ENGINEER_PLANNER,
@@ -1668,6 +1677,102 @@ def _get_state_worker_client(state: BaseModel | Mapping[str, Any]) -> Any | None
     )
 
 
+async def _current_role_manifest_errors(
+    *,
+    worker_client: Any | None,
+    target_node: AgentName,
+    state: BaseModel | Mapping[str, Any] | None = None,
+) -> list[NodeEntryValidationError]:
+    manifest_path = ".manifests/current_role.json"
+    worker_session_id = None if state is None else _get_state_value(state, "worker_session_id")
+    if worker_session_id is None and state is not None:
+        worker_session_id = _get_state_value(state, "session_id")
+
+    owns_client = worker_client is None
+    client = worker_client
+    if client is None and worker_session_id:
+        client = WorkerClient(
+            base_url=controller_settings.worker_light_url,
+            heavy_url=controller_settings.worker_heavy_url,
+            session_id=str(worker_session_id),
+        )
+
+    if client is None:
+        return [
+            NodeEntryValidationError(
+                code=REASON_MISSING_ARTIFACT,
+                message=(
+                    "Current-role manifest missing; no workspace client was "
+                    "available to read .manifests/current_role.json."
+                ),
+                source=EntryValidationSource.ARTIFACT,
+                artifact_path=manifest_path,
+            )
+        ]
+
+    try:
+        content = await client.read_file_optional(
+            manifest_path,
+            bypass_agent_permissions=True,
+        )
+    except Exception as exc:
+        return [
+            NodeEntryValidationError(
+                code=REASON_MISSING_ARTIFACT,
+                message=(
+                    "Current-role manifest could not be read from "
+                    f"{manifest_path}: {exc}"
+                ),
+                source=EntryValidationSource.ARTIFACT,
+                artifact_path=manifest_path,
+            )
+        ]
+    finally:
+        if owns_client and client is not None:
+            with contextlib.suppress(Exception):
+                await client.aclose()
+
+    if content is None:
+        return [
+            NodeEntryValidationError(
+                code=REASON_MISSING_ARTIFACT,
+                message=(
+                    "Current-role manifest missing; expected "
+                    f"{manifest_path} to name {target_node.value}."
+                ),
+                source=EntryValidationSource.ARTIFACT,
+                artifact_path=manifest_path,
+            )
+        ]
+
+    try:
+        manifest = parse_current_role_manifest(content)
+    except Exception as exc:
+        return [
+            NodeEntryValidationError(
+                code=REASON_POLICY_INVALID,
+                message=(f"Current-role manifest malformed at {manifest_path}: {exc}"),
+                source=EntryValidationSource.POLICY,
+                artifact_path=manifest_path,
+            )
+        ]
+
+    if manifest.agent_name != target_node:
+        return [
+            NodeEntryValidationError(
+                code=REASON_POLICY_INVALID,
+                message=(
+                    "Current-role manifest mismatch: "
+                    f"expected {target_node.value}, found {manifest.agent_name.value}."
+                ),
+                source=EntryValidationSource.POLICY,
+                artifact_path=manifest_path,
+            )
+        ]
+
+    return []
+
+
 async def evaluate_node_entry_contract(
     *,
     contract: NodeEntryContract,
@@ -1678,6 +1783,13 @@ async def evaluate_node_entry_contract(
     integration_mode: bool | None = None,
 ) -> NodeEntryValidationResult:
     errors: list[NodeEntryValidationError] = []
+
+    current_role_errors = await _current_role_manifest_errors(
+        worker_client=_get_state_worker_client(state),
+        target_node=contract.node,
+        state=state,
+    )
+    errors.extend(current_role_errors)
 
     for required_field in contract.required_state_fields:
         if _get_state_value(state, required_field) is None:

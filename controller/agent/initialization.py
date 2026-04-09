@@ -5,6 +5,7 @@ from structlog import get_logger
 
 from controller.clients.backend import RemoteFilesystemBackend
 from shared.agent_templates import load_common_template_files
+from shared.current_role import current_role_manifest_json
 from shared.enums import AgentName
 
 logger = get_logger(__name__)
@@ -142,6 +143,36 @@ def _can_write_template(
         return True
 
 
+async def seed_current_role_manifest(
+    backend: RemoteFilesystemBackend,
+    agent_name: AgentName,
+) -> bool:
+    """Refresh the backend-owned current-role manifest for the active workspace."""
+    current_role_path = ".manifests/current_role.json"
+    worker_client = getattr(backend.client, "client", backend.client)
+    try:
+        await worker_client.write_file(
+            current_role_path,
+            current_role_manifest_json(agent_name),
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        logger.info(
+            "current_role_manifest_seeded",
+            agent_name=agent_name,
+            path=current_role_path,
+        )
+        return True
+    except Exception as exc:
+        logger.warning(
+            "current_role_manifest_seed_failed",
+            agent_name=agent_name,
+            path=current_role_path,
+            error=str(exc),
+        )
+        return False
+
+
 async def initialize_agent_files(
     backend: RemoteFilesystemBackend, agent_name: AgentName, overwrite: bool = False
 ) -> None:
@@ -182,6 +213,8 @@ async def initialize_agent_files(
 
     if tasks:
         await asyncio.gather(*tasks)
+
+    await seed_current_role_manifest(backend, agent_name)
 
     # Skills are mounted read-only at /skills on worker side; initialization must not
     # attempt to write there through normal agent permissions.
