@@ -2863,7 +2863,7 @@ def test_script_tool_request_normalizes_drafting_script_path_by_graph():
                 "scripts/submit_plan.py",
                 "journal.md",
             ),
-            ("scripts/submit_plan.sh",),
+            ("scripts/submit_benchmark_plan.sh", "scripts/submit_plan.sh"),
         ),
         (
             "dataset/data/seed/role_based/engineer_plan_reviewer.json",
@@ -2886,7 +2886,7 @@ def test_script_tool_request_normalizes_drafting_script_path_by_graph():
                 "scripts/submit_plan.py",
                 "journal.md",
             ),
-            ("scripts/submit_plan.sh",),
+            ("scripts/submit_engineering_plan.sh", "scripts/submit_plan.sh"),
         ),
     ],
 )
@@ -3086,7 +3086,10 @@ async def test_codex_materialized_planner_workspace_submits(
                 "scripts/submit_for_review.sh",
                 "scripts/submit_for_review.py",
             ),
-            ("scripts/submit_for_review.sh",),
+            (
+                "scripts/submit_benchmark_for_review.sh",
+                "scripts/submit_for_review.sh",
+            ),
         ),
         (
             "dataset/data/seed/role_based/engineer_coder.json",
@@ -3115,7 +3118,10 @@ async def test_codex_materialized_planner_workspace_submits(
                 "scripts/submit_for_review.sh",
                 "scripts/submit_for_review.py",
             ),
-            ("scripts/submit_for_review.sh",),
+            (
+                "scripts/submit_engineering_for_review.sh",
+                "scripts/submit_for_review.sh",
+            ),
         ),
         (
             "dataset/data/seed/role_based/engineer_plan_reviewer.json",
