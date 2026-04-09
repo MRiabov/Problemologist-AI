@@ -20,12 +20,21 @@ class PromptBackendFamily(StrEnum):
     CLI_BASED = "cli_based"
 
 
+class PromptCliAppendices(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    shared: str = ""
+    providers: dict[str, str] = Field(default_factory=dict)
+
+
 class PromptAppendices(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     shared: str = ""
+    bug_reporting: str = ""
     drafting: dict[str, str] = Field(default_factory=dict)
     backend: dict[str, str] = Field(default_factory=dict)
+    cli: PromptCliAppendices = Field(default_factory=PromptCliAppendices)
 
 
 class PromptSourceConfig(BaseModel):
@@ -92,6 +101,14 @@ class PromptManager:
             return False
         return mode in (DraftingMode.MINIMAL, DraftingMode.FULL)
 
+    def _bug_reports_enabled(self) -> bool:
+        if self._agents_config is None:
+            return False
+        try:
+            return bool(self._agents_config.bug_reports.enabled)
+        except Exception:
+            return False
+
     @staticmethod
     def _supports_drafting_appendix(role_key: str) -> bool:
         return role_key in PromptManager._DRAFTING_ROLE_KEYS
@@ -112,6 +129,7 @@ class PromptManager:
         template_name: str | AgentName,
         *,
         backend_family: str | PromptBackendFamily = PromptBackendFamily.API_BASED,
+        cli_provider_name: str | None = None,
         runtime_context: str | None = None,
     ) -> str:
         """Render a prompt with the shared base source model and runtime context."""
@@ -130,8 +148,19 @@ class PromptManager:
 
         prompt_sections = [
             role_prompt,
-            self._prompt_source.appendices.shared.strip(),
         ]
+        shared_appendix = self._prompt_source.appendices.shared.strip()
+        if shared_appendix:
+            prompt_sections.append(shared_appendix)
+        if self._bug_reports_enabled():
+            bug_reporting_appendix = (
+                self._prompt_source.appendices.bug_reporting.strip()
+            )
+            if not bug_reporting_appendix:
+                raise ValueError(
+                    "Bug-report mode is enabled, but config/prompts.yaml is missing appendices.bug_reporting"
+                )
+            prompt_sections.append(bug_reporting_appendix)
         if self._technical_drawing_mode_active(
             role_key
         ) and self._supports_drafting_appendix(role_key):
@@ -139,9 +168,22 @@ class PromptManager:
             if drafting_appendix:
                 prompt_sections.append(drafting_appendix.strip())
         prompt_sections.append(backend_appendix.strip())
+        if backend_key == PromptBackendFamily.CLI_BASED.value:
+            cli_appendices = self._prompt_source.appendices.cli
+            shared_cli_appendix = cli_appendices.shared.strip()
+            provider_appendix = ""
+            if cli_provider_name:
+                provider_key = cli_provider_name.strip().lower()
+                raw_provider_appendix = cli_appendices.providers.get(provider_key)
+                if raw_provider_appendix:
+                    provider_appendix = raw_provider_appendix.strip()
+            if shared_cli_appendix:
+                prompt_sections.append(shared_cli_appendix)
+            if provider_appendix:
+                prompt_sections.append(provider_appendix)
         if runtime_context and runtime_context.strip():
             prompt_sections.append(runtime_context.strip())
-        # CLI-backed Codex runs already get the skill files through the workspace
+        # CLI-backed runs already get the skill files through the workspace
         # contract, so they do not need the extra catalog text in the prompt.
         if backend_key != PromptBackendFamily.CLI_BASED.value:
             skill_catalog = "\n".join(build_skill_catalog_lines()).strip()

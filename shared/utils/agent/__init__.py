@@ -953,7 +953,10 @@ async def _preview_async(
             preview_output_dir = workspace_root / candidate_path.parent
         break
 
-    materialized_path = materialize_preview_response(response, preview_output_dir)
+    materialized_path = materialize_preview_response(
+        response,
+        preview_output_dir,
+    )
     if materialized_path is not None:
         local_path = str(materialized_path.relative_to(workspace_root))
         response.image_path = local_path

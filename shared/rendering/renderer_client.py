@@ -332,7 +332,8 @@ def render_stress_heatmap(
 
 
 def materialize_preview_response(
-    response: PreviewDesignResponse, output_dir: Path
+    response: PreviewDesignResponse,
+    output_dir: Path,
 ) -> Path | None:
     """Persist a preview response payload into the local workspace."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -343,6 +344,16 @@ def materialize_preview_response(
 
     if object_store_keys:
         storage_client = _storage_client_from_env()
+        missing_object_store_paths = [
+            rel_path
+            for rel_path in object_store_keys
+            if rel_path not in response.render_blobs_base64
+        ]
+        if storage_client is None and missing_object_store_paths:
+            raise RuntimeError(
+                "preview response referenced object-store-backed renders but no "
+                "S3 client is configured"
+            )
 
     if response.render_blobs_base64:
         for rel_path, blob in response.render_blobs_base64.items():
@@ -359,14 +370,6 @@ def materialize_preview_response(
     if object_store_keys and storage_client is not None:
         for rel_path, object_key in object_store_keys.items():
             target = workspace_root / rel_path
-            if target.exists():
-                if first_materialized is None and target.suffix.lower() in {
-                    ".png",
-                    ".jpg",
-                    ".jpeg",
-                }:
-                    first_materialized = target
-                continue
             target.parent.mkdir(parents=True, exist_ok=True)
             storage_client.download_file(object_key, target)
             if first_materialized is None and target.suffix.lower() in {
@@ -384,11 +387,17 @@ def materialize_preview_response(
             first_materialized = image_path
 
     if response.image_path and first_materialized is None:
-        candidate = workspace_root / response.image_path
+        candidate = (
+            Path(response.image_path)
+            if Path(response.image_path).is_absolute()
+            else workspace_root / response.image_path
+        )
         if candidate.exists():
             first_materialized = candidate
         else:
-            first_materialized = output_dir / Path(response.image_path).name
+            raise RuntimeError(
+                f"preview image {response.image_path} was not materialized"
+            )
 
     if response.render_manifest_json:
         manifest_path = output_dir / "render_manifest.json"

@@ -57,7 +57,7 @@ The current callable signatures and request shapes live in [function_signatures.
 - For history or replay, resolve the bundle from the append-only render index and then read its bundle-local manifest.
 - Treat `renders/render_manifest.json` as compatibility plumbing only when the runtime still exposes it.
 - Simulation bundles may also persist `frames.jsonl` and `objects.parquet` sidecars at the video-capture cadence. Treat `frames.jsonl` as sparse timestamps and `objects.parquet` as the frame-indexed pose-history sidecar; inspect the MP4 and that sidecar together when motion or timing matters.
-- Never infer coordinates from raw pixels, filenames, or stale manifests.
+- Never infer coordinates from raw pixels or stale manifests. Filename stems such as `e0_a0` are generated from the render request and encode the rounded orbit angles for that preview; use the bundle-local manifest when you need structured metadata or exact provenance.
 
 ## Inspection Rules
 

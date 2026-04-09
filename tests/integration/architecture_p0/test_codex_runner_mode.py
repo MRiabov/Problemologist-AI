@@ -244,8 +244,11 @@ def _agents_config_with_technical_drawing_modes(
     *,
     engineer_mode: DraftingMode = DraftingMode.OFF,
     benchmark_mode: DraftingMode = DraftingMode.OFF,
+    bug_reports_enabled: bool = False,
 ) -> AgentsConfig:
     data = yaml.safe_load(AGENTS_CONFIG_PATH.read_text(encoding="utf-8")) or {}
+    bug_reports = data.setdefault("bug_reports", {})
+    bug_reports["enabled"] = bug_reports_enabled
     agents = data.setdefault("agents", {})
     engineer_agent = agents.setdefault("engineer_planner", {})
     engineer_agent["technical_drawing_mode"] = engineer_mode
@@ -604,15 +607,19 @@ def test_materialize_seed_workspace_forwards_new_terminal_flag_to_open_cli_ui(
     workspace_dir = tmp_path / "workspace"
     prompt_path = workspace_dir / "prompt.md"
     captured: dict[str, object] = {}
+    materialize_kwargs: dict[str, object] = {}
 
     monkeypatch.setattr(
         materialize_seed_workspace_module,
         "materialize_workspace",
-        lambda **_: SimpleNamespace(
-            workspace_dir=workspace_dir,
-            prompt_path=prompt_path,
-            prompt_text="prompt text",
-            copied_paths=["foo.txt"],
+        lambda **kwargs: (
+            materialize_kwargs.update(kwargs)
+            or SimpleNamespace(
+                workspace_dir=workspace_dir,
+                prompt_path=prompt_path,
+                prompt_text="prompt text",
+                copied_paths=["foo.txt"],
+            )
         ),
     )
     monkeypatch.setattr(
@@ -644,6 +651,7 @@ def test_materialize_seed_workspace_forwards_new_terminal_flag_to_open_cli_ui(
         materialize_seed_workspace_module.main()
 
     assert exc_info.value.code == 0
+    assert materialize_kwargs["provider_name"] == "qwen"
     assert captured["new_terminal"] is True
     assert captured["provider_name"] == "qwen"
     assert captured["task_id"] == "ec-001-drawing-full"
@@ -2651,7 +2659,7 @@ def test_launch_codex_exec_uses_expected_sandbox_policy(
     assert workspace_dir.exists()
 
 
-def _build_codex_runtime_context_for_test(
+def _build_cli_runtime_context_for_test(
     item: EvalDatasetItem, agent_name: AgentName
 ) -> str:
     dataset_note = (
@@ -2699,15 +2707,27 @@ def test_prompt_source_role_prompts_follow_runtime_order():
         "journalling_agent",
         "default",
     ]
+    assert "bug_reporting" in prompt_source["appendices"]
+    assert sorted(prompt_source["appendices"]["cli"]["providers"].keys()) == [
+        "codex",
+        "qwen",
+    ]
 
 
 @pytest.mark.integration_p0
-def test_prompt_manager_unified_render_uses_shared_source_model(tmp_path: Path):
+def test_prompt_manager_unified_render_uses_shared_source_model(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
     item = _load_dataset_item(
         "dataset/data/seed/role_based/engineer_coder.json",
         "ec-001",
     )
     workspace_dir = tmp_path / "workspace"
+    monkeypatch.setattr(
+        "evals.logic.codex_workspace.resolve_seed_artifact_dir",
+        lambda *args, **kwargs: None,
+    )
     materialized = materialize_seed_workspace(
         item=item,
         agent_name=AgentName.ENGINEER_CODER,
@@ -2719,7 +2739,7 @@ def test_prompt_manager_unified_render_uses_shared_source_model(tmp_path: Path):
     cli_prompt = prompt_manager.render(
         AgentName.ENGINEER_CODER,
         backend_family="cli_based",
-        runtime_context=_build_codex_runtime_context_for_test(
+        runtime_context=_build_cli_runtime_context_for_test(
             item, AgentName.ENGINEER_CODER
         ),
     )
@@ -2732,15 +2752,119 @@ def test_prompt_manager_unified_render_uses_shared_source_model(tmp_path: Path):
         "Use controller-managed tools and provider-native tool calls."
     )
     assert cli_prompt.index("Use workspace-relative paths only.") < cli_prompt.index(
-        "This is a local Codex workspace."
+        "This is a local CLI-provider workspace."
     )
     assert "Available skills you can read:" in api_prompt
     assert "Available skills you can read:" not in cli_prompt
-    assert cli_prompt.index("This is a local Codex workspace.") < cli_prompt.index(
-        "Workspace: current directory"
-    )
+    assert cli_prompt.index(
+        "This is a local CLI-provider workspace."
+    ) < cli_prompt.index("Workspace: current directory")
     assert "common.code_template" not in cli_prompt
+    assert "Bug-report mode is a global diagnostic overlay." not in api_prompt
+    assert "Bug-report mode is a global diagnostic overlay." not in cli_prompt
     assert materialized.prompt_text == cli_prompt
+
+
+@pytest.mark.integration_p0
+def test_prompt_manager_appends_cli_provider_specific_appendix():
+    item = _load_dataset_item(
+        "dataset/data/seed/role_based/engineer_coder.json",
+        "ec-001",
+    )
+
+    prompt_manager = PromptManager()
+    prompt = prompt_manager.render(
+        AgentName.ENGINEER_CODER,
+        backend_family="cli_based",
+        cli_provider_name="qwen",
+        runtime_context=_build_cli_runtime_context_for_test(
+            item, AgentName.ENGINEER_CODER
+        ),
+    )
+
+    assert "This is a local CLI-provider workspace." in prompt
+    assert (
+        "Qwen-specific reminder: use `render_cad(...)` for CAD geometry, then inspect the generated render files with `read_file` even if you think you do not have a dedicated image tool. Reread the active workspace state before answering and do not rely on memory across turns."
+        in prompt
+    )
+    assert (
+        "Codex-specific reminder: keep the local shell helper flow and resume syntax in mind."
+        not in prompt
+    )
+    assert prompt.index("This is a local CLI-provider workspace.") < prompt.index(
+        "Qwen-specific reminder: use `render_cad(...)` for CAD geometry, then inspect the generated render files with `read_file` even if you think you do not have a dedicated image tool. Reread the active workspace state before answering and do not rely on memory across turns."
+    )
+    assert prompt.index(
+        "Qwen-specific reminder: use `render_cad(...)` for CAD geometry, then inspect the generated render files with `read_file` even if you think you do not have a dedicated image tool. Reread the active workspace state before answering and do not rely on memory across turns."
+    ) < prompt.index("Workspace: current directory")
+
+
+@pytest.mark.integration_p0
+def test_prompt_manager_injects_bug_reporting_appendix_only_when_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    config = _agents_config_with_technical_drawing_modes(bug_reports_enabled=True)
+    monkeypatch.setattr(
+        "controller.agent.prompt_manager.load_agents_config",
+        lambda: config,
+    )
+
+    item = _load_dataset_item(
+        "dataset/data/seed/role_based/engineer_coder.json",
+        "ec-001",
+    )
+    prompt_manager = PromptManager()
+    api_prompt = prompt_manager.render(AgentName.ENGINEER_CODER)
+    cli_prompt = prompt_manager.render(
+        AgentName.ENGINEER_CODER,
+        backend_family="cli_based",
+        runtime_context=_build_cli_runtime_context_for_test(
+            item, AgentName.ENGINEER_CODER
+        ),
+    )
+
+    assert "Bug-report mode is a global diagnostic overlay." in api_prompt
+    assert "Bug-report mode is a global diagnostic overlay." in cli_prompt
+    assert (
+        "Keep the report concise and factual: include the active role, session or episode identifiers when available, the exact failing command or tool call, expected versus actual behavior, and the relevant artifact paths."
+        in api_prompt
+    )
+    assert (
+        "Filing a bug report is diagnostic, not terminal; continue working unless the task is otherwise blocked or the run has reached a hard stop."
+        in cli_prompt
+    )
+
+
+@pytest.mark.integration_p0
+def test_materialize_seed_workspace_threads_cli_provider_specific_appendix(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    item = _load_dataset_item(
+        "dataset/data/seed/role_based/engineer_coder.json",
+        "ec-001",
+    )
+    workspace_dir = tmp_path / "workspace"
+    monkeypatch.setattr(
+        "evals.logic.codex_workspace.resolve_seed_artifact_dir",
+        lambda *args, **kwargs: None,
+    )
+
+    materialized = materialize_seed_workspace(
+        item=item,
+        agent_name=AgentName.ENGINEER_CODER,
+        workspace_dir=workspace_dir,
+        provider_name="qwen",
+    )
+
+    assert (
+        "Qwen-specific reminder: use `render_cad(...)` for CAD geometry, then inspect the generated render files with `read_file` even if you think you do not have a dedicated image tool. Reread the active workspace state before answering and do not rely on memory across turns."
+        in materialized.prompt_text
+    )
+    assert (
+        "Codex-specific reminder: keep the local shell helper flow and resume syntax in mind."
+        not in materialized.prompt_text
+    )
 
 
 @pytest.mark.integration_p0

@@ -35,6 +35,7 @@ from shared.workers.schema import (
     ListFilesRequest,
     PreviewDesignResponse,
     ReadFileRequest,
+    ReadFilesRequest,
     RenderManifest,
     WriteFileRequest,
 )
@@ -946,13 +947,78 @@ async def test_int_212_utils_preview_materializes_modality_manifest_and_depth_ar
         manifest_content = manifest_resp.json()["content"]
         manifest = RenderManifest.model_validate_json(manifest_content)
         assert manifest.worker_session_id == session_id
-        assert len(manifest.preview_evidence_paths) == 3, (
-            manifest.preview_evidence_paths
-        )
+        assert manifest.preview_evidence_paths, manifest.preview_evidence_paths
         assert manifest.preview_evidence_paths[0] == artifact_path
         assert artifact_path in manifest.artifacts
         artifact_metadata = manifest.artifacts[artifact_path]
         assert artifact_metadata.modality == "depth"
+
+        first_read_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/read_files",
+            json=ReadFilesRequest(paths=[artifact_path]).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+        assert first_read_resp.status_code == 200, first_read_resp.text
+        first_read_files = first_read_resp.json()["files"]
+        assert len(first_read_files) == 1, first_read_files
+        first_image_bytes = base64.b64decode(first_read_files[0]["content_b64"])
+
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="solution_script.py",
+                content="""
+from build123d import Align, Box
+from shared.models.schemas import PartMetadata
+
+
+def build():
+    part = Box(2.0, 2.0, 5.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    part.label = "preview_helper_box"
+    part.metadata = PartMetadata(material_id="aluminum_6061", fixed=False)
+    return part
+
+
+result = build()
+""",
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+
+        second_exec_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/runtime/execute",
+            json=ExecuteRequest(
+                code="python preview_probe.py",
+                timeout=120,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=180.0,
+        )
+        assert second_exec_resp.status_code == 200, second_exec_resp.text
+        second_exec_data = ExecuteResponse.model_validate(second_exec_resp.json())
+        assert second_exec_data.exit_code == 0, second_exec_data.stderr
+        second_artifact_line = next(
+            line
+            for line in second_exec_data.stdout.splitlines()
+            if line.startswith("PREVIEW_ARTIFACT_PATH=")
+        )
+        second_artifact_path = second_artifact_line.split("=", 1)[1]
+        assert second_artifact_path == artifact_path, second_exec_data.stdout
+
+        second_read_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/read_files",
+            json=ReadFilesRequest(paths=[artifact_path]).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+        assert second_read_resp.status_code == 200, second_read_resp.text
+        second_read_files = second_read_resp.json()["files"]
+        assert len(second_read_files) == 1, second_read_files
+        second_image_bytes = base64.b64decode(second_read_files[0]["content_b64"])
+        assert second_image_bytes != first_image_bytes
 
 
 @pytest.mark.integration_p1
@@ -1275,6 +1341,56 @@ async def test_int_215_engineer_preview_routes_to_engineer_bucket_without_assemb
         assert manifest_resp.status_code == 200, manifest_resp.text
         manifest = RenderManifest.model_validate_json(manifest_resp.json()["content"])
         assert preview_data.artifact_path in manifest.artifacts
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+@pytest.mark.int_id("INT-217")
+async def test_int_217_preview_materializes_without_s3_env():
+    """
+    INT-217: preview materialization must still hydrate the local workspace when
+    the caller has no ambient S3 credentials.
+    """
+    session_id = f"INT-217-{uuid.uuid4().hex[:8]}"
+
+    async with httpx.AsyncClient(timeout=1000.0) as client:
+        await _write_preview_workspace(client, session_id)
+
+        exec_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/runtime/execute",
+            json=ExecuteRequest(
+                code=(
+                    "bash -lc '"
+                    "unset S3_ENDPOINT S3_ACCESS_KEY AWS_ACCESS_KEY_ID "
+                    "AWS_SECRET_ACCESS_KEY ASSET_S3_BUCKET WORKER_LIGHT_URL; "
+                    "export CONTROLLER_URL=http://127.0.0.1:18000; "
+                    "python preview_probe.py'"
+                ),
+                timeout=120,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=180.0,
+        )
+        assert exec_resp.status_code == 200, exec_resp.text
+        exec_data = ExecuteResponse.model_validate(exec_resp.json())
+        assert exec_data.exit_code == 0, exec_data.stderr
+        assert "PREVIEW_SUCCESS=True" in exec_data.stdout, exec_data.stdout
+        artifact_line = next(
+            line
+            for line in exec_data.stdout.splitlines()
+            if line.startswith("PREVIEW_ARTIFACT_PATH=")
+        )
+        artifact_path = artifact_line.split("=", 1)[1]
+        assert artifact_path.startswith("renders/current-episode/"), artifact_path
+
+        blob_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/read_blob",
+            json=ReadFileRequest(path=artifact_path).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=60.0,
+        )
+        assert blob_resp.status_code == 200, blob_resp.text
+        assert blob_resp.content.startswith(b"\x89PNG"), blob_resp.content[:8]
 
 
 @pytest.mark.integration_p1

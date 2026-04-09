@@ -314,6 +314,7 @@ def main() -> None:
         item=row,
         agent_name=agent,
         workspace_dir=workspace_dir,
+        provider_name=args.provider,
     )
 
     if args.force_no_validate_seed:

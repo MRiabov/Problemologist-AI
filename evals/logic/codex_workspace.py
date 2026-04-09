@@ -823,8 +823,10 @@ def _review_prefix(agent_name: AgentName) -> str | None:
     }.get(agent_name)
 
 
-def _build_codex_runtime_context(
-    *, item: EvalDatasetItem, agent_name: AgentName
+def _build_cli_runtime_context(
+    *,
+    item: EvalDatasetItem,
+    agent_name: AgentName,
 ) -> str:
     task = item.task.strip()
     if item.seed_dataset is not None:
@@ -854,14 +856,17 @@ def build_cli_prompt(
     *,
     item: EvalDatasetItem,
     agent_name: AgentName,
+    provider_name: str | None = None,
 ) -> str:
     """Build a role-specific prompt for the materialized workspace."""
 
-    runtime_context = _build_codex_runtime_context(item=item, agent_name=agent_name)
+    runtime_context = _build_cli_runtime_context(item=item, agent_name=agent_name)
     prompt_manager = PromptManager()
+    # PromptManager owns the shared, drafting, backend, and bug-report appendices.
     return prompt_manager.render(
         agent_name,
         backend_family=PromptBackendFamily.CLI_BASED,
+        cli_provider_name=provider_name,
         runtime_context=runtime_context,
     )
 
@@ -1062,6 +1067,7 @@ def materialize_seed_workspace(
     item: EvalDatasetItem,
     agent_name: AgentName,
     workspace_dir: Path,
+    provider_name: str | None = None,
 ) -> MaterializedWorkspace:
     """Materialize a seeded eval row into a local workspace."""
 
@@ -1185,6 +1191,7 @@ def materialize_seed_workspace(
     prompt_text = build_cli_prompt(
         item=item,
         agent_name=agent_name,
+        provider_name=provider_name,
     )
     prompt_path = workspace_dir / "prompt.md"
     prompt_path.write_text(prompt_text, encoding="utf-8")
