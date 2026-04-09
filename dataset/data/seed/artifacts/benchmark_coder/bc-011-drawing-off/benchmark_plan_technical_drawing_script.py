@@ -14,6 +14,7 @@ from build123d import (
     Box,
     Compound,
     Location,
+    TechnicalDrawing,
 )
 
 from utils.metadata import CompoundMetadata, PartMetadata
@@ -58,6 +59,7 @@ def build() -> Compound:
     All 5 inventory items are included so the TechnicalDrawing projection
     shows every part referenced by the dimension/callout schedule.
     """
+    TechnicalDrawing(title="Sideways Ball Benchmark Plan")
     children = [
         _make_part(
             "ground_plane",

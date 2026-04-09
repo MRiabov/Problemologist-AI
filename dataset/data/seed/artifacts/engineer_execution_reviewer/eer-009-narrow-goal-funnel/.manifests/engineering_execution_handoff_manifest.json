@@ -3,7 +3,7 @@
   "reviewer_stage": "engineering_execution_reviewer",
   "timestamp": "2026-03-11T12:00:00Z",
   "session_id": "seed-eer-009-narrow-goal-funnel",
-  "revision": "106c57712a345e83728310ea45e8004c738fdaf0",
+  "revision": "96dcf4a059618134f8d082bad282b646cffc7775",
   "script_path": "solution_script.py",
   "script_sha256": "791f9760e68336c6e62c53ae82ba53fa26bd1fd3b3a355654500d20366e8ddb3",
   "validation_success": true,

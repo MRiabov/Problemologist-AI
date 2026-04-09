@@ -4,9 +4,9 @@
   "session_id": "seed-bc-011-drawing-off",
   "planner_node_type": "benchmark_planner",
   "artifact_hashes": {
-    "benchmark_plan.md": "9332a08e74a4b8400a897d349972b6c79741669e",
-    "todo.md": "e5f6a533c1fc94a8fb29807dc281a265f1c0838f",
-    "benchmark_definition.yaml": "41e5fc7d3c2a581e927853f6761b9f9be4bc35af",
-    "benchmark_assembly_definition.yaml": "5994d4afc5e3cb724adb0c708422f0434be5340b"
+    "benchmark_plan.md": "c7ef3e7b37651d8e1a390566b3c6e8089dbea8ee3834e7eacb96ff337d26e209",
+    "todo.md": "e0e4e969cbe55b2a66f9d3eac0be603810f2009317c6009650b74cd7bb8f1ee9",
+    "benchmark_definition.yaml": "0a7ba28d4c5ee581fc85073b040c63f6cd4103ffcf974608dfacbeb417b0c12a",
+    "benchmark_assembly_definition.yaml": "0126a49875a5e2c440ab59306f9b509bbb505db732e569535ec77d28edc9783a"
   }
 }

@@ -4,9 +4,9 @@
   "session_id": "seed-bc-011-sideways-ball",
   "planner_node_type": "benchmark_planner",
   "artifact_hashes": {
-    "benchmark_plan.md": "c7ef3e7b37651d8e1a390566b3c6e8089dbea8ee3834e7eacb96ff337d26e209",
+    "benchmark_plan.md": "67e7cf722cf2f8beca3740042e1745ca46a6f40eed99ffdec5942a4633390f31",
     "todo.md": "e0e4e969cbe55b2a66f9d3eac0be603810f2009317c6009650b74cd7bb8f1ee9",
     "benchmark_definition.yaml": "0a7ba28d4c5ee581fc85073b040c63f6cd4103ffcf974608dfacbeb417b0c12a",
-    "benchmark_assembly_definition.yaml": "43885913141cddc8d5b3765d056ca21b0465b39da4e80b556e5b086daf894bc0"
+    "benchmark_assembly_definition.yaml": "7779f22c2f47d4b400b07bf3aa9d538697126997d971b807e228a7f4ed89026e"
   }
 }

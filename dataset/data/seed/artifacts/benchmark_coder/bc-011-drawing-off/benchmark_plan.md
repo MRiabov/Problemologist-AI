@@ -18,92 +18,37 @@ Test lateral transfer over 1 meter distance. The benchmark moves a 40 mm radius 
 - Failure if the sphere exits simulation bounds.
 - Gravity-only passive transfer via a ramp/track geometry; no active drive mechanism. The `lift_carriage` has a single passive DOF (`slide_z`) with no `control` block — it acts as a friction-guided sliding surface, not a powered actuator.
 
-## 4. Detailed Calculations
-
-### 4.1 Transfer Distance and Geometry
-
-The payload starts at `start_position = [-0.5, 0.0, 0.12]` m and must reach the goal zone centered at X=+0.5 m. The lateral transfer distance is:
-
-```
-delta_x = 0.5 - (-0.5) = 1.0 m
-```
-
-The start height is Z=0.12 m and the goal shelf is at Z=0.17 m. Since the goal is *higher* than the start, a purely gravity-driven transfer is impossible without an intermediate ramp that first drops the sphere to gain kinetic energy, then uses that energy to climb back up. The mechanism uses a V-shaped ramp profile:
-
-1. **Drop phase:** Sphere rolls down from Z=0.18 m (build zone ceiling) to Z=0.04 m over the first 0.5 m (X: -0.5 to 0.0), gaining velocity.
-2. **Climb phase:** Sphere climbs from Z=0.04 m to Z=0.17 m over the remaining 0.5 m (X: 0.0 to +0.5).
-
-### 4.2 Energy Balance
-
-For a steel sphere (`steel_carbon`, density ~7850 kg/m³, radius 0.04 m):
-
-```
-mass = density * volume = 7850 * (4/3 * pi * 0.04³) = 7850 * 0.000268 = 2.105 kg
-weight = mass * g = 2.105 * 9.81 = 20.65 N
-```
-
-Energy at ramp entry (relative to Z=0.04 m datum):
-
-```
-E_start = m * g * (0.18 - 0.04) = 2.105 * 9.81 * 0.14 = 2.87 J
-```
-
-Energy required to reach goal shelf (Z=0.17 m from Z=0.04 m datum):
-
-```
-E_goal = m * g * (0.17 - 0.04) = 2.105 * 9.81 * 0.13 = 2.68 J
-```
-
-Net energy margin:
-
-```
-E_margin = 2.87 - 2.68 = 0.19 J  (7% margin before friction)
-```
-
-Rolling friction coefficient for steel-on-aluminum: μ_r ≈ 0.002. Work lost to friction over 1.0 m:
-
-```
-W_friction = μ_r * m * g * d = 0.002 * 20.65 * 1.0 = 0.041 J
-```
-
-Net energy at goal: 0.19 - 0.041 = 0.15 J > 0. Transfer succeeds with margin.
-
-### 4.3 Timing Estimate
-
-Velocity at goal bottom (Z=0.04 m):
-
-```
-v = sqrt(2 * g * h) = sqrt(2 * 9.81 * 0.14) = sqrt(2.75) = 1.66 m/s
-```
-
-Transfer time (average velocity ~1.1 m/s over 1.0 m):
-
-```
-t_transfer ≈ 1.0 / 1.1 = 0.91 s
-```
-
-### 4.4 Clearance Margins
-
-- Guide rail spacing: Y = +/-0.06 m, sphere diameter = 0.08 m. Clearance per side: (0.12 - 0.08) / 2 = 0.02 m (20 mm).
-- Build zone Z ceiling: 0.18 m. Ramp peak at Z=0.18 m exactly hits the ceiling — valid.
-
-### 4.5 Tolerance Analysis
-
-Runtime jitter on start position: [0.01, 0.005, 0.005] m. Worst-case start Z = 0.12 - 0.005 = 0.115 m, but the ramp entry is fixed at Z=0.18 m regardless of jitter. The jitter affects where on the ramp entry the sphere spawns:
-
-```
-E_worst_x_jitter = negligible (ramp entry height is fixed by geometry, not spawn position)
-```
-
-The transfer is robust to the specified jitter envelope because the ramp geometry, not the spawn position, determines the available energy.
-
-## 5. Randomization
+## 4. Randomization
 
 - Static variation on platform height between 0.07 m and 0.09 m (affects ramp mounting base).
 - Static variation on rail Y offset between -0.01 m and +0.01 m (affects guide clearance).
 - Runtime jitter on the sphere start position: [0.01, 0.005, 0.005] m.
 
-## 6. Implementation Notes
+## 5. Implementation Notes
+
+### 5.1 Detailed Calculations
+
+**Transfer distance:** `delta_x = 0.5 - (-0.5) = 1.0 m`
+
+**Energy balance** for steel sphere (`steel_carbon`, density ~7850 kg/m³, radius 0.04 m, mass ≈ 2.105 kg):
+- Ramp entry at Z=0.18 m (build zone ceiling), lowest point at Z=0.04 m, goal shelf at Z=0.17 m.
+- `E_start = m * g * (0.18 - 0.04) = 2.105 * 9.81 * 0.14 = 2.87 J`
+- `E_goal = m * g * (0.17 - 0.04) = 2.105 * 9.81 * 0.13 = 2.68 J`
+- `E_margin = 2.87 - 2.68 = 0.19 J` (7% before friction)
+- Rolling friction loss (μ_r ≈ 0.002, d=1.0 m): `W_friction = 0.002 * 20.65 * 1.0 = 0.041 J`
+- Net energy at goal: 0.15 J > 0 — transfer succeeds.
+
+**Timing:** velocity at bottom ≈ 1.66 m/s, transfer time ≈ 0.91 s.
+
+**Clearance:** guide rail spacing Y=±0.06 m, sphere diameter 0.08 m → 20 mm per side.
+
+**Tolerance:** worst-case jitter (Z: -0.005 m) still leaves positive margin because ramp entry height is fixed by geometry.
+
+### 5.2 Payload Trajectory
+
+The payload follows a gravity-driven ramp path: start at X=-0.5 m, Z=0.18 m → bottom at X=0 m, Z=0.04 m → goal at X=+0.5 m, Z=0.17 m. The `lift_carriage` provides passive Z-axis guidance (`dofs: [slide_z]`, no `control` block).
+
+### 5.3 General Requirements
 
 - Use Build123d primitives.
 - Ensure every part has `PartMetadata` or `CompoundMetadata`.

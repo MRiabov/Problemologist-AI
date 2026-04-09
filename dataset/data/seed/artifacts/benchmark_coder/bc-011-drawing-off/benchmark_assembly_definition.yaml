@@ -77,9 +77,6 @@ final_assembly:
     config:
       dofs:
         - slide_z
-      control:
-        mode: ON_OFF
-        speed: 1.0
 drafting:
   sheet_id: "sheet-1"
   title: "Sideways Ball Drawing"

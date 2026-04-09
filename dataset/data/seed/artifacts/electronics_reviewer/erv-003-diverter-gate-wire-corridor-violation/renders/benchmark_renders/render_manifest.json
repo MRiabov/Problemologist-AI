@@ -4,7 +4,7 @@
   "created_at": "2026-04-08T07:06:34.714169+00:00",
   "episode_id": "30c9cd56-c90b-57f8-a2d9-dcefd16f78bf",
   "worker_session_id": "seed-renders-erv-003-diverter-gate-wire-corridor-violation-37c7ad72",
-  "revision": "106c57712a345e83728310ea45e8004c738fdaf0",
+  "revision": "96dcf4a059618134f8d082bad282b646cffc7775",
   "scene_hash": "589ef4dcb97e15f6d2cf4cf5858f04394858c2032a58bf42d633df6213d57807",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",
