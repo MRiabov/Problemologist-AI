@@ -85,6 +85,9 @@ drafting:
   title: "Sideways Ball Drawing"
   units: "mm"
   projection_standard: "orthographic"
+  goal_zone_overlap_intents:
+    - zone_name: goal_zone
+      target: raised_goal_shelf
   views:
     - view_id: "front_overview"
       target: "floor_plate"

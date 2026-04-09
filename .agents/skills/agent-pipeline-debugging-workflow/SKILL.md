@@ -13,15 +13,15 @@ Deterministic validation is not optional: if a value can be checked from structu
 
 Use these docs in order when deciding whether the failure is a seed bug, code bug, prompt bug, or architecture gap:
 
-1. `specs/desired_architecture.md`
-2. `specs/architecture/evals-architecture.md`
-3. `specs/devtools.md`
-4. `specs/integration-test-rules.md`
-5. `specs/integration-test-list.md`
-6. `specs/architecture/agents/agent-harness.md`
-7. `specs/architecture/agents/prompt-management.md`
-8. `specs/architecture/agents/agent-skill.md`
-9. `specs/architecture/observability.md`
+01. `specs/desired_architecture.md`
+02. `specs/architecture/evals-architecture.md`
+03. `specs/devtools.md`
+04. `specs/integration-test-rules.md`
+05. `specs/integration-test-list.md`
+06. `specs/architecture/agents/agent-harness.md`
+07. `specs/architecture/agents/prompt-management.md`
+08. `specs/architecture/agents/agent-skill.md`
+09. `specs/architecture/observability.md`
 10. `specs/dataset-generation.md`
 11. `specs/business-usecase.md`
 
@@ -29,28 +29,32 @@ If a row violates the current seeded-entry contract, fix the seed or fixture and
 
 ## Non-negotiable rules
 
-1. Never debug with multiple agents (`--agent all` is forbidden for triage).
-2. Always reproduce with one agent and one task first (`--task-id`, `--limit 1`, `--concurrency 1`).
-   - `run_evals.py` now supports multi-ID `--task-id` input (repeated flags, CSV, bracket list), but use that only after first-seed triage.
-   - `--random` with `--limit N` can help widen follow-up runs so they do not keep hitting only the first eval row.
-3. Run evals through `uv run dataset/evals/run_evals.py`.
-4. Use standard `run_evals.py` startup (it already runs env setup); do not pre-run `./scripts/env_up.sh` for normal eval triage.
-5. If you hit devops/startup instability (ports, stale containers, unhealthy services), run `scripts/env_down.sh` first, then rerun `uv run dataset/evals/run_evals.py`; the eval runner will bring the environment back up automatically.
-6. Fix root causes in prompts/code/environment; do not add permissive fallbacks that hide failures.
-7. Validate fixes against intended architecture/business behavior, not just current implementation behavior.
-8. Use subagents to view and triage from logs; else you'll fill up your context too quickly.
-9. If you changed a contract surface (prompt/runtime/helper/validator), treat any earlier eval behavior as tainted evidence until you rerun under the corrected contract.
+01. Never debug with multiple agents (`--agent all` is forbidden for triage).
+02. Always reproduce with one agent and one task first (`--task-id`, `--limit 1`, `--concurrency 1`).
+    - `run_evals.py` now supports multi-ID `--task-id` input (repeated flags, CSV, bracket list), but use that only after first-seed triage.
+    - `--random` with `--limit N` can help widen follow-up runs so they do not keep hitting only the first eval row.
+03. Run evals through `uv run dataset/evals/run_evals.py`.
+04. Use standard `run_evals.py` startup (it already runs env setup); do not pre-run `./scripts/env_up.sh` for normal eval triage.
+05. If you hit devops/startup instability (ports, stale containers, unhealthy services), run `scripts/env_down.sh` first, then rerun `uv run dataset/evals/run_evals.py`; the eval runner will bring the environment back up automatically.
+06. Fix root causes in prompts/code/environment; do not add permissive fallbacks that hide failures.
+07. Validate fixes against intended architecture/business behavior, not just current implementation behavior.
+08. Use subagents to view and triage from logs; else you'll fill up your context too quickly.
+09. If you changed a contract surface (prompt/runtime/helper/validator), treat any earlier eval behavior as tainted evidence until you rerun under the corrected contract.
 10. Respect the skill split:
-   - `skills/` is the runtime agent skill repo.
-   - `.codex/skills/` is the Codex-only overlay.
-   - Do not assume runtime agents inherit `.codex/skills/`.
-   - It is acceptable for Codex to inherit or reuse runtime-agent skills, but not the other way around.
-   - If a Codex-only skill appears in `skills/`, remove that drift to avoid confusing runtime agents.
+
+- `skills/` is the runtime agent skill repo.
+- `.codex/skills/` is the Codex-only overlay.
+- Do not assume runtime agents inherit `.codex/skills/`.
+- It is acceptable for Codex to inherit or reuse runtime-agent skills, but not the other way around.
+- If a Codex-only skill appears in `skills/`, remove that drift to avoid confusing runtime agents.
+
 11. If you are acting as the supervisor agent, never edit files in a worker agent's workspace. Keep your edits limited to backend/runtime/orchestration/code-path fixes and repository-level contracts; let the worker agent own its own workspace files.
 12. Distinguish three end states clearly:
-   - `code bug`: controller/runtime/helper/validator/integration behavior is wrong.
-   - `prompt bug`: orchestration is healthy but the agent is being taught the wrong operational contract.
-   - `optimization gap`: prompt and code contracts are now correct, but the model still fails because solution quality/search is weak.
+
+- `code bug`: controller/runtime/helper/validator/integration behavior is wrong.
+- `prompt bug`: orchestration is healthy but the agent is being taught the wrong operational contract.
+- `optimization gap`: prompt and code contracts are now correct, but the model still fails because solution quality/search is weak.
+
 12. If contract-surface code changed, run the relevant integration test before spending more eval quota.
 13. Before rerunning a costly eval after an authored-script or helper-contract change, do at least one cheap validity check first when possible (syntax/import/basic command).
 14. When debugging prompts, default to judge mode with reviewer execution enabled (`--run-judge --run-reviewers-with-judge`) so reviewer checklists are populated after hard-check success; opt out only when reviewer execution is intentionally not needed.
@@ -114,27 +118,31 @@ uv run scripts/validate_eval_seed.py --agent <agent> --task-id <task-id>
 ## Canonical debug commands
 
 - Preferred log-reading method:
-Use a subagent to inspect logs and return concise evidence (`cause`, `proof lines`, `next fix`), instead of raw full-log reads in the main agent context.
+  Use a subagent to inspect logs and return concise evidence (`cause`, `proof lines`, `next fix`), instead of raw full-log reads in the main agent context.
+
 - Primary agent log location:
-Agent pipeline logs/traces are in `logs/manual_run/` (`controller.log`, `worker_light.log`, `worker_heavy.log`, `temporal_worker.log`). Agent-level orchestration traces are in `logs/manual_run/controller.log`.
+  Agent pipeline logs/traces are in `logs/manual_run/` (`controller.log`, `worker_light.log`, `worker_heavy.log`, `temporal_worker.log`). Agent-level orchestration traces are in `logs/manual_run/controller.log`.
+
 - Distilled eval trace log:
-`uv run dataset/evals/run_evals.py` also writes `logs/evals/readable_agent_logs.log` and updates `logs/readable_agent_logs.log` symlink.
-Use this first when the goal is to quickly read agent reasoning/tool flow without structlog wrappers.
-Format is intentionally simple:
+  `uv run dataset/evals/run_evals.py` also writes `logs/evals/readable_agent_logs.log` and updates `logs/readable_agent_logs.log` symlink.
+  Use this first when the goal is to quickly read agent reasoning/tool flow without structlog wrappers.
+  Format is intentionally simple:
+
   - `agent_name | short_run_id | text`
   - `agent_name | short_run_id | TOOL tool_name key=value`
   - `agent_name | short_run_id | RESULT tool_name ...`
   - `agent_name | short_run_id | TOOL tool_name ERROR ...`
-The file is derived from persisted episode traces, not from raw structlog output, so it should not contain ANSI color codes, JSON escaping noise, or structlog brackets/symbols.
-If another eval run is active at the same time, treat the readable log as contested evidence until you rerun in isolated single-agent mode.
+    The file is derived from persisted episode traces, not from raw structlog output, so it should not contain ANSI color codes, JSON escaping noise, or structlog brackets/symbols.
+    If another eval run is active at the same time, treat the readable log as contested evidence until you rerun in isolated single-agent mode.
 
 - Machine-readable backend error logs:
-When the regression looks like startup, orchestration, or trace drift, inspect `logs/integration_tests/current/json/*_errors.json` alongside `logs/manual_run/` so you can separate product failures from infra noise.
+  When the regression looks like startup, orchestration, or trace drift, inspect `logs/integration_tests/current/json/*_errors.json` alongside `logs/manual_run/` so you can separate product failures from infra noise.
 
 - Hard-check pass-rate helper output:
-`uv run dataset/evals/run_evals.py` now prints `Hard check pass rates:` at the end and writes `logs/evals/hard_check_pass_rates.yaml`.
-Use this to quickly verify which seeded eval IDs were run per agent and which configured reward `hard_checks` failed.
-YAML shape:
+  `uv run dataset/evals/run_evals.py` now prints `Hard check pass rates:` at the end and writes `logs/evals/hard_check_pass_rates.yaml`.
+  Use this to quickly verify which seeded eval IDs were run per agent and which configured reward `hard_checks` failed.
+  YAML shape:
+
   - `<agent_name>.ran_cases: [seed-id, ...]`
   - `<agent_name>.hard_checks.<check_name>.pass_rate`
   - `<agent_name>.hard_checks.<check_name>.failed_seeds`
@@ -205,15 +213,15 @@ sed -n '1,200p' events.jsonl
 
 When an eval regression looks like contract drift, inspect all relevant surfaces before concluding it is "just a prompt issue":
 
-1. prompt text and examples
-2. runtime helper modules exposed to agents
-3. loader/import behavior for authored scripts
-4. controller validators and script-contract guards
-5. schema/request descriptions shown to tools or APIs
-6. template repos and sample agent files
-7. mock transcripts / integration fixtures that may keep teaching the old contract
-8. architecture specs and skills that should own the long-form instructions
-9. deterministic validators, normalization helpers, and generated schemas/code that compute or check derived fields
+01. prompt text and examples
+02. runtime helper modules exposed to agents
+03. loader/import behavior for authored scripts
+04. controller validators and script-contract guards
+05. schema/request descriptions shown to tools or APIs
+06. template repos and sample agent files
+07. mock transcripts / integration fixtures that may keep teaching the old contract
+08. architecture specs and skills that should own the long-form instructions
+09. deterministic validators, normalization helpers, and generated schemas/code that compute or check derived fields
 10. observability outputs and terminal metadata (`events.jsonl`, `terminal_reason`, `failure_class`, and backend error JSON logs) when the failure is about trace integrity or status transitions
 
 ## Iterative debug directive
@@ -239,21 +247,21 @@ Quota guard:
 ## Triage classification
 
 - Environment/bootstrap failure:
-`controller_unreachable`, `worker_unreachable`, dependency/import/startup errors.
+  `controller_unreachable`, `worker_unreachable`, dependency/import/startup errors.
 - Seed/fixture contract failure:
-`validate_eval_seed.py` rejects missing artifacts, malformed manifests, stale renders, or workspace-shape drift before full evals can be trusted.
+  `validate_eval_seed.py` rejects missing artifacts, malformed manifests, stale renders, or workspace-shape drift before full evals can be trusted.
 - API/orchestration contract failure:
-`eval_trigger_failed`, wrong status transitions, bad request/response shape.
+  `eval_trigger_failed`, wrong status transitions, bad request/response shape.
 - Trace/flow integrity failure:
-`eval_failed_missing_traces`, missing required agent trace despite completion-like state.
+  `eval_failed_missing_traces`, missing required agent trace despite completion-like state.
 - Timeout/stall failure:
-`eval_timeout`, repeated `RUNNING` without meaningful progress.
+  `eval_timeout`, repeated `RUNNING` without meaningful progress.
 - Prompt/behavior failure:
-pipeline executes but artifacts are invalid/incomplete relative to requirements.
+  pipeline executes but artifacts are invalid/incomplete relative to requirements.
 - Optimization gap:
-contracts are now correct and the pipeline is healthy, but the generated solution is still weak, unstable, or under-optimized.
+  contracts are now correct and the pipeline is healthy, but the generated solution is still weak, unstable, or under-optimized.
 - Architecture gap:
-current code path is over-complex, contradictory, or missing logic needed by intended behavior.
+  current code path is over-complex, contradictory, or missing logic needed by intended behavior.
 
 ## Architecture and business alignment checks
 

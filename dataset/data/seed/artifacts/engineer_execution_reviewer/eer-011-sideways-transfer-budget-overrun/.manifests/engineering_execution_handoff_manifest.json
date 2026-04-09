@@ -3,7 +3,7 @@
   "reviewer_stage": "engineering_execution_reviewer",
   "timestamp": "2026-03-11T12:00:00Z",
   "session_id": "seed-eer-011-sideways-transfer-budget-overrun",
-  "revision": "02f32cdb93380db67316855772a96d60f4276b3c",
+  "revision": "106c57712a345e83728310ea45e8004c738fdaf0",
   "script_path": "solution_script.py",
   "script_sha256": "b37997f24f18f6b881bf90d908973bc640b5b4b086974b88340813b48e4cb57b",
   "validation_success": true,

@@ -81,6 +81,11 @@ drafting:
   title: "Side-Deflect Ramp Drawing"
   units: "mm"
   projection_standard: "orthographic"
+  goal_zone_overlap_intents:
+    - zone_name: goal_zone
+      target: side_goal_wall
+    - zone_name: goal_zone
+      target: catch_bin
   views:
     - view_id: "front"
       target: "deflector_ramp"

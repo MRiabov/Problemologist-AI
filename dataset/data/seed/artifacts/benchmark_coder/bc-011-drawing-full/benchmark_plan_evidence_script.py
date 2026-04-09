@@ -1,19 +1,25 @@
 """Benchmark plan evidence script for the sideways-ball benchmark.
 
-Reconstructs the approved planner inventory as a previewable build123d scene.
-Matches manufactured_parts exactly:
-  - ground_plane x1 (hdpe, fixed)
-  - floor_plate x1 (aluminum_6061, fixed)
-  - support_tower x1 (aluminum_6061, fixed)
-  - raised_goal_shelf x1 (aluminum_6061, fixed)
-  - lift_carriage x1 (hdpe, slide_z)
+This script reconstructs the approved planner inventory as a previewable
+build123d scene. Every label and quantity must match the manufactured_parts
+section of benchmark_assembly_definition.yaml exactly.
 """
 
 from build123d import Align, Box, Compound, Location
 
 from utils.metadata import CompoundMetadata, PartMetadata
 
-# Build zone: min [-0.58, -0.1, 0.0], max [0.58, 0.1, 0.18] (metres)
+# Build zone from benchmark_definition.yaml:
+#   min: [-0.58, -0.1, 0.0], max: [0.58, 0.1, 0.18]  (metres)
+# We place small proxy boxes inside the build zone with labels matching
+# the manufactured_parts inventory.
+
+# manufactured_parts (from benchmark_assembly_definition.yaml):
+#   ground_plane       qty=1
+#   floor_plate        qty=1
+#   support_tower      qty=1
+#   raised_goal_shelf  qty=1
+#   lift_carriage      qty=1
 
 GROUND_PLANE_POS = (0.0, 0.0, 0.005)
 GROUND_PLANE_SIZE = (1.16, 0.2, 0.01)

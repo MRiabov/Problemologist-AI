@@ -29,12 +29,12 @@ from utils.metadata import CompoundMetadata, PartMetadata
 # benchmark_assembly_definition.yaml.
 
 FLOOR_PLATE_POS = (20.0, 0.0, 10.0)
-FLOOR_PLATE_SIZE = (560.0, 180.0, 20.0)
+FLOOR_PLATE_SIZE = (300.0, 180.0, 20.0)
 
-SUPPORT_TOWER_POS = (230.0, 0.0, 105.0)
+SUPPORT_TOWER_POS = (130.0, 0.0, 105.0)
 SUPPORT_TOWER_SIZE = (80.0, 120.0, 210.0)
 
-RAISED_GOAL_SHELF_POS = (375.0, 0.0, 235.0)
+RAISED_GOAL_SHELF_POS = (375.0, 120.0, 235.0)
 RAISED_GOAL_SHELF_SIZE = (150.0, 120.0, 30.0)
 
 LIFT_CARRIAGE_POS = (-130.0, 0.0, 60.0)
