@@ -62,12 +62,12 @@ def build() -> Compound:
         ],
     )
     benchmark_compound.metadata = CompoundMetadata(fixed=False)
-    # submit_for_review is expected to be in global scope during execution
+    # submit_benchmark_for_review is expected to be in global scope during execution
     try:
-        from utils import submit_for_review  # noqa: F401
+        from utils import submit_benchmark_for_review  # noqa: F401
     except ImportError:
         pass
 
-    if "submit_for_review" in globals():
-        globals()["submit_for_review"](benchmark_compound)
+    if "submit_benchmark_for_review" in globals():
+        globals()["submit_benchmark_for_review"](benchmark_compound)
     return benchmark_compound

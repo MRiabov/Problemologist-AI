@@ -125,7 +125,7 @@ transcript:
       reason: Benchmark artifacts and simulation outputs are valid.
       required_fixes: []
       checklist:
-        goal_reached: true
+        motion_evidence_verified: true
         render_count: 2
         inspected_render_count: 2
         visual_inspection_min_images: 1

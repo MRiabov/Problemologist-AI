@@ -111,7 +111,7 @@ The `drive_motor` (`ServoMotor_DS3218`) actuates the lift carriage. The motor is
 - `benchmark_assembly_definition.yaml` — fixture structure, DOFs, COTS metadata, drafting spec
 - `benchmark_plan_evidence_script.py` — build123d evidence matching this inventory
 - `benchmark_plan_technical_drawing_script.py` — orthographic drawing of the lift carriage
-- `submit_plan()` — explicit submission gate
+- `submit_benchmark_plan()` — explicit submission gate
 
 ## 9. Implementation Notes for Benchmark Coder
 

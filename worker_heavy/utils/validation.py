@@ -1974,13 +1974,14 @@ def simulate(
         close_all_session_backends()
         gc.collect()
 
-        status_msg = metrics.fail_reason or (
-            "Benchmark simulation stable."
-            if benchmark_mode
-            else "Goal achieved."
-            if metrics.success
-            else "Simulation stable."
-        )
+        if metrics.fail_reason:
+            status_msg = metrics.fail_reason
+        elif benchmark_mode:
+            status_msg = "Benchmark simulation stable."
+        elif metrics.success:
+            status_msg = "Goal achieved."
+        else:
+            status_msg = "Simulation stable."
         runtime_revision = (
             os.environ.get("REPO_REVISION")
             or repo_revision(Path.cwd())
