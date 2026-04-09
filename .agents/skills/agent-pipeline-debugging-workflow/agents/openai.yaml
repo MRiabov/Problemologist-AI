@@ -1,0 +1,7 @@
+interface:
+  display_name: "Agent Pipeline Debugging"
+  short_description: "Debug failing eval runs, seeded fixtures, and contract drift"
+  default_prompt: "Use $agent-pipeline-debugging-workflow to reproduce the failing eval or seeded row with one agent and one task, inspect the run artifacts and seed validation results, and fix the root cause."
+
+policy:
+  allow_implicit_invocation: true
