@@ -435,6 +435,9 @@ async def test_engineering_full_loop():
         assert Path("solution_script.py") in artifact_paths, (
             f"Expected solution_script.py in engineer artifacts. Artifacts: {artifact_paths}"
         )
+        assert Path(".manifests/current_role.json") in artifact_paths, (
+            f"Expected current_role.json in engineer artifacts. Artifacts: {artifact_paths}"
+        )
 
         tool_traces = [
             trace for trace in traces if trace.trace_type == TraceType.TOOL_START

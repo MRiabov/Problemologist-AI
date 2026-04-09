@@ -298,7 +298,7 @@ def get_benchmark_planner_tools(
             session_id=session_id,
         )
 
-    async def submit_plan() -> dict:
+    async def submit_benchmark_plan() -> dict:
         """
         Validate benchmark planner artifacts and explicitly submit planner handoff.
 
@@ -540,7 +540,7 @@ def get_benchmark_planner_tools(
             invoke_cots_search_subagent,
             render_cad,
             render_technical_drawing,
-            submit_plan,
+            submit_benchmark_plan,
         ],
     )
 

@@ -142,7 +142,7 @@ async def _publish_drafting_preview_bundle(
     )
     if source_manifest_raw is None:
         raise FileNotFoundError(
-            f"{source_manifest_path} missing; call render_technical_drawing() before submit_plan()."
+            f"{source_manifest_path} missing; call render_technical_drawing() before submit_engineering_plan()."
         )
 
     technical_drawing_script_content = await fs.client.read_file_optional(
@@ -166,7 +166,7 @@ async def _publish_drafting_preview_bundle(
         if source_manifest.revision.strip().lower() != current_revision:
             raise ValueError(
                 "drafting preview manifest revision does not match the current "
-                "repository revision; re-run render_technical_drawing() before submit_plan()."
+                "repository revision; re-run render_technical_drawing() before submit_engineering_plan()."
             )
 
     source_bundle_root = source_manifest_path.parent
@@ -656,7 +656,7 @@ def get_engineer_planner_tools(
     """
     Planner-specific toolset for engineer/electronics planners.
 
-    Includes explicit `submit_plan()` so planner completion is an intentional action.
+    Includes explicit `submit_engineering_plan()` so planner completion is an intentional action.
     """
     common_tools = get_common_tools(fs, session_id)
 
@@ -769,7 +769,7 @@ def get_engineer_planner_tools(
 
         return await run_validate_and_price_script(fs)
 
-    async def submit_plan() -> dict:
+    async def submit_engineering_plan() -> dict:
         """
         Validate planner artifacts and explicitly submit the planning handoff.
 
@@ -1007,6 +1007,6 @@ def get_engineer_planner_tools(
             *planner_common_tools,
             invoke_cots_search_subagent,
             validate_costing_and_price,
-            submit_plan,
+            submit_engineering_plan,
         ],
     )
