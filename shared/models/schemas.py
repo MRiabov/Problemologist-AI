@@ -1685,9 +1685,7 @@ class DraftingSheet(StrictContractModel):
     title: str
     units: Literal["mm"] = "mm"
     projection_standard: Literal["orthographic"] = "orthographic"
-    goal_zone_overlap_intents: list[GoalZoneOverlapIntent] = Field(
-        default_factory=list
-    )
+    goal_zone_overlap_intents: list[GoalZoneOverlapIntent] = Field(default_factory=list)
     views: list[DraftingView] = Field(default_factory=list)
     notes: list[DraftingNote] = Field(default_factory=list)
     layout: DraftingLayout | None = None

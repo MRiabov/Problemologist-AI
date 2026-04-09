@@ -4,7 +4,7 @@
   "created_at": "2026-04-09T02:10:00.000000+00:00",
   "episode_id": "9b6c7d8e-3f4a-5b0c-9d2e-5f6a7b8c9d0e",
   "worker_session_id": "seed-renders-bpr-003-drawing-full-5b9d0e3f",
-  "revision": "96dcf4a059618134f8d082bad282b646cffc7775",
+  "revision": "2c32b19f9261f80d4be213d277fef1c41eb1de2b",
   "scene_hash": "d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",

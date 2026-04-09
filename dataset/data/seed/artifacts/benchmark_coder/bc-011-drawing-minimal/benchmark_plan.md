@@ -31,6 +31,7 @@ Test lateral transfer over 1 meter distance. The benchmark moves a 40 mm radius 
 **Transfer distance:** `delta_x = 0.5 - (-0.5) = 1.0 m`
 
 **Energy balance** for steel sphere (`steel_carbon`, density ~7850 kg/m³, radius 0.04 m, mass ≈ 2.105 kg):
+
 - Ramp entry at Z=0.18 m (build zone ceiling), lowest point at Z=0.04 m, goal shelf at Z=0.17 m.
 - `E_start = m * g * (0.18 - 0.04) = 2.105 * 9.81 * 0.14 = 2.87 J`
 - `E_goal = m * g * (0.17 - 0.04) = 2.105 * 9.81 * 0.13 = 2.68 J`

@@ -47,9 +47,7 @@ def _hash_bytes(content: bytes) -> str:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Archive bug_report.md into a run-scoped logs/bug_reports/ tree."
-        )
+        description=("Archive bug_report.md into a run-scoped logs/bug_reports/ tree.")
     )
     parser.add_argument(
         "--workspace-root",
@@ -72,7 +70,9 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--session-id",
         type=str,
-        default=_env_value("SESSION_ID", "USER_SESSION_ID", "PROBLEMOLOGIST_SESSION_ID"),
+        default=_env_value(
+            "SESSION_ID", "USER_SESSION_ID", "PROBLEMOLOGIST_SESSION_ID"
+        ),
         help="Session identifier to record in the archive manifest.",
     )
     parser.add_argument(
@@ -141,8 +141,9 @@ def archive_bug_report(
         session_id=session_id,
         episode_id=episode_id,
         workspace_dir=resolved_workspace_root.as_posix(),
-        source_path=resolved_bug_report_path.relative_to(resolved_workspace_root)
-        .as_posix(),
+        source_path=resolved_bug_report_path.relative_to(
+            resolved_workspace_root
+        ).as_posix(),
         archive_root=resolved_archive_root.as_posix(),
         archive_dir=archive_dir.as_posix(),
         archived_report_path=archived_report_path.as_posix(),

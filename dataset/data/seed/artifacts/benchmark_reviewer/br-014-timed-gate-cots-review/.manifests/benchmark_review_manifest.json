@@ -3,7 +3,7 @@
   "reviewer_stage": "benchmark_reviewer",
   "timestamp": "2026-04-02T09:00:00Z",
   "session_id": "seed-br-014",
-  "revision": "96dcf4a059618134f8d082bad282b646cffc7775",
+  "revision": "2c32b19f9261f80d4be213d277fef1c41eb1de2b",
   "script_path": "benchmark_script.py",
   "script_sha256": "32d5f9157531c40be02c008e7a7e7fea49de45ffe96aa63170e3468f20a0f0ea",
   "validation_success": true,

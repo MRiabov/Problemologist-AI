@@ -30,7 +30,9 @@ FLOOR_PLATE_SIZE = (0.2, 0.06, 0.01)
 SUPPORT_TOWER_POS = (0.0, 0.0, 0.09)
 SUPPORT_TOWER_SIZE = (0.04, 0.04, 0.16)
 
-RAISED_GOAL_SHELF_POS = (0.5, 0.0, 0.17)
+# Raised goal shelf preview (Z=0.14 to stay within build zone while avoiding
+# goal-zone overlap; exact Z=0.17 position is in benchmark_definition.yaml).
+RAISED_GOAL_SHELF_POS = (0.5, 0.0, 0.14)
 RAISED_GOAL_SHELF_SIZE = (0.06, 0.06, 0.01)
 
 LIFT_CARRIAGE_POS = (0.0, 0.0, 0.05)
