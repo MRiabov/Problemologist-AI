@@ -26,6 +26,7 @@ The developer instrumentation layer is split into a small set of canonical entry
 | Eval coordination | `scripts/internal/eval_run_lock.py`, `scripts/internal/eval_seed_renders.py` | Serialize eval runs and support deterministic seed render regeneration for maintainer tooling | Internal helper modules |
 | Seed and fixture validation | `scripts/validate_eval_seed.py`, `scripts/update_eval_seed_renders.py`, `scripts/validate_integration_mock_response_preflight.py`, `scripts/normalize_integration_mock_responses.py` | Validate seeded eval rows against the current seeded-entry contract, update deterministic seed render bundles, validate integration mock-response scenarios, and repair deterministic fixture drift | Public maintenance utilities |
 | Derived artifact regeneration | `scripts/generate_openapi.py`, `scripts/persist_test_results.py` | Regenerate API schemas and persist test-history outputs | Public utilities |
+| Bug-report archival | `scripts/persist_bug_reports.py` | Copy `bug_report.md` into `logs/bug_reports/` with run/session metadata | Public utility |
 | Compatibility and environment helpers | `scripts/ensure_docker_vfs.sh`, `scripts/ensure_ngspice.sh`, `scripts/cleanup_local_s3.py` | Make the local stack runnable in constrained environments and clear object-store state before runs | Public support scripts |
 | Experimental probes | `scripts/experiments/**` | Measure or compare runtime behavior without defining the stable contract | Non-contractual |
 
@@ -229,6 +230,13 @@ These scripts own a few generated or persisted artifacts that should be treated 
 - It maintains the rolling history in `test_output/integration_test_history.json`.
 - It archives older runs in `test_output/integration_test_archive.json`.
 - It is post-run bookkeeping, not a substitute for the integration runner.
+
+### Bug-report archival
+
+- `scripts/persist_bug_reports.py` is the maintainer-facing helper for runtime blocker reports.
+- It copies `bug_report.md` into a run-scoped archive tree under `logs/bug_reports/`.
+- The archive manifest records the active role, session or episode identifiers when available, the workspace path, the archive path, and a content hash for the copied report.
+- The helper is separate from `journal.md`, review YAML, and test-history persistence.
 
 ## Legacy and experimental helpers
 

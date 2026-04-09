@@ -35,6 +35,7 @@ The Skill Agent stages skill improvements into the session-local overlay, not th
 - Use the session-local overlay as the active working tree for the skill loop.
 - Preserve provenance and do not drop in a second prompt system by accident.
 - If a skill fix needs domain context, tell it which role behavior or tool contract is failing.
+- Use `journal.md` for skill-loop notes; if bug-report mode is enabled and runtime plumbing blocks progress, also file `bug_report.md` at the workspace root.
 
 ## Acceptance Checklist
 

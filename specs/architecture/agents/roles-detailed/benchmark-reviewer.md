@@ -47,6 +47,7 @@ The Benchmark Reviewer decides whether the implemented benchmark is ready to han
 - If moving benchmark fixtures exist, inspect the latest simulation video and the sampled `objects.parquet` sidecar before approval.
 - Interpret benchmark payload drift with the config-driven observation window in `config/agents_config.yaml` (`benchmark_payload_observation.window_s`); payload out-of-bounds before that window is a failure, while later drift is evidence rather than a benchmark-simulation failure.
 - Do not require benchmark-side goal completion; benchmark review is about approving a valid, stable problem instance for the engineering graph.
+- If bug-report mode is enabled and runtime plumbing blocks the review, write `bug_report.md` at the workspace root and continue unless the reviewer is actually blocked.
 - Keep the review read-only.
 - Write only the stage-owned decision/comments YAML pair, then finish with `bash scripts/submit_review.sh`.
 

@@ -50,6 +50,7 @@ The Engineering Execution Reviewer decides whether the implemented solution is r
 - Inspect render images and simulation video when they exist.
 - Inspect the sampled `objects.parquet` sidecar when motion evidence exists.
 - Verify plan fidelity, robustness, manufacturability, cost/weight compliance, and motion plausibility.
+- If bug-report mode is enabled and runtime plumbing blocks the review, write `bug_report.md` at the workspace root and continue unless the reviewer is actually blocked.
 - Keep the review read-only and stage-scoped.
 - Write only the stage-owned decision/comments YAML pair, then finish with `bash scripts/submit_review.sh`.
 

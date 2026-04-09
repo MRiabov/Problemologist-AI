@@ -15,7 +15,7 @@ The target state keeps prompt optimization unified. We do not maintain one base 
 1. One PromptManager owns prompt assembly for every backend family.
 2. The same prompt source model feeds controller/API and CLI-provider runtimes.
 3. Base prompts remain short, role-focused, and operational.
-4. Backend appendices describe backend-specific runtime differences, not domain knowledge.
+4. Backend appendices describe backend-family runtime differences, not domain knowledge.
 5. Skills own detailed procedures, reasoning patterns, and examples.
 6. Prompt-context templates are first-class prompt inputs, not loose starter files.
 7. Tool summaries should reflect actual runtime registration or central runtime config.
@@ -54,14 +54,16 @@ The PromptManager is the only component that merges prompt fragments into final 
 
 It must:
 
-1. read the shared source model,
-2. choose the backend family,
-3. render the active role prompt,
-4. add the shared appendix,
-5. add the drafting appendix when drafting mode is active for the planner family,
-6. add the backend appendix,
-7. append runtime-generated context,
-8. append a compact generated skill index when the backend family needs one, preferably derived from the active skill tree for the current session.
+01. read the shared source model,
+02. choose the backend family,
+03. render the active role prompt,
+04. add the shared appendix,
+05. add the bug-report appendix when the global bug-report mode is active,
+06. add the drafting appendix when drafting mode is active for the planner family,
+07. add the backend appendix,
+08. add the CLI-provider appendix when the backend family is `cli_based`,
+09. append runtime-generated context,
+10. append a compact generated skill index when the backend family needs one, preferably derived from the active skill tree for the current session.
 
 The backend choice selects which appendix branch is used. It does not select a different prompt manager or a different prompt source model.
 
@@ -81,6 +83,8 @@ Shared appendices apply to every role and every backend family.
 
 They should cover rules such as workspace-relative paths, system-owned metadata, submission hygiene, and common constraints that are universal across the agent runtime.
 
+Bug-report appendices are also global, but they are conditional: PromptManager appends them only when the top-level bug-report mode is enabled in `config/agents_config.yaml`.
+
 If a rule is universal but long, it probably belongs in the relevant runtime contract or skill instead of the shared appendix.
 
 ### Drafting appendices
@@ -98,6 +102,14 @@ Backend appendices explain the differences between `cli_based` and `api_based` e
 The appendix may include the tool surface that matters to that backend family, local submission helpers, native tool-loop reminders, and any other runtime-specific operational notes.
 
 The appendix should stay short. It should help the model choose the right runtime behavior, not teach the domain.
+
+### CLI-provider appendices
+
+CLI-provider appendices are conditional additions that only appear when the backend family is `cli_based`.
+
+They live in `config/prompts.yaml` under `appendices.cli` and can include a shared fragment plus provider-specific fragments keyed by provider name, such as `codex` or `qwen`.
+
+These appendices carry provider-specific operational reminders. They do not replace the generic `cli_based` backend appendix, and they do not become a second prompt source model.
 
 ### Runtime-generated context
 
@@ -136,10 +148,12 @@ The final prompt should read in this order:
 
 1. role prompt
 2. shared appendix
-3. drafting appendix, when active
-4. backend appendix
-5. runtime-generated context
-6. compact generated skill index, when needed
+3. bug-report appendix, when active
+4. drafting appendix, when active
+5. backend appendix
+6. CLI-provider appendix, when active
+7. runtime-generated context
+8. compact generated skill index, when needed
 
 That order keeps the base prompt stable while still allowing backend-specific and runtime-specific context to appear in a predictable place.
 
@@ -167,7 +181,7 @@ A change should go to the smallest source that owns it.
 
 - Role identity changes go to the role prompt.
 - Universal workspace rule changes go to the shared appendix or the runtime contract.
-- Backend tool or submission changes go to the backend appendix or the runtime-generated summary source.
+- Backend tool or submission changes go to the backend appendix, the CLI-provider appendix, or the runtime-generated summary source.
 - Starter workspace or helper script changes go to `shared/agent_templates/`.
 - Business procedure changes go to skills.
 
@@ -206,17 +220,21 @@ appendices:
   shared: |
     Use workspace-relative paths only.
     Treat .manifests/ as system-owned.
+  bug_reporting: |
+    If infrastructure or runtime plumbing blocks progress, write `bug_report.md` at the workspace root and keep working unless the task is otherwise blocked.
   backend:
-      cli_based:
-        shared: |
-          Use the local workspace and shell helpers when they are available.
-      engineer_coder: |
-        Use scripts/submit_solution_for_review.sh or the Python submission helper.
-    api_based:
-      shared: |
-        Use the controller-backed runtime and native tool loop.
-      benchmark_coder: |
-        Keep the prompt aligned with the controller-backed benchmark tools.
+    cli_based: |
+      Use the local workspace and shell helpers when they are available.
+    api_based: |
+      Use the controller-backed runtime and native tool loop.
+  cli:
+    shared: |
+      Re-read the workspace prompt and local files after a resume or handoff boundary.
+    providers:
+      codex: |
+        Codex-specific reminder: keep the local shell helper flow and resume syntax in mind.
+      qwen: |
+        Qwen-specific reminder: use `render_cad(...)` for CAD geometry, then inspect the generated render files with `read_file` even if you think you do not have a dedicated image tool. Reread the active workspace state before answering and do not rely on memory across turns.
 ```
 
 The shape above is illustrative, not exhaustive. The concrete YAML layout must include any active role families, including electronics planner/reviewer roles and helper agents if they remain first-class, but the ownership model should remain the same.

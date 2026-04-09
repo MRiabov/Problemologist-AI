@@ -29,6 +29,7 @@ The COTS Search subagent returns catalog-backed part candidates with exact ident
 - Tell it whether the query is for benchmark-owned fixtures or engineer-owned solution parts.
 - Tell it the budget or weight ceiling when that matters.
 - Do not ask it to invent proxy parts when the catalog has no exact match.
+- This subagent does not own `bug_report.md`; if runtime plumbing blocks the query, return the exact blocker to the caller so the caller can file the report.
 
 ## Acceptance Checklist
 

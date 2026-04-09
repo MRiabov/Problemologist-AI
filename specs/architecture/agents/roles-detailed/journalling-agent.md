@@ -29,6 +29,7 @@ The Journalling Agent compresses the run context into `journal.md`.
 
 - Preserve decisions, blockers, open questions, and next steps.
 - Keep the journal concise enough to remain useful for later debugging.
+- Use `journal.md` for task-facing compression; if bug-report mode is enabled and runtime plumbing blocks progress, also file `bug_report.md` at the workspace root.
 - Do not use it to redesign the solution or rewrite other task artifacts.
 - Preserve traceability to the current episode or revision when possible.
 

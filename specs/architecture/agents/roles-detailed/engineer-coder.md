@@ -60,6 +60,7 @@ The Engineering Coder turns the approved engineering handoff into `solution_scri
 - `solution_plan_technical_drawing_script.py` is the presentation companion, not a second geometry contract.
 - Validate and simulate the latest revision with `validate_engineering()` / `simulate_engineering()` before requesting review, then call `submit_solution_for_review()`.
 - Inspect render or video evidence when it exists; do not rely on text-only summaries.
+- If bug-report mode is enabled and runtime plumbing blocks progress, write `bug_report.md` at the workspace root, keep `journal.md` for task-facing notes, and continue working unless the task is genuinely blocked.
 - Use `plan_refusal.md` only when the approved plan is genuinely infeasible.
 - If payload trajectory data exists, keep the coarse and fine motion contracts aligned.
 

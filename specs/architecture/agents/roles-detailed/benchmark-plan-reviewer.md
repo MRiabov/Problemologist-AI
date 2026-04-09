@@ -40,6 +40,7 @@ The Benchmark Plan Reviewer checks the planner handoff before implementation sta
 - The technical-drawing companion is presentation-only; it must preserve the same labels, repeated quantities, and COTS identities as the planner handoff and cannot define a second geometry contract.
 - If render images exist, inspect at least one before approval.
 - If the benchmark has moving fixtures, require motion-visible handoff facts, not just prose.
+- If bug-report mode is enabled and runtime plumbing blocks the review, write `bug_report.md` at the workspace root and continue unless the reviewer is actually blocked.
 - Keep the review output limited to the stage-owned YAML pair.
 - Write the stage-owned YAML pair and finish with `bash scripts/submit_review.sh`.
 

@@ -118,6 +118,24 @@ the handoff:
 - the Engineering Execution Reviewer later reads it as the latest-revision
   entry gate
 
+## Bug report artifact
+
+`bug_report.md` is a workspace-root debug artifact owned by the active role
+when bug-report mode is enabled.
+
+The mode does not change the default workspace layout. It only adds a
+conditional write path for the current role when the blocker is caused by
+infrastructure, harness, workspace materialization, prompt transport,
+filesystem policy, render plumbing, eval orchestration, or other runtime
+plumbing rather than by the task itself.
+
+The artifact stays separate from `journal.md`, `plan_refusal.md`, and the
+stage review YAML files. It is not a stop signal, and it does not replace the
+normal handoff or review routing.
+
+Maintainer-facing archives live under `logs/bug_reports/` and are populated by
+the public archive helper, not by agent workspace writes.
+
 Reviewer-stage manifest filenames are explicit and role-scoped:
 
 1. `.manifests/benchmark_plan_review_manifest.json`

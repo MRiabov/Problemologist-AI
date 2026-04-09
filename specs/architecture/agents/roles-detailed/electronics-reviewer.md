@@ -47,6 +47,7 @@ The Electronics Reviewer checks explicit electromechanical implementation work a
 - Inspect media when it exists.
 - If the task has moving parts, check the latest dynamic evidence before approval.
 - Keep the review read-only and stage-scoped.
+- If bug-report mode is enabled and runtime plumbing blocks the review, write `bug_report.md` at the workspace root and continue unless the reviewer is actually blocked.
 - Write only the stage-owned decision/comments YAML pair, then finish with `bash scripts/submit_review.sh`.
 
 ## Acceptance Checklist

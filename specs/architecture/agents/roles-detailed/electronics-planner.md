@@ -45,6 +45,7 @@ The Electronics Planner is a companion planner for explicit electromechanical ha
 - Keep power, connector, and routing constraints explicit in the handoff.
 - Tell the agent which benchmark-owned surfaces, connectors, or power rails are interactable.
 - If the task does not need explicit electronics, do not route work here.
+- If bug-report mode is enabled and runtime plumbing blocks progress, write `bug_report.md` at the workspace root and keep working unless the task is genuinely blocked.
 
 ## Acceptance Checklist
 
