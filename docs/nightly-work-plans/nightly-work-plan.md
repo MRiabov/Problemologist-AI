@@ -11,12 +11,12 @@ The engineer coder can build the sideways-transfer geometry, but the eval does n
 reaches the execution-review manifest step. The earlier run failed explicitly with a missing .manifests/
 engineering_execution_handoff_manifest.json, and the agent then spent time chasing renderer/display workarounds that are not
 valid in this shell. I removed the bad WORKER_RENDERER_LOCAL_RENDER hint from the seed, but the underlying structural issue
-remains: the workflow is blocked before submit_for_review can complete.
+remains: the workflow is blocked before submit_solution_for_review can complete.
 
 Observed Behavior
 
 - The failed session at run_20260330_182344 ended with:
-  - .manifests/engineering_execution_handoff_manifest.json missing; call submit_for_review(compound) first.
+  - .manifests/engineering_execution_handoff_manifest.json missing; call submit_solution_for_review(compound) first.
   - See logs/evals/runs/run_20260330_182344/sessions/ec-001/session_metadata.json
 - The transcript shows the agent reached validation/simulation probing, then concluded the handoff was blocked by renderer/
   MuJoCo display permissions in the shell.
@@ -27,7 +27,7 @@ Observed Behavior
 Expected Behavior
 
 - The coder should implement the geometry.
-- Validation and simulation should complete in a way that still allows bash scripts/submit_for_review.sh to write the review
+- Validation and simulation should complete in a way that still allows bash scripts/submit_solution_for_review.sh to write the review
   manifest.
 - The eval should finish with a successful handoff, not a workspace that looks complete but fails the gate.
 

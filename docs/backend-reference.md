@@ -86,6 +86,7 @@ Runtime conversations use four message roles: `system`, `user`, `assistant`, and
 | `read_file` / `write_file` / `edit_file` / `grep` / `list_files` | Respect path policy and session isolation |
 | `inspect_media` | The only agent-facing tool that counts as visual inspection |
 | `submit_benchmark_plan()` / `submit_engineering_plan()` | Mandatory planner completion gate |
+| `submit_benchmark_for_review()` / `submit_solution_for_review()` | Role-scoped coder handoff submission gate |
 | `submit_review` | Mandatory reviewer completion gate |
 | `validate_benchmark()` / `validate_engineering()` | Role-scoped geometry validation plus fast preview generation |
 | `simulate_benchmark()` / `simulate_engineering()` | Physics-backed simulation or benchmark simulation path |
