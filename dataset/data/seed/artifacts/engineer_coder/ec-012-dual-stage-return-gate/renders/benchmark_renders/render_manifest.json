@@ -4,7 +4,7 @@
   "created_at": "2026-04-08T07:44:04.113789+00:00",
   "episode_id": "a2e38bb6-e61e-5b41-afe0-d26fc7dc2552",
   "worker_session_id": "seed-renders-ec-012-dual-stage-return-gate-97f016e6",
-  "revision": "dccb2285a4d832925d20397c763f34d5211fa83b",
+  "revision": "c56b80d809e74a0c51d95499eadc0502fde80c64",
   "scene_hash": "336d628cdb49129d4b33ce69b86ee5dcf2c7e9d4716a98c92559db931a46c0d9",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",
