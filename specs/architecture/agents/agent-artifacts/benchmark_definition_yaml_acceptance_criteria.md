@@ -10,6 +10,7 @@ It is worth being a first-class agent artifact because downstream roles, validat
 - The file schema-validates before execution continues.
 - Goal-zone, forbid-zone, and build-zone geometry are exact and internally consistent.
 - The moved object has a top-level `start_position`, stable labels, and a `material_id` that resolves to a known material from `manufacturing_config.yaml`.
+- The moved object’s declared start pose is collision-free against benchmark-owned fixture geometry; startup overlap is a hard validation failure.
 - Static and runtime randomization ranges are exact, bounded, and materialized at seed time.
 - Benchmark caps, estimate fields, and other numeric fields are exact, not deferred to later inference.
 - Any benchmark-owned moving fixture is declared explicitly and remains motion-visible to downstream roles.
@@ -25,6 +26,7 @@ It is worth being a first-class agent artifact because downstream roles, validat
 ## Reviewer Look-Fors
 
 - Goal, forbid, and build geometry intersect the moved object at spawn or after stated randomization.
+- Benchmark-owned fixture geometry intersects the moved object at its declared start_position before runtime jitter is applied.
 - `moved_object.material_id` is missing, empty, or unknown to `manufacturing_config.yaml`.
 - Runtime or static randomization pushes the object out of bounds or into an impossible start state.
 - Hidden benchmark motion or unsupported fixture declarations appear in the file.

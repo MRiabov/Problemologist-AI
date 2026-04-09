@@ -53,6 +53,7 @@ To allow for better visual generalization and more realistic environments, envir
 Notably, the engineer is informed about runtime randomization to prevent unexpected issues.
 
 - The spawned "moved" object will also include some position jitter to ensure the CAD model's robustness against variable input.
+- The spawned "moved" object must already clear benchmark-owned fixture geometry at its declared start pose. Runtime jitter validates robustness around that pose; it does not permit an initial overlap.
 
 ##### Runtime randomization verification
 
@@ -87,6 +88,11 @@ Failure is achieved via either of:
 
    - With "passive/static" parts: break upon stress which is higher than max stress - safety factor(note: not applicable for now as we are simulating rigid-body only).
    - Some parts have custom breaking logic - e.g. motors can be overloaded on shaft.
+
+6. The runtime-spawned moved object overlaps benchmark-owned fixture geometry at its declared start pose.
+
+   - This is a startup validation failure, not a physics-side collision event.
+   - Reject the benchmark before the first simulation step if the spawn pose is not clear.
 
 ## Conversion of CAD to mesh and to MuJoCo/Genesis
 
