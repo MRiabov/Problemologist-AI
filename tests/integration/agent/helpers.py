@@ -806,7 +806,7 @@ async def seed_approved_benchmark_bundle(
         client,
         session_id=benchmark_session_id,
         path=".manifests/benchmark_review_manifest.json",
-        content=benchmark_review_manifest.model_dump_json(indent=2),
+        content=benchmark_review_manifest.model_dump_json(indent=2, exclude_none=True),
         bypass_agent_permissions=True,
     )
 

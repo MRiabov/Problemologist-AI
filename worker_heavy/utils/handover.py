@@ -940,7 +940,7 @@ def submit_for_review(
         ),
     )
 
-    manifest_json = manifest.model_dump_json(indent=2)
+    manifest_json = manifest.model_dump_json(indent=2, exclude_none=True)
     with manifest_path.open("w", encoding="utf-8") as f:
         f.write(manifest_json)
 

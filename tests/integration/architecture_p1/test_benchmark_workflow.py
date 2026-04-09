@@ -295,6 +295,7 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert manifest.simulation_success is True
         assert manifest.motion_evidence_verified is True
         assert manifest.goal_reached is None
+        assert '"goal_reached"' not in manifest_resp.text
         assert "goal achieved" not in manifest.simulation_summary.lower()
         assert manifest.preview_evidence_paths
         assert set(manifest.preview_evidence_paths) == set(manifest.renders)

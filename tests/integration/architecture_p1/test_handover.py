@@ -165,6 +165,7 @@ async def test_benchmark_to_engineer_handoff():
         assert manifest.simulation_success is True
         assert manifest.motion_evidence_verified is True
         assert manifest.goal_reached is None
+        assert '"goal_reached"' not in manifest_resp.text
         assert "goal achieved" not in manifest.simulation_summary.lower()
         benchmark_assembly_definition_path = next(
             p for p in artifact_paths if p == Path("benchmark_assembly_definition.yaml")
