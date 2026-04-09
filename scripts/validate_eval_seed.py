@@ -3,7 +3,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import atexit
+import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -288,6 +290,191 @@ def _parse_args() -> argparse.Namespace:
 def _build_session_id(agent: AgentName, task_id: str) -> str:
     suffix = uuid.uuid4().hex[:8]
     return f"seed-check-{agent.value}-{task_id}-{suffix}"[:120]
+
+
+def _load_json_mapping(path: Path) -> dict[str, object] | None:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(data, dict):
+        return None
+    return data
+
+
+def _load_yaml_mapping(path: Path) -> dict[str, object] | None:
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(data, dict):
+        return None
+    return data
+
+
+def _resolve_workspace_dir(
+    raw_workspace_dir: object, *, session_dir: Path | None = None
+) -> Path | None:
+    if not isinstance(raw_workspace_dir, str):
+        return None
+    workspace_dir = Path(raw_workspace_dir).expanduser()
+    if workspace_dir.is_absolute():
+        return workspace_dir.resolve()
+
+    if session_dir is not None:
+        candidate = (session_dir / workspace_dir).expanduser()
+        if candidate.exists():
+            return candidate.resolve()
+
+    return (ROOT / workspace_dir).resolve()
+
+
+def _latest_review_comments_path(
+    *, workspace_dir: Path, agent: AgentName
+) -> Path | None:
+    review_prefix = AGENT_SPECS[agent].review_filename_prefix
+    if not review_prefix:
+        return None
+
+    reviews_dir = workspace_dir / "reviews"
+    if not reviews_dir.exists():
+        return None
+
+    comments_pattern = re.compile(
+        rf"^{re.escape(review_prefix)}-comments-round-(\d+)\.yaml$"
+    )
+    latest_round = -1
+    latest_path: Path | None = None
+
+    for entry in reviews_dir.iterdir():
+        if entry.is_dir():
+            continue
+        match = comments_pattern.fullmatch(entry.name)
+        if match is None:
+            continue
+        round_number = int(match.group(1))
+        if round_number > latest_round:
+            latest_round = round_number
+            latest_path = entry
+
+    return latest_path
+
+
+def _judge_failure_summary_lines(*, report_path: Path, agent_value: str) -> list[str]:
+    report = _load_yaml_mapping(report_path)
+    if not report:
+        return []
+
+    report_root = report_path.parent
+    if agent_value == "all":
+        agent_keys = sorted(report)
+    else:
+        agent_keys = [agent_value] if agent_value in report else []
+
+    summary_lines: list[str] = []
+    seen: set[tuple[str, str]] = set()
+
+    for agent_key in agent_keys:
+        payload = report.get(agent_key)
+        if not isinstance(payload, dict):
+            continue
+
+        judge_checks = payload.get("judge_checks")
+        if not isinstance(judge_checks, dict):
+            continue
+
+        failure_pointers: dict[str, object] = {}
+        for check_payload in judge_checks.values():
+            if not isinstance(check_payload, dict):
+                continue
+            raw_failure_pointers = check_payload.get("failure_pointers")
+            if not isinstance(raw_failure_pointers, dict):
+                continue
+            for seed_id, pointer in raw_failure_pointers.items():
+                if seed_id not in failure_pointers:
+                    failure_pointers[seed_id] = pointer
+
+        if not failure_pointers:
+            failed_seeds: list[str] = []
+            for check_payload in judge_checks.values():
+                if not isinstance(check_payload, dict):
+                    continue
+                raw_failed_seeds = check_payload.get("failed_seeds")
+                if isinstance(raw_failed_seeds, list):
+                    for seed_id in raw_failed_seeds:
+                        if isinstance(seed_id, str):
+                            failed_seeds.append(seed_id)
+            failure_pointers = {seed_id: {} for seed_id in sorted(set(failed_seeds))}
+
+        try:
+            agent_name = AgentName(agent_key)
+        except ValueError:
+            continue
+
+        for seed_id in sorted(failure_pointers):
+            cache_key = (agent_key, seed_id)
+            if cache_key in seen:
+                continue
+            seen.add(cache_key)
+
+            pointer = failure_pointers.get(seed_id)
+            session_dir: Path | None = None
+            if isinstance(pointer, dict):
+                raw_session_dir = pointer.get("session_log_dir")
+                if isinstance(raw_session_dir, str) and raw_session_dir.strip():
+                    session_dir = (ROOT / raw_session_dir).resolve()
+
+            workspace_dir: Path | None = None
+            if session_dir is not None:
+                metadata_path = session_dir / "session_metadata.json"
+                metadata = _load_json_mapping(metadata_path)
+                if metadata is not None:
+                    workspace_dir = _resolve_workspace_dir(
+                        metadata.get("workspace_dir"), session_dir=session_dir
+                    )
+
+            if workspace_dir is None:
+                for metadata_path in report_root.rglob("session_metadata.json"):
+                    metadata = _load_json_mapping(metadata_path)
+                    if metadata is None:
+                        continue
+                    if str(metadata.get("task_id")) != seed_id:
+                        continue
+                    if (
+                        agent_value != "all"
+                        and str(metadata.get("agent_name")) != agent_key
+                    ):
+                        continue
+                    workspace_dir = _resolve_workspace_dir(
+                        metadata.get("workspace_dir"),
+                        session_dir=metadata_path.parent,
+                    )
+                    if workspace_dir is not None:
+                        break
+
+            comments_path = (
+                _latest_review_comments_path(
+                    workspace_dir=workspace_dir, agent=agent_name
+                )
+                if workspace_dir is not None
+                else None
+            )
+
+            if comments_path is None:
+                fallback_path = (
+                    workspace_dir / "reviews"
+                    if workspace_dir is not None
+                    else (session_dir or report_root)
+                )
+                comments_text = str(fallback_path.resolve())
+            else:
+                comments_text = str(comments_path.resolve())
+
+            summary_lines.append(
+                f'{seed_id}. Review comments can be found at "{comments_text}".'
+            )
+
+    return summary_lines
 
 
 def _validate_generated_curation_manifests(*, errors_only: bool = False) -> list[Path]:
@@ -581,14 +768,23 @@ async def _async_main(args: argparse.Namespace) -> int:
             print(
                 f"Running judge evals for {agent_value} via {judge_backend.value} backend..."
             )
-            try:
-                subprocess.run(judge_command, check=True, cwd=ROOT)
-            except subprocess.CalledProcessError as exc:
-                print(
-                    f"Judge evals for {agent_value} failed with exit code {exc.returncode}.",
-                    file=sys.stderr,
+            result = subprocess.run(judge_command, check=False, cwd=ROOT)
+            if result.returncode != 0:
+                report_path = (
+                    ROOT / "logs" / "evals" / "current" / "judge_pass_rates.yaml"
                 )
-                return exc.returncode
+                summary_lines = _judge_failure_summary_lines(
+                    report_path=report_path,
+                    agent_value=agent_value,
+                )
+                print("REVIEW FAILED!")
+                if summary_lines:
+                    print("Failed seeds:")
+                    for line in summary_lines:
+                        print(line)
+                else:
+                    print("Failed seeds: unavailable.")
+                return result.returncode
 
     return 0
 
