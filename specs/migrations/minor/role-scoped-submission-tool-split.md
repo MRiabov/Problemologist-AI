@@ -34,8 +34,9 @@ source. The role-scoped helpers in this migration must fail closed when that
 file is missing, malformed, or names a different role.
 
 The naming contract in this migration uses `benchmark` and `engineering` as
-the canonical public graph labels. `solution` remains a legacy file-name
-compatibility concept only, not the new public tool label.
+the canonical public graph labels. `solution` remains the helper suffix and
+file-name compatibility concept for the engineering-side submission path
+(`submit_solution_for_review()`), not the public graph label.
 
 This migration is intentionally narrower than a full contract rewrite. The
 shared validation, simulation, and handover logic can stay shared internally.
@@ -66,10 +67,10 @@ symbol names and route names, not only in the backend branch logic.
 | -- | -- | -- |
 | `controller/agent/tools.py` | Engineering/electronics planner tools export a nested `submit_plan()` helper. | The planner completion gate should be role-scoped so the public tool name matches the graph. |
 | `controller/agent/benchmark/tools.py` | Benchmark planner tools also export a nested `submit_plan()` helper. | The benchmark planner path needs its own public name, not a shared one. |
-| `shared/utils/agent/__init__.py` | The shared import surface exports `validate`, `simulate`, and `submit_for_review`. | Those names are currently graph-neutral even though the call sites are not. |
-| `utils/submission.py` | The agent-facing compatibility import surface re-exports the same generic helpers. | The public script import surface must advertise role-scoped names instead of one shared set. |
+| `shared/utils/agent/__init__.py` | The shared import surface exports role-scoped helpers (`validate_benchmark`, `simulate_benchmark`, `submit_benchmark_for_review`, `validate_engineering`, `simulate_engineering`, `submit_solution_for_review`) plus generic aliases. | The public script import surface must advertise role-scoped names instead of one shared set. |
+| `utils/submission.py` | The agent-facing compatibility import surface re-exports the same role-scoped helpers plus the legacy generic aliases. | The public script import surface must advertise role-scoped names instead of one shared set. |
 | `shared/agent_templates/codex/scripts/submit_plan.py` | Planner submission is current-role aware, but the exported helper name is still generic. | The helper needs a role-scoped public entrypoint. |
-| `shared/agent_templates/codex/scripts/submit_for_review.py` | Coder handoff is current-role aware, but it still exposes one generic completion command. | Benchmark and engineering coders need distinct names in the public script contract. |
+| `shared/agent_templates/codex/scripts/submit_for_review.py` | Coder handoff is current-role aware and dispatches to the role-scoped benchmark or solution review helper. | Benchmark and engineering coders need distinct names in the public script contract. |
 | `controller/clients/worker.py` | `validate()`, `simulate()`, and `submit()` still post through benchmark-branded worker routes. | Engineer-side transport should stop using benchmark terminology. |
 | `worker_heavy/api/routes.py` | The worker exposes `/benchmark/validate`, `/benchmark/simulate`, and `/benchmark/submit`. | The endpoint labels should follow the graph label used by the caller. |
 | `controller/middleware/remote_fs.py` | The controller-side Temporal-backed path also drives benchmark-branded validation and simulation calls. | The controller middleware should follow the same role-scoped route split as the client. |
@@ -99,7 +100,9 @@ symbol names and route names, not only in the backend branch logic.
    `submit_engineering_plan()`.
 2. Coder public helpers are split into
    `validate_benchmark()`, `simulate_benchmark()`,
-   `submit_benchmark_for_review()`, and their engineering-side counterparts.
+   `submit_benchmark_for_review()`, and the engineering-side counterparts
+   `validate_engineering()`, `simulate_engineering()`,
+   `submit_solution_for_review()`.
 3. The backend keeps the shared implementation behind the new names. The split
    is an exported-name and route-label change first, not a rewrite of the
    validation logic itself.
@@ -163,7 +166,7 @@ symbol names and route names, not only in the backend branch logic.
   `scripts/submit_engineering_plan.sh` for the planner gate. If coder
   completion stays shell-launched in this branch, add matching
   `scripts/submit_benchmark_for_review.sh` and
-  `scripts/submit_engineering_for_review.sh` wrappers.
+  `scripts/submit_solution_for_review.sh` wrappers.
 - Keep the helper scripts thin; the shell layer should remain a wrapper over
   the Python implementation.
 - Leave reviewer script naming alone in this tranche unless the reviewer path

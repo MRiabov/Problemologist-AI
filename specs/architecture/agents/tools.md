@@ -106,9 +106,9 @@ The shell script is the canonical command surface for that capability.
 It preserves the same runtime intent as a direct tool call, but it keeps the contract visible in the repository and callable from the workspace shell.
 Reviewer submission and planner/coder submission both use this shell-script pattern when a role needs an explicit command-like completion gate.
 For planner roles, the local bridges are `scripts/submit_benchmark_plan.sh` and `scripts/submit_engineering_plan.sh`.
-For coder review submission, the local bridges are `scripts/submit_benchmark_for_review.sh` and `scripts/submit_engineering_for_review.sh`.
+For coder review submission, the local bridges are `scripts/submit_benchmark_for_review.sh` and `scripts/submit_solution_for_review.sh`.
 For reviewer roles, the local bridge is `scripts/submit_review.sh`.
-Prompts may also reference the underlying Python utilities (`utils.submission.submit_benchmark_plan(...)`, `utils.submission.submit_engineering_plan(...)`, `utils.submission.submit_benchmark_for_review(...)`, and `utils.submission.submit_engineering_for_review(...)`) as alternative completion paths when a supporting script is clearer for the role; the shell bridge remains the default command-like surface.
+Prompts may also reference the underlying Python utilities (`utils.submission.submit_benchmark_plan(...)`, `utils.submission.submit_engineering_plan(...)`, `utils.submission.submit_benchmark_for_review(...)`, and `utils.submission.submit_solution_for_review(...)`) as alternative completion paths when a supporting script is clearer for the role; the shell bridge remains the default command-like surface.
 These submission bridges read `.manifests/current_role.json` to decide which stage contract is active; they do not infer role from `AGENT_NAME` or workspace file shape.
 
 Input handling follows a simple split:
@@ -154,7 +154,7 @@ from utils.submission import (
     submit_benchmark_for_review,
     validate_engineering,
     simulate_engineering,
-    submit_engineering_for_review,
+    submit_solution_for_review,
 )
 from utils.metadata import PartMetadata, CompoundMetadata
 ```
@@ -173,7 +173,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 
 <!-- should it contain its environment model or only the generated model?  -->
 
-- `submit_engineering_for_review(Compound)` - submits the whole assembly for a review to `Reviewer` agent node, which can later approve it and submit return the final design to the user.
+- `submit_solution_for_review(Compound)` - submits the whole assembly for a review to `Reviewer` agent node, which can later approve it and submit return the final design to the user.
 
 <!-- Same: what's in the compound? -->
 
@@ -255,7 +255,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
   - If validating a compound, it will also check for unusual DOFs, e.g. a part has >=4 DOFs, which is unusual in engineering. It won't raise immediately, but it will throw a "warning". The reviewer will also get notified that DOFs are excessive in this part in particular, and will be more strict in review.
 - `validate_engineering(Compound) -> tuple[bool, str | None]` - the engineering geometry gate. It validates the approved solution assembly against the current revision, uses `validate_and_price(...)` for manufacturability and pricing prechecks, and fails closed if the assembly cannot be reproduced from the persisted workspace snapshot or does not satisfy the engineering constraints.
 - `simulate_engineering(Compound) -> BenchmarkToolResponse` - Submits a model for a simulation. Robustness checking uses runtime randomization by executing one heavy-worker job with one backend scene build/load and `num_scenes` parallel jittered scene instances inside that one backend run. `num_scenes` is batch width, not permission for serialized whole-scene reruns or multiple heavy jobs on one worker; nor multithreaded implementation - only batch width.
-- `submit_engineering_for_review(Compound)` - submits the whole assembly for a review to `Reviewer` agent node, which can later approve it and submit return the final design to the user.
+- `submit_solution_for_review(Compound)` - submits the whole assembly for a review to `Reviewer` agent node, which can later approve it and submit return the final design to the user.
 
 ### Planner tools
 
@@ -321,14 +321,14 @@ So:
    - if valid, pass, if not valid, fail.
 2. Git commit all files.
 3. Start simulation, locally.
-4. If simulation passes, notify the engineer via logs. (don't ask the agent to improve for now, though it could be well cost-efficient and useful). The agent will then run a `submit_engineering_for_review(final_compound)`.
+4. If simulation passes, notify the engineer via logs. (don't ask the agent to improve for now, though it could be well cost-efficient and useful). The agent will then run a `submit_solution_for_review(final_compound)`.
    - Don't render the video yet! If the simulation didn't pass, maybe we don't need to render the video. We can instead print positions (probably just final positions) of all parts in the simulation and let the agent introspect them.
      The simulation will produce video. The issue is, it's expensive to render.
 5. If doesn't, retry the simulation.
 
-#### submit_engineering_for_review(compound: Compound)
+#### submit_solution_for_review(compound: Compound)
 
-The Engineering Coder calls `submit_engineering_for_review(compound)` after validation and simulation pass for the latest code revision. This utility persists handover artifacts and marks the submission candidate as ready for review.
+The Engineering Coder calls `submit_solution_for_review(compound)` after validation and simulation pass for the latest code revision. This utility persists handover artifacts and marks the submission candidate as ready for review.
 
 Submission-stage contract:
 
@@ -359,7 +359,7 @@ Manifest persistence contract:
 
 Reviewer entry preconditions are explicit and fail-closed:
 
-1. `submit_benchmark_for_review(compound)` or `submit_engineering_for_review(compound)` must be called in the latest code revision (latest candidate script state), not in an earlier failed revision.
+1. `submit_benchmark_for_review(compound)` or `submit_solution_for_review(compound)` must be called in the latest code revision (latest candidate script state), not in an earlier failed revision.
 2. The latest validation artifacts must indicate success (`validate_benchmark()` in benchmark / `validate_engineering()` in engineering).
 3. The latest simulation artifact must indicate success and objective completion (target payload reached the green/goal zone).
 4. The reviewer-stage manifest must parse into a typed model (`ReviewManifest`) with `status=ready_for_review`, matching session/revision metadata, and correct `reviewer_stage`.

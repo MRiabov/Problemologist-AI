@@ -207,11 +207,11 @@ appendices:
     Use workspace-relative paths only.
     Treat .manifests/ as system-owned.
   backend:
-    cli_based:
-      shared: |
-        Use the local workspace and shell helpers when they are available.
+      cli_based:
+        shared: |
+          Use the local workspace and shell helpers when they are available.
       engineer_coder: |
-        Use scripts/submit_engineering_for_review.sh or the Python submission helper.
+        Use scripts/submit_solution_for_review.sh or the Python submission helper.
     api_based:
       shared: |
         Use the controller-backed runtime and native tool loop.
