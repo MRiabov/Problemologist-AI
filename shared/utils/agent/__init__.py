@@ -1,23 +1,20 @@
 import asyncio
 import base64
-import contextlib
-import importlib.util
 import math
 import os
-import sys
 from enum import Enum
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 import httpx
 import structlog
-from build123d import Compound, Part
+from build123d import Align, Box, Compound, Location, Part
 from deprecated import deprecated
 from pydantic import BaseModel
 
 from shared.current_role import current_role_agent_name
 from shared.enums import AgentName
+from shared.models.schemas import BenchmarkDefinition, CompoundMetadata, PartMetadata
 from shared.rendering import (
     bundle_workspace_base64,
     export_preview_scene_bundle,
@@ -33,7 +30,6 @@ from shared.script_contracts import (
 from shared.simulation.schemas import get_default_simulator_backend
 from shared.utils.fasteners import HoleType as HoleType
 from shared.utils.fasteners import fastener_hole as fastener_hole
-from shared.workers.loader import sys_path_context
 from shared.workers.schema import (
     BenchmarkToolResponse,
     PlanRefusal,
@@ -199,34 +195,81 @@ def _preview_output_dir() -> Path:
     )
 
 
-def _load_module_from_path(module_path: Path) -> Any:
-    if not module_path.exists():
-        raise FileNotFoundError(f"Module not found at {module_path}")
-
-    module_name = f"dynamic_preview_{module_path.stem}_{uuid4().hex}"
-    with sys_path_context(str(module_path.parent)):
-        spec = importlib.util.spec_from_file_location(module_name, str(module_path))
-        if spec is None or spec.loader is None:
-            raise RuntimeError(f"Could not load module spec for {module_path}")
-        module = importlib.util.module_from_spec(spec)
-        try:
-            spec.loader.exec_module(module)
-        finally:
-            with contextlib.suppress(Exception):
-                sys.modules.pop(module_name, None)
-    return module
+def _workspace_benchmark_definition_path() -> Path:
+    return _workspace_root() / "benchmark_definition.yaml"
 
 
-def objectives_geometry() -> Any:
-    """Materialize benchmark objective geometry for the current workspace."""
-    benchmark_script = _workspace_root() / "benchmark_script.py"
-    module = _load_module_from_path(benchmark_script)
-    factory = getattr(module, "objectives_geometry", None)
-    if not callable(factory):
-        raise AttributeError(
-            "benchmark_script.py must define an objectives_geometry() function"
+def _load_workspace_benchmark_definition() -> BenchmarkDefinition:
+    benchmark_definition_path = _workspace_benchmark_definition_path()
+    if not benchmark_definition_path.exists():
+        raise FileNotFoundError(
+            f"benchmark_definition.yaml not found at {benchmark_definition_path}"
         )
-    return factory()
+
+    from worker_heavy.utils.file_validation import validate_benchmark_definition_yaml
+
+    is_valid, benchmark_or_errors = validate_benchmark_definition_yaml(
+        benchmark_definition_path.read_text(encoding="utf-8"),
+        session_id=os.getenv("SESSION_ID"),
+    )
+    if not is_valid:
+        raise ValueError("; ".join(benchmark_or_errors))
+    return benchmark_or_errors
+
+
+def _build_objective_zone(label: str, bounds_min, bounds_max):
+    size_x = float(bounds_max[0]) - float(bounds_min[0])
+    size_y = float(bounds_max[1]) - float(bounds_min[1])
+    size_z = float(bounds_max[2]) - float(bounds_min[2])
+    center = (
+        (float(bounds_min[0]) + float(bounds_max[0])) / 2.0,
+        (float(bounds_min[1]) + float(bounds_max[1])) / 2.0,
+        (float(bounds_min[2]) + float(bounds_max[2])) / 2.0,
+    )
+    zone = Box(
+        max(size_x, 0.0),
+        max(size_y, 0.0),
+        max(size_z, 0.0),
+        align=(Align.CENTER, Align.CENTER, Align.CENTER),
+    ).move(Location(center))
+    zone.label = label
+    zone.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    return zone
+
+
+def objectives_geometry() -> Compound:
+    """Materialize benchmark objective overlay geometry for the current workspace."""
+
+    benchmark_definition = _load_workspace_benchmark_definition()
+    objectives = benchmark_definition.objectives
+    children = []
+
+    goal_zone = objectives.goal_zone
+    if goal_zone is not None:
+        children.append(
+            _build_objective_zone("zone_goal", goal_zone.min, goal_zone.max)
+        )
+
+    for index, forbid_zone in enumerate(objectives.forbid_zones or []):
+        zone_name = str(forbid_zone.name).strip() or f"forbid_{index}"
+        children.append(
+            _build_objective_zone(
+                f"zone_forbid_{index}_{zone_name}",
+                forbid_zone.min,
+                forbid_zone.max,
+            )
+        )
+
+    build_zone = objectives.build_zone
+    if build_zone is not None:
+        children.append(
+            _build_objective_zone("zone_build", build_zone.min, build_zone.max)
+        )
+
+    overlay = Compound(children=children) if children else Compound()
+    overlay.label = "benchmark_objectives"
+    overlay.metadata = CompoundMetadata()
+    return overlay
 
 
 def _default_reviewer_stage() -> str:

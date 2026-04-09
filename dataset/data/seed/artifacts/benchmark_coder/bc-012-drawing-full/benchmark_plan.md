@@ -57,6 +57,7 @@ The fixed simulation context that anchors all benchmark fixtures. Provides the r
 - AABB min: `(320, -55, 220)`
 - AABB max: `(430, 55, 300)`
 - Success when the projectile ball center enters this volume.
+- The `raised_goal_shelf` fixture is designed to occupy this goal zone as the target landing platform.
 
 ### Forbid zone: `shelf_support_clearance`
 

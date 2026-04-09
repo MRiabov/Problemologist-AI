@@ -40,7 +40,9 @@ RAISED_GOAL_SHELF_SIZE = (150.0, 120.0, 30.0)
 LIFT_CARRIAGE_POS = (-130.0, 0.0, 60.0)
 LIFT_CARRIAGE_SIZE = (120.0, 110.0, 18.0)
 
-DRIVE_MOTOR_POS = (-130.0, 0.0, 10.0)
+# ServoMotor_DS3218 dimensions from catalog (L, W, H) = (40.0, 20.0, 40.5)
+# Positioned beside the carriage path (y=80) to avoid intersection.
+DRIVE_MOTOR_POS = (-130.0, 80.0, 30.0)
 DRIVE_MOTOR_SIZE = (40.0, 20.0, 40.5)
 
 
@@ -77,10 +79,9 @@ def _build_model() -> Compound:
     children.append(lc)
 
     # drive_motor x1 (COTS ServoMotor_DS3218 proxy)
-    # Place on top of floor plate (floor plate top is at Z=30)
     dm = Box(*DRIVE_MOTOR_SIZE, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    dm = dm.move(Location((-130.0, 0.0, 30.0)))
-    dm.label = "ServoMotor_DS3218"
+    dm = dm.move(Location(DRIVE_MOTOR_POS))
+    dm.label = "drive_motor"
     dm.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(dm)
 
