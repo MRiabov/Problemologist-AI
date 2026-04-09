@@ -975,6 +975,8 @@ def define_graph():
             return END
         if decision == ReviewDecision.REJECT_PLAN:
             state.session.status = SessionStatus.REJECTED
+            # Explicit solvability rejections terminate the benchmark planning
+            # attempt; the planner loop only retries malformed reviewer output.
             return END
         if decision == ReviewDecision.REJECTED:
             state.session.status = SessionStatus.REJECTED

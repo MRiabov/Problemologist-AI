@@ -53,13 +53,17 @@ def _workspace_environment_version(content: str) -> str | None:
     return version_text or None
 
 
-def _benchmark_planner_drafting_required() -> bool:
+def _benchmark_planner_drafting_required() -> bool | None:
     try:
         drafting_mode = load_agents_config().get_technical_drawing_mode(
             AgentName.BENCHMARK_PLANNER
         )
     except Exception:
-        return False
+        logger.warning(
+            "benchmark_planner_drafting_mode_lookup_failed",
+            agent_name=AgentName.BENCHMARK_PLANNER.value,
+        )
+        return None
     return drafting_mode in (DraftingMode.MINIMAL, DraftingMode.FULL)
 
 
@@ -314,7 +318,20 @@ def get_benchmark_planner_tools(
             "benchmark_definition.yaml",
             "benchmark_assembly_definition.yaml",
         ]
-        if _benchmark_planner_drafting_required():
+        drafting_required = _benchmark_planner_drafting_required()
+        if drafting_required is None:
+            result = PlannerSubmissionResult(
+                ok=False,
+                status="rejected",
+                errors=[
+                    "benchmark planner drafting policy could not be loaded; "
+                    "refusing to submit without a verified drafting contract"
+                ],
+                node_type=AgentName.BENCHMARK_PLANNER,
+            )
+            return result.model_dump(mode="json")
+
+        if drafting_required:
             try:
                 await _publish_drafting_preview_bundle(
                     fs,
@@ -471,7 +488,8 @@ def get_benchmark_planner_tools(
             benchmark_assembly_definition_text
         )
 
-        if _benchmark_planner_drafting_required():
+        drafting_required = _benchmark_planner_drafting_required()
+        if drafting_required:
             drafting_errors = await _validate_drafting_preview_artifacts(
                 fs,
                 AgentName.BENCHMARK_PLANNER,
