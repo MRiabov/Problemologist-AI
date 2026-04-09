@@ -461,10 +461,8 @@ class BenchmarkPlannerNode(BaseNode):
         if static_geometry:
             environment_perturbations["static_geometry"] = static_geometry
 
-        moved_object = objectives_data.get("moved_object")
-        target_object_properties = (
-            moved_object if isinstance(moved_object, dict) else {}
-        )
+        payload = objectives_data.get("payload")
+        target_object_properties = payload if isinstance(payload, dict) else {}
 
         return RandomizationStrategy(
             theme=theme[:200],
@@ -490,16 +488,16 @@ class BenchmarkPlannerNode(BaseNode):
         normalized_totals: dict[str, float] = {}
         removed_keys: list[str] = []
 
-        moved_object = data.get("moved_object")
-        if isinstance(moved_object, dict):
-            static_randomization = moved_object.get("static_randomization")
+        payload = data.get("payload")
+        if isinstance(payload, dict):
+            static_randomization = payload.get("static_randomization")
             if isinstance(static_randomization, dict):
                 nested_start_position = static_randomization.pop("start_position", None)
                 if (
                     nested_start_position is not None
-                    and "start_position" not in moved_object
+                    and "start_position" not in payload
                 ):
-                    moved_object["start_position"] = nested_start_position
+                    payload["start_position"] = nested_start_position
                     changed = True
                 elif nested_start_position is not None:
                     static_randomization["start_position"] = nested_start_position
@@ -544,8 +542,8 @@ class BenchmarkPlannerNode(BaseNode):
             removed_keys=removed_keys,
             kept_keys=sorted(normalized_totals.keys()),
             promoted_start_position=bool(
-                isinstance(data.get("moved_object"), dict)
-                and data["moved_object"].get("start_position") is not None
+                isinstance(data.get("payload"), dict)
+                and data["payload"].get("start_position") is not None
             ),
         )
         return True

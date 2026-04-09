@@ -89,16 +89,16 @@ def _validate_benchmark_definition_consistency(
             "goal_zone does not overlap build_zone",
         )
 
-    jitter = objectives.moved_object.runtime_jitter
-    start = objectives.moved_object.start_position
-    jitter_error = _validate_non_negative_range("moved_object.runtime_jitter", jitter)
+    jitter = objectives.payload.runtime_jitter
+    start = objectives.payload.start_position
+    jitter_error = _validate_non_negative_range("payload.runtime_jitter", jitter)
     if jitter_error is not None:
         return jitter_error
 
     radius_max = 0.0
-    radius_range = objectives.moved_object.static_randomization.radius
+    radius_range = objectives.payload.static_randomization.radius
     radius_error = _validate_non_negative_range(
-        "moved_object.static_randomization.radius", radius_range
+        "payload.static_randomization.radius", radius_range
     )
     if radius_error is not None:
         return radius_error
@@ -119,21 +119,21 @@ def _validate_benchmark_definition_consistency(
     if not _boxes_intersect(moved_min, moved_max, build_zone.min, build_zone.max):
         return _benchmark_refusal_error(
             BenchmarkRefusalReason.UNSOLVABLE_SCENARIO,
-            "moved_object runtime envelope does not overlap build_zone",
+            "payload runtime envelope does not overlap build_zone",
         )
 
     for i, axis in enumerate(("x", "y", "z")):
         if moved_min[i] < build_zone.min[i] or moved_max[i] > build_zone.max[i]:
             return _benchmark_refusal_error(
                 BenchmarkRefusalReason.UNSOLVABLE_SCENARIO,
-                f"moved_object runtime envelope exceeds build_zone on axis {axis}",
+                f"payload runtime envelope exceeds build_zone on axis {axis}",
             )
 
     for zone in objectives.objectives.forbid_zones:
         if _boxes_intersect(moved_min, moved_max, zone.min, zone.max):
             return _benchmark_refusal_error(
                 BenchmarkRefusalReason.CONTRADICTORY_CONSTRAINTS,
-                "moved_object runtime envelope intersects forbid zone "
+                "payload runtime envelope intersects forbid zone "
                 f"'{zone.name}' across jitter/randomization",
             )
 
@@ -156,7 +156,7 @@ def validate_benchmark_definition_yaml(
 
         objectives = BenchmarkDefinition(**data)
 
-        material_id = objectives.moved_object.material_id
+        material_id = objectives.payload.material_id
         manufacturing_config = load_config()
         known_material_ids = set(manufacturing_config.materials.keys())
         known_material_ids.update(manufacturing_config.cnc.materials.keys())
@@ -166,7 +166,7 @@ def validate_benchmark_definition_yaml(
         known_material_ids.update(manufacturing_config.three_dp.materials.keys())
         if material_id not in known_material_ids:
             return False, [
-                "moved_object.material_id must reference a known material from "
+                "payload.material_id must reference a known material from "
                 f"manufacturing_config.yaml (got '{material_id}')"
             ]
 

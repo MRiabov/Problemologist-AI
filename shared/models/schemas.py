@@ -190,7 +190,7 @@ class MaxStressObjective(StrictContractModel):
 
 
 class ForbidZone(StrictContractModel):
-    """A zone that the moved object must not enter."""
+    """A zone that the payload must not enter."""
 
     name: str
     min: CoercedTuple3D
@@ -763,7 +763,7 @@ class BenchmarkDefinition(StrictContractModel):
 
     This file defines WHAT the engineer must achieve and the benchmark-owned
     environment metadata:
-    - Guide the moved_object into the goal_zone
+    - Guide the payload into the goal_zone
     - Stay WITHIN the build_zone
     - AVOID all forbid_zones
     - Respect runtime-derived max_unit_cost and max_weight constraints
@@ -776,7 +776,7 @@ class BenchmarkDefinition(StrictContractModel):
     physics: PhysicsConfig = PhysicsConfig()
     fluids: list[FluidDefinition] = []
     simulation_bounds: BoundingBox
-    moved_object: MovedObject
+    payload: MovedObject
     constraints: Constraints
     randomization: RandomizationMeta = RandomizationMeta()
     electronics_requirements: ElectronicsRequirements | None = None

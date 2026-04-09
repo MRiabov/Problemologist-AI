@@ -239,7 +239,7 @@ class SimulationLoop:
                 forbidden_sites=self.forbidden_sites,
             )
 
-            if self.objectives and self.objectives.moved_object:
+            if self.objectives and self.objectives.payload:
                 self.benchmark_payload_body_name = self._identify_target_body()
 
             # Configurable timeout (capped at hard limit)
@@ -609,7 +609,7 @@ class SimulationLoop:
             return False
         if self.benchmark_payload_body_name is None:
             return False
-        if not self.objectives or not self.objectives.moved_object:
+        if not self.objectives or not self.objectives.payload:
             return False
         if body_name != self.benchmark_payload_body_name:
             return False
@@ -624,8 +624,8 @@ class SimulationLoop:
             return
 
         payload_label = (
-            str(self.objectives.moved_object.label).strip()
-            if self.objectives and self.objectives.moved_object
+            str(self.objectives.payload.label).strip()
+            if self.objectives and self.objectives.payload
             else body_name
         )
         self.metric_collector.add_event(
@@ -913,9 +913,9 @@ class SimulationLoop:
         """Identify the primary target body for objective tracking."""
         all_bodies = self.backend.get_all_body_names()
 
-        # Priority 1: Check objectives for moved_object label
-        if self.objectives and self.objectives.moved_object:
-            label = str(self.objectives.moved_object.label).strip()
+        # Priority 1: Check objectives for payload label
+        if self.objectives and self.objectives.payload:
+            label = str(self.objectives.payload.label).strip()
             namespaced_label = moved_object_scene_name(label)
             if namespaced_label in all_bodies:
                 return namespaced_label

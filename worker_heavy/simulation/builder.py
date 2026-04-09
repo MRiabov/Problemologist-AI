@@ -55,7 +55,7 @@ class AssemblyPartData(BaseModel):
 
 
 def _build_moved_object_geometry(moved: Any):
-    """Build the authored moved object geometry from its declared shape."""
+    """Build the authored payload geometry from its declared shape."""
     shape = str(getattr(moved, "shape", "sphere")).strip().lower()
     radius_range = getattr(getattr(moved, "static_randomization", None), "radius", None)
     radius = float(max(radius_range)) if radius_range else None
@@ -83,7 +83,7 @@ def _build_moved_object_geometry(moved: Any):
         )
 
     raise ValueError(
-        f"Unsupported moved_object.shape '{shape}'. Expected sphere, cube, box, or cylinder."
+        f"Unsupported payload.shape '{shape}'. Expected sphere, cube, box, or cylinder."
     )
 
 
@@ -990,9 +990,9 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                 )
                 body_locations[data.label] = (data.pos, data.euler)
 
-        # 3. Add the benchmark-mandated moved object as a dynamic body.
-        if objectives and getattr(objectives, "moved_object", None):
-            moved = objectives.moved_object
+        # 3. Add the benchmark-mandated payload as a dynamic body.
+        if objectives and getattr(objectives, "payload", None):
+            moved = objectives.payload
             moved_part = _build_moved_object_geometry(moved)
             moved_label = str(moved.label).strip()
             moved_body_name = moved_object_scene_name(moved_label)

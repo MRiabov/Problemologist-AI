@@ -90,7 +90,7 @@ async def run_verification_job(
             backend_type=backend_type.value,
             session_id=session_id,
             explicit_target_body_name=(
-                objectives.moved_object.label if objectives else None
+                objectives.payload.label if objectives else None
             ),
         )
 

@@ -602,16 +602,16 @@ def _validate_benchmark_definition_consistency(
             "goal_zone does not overlap build_zone",
         )
 
-    jitter = objectives.moved_object.runtime_jitter
-    start = objectives.moved_object.start_position
-    jitter_error = _validate_non_negative_range("moved_object.runtime_jitter", jitter)
+    jitter = objectives.payload.runtime_jitter
+    start = objectives.payload.start_position
+    jitter_error = _validate_non_negative_range("payload.runtime_jitter", jitter)
     if jitter_error is not None:
         return jitter_error
 
     radius_max = 0.0
-    radius_range = objectives.moved_object.static_randomization.radius
+    radius_range = objectives.payload.static_randomization.radius
     radius_error = _validate_non_negative_range(
-        "moved_object.static_randomization.radius", radius_range
+        "payload.static_randomization.radius", radius_range
     )
     if radius_error is not None:
         return radius_error
@@ -632,20 +632,20 @@ def _validate_benchmark_definition_consistency(
     if not _boxes_intersect(moved_min, moved_max, build_zone.min, build_zone.max):
         return _benchmark_refusal_error(
             BenchmarkRefusalReason.UNSOLVABLE_SCENARIO,
-            "moved_object runtime envelope does not overlap build_zone",
+            "payload runtime envelope does not overlap build_zone",
         )
     for i, axis in enumerate(("x", "y", "z")):
         if moved_min[i] < build_zone.min[i] or moved_max[i] > build_zone.max[i]:
             return _benchmark_refusal_error(
                 BenchmarkRefusalReason.UNSOLVABLE_SCENARIO,
-                f"moved_object runtime envelope exceeds build_zone on axis {axis}",
+                f"payload runtime envelope exceeds build_zone on axis {axis}",
             )
 
     for zone in objectives.objectives.forbid_zones:
         if _boxes_intersect(moved_min, moved_max, zone.min, zone.max):
             return _benchmark_refusal_error(
                 BenchmarkRefusalReason.CONTRADICTORY_CONSTRAINTS,
-                "moved_object runtime envelope intersects forbid zone "
+                "payload runtime envelope intersects forbid zone "
                 f"'{zone.name}' across jitter/randomization",
             )
 
@@ -697,8 +697,8 @@ def _validate_parent_fixed_contract(
         return None
 
     moved_label = None
-    if objectives and objectives.moved_object:
-        moved_label = objectives.moved_object.label
+    if objectives and objectives.payload:
+        moved_label = objectives.payload.label
 
     unfixed_children: list[str] = []
     for child in getattr(component, "children", []) or []:
@@ -772,14 +772,14 @@ def _validate_top_level_location_contract(component: Compound) -> str | None:
     )
 
 
-def _build_moved_object_start_geometry(moved_object: Any) -> Any:
+def _build_moved_object_start_geometry(payload: Any) -> Any:
     """Materialize the benchmark payload at its declared startup pose."""
     from build123d import Location
 
     from worker_heavy.simulation.builder import _build_moved_object_geometry
 
-    geometry = _build_moved_object_geometry(moved_object)
-    start_position = tuple(float(value) for value in moved_object.start_position)
+    geometry = _build_moved_object_geometry(payload)
+    start_position = tuple(float(value) for value in payload.start_position)
     return geometry.move(Location(start_position))
 
 
@@ -787,15 +787,13 @@ def _validate_moved_object_start_clearance(
     component: Compound, objectives: BenchmarkDefinition | None
 ) -> str | None:
     """Reject benchmark fixtures that overlap the runtime-spawned payload."""
-    if objectives is None or getattr(objectives, "moved_object", None) is None:
+    if objectives is None or getattr(objectives, "payload", None) is None:
         return None
 
     try:
-        moved_object_geometry = _build_moved_object_start_geometry(
-            objectives.moved_object
-        )
+        moved_object_geometry = _build_moved_object_start_geometry(objectives.payload)
     except Exception as exc:
-        return f"Unable to materialize moved_object startup geometry: {exc}"
+        return f"Unable to materialize payload startup geometry: {exc}"
 
     for index, solid in enumerate(component.solids()):
         label = getattr(solid, "label", None) or f"solid_{index}"
@@ -803,12 +801,11 @@ def _validate_moved_object_start_clearance(
             intersection = moved_object_geometry.intersect(solid)
         except Exception as exc:
             return (
-                "Unable to evaluate moved_object startup clearance against "
-                f"{label}: {exc}"
+                f"Unable to evaluate payload startup clearance against {label}: {exc}"
             )
         if _shape_volume(intersection) > 1e-6:
             return (
-                "moved_object start pose intersects benchmark geometry "
+                "payload start pose intersects benchmark geometry "
                 f"(offending solid: {label})"
             )
 
@@ -2178,7 +2175,7 @@ def simulate(
         if objectives and final_video_path and final_video_path.exists():
             payload_position_summary = summarize_payload_position_history(
                 final_video_path.parent / "objects.parquet",
-                payload_label=objectives.moved_object.label,
+                payload_label=objectives.payload.label,
             )
         if payload_position_summary:
             result.summary = f"{result.summary}\n{payload_position_summary}"

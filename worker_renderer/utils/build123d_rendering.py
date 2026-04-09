@@ -193,7 +193,7 @@ def resolve_payload_path_points(
                 definition = BenchmarkDefinition.model_validate(raw_payload)
             except Exception:
                 continue
-            start_point = _as_point3(definition.moved_object.start_position)
+            start_point = _as_point3(definition.payload.start_position)
             goal = definition.objectives.goal_zone
             goal_center = (
                 (float(goal.min[0]) + float(goal.max[0])) / 2.0,
@@ -207,7 +207,7 @@ def resolve_payload_path_points(
                 return points
 
     if benchmark_definition is not None:
-        start_point = _as_point3(benchmark_definition.moved_object.start_position)
+        start_point = _as_point3(benchmark_definition.payload.start_position)
         goal = benchmark_definition.objectives.goal_zone
         goal_center = (
             (float(goal.min[0]) + float(goal.max[0])) / 2.0,
