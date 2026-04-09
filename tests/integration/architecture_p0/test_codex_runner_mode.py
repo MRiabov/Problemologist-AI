@@ -2509,9 +2509,9 @@ result = build()
 
         from solution_script import result
         from shared.workers.persistence import record_validation_result
-        from utils.submission import validate
+        from utils.submission import validate_engineering
 
-        ok, message = validate(result, output_dir=".")
+        ok, message = validate_engineering(result, output_dir=".")
         record_validation_result(
             Path.cwd(),
             ok,

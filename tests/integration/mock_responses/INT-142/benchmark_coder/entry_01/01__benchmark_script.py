@@ -3,7 +3,7 @@ from build123d import *  # noqa: F403, F405
 
 from shared.workers.workbench_models import ManufacturingMethod
 from utils.metadata import PartMetadata
-from utils.submission import simulate, submit_for_review, validate
+from utils.submission import simulate_benchmark, submit_benchmark_for_review, validate_benchmark
 
 
 def build():
@@ -16,11 +16,11 @@ def build():
 
 
 result = build()
-validate_ok, validate_message = validate(result)
+validate_ok, validate_message = validate_benchmark(result)
 print(validate_ok)
 print(validate_message)
-sim_result = simulate(result)
+sim_result = simulate_benchmark(result)
 print(sim_result.success)
 print(sim_result.message)
 if validate_ok and sim_result.success:
-    print(submit_for_review(result))
+    print(submit_benchmark_for_review(result))

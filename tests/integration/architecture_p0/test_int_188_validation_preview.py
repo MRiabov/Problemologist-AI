@@ -680,9 +680,11 @@ async def test_int_188_engineer_planner_submit_plan_rejects_empty_drafting_manif
         )
 
         tools = get_engineer_planner_tools(fs, session_id)
-        submit_plan = next(tool for tool in tools if tool.__name__ == "submit_plan")
+        submit_engineering_plan = next(
+            tool for tool in tools if tool.__name__ == "submit_engineering_plan"
+        )
 
-        result = await submit_plan()
+        result = await submit_engineering_plan()
         assert result["ok"] is False, result
         assert result["status"] == "rejected", result
         assert result["errors"], result
@@ -701,7 +703,7 @@ async def test_int_188_engineer_planner_submit_plan_rejects_empty_drafting_manif
 @pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.asyncio
 async def test_int_188_benchmark_planner_submit_plan_publishes_scratch_drafting_bundle():
-    """INT-188: benchmark planner submit_plan must publish the scratch drafting bundle."""
+    """INT-188: benchmark planner submit_benchmark_plan must publish the scratch drafting bundle."""
     session_id = f"INT-188-{uuid.uuid4().hex[:8]}"
     episode_id = str(uuid.uuid4())
     worker_client = WorkerClient(
@@ -973,9 +975,11 @@ async def test_int_188_benchmark_planner_submit_plan_publishes_scratch_drafting_
         )
 
         tools = get_benchmark_planner_tools(fs, session_id)
-        submit_plan = next(tool for tool in tools if tool.__name__ == "submit_plan")
+        submit_benchmark_plan = next(
+            tool for tool in tools if tool.__name__ == "submit_benchmark_plan"
+        )
 
-        result = await submit_plan()
+        result = await submit_benchmark_plan()
         assert result["ok"] is True, result
         assert result["status"] == "submitted", result
 

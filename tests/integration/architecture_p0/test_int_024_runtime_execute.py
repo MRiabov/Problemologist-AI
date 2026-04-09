@@ -122,7 +122,7 @@ async def test_int_024_runtime_execute_masks_host_session_root_as_workspace():
 async def test_int_024_runtime_execute_reaches_benchmark_validate_toolchain():
     """
     INT-024: benchmark validation remains reachable from the light-worker
-    runtime via direct utils.submission.validate() calls inside the authored
+    runtime via direct utils.submission.validate_benchmark() calls inside the authored
     script during execute_command-equivalent execution, without
     host-resolution failures.
     """
@@ -132,7 +132,7 @@ async def test_int_024_runtime_execute_reaches_benchmark_validate_toolchain():
     script = """
 from build123d import Box, Location
 from utils.metadata import PartMetadata
-from utils.submission import validate
+from utils.submission import validate_benchmark
 
 def build():
     p = Box(4, 4, 4).move(Location((0, 0, 4)))
@@ -141,7 +141,7 @@ def build():
     return p
 
 result = build()
-success, message = validate(result)
+success, message = validate_benchmark(result)
 print(f"VALIDATE_SUCCESS={success}")
 print(f"VALIDATE_MESSAGE={message}")
 """
@@ -271,7 +271,7 @@ async def test_int_024_runtime_execute_rejects_startup_overlap_with_spawned_payl
 
     overlap_script = """
 from build123d import Box, Location
-from utils.submission import validate
+from utils.submission import validate_benchmark
 
 def build():
     p = Box(12, 12, 12)
@@ -280,7 +280,7 @@ def build():
     return p
 
 result = build()
-success, message = validate(result)
+success, message = validate_benchmark(result)
 print(f"VALIDATE_SUCCESS={success}")
 print(f"VALIDATE_MESSAGE={message}")
 """
@@ -358,7 +358,7 @@ print(f"VALIDATE_MESSAGE={message}")
 @pytest.mark.asyncio
 async def test_int_024_runtime_validate_rejects_transient_shell_state_mismatch():
     """
-    INT-024: utils.submission.validate() must fail closed when the live
+    INT-024: utils.submission.validate_benchmark() must fail closed when the live
     compound differs from the persisted solution_script.py semantic signature.
     """
     session_id = f"INT-024-SIG-{uuid.uuid4().hex[:8]}"
@@ -375,10 +375,10 @@ result = build()
 
     runtime_code = """python3 - <<'PY'
 from build123d import Box
-from utils.submission import validate
+from utils.submission import validate_benchmark
 
 result = Box(5, 5, 5)
-success, message = validate(result)
+success, message = validate_benchmark(result)
 print(f"VALIDATE_SUCCESS={success}")
 print(f"VALIDATE_MESSAGE={message}")
 PY
@@ -426,7 +426,7 @@ async def test_int_024_runtime_validate_rejects_parent_only_fixed_metadata():
     script = """
 from build123d import Align, Box, BuildPart, Compound
 from utils.metadata import CompoundMetadata, PartMetadata
-from utils.submission import validate
+from utils.submission import validate_benchmark
 
 def build():
     with BuildPart() as ground_builder:
@@ -447,7 +447,7 @@ def build():
     return benchmark
 
 result = build()
-success, message = validate(result)
+success, message = validate_benchmark(result)
 print(f"VALIDATE_SUCCESS={success}")
 print(f"VALIDATE_MESSAGE={message}")
 """
@@ -527,7 +527,7 @@ async def test_int_024_runtime_validate_accepts_translated_top_level_parts_with_
     script = """
 from build123d import Align, Box, BuildPart, Compound
 from utils.metadata import CompoundMetadata, PartMetadata
-from utils.submission import validate
+from utils.submission import validate_benchmark
 
 def build():
     with BuildPart() as ground_builder:
@@ -554,7 +554,7 @@ def build():
     return benchmark
 
 result = build()
-success, message = validate(result)
+success, message = validate_benchmark(result)
 print(f"VALIDATE_SUCCESS={success}")
 print(f"VALIDATE_MESSAGE={message}")
 """
@@ -638,7 +638,7 @@ async def test_int_024_runtime_validate_rejects_blank_top_level_labels():
     script = """
 from build123d import Align, Box, Compound
 from utils.metadata import CompoundMetadata, PartMetadata
-from utils.submission import validate
+from utils.submission import validate_benchmark
 
 def build():
     part = Box(1, 1, 1, align=(Align.CENTER, Align.CENTER, Align.MIN))
@@ -651,7 +651,7 @@ def build():
     return scene
 
 result = build()
-success, message = validate(result)
+success, message = validate_benchmark(result)
 print(f"VALIDATE_SUCCESS={success}")
 print(f"VALIDATE_MESSAGE={message}")
 """
@@ -698,7 +698,7 @@ async def test_int_024_runtime_validate_reports_resolved_build_zone_bounds():
     script = """
 from build123d import Align, Box
 from utils.metadata import PartMetadata
-from utils.submission import validate
+from utils.submission import validate_benchmark
 
 def build():
     ground = Box(40, 40, 1, align=(Align.CENTER, Align.CENTER, Align.MIN))
@@ -707,7 +707,7 @@ def build():
     return ground
 
 result = build()
-success, message = validate(result)
+success, message = validate_benchmark(result)
 print(f"VALIDATE_SUCCESS={success}")
 print(f"VALIDATE_MESSAGE={message}")
 """

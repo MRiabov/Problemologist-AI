@@ -201,8 +201,8 @@ async def test_engineering_full_loop():
         planner_tool_trace_names = [
             trace.name for trace in planner_tool_traces if trace.name
         ]
-        assert "submit_plan" in planner_tool_trace_names, (
-            f"Expected TOOL_START trace for submit_plan. Observed: {planner_tool_trace_names}"
+        assert "submit_engineering_plan" in planner_tool_trace_names, (
+            f"Expected TOOL_START trace for submit_engineering_plan. Observed: {planner_tool_trace_names}"
         )
         assert any(
             trace.name in {"inspect_media", "inspect_media_tool"}
