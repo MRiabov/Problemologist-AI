@@ -85,10 +85,10 @@ def build() -> Compound:
 
     Every top-level child must have a unique label that is not
     ``environment``, does not start with ``zone_``, and does not start with
-    ``benchmark_moved_object__`` because the simulator reserves those names.
+    ``benchmark_payload__`` because the simulator reserves those names.
     """
-    # NOTE: Do NOT include the moved object here — the simulation system spawns
-    # `benchmark_moved_object__projectile_ball` independently from
+    # NOTE: Do NOT include the payload here — the simulation system spawns
+    # `benchmark_payload__projectile_ball` independently from
     # `benchmark_definition.yaml`. Returning it from build() creates a duplicate
     # body that collides with the spawned ball, causing instant OUT_OF_BOUNDS.
     children = [

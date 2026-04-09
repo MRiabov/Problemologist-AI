@@ -11,7 +11,7 @@ goal shelf.
 
 - **Learning objective**: Test powered fixture motion with COTS motor import,
   clearance-zone avoidance, and class-aware catalog resolution.
-- **Moved object**: ABS sphere, radius 44–46 mm, spawns at `(-200, 0, 60)`
+- **Payload**: ABS sphere, radius 44–46 mm, spawns at `(-200, 0, 60)`
   with `±[10, 8, 6]` mm runtime jitter.
 - **Goal zone**: `(320, -55, 220)` to `(430, 55, 300)`.
 - **Forbid zone**: shelf-support clearance `(180, -95, 0)` to `(280, 95, 210)`.

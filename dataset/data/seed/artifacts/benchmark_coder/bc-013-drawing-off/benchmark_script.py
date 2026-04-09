@@ -20,8 +20,8 @@ def build() -> Compound:
     - `side_goal_wall`: vertical wall at goal zone near [170, 0, 50] mm.
     - `catch_bin`: goal bin at [170, 0, 15] mm, 60x70x20 mm.
     """
-    # NOTE: Do NOT include the moved object here -- the simulation system spawns
-    # `benchmark_moved_object__projectile_ball` independently from `benchmark_definition.yaml`.
+    # NOTE: Do NOT include the payload here -- the simulation system spawns
+    # `benchmark_payload__projectile_ball` independently from `benchmark_definition.yaml`.
     # Returning it from build() creates a duplicate body that collides with the spawned ball,
     # causing instant OUT_OF_BOUNDS.
     children = []
