@@ -1,7 +1,8 @@
-# Journal
+# Execution Journal
 
-## Entry 1: Seeded Planner Package
+## Session Start
 
-- Intent: Implement the reviewed single-motor raised-shelf lift stage.
-- Context: The seed now includes the benchmark objective bounds, the coarse `shelf_lift` motion forecast in `assembly_definition.yaml`, and the narrower `payload_trajectory_definition.yaml` refinement that keeps the same build-safe start and goal-contact finish.
-- Next Step: Build the `lift_base`, `left_frame`, `right_frame`, `belt_bed`, and `upper_tray` geometry in `solution_script.py` while preserving the `ServoMotor_DS3218` corridor and matching the authored motion anchors.
+- Received reviewed planner handoff for the freestanding no-drill transfer benchmark.
+- Planner contract: `freestanding_transfer` subassembly with no DOFs, passive chute path.
+- Benchmark constraint: no drilling, bolting, or leaning on the `benchmark_environment`.
+- Budget: $42.75 / 504.85 g, well under the $54.00 / 900.0 g caps.

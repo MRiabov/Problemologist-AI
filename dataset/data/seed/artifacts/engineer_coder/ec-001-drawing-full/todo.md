@@ -1,9 +1,11 @@
-# TODO
+# Implementation Checklist
 
-- [x] Planner-reviewed handoff package seeded
-- [ ] Read the seeded benchmark and engineering planner artifacts
-- [ ] Confirm the gravity-ramp plan stays passive and clears the forbid zone
-- [ ] Implement `gravity_ramp` in `solution_script.py`
-- [ ] Preserve the benchmark-owned `payload_ball` and read-only fixture context
-- [ ] Validate build-zone fit, inventory exactness, and planner budget margins
-- [ ] Prepare the reviewed execution handoff package after implementation
+- [ ] Read benchmark handoff package (`benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`)
+- [ ] Read reviewed planner artifacts (`plan.md`, `assembly_definition.yaml`)
+- [ ] Read drafting evidence (`solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`)
+- [ ] Implement the freestanding no-drill transfer in `solution_script.py`
+- [ ] Verify inventory matches the approved planner multiset (labels, quantities, COTS identities)
+- [ ] Run `validate_and_price` and confirm pass
+- [ ] Run `simulate` and confirm goal-zone success
+- [ ] Call `submit_for_review` with latest revision artifacts
+- [ ] Update `todo.md` and `journal.md` during execution

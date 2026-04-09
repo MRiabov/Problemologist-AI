@@ -1,17 +1,17 @@
 {
-  "component_label": "solution_plan_technical_drawing",
+  "component_label": "freestanding_transfer",
   "entities": [
     {
-      "label": "base_frame",
-      "semantic_label": "base_frame",
-      "instance_id": "base_frame",
-      "instance_name": "base_frame",
+      "label": "freestanding_transfer",
+      "semantic_label": "freestanding_transfer",
+      "instance_id": "freestanding_transfer",
+      "instance_name": "freestanding_transfer",
       "object_type": "part",
       "object_id": 0,
       "pos": [
         0.0,
         0.0,
-        48.0
+        179.0
       ],
       "euler": [
         -0.0,
@@ -19,12 +19,12 @@
         -0.0
       ],
       "mesh_paths": [
-        "meshes/base_frame.obj"
+        "meshes/freestanding_transfer.obj"
       ],
       "box_size": null,
       "material_id": "aluminum_6061",
-      "body_name": "base_frame",
-      "geom_name": "base_frame",
+      "body_name": "freestanding_transfer",
+      "geom_name": "freestanding_transfer",
       "zone_type": null,
       "color_rgba": [
         0.7529411764705882,
@@ -40,16 +40,16 @@
       "include_in_segmentation": true
     },
     {
-      "label": "bridge_deck",
-      "semantic_label": "bridge_deck",
-      "instance_id": "bridge_deck",
-      "instance_name": "bridge_deck",
+      "label": "freestanding_base",
+      "semantic_label": "freestanding_base",
+      "instance_id": "freestanding_base",
+      "instance_name": "freestanding_base",
       "object_type": "part",
       "object_id": 1,
       "pos": [
-        10.0,
         0.0,
-        60.0
+        0.0,
+        0.0
       ],
       "euler": [
         -0.0,
@@ -57,12 +57,12 @@
         -0.0
       ],
       "mesh_paths": [
-        "meshes/bridge_deck.obj"
+        "meshes/freestanding_base.obj"
       ],
       "box_size": null,
       "material_id": "aluminum_6061",
-      "body_name": "bridge_deck",
-      "geom_name": "bridge_deck",
+      "body_name": "freestanding_base",
+      "geom_name": "freestanding_base",
       "zone_type": null,
       "color_rgba": [
         0.7529411764705882,
@@ -78,16 +78,16 @@
       "include_in_segmentation": true
     },
     {
-      "label": "left_fence",
-      "semantic_label": "left_fence",
-      "instance_id": "left_fence",
-      "instance_name": "left_fence",
+      "label": "capture_funnel",
+      "semantic_label": "capture_funnel",
+      "instance_id": "capture_funnel",
+      "instance_name": "capture_funnel",
       "object_type": "part",
       "object_id": 2,
       "pos": [
-        10.0,
-        -57.5,
-        60.0
+        -200.0,
+        0.0,
+        20.0
       ],
       "euler": [
         -0.0,
@@ -95,12 +95,12 @@
         -0.0
       ],
       "mesh_paths": [
-        "meshes/left_fence.obj"
+        "meshes/capture_funnel.obj"
       ],
       "box_size": null,
       "material_id": "hdpe",
-      "body_name": "left_fence",
-      "geom_name": "left_fence",
+      "body_name": "capture_funnel",
+      "geom_name": "capture_funnel",
       "zone_type": null,
       "color_rgba": [
         0.9450980392156862,
@@ -116,15 +116,15 @@
       "include_in_segmentation": true
     },
     {
-      "label": "right_fence",
-      "semantic_label": "right_fence",
-      "instance_id": "right_fence",
-      "instance_name": "right_fence",
+      "label": "left_wall",
+      "semantic_label": "left_wall",
+      "instance_id": "left_wall",
+      "instance_name": "left_wall",
       "object_type": "part",
       "object_id": 3,
       "pos": [
-        10.0,
-        57.5,
+        0.0,
+        -80.0,
         60.0
       ],
       "euler": [
@@ -133,12 +133,12 @@
         -0.0
       ],
       "mesh_paths": [
-        "meshes/right_fence.obj"
+        "meshes/left_wall.obj"
       ],
       "box_size": null,
       "material_id": "hdpe",
-      "body_name": "right_fence",
-      "geom_name": "right_fence",
+      "body_name": "left_wall",
+      "geom_name": "left_wall",
       "zone_type": null,
       "color_rgba": [
         0.9450980392156862,
@@ -154,16 +154,16 @@
       "include_in_segmentation": true
     },
     {
-      "label": "landing_pocket",
-      "semantic_label": "landing_pocket",
-      "instance_id": "landing_pocket",
-      "instance_name": "landing_pocket",
+      "label": "right_wall",
+      "semantic_label": "right_wall",
+      "instance_id": "right_wall",
+      "instance_name": "right_wall",
       "object_type": "part",
       "object_id": 4,
       "pos": [
-        225.0,
         0.0,
-        68.0
+        80.0,
+        60.0
       ],
       "euler": [
         -0.0,
@@ -171,12 +171,12 @@
         -0.0
       ],
       "mesh_paths": [
-        "meshes/landing_pocket.obj"
+        "meshes/right_wall.obj"
       ],
       "box_size": null,
       "material_id": "hdpe",
-      "body_name": "landing_pocket",
-      "geom_name": "landing_pocket",
+      "body_name": "right_wall",
+      "geom_name": "right_wall",
       "zone_type": null,
       "color_rgba": [
         0.9450980392156862,
@@ -192,16 +192,92 @@
       "include_in_segmentation": true
     },
     {
+      "label": "exit_tray",
+      "semantic_label": "exit_tray",
+      "instance_id": "exit_tray",
+      "instance_name": "exit_tray",
+      "object_type": "part",
+      "object_id": 5,
+      "pos": [
+        260.0,
+        0.0,
+        120.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/exit_tray.obj"
+      ],
+      "box_size": null,
+      "material_id": "hdpe",
+      "body_name": "exit_tray",
+      "geom_name": "exit_tray",
+      "zone_type": null,
+      "color_rgba": [
+        0.9450980392156862,
+        0.9607843137254902,
+        0.9764705882352941,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        235,
+        154,
+        59
+      ],
+      "include_in_segmentation": true
+    },
+    {
+      "label": "ballast_block",
+      "semantic_label": "ballast_block",
+      "instance_id": "ballast_block",
+      "instance_name": "ballast_block",
+      "object_type": "part",
+      "object_id": 6,
+      "pos": [
+        0.0,
+        0.0,
+        140.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "mesh_paths": [
+        "meshes/ballast_block.obj"
+      ],
+      "box_size": null,
+      "material_id": "aluminum_6061",
+      "body_name": "ballast_block",
+      "geom_name": "ballast_block",
+      "zone_type": null,
+      "color_rgba": [
+        0.7529411764705882,
+        0.7529411764705882,
+        0.7529411764705882,
+        1.0
+      ],
+      "segmentation_color_rgb": [
+        103,
+        59,
+        235
+      ],
+      "include_in_segmentation": true
+    },
+    {
       "label": "zone_goal",
       "semantic_label": "zone_goal",
       "instance_id": "zone_goal",
       "instance_name": "zone_goal",
       "object_type": "zone",
-      "object_id": 5,
+      "object_id": 7,
       "pos": [
-        265.0,
+        260.0,
         0.0,
-        72.5
+        65.0
       ],
       "euler": [
         0.0,
@@ -210,9 +286,9 @@
       ],
       "mesh_paths": [],
       "box_size": [
+        50.0,
         55.0,
-        70.0,
-        47.5
+        45.0
       ],
       "material_id": null,
       "body_name": null,
@@ -225,49 +301,9 @@
         0.22
       ],
       "segmentation_color_rgb": [
+        66,
         235,
-        154,
         59
-      ],
-      "include_in_segmentation": false
-    },
-    {
-      "label": "zone_forbid_0_floor_gap",
-      "semantic_label": "zone_forbid_0_floor_gap",
-      "instance_id": "zone_forbid_0_floor_gap",
-      "instance_name": "zone_forbid_0_floor_gap",
-      "object_type": "zone",
-      "object_id": 6,
-      "pos": [
-        10.0,
-        0.0,
-        20.0
-      ],
-      "euler": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "mesh_paths": [],
-      "box_size": [
-        80.0,
-        150.0,
-        25.0
-      ],
-      "material_id": null,
-      "body_name": null,
-      "geom_name": null,
-      "zone_type": "forbid",
-      "color_rgba": [
-        0.83,
-        0.2,
-        0.2,
-        0.2
-      ],
-      "segmentation_color_rgb": [
-        103,
-        59,
-        235
       ],
       "include_in_segmentation": false
     },
@@ -277,11 +313,11 @@
       "instance_id": "zone_build",
       "instance_name": "zone_build",
       "object_type": "zone",
-      "object_id": 7,
+      "object_id": 8,
       "pos": [
         10.0,
         0.0,
-        130.0
+        110.0
       ],
       "euler": [
         0.0,
@@ -290,9 +326,9 @@
       ],
       "mesh_paths": [],
       "box_size": [
-        350.0,
+        330.0,
         180.0,
-        130.0
+        110.0
       ],
       "material_id": null,
       "body_name": null,
@@ -305,27 +341,27 @@
         0.14
       ],
       "segmentation_color_rgb": [
-        66,
         235,
-        59
+        59,
+        117
       ],
       "include_in_segmentation": false
     }
   ],
   "bounds_min": [
-    -340.0,
+    -320.0,
     -180.0,
-    -5.0
+    0.0
   ],
   "bounds_max": [
-    360.0,
+    340.0,
     180.0,
-    260.0
+    220.0
   ],
   "center": [
     10.0,
     0.0,
-    127.5
+    110.0
   ],
-  "diagonal": 830.5570419904944
+  "diagonal": 783.3262411026456
 }

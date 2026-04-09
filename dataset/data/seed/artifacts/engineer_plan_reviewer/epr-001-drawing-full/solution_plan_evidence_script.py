@@ -71,9 +71,8 @@ def _build_frustum(
 
 
 def _build_motor_drive() -> object:
-    motor = ServoMotor.from_catalog_id("ServoMotor_DS3218", label="motor_drive")
+    motor = ServoMotor.from_catalog_id("ServoMotor_DS3218")
     motor = motor.moved(Location((-460.0, -55.0, 30.0), (0.0, 90.0, 0.0)))
-    motor.label = "motor_drive"
     return motor
 
 

@@ -1,8 +1,11 @@
-# TODO
+# Implementation Checklist
 
-- [x] Preserve the reviewed raised-bridge lift concept and keep the shelf opening aligned.
-- [x] Keep the planner target budget below the benchmark cap.
-- [ ] Implement the lift frame, belt bed, and upper tray in `solution_script.py`.
-- [ ] Add the motor mount, switch, relay, and bearing details into `assembly_definition.yaml`.
-- [ ] Keep the cable shroud outside the rising path and away from the tray exit.
-- [ ] Validate the handoff package and record any remaining implementation notes in the journal.
+- [ ] Read benchmark handoff package (`benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`)
+- [ ] Read reviewed planner artifacts (`plan.md`, `assembly_definition.yaml`)
+- [ ] Read drafting evidence (`solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`)
+- [ ] Implement the freestanding no-drill transfer in `solution_script.py`
+- [ ] Verify inventory matches the approved planner multiset (labels, quantities, COTS identities)
+- [ ] Run `validate_and_price` and confirm pass
+- [ ] Run `simulate` and confirm goal-zone success
+- [ ] Call `submit_for_review` with latest revision artifacts
+- [ ] Update `todo.md` and `journal.md` during execution

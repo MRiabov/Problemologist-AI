@@ -5,66 +5,45 @@ units:
   mass: "g"
   currency: "USD"
 constraints:
-  benchmark_max_unit_cost_usd: 80.0
-  benchmark_max_weight_g: 1500.0
-  planner_target_max_unit_cost_usd: 40.0
-  planner_target_max_weight_g: 1200.0
-manufactured_parts:
-  - part_name: floor_slab
-    part_id: floor_slab
-    manufacturing_method: CNC
-    material_id: aluminum_6061
-    quantity: 1
-    part_volume_mm3: 400000.0
-    stock_bbox_mm:
-      x: 1000.0
-      y: 2000.0
-      z: 20.0
-    stock_volume_mm3: 40000000.0
-    removed_volume_mm3: 39600000.0
-    estimated_unit_cost_usd: 5.0
-  - part_name: forbid_wall_left
-    part_id: forbid_wall_left
-    manufacturing_method: CNC
-    material_id: aluminum_6061
-    quantity: 1
-    part_volume_mm3: 250000.0
-    stock_bbox_mm:
-      x: 50.0
-      y: 1000.0
-      z: 500.0
-    stock_volume_mm3: 25000000.0
-    removed_volume_mm3: 24750000.0
-    estimated_unit_cost_usd: 6.0
-  - part_name: forbid_wall_right
-    part_id: forbid_wall_right
-    manufacturing_method: CNC
-    material_id: aluminum_6061
-    quantity: 1
-    part_volume_mm3: 250000.0
-    stock_bbox_mm:
-      x: 50.0
-      y: 1000.0
-      z: 500.0
-    stock_volume_mm3: 25000000.0
-    removed_volume_mm3: 24750000.0
-    estimated_unit_cost_usd: 6.0
+  benchmark_max_unit_cost_usd: 54.0
+  benchmark_max_weight_g: 900.0
+  planner_target_max_unit_cost_usd: 54.0
+  planner_target_max_weight_g: 900.0
+manufactured_parts: []
 cots_parts: []
 environment_drill_operations: []
 final_assembly:
-  - name: floor_slab
-    config:
-      dofs: []
-  - name: forbid_wall_left
-    config:
-      dofs: []
-  - name: forbid_wall_right
+- subassembly_id: benchmark_environment
+  parts:
+  - name: environment_fixture
     config:
       dofs: []
 totals:
-  estimated_unit_cost_usd: 17.0
-  estimated_weight_g: 600.0
+  estimated_unit_cost_usd: 0.0
+  estimated_weight_g: 0.0
   estimate_confidence: high
-dfm_suggestions:
-  - Keep the floor slab flat and planar for reliable benchmark behavior.
-  - Treat forbid walls as read-only clearance references.
+drafting:
+  sheet_id: sheet_1
+  title: No-drill benchmark environment
+  units: mm
+  projection_standard: orthographic
+  views:
+  - view_id: top_environment
+    target: environment_fixture
+    projection: top
+    scale: 1.0
+    datums: [A]
+    dimensions:
+    - dimension_id: d_env_length
+      kind: linear
+      target: environment_fixture
+      value: 600.0
+      tolerance: nominal
+      binding: true
+    - dimension_id: d_env_width
+      kind: linear
+      target: environment_fixture
+      value: 300.0
+      tolerance: nominal
+      binding: true
+  notes: []

@@ -1,12 +1,11 @@
-# TODO
+# Implementation Checklist
 
-- [x] Reviewed timed-gate planner package seeded
-- [ ] Read the seeded `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `plan.md`, and `assembly_definition.yaml`
-- [ ] Encode the coarse `motion_forecast` in `assembly_definition.yaml` as the build-safe start-to-goal trajectory
-- [ ] Narrow the same moving-part path in `payload_trajectory_definition.yaml` without changing the moving-part set
-- [ ] Implement the `base_plate` and `settling_chute` so the ball arrives at the gate on a stable line
-- [ ] Implement the `metering_wheel_guard` and `drive_motor` while keeping the wiring corridor outside `gate_swing_keepout`
-- [ ] Implement the `guide_rail`, `post_gate_channel`, and `goal_cup` so the release path lands in `goal_zone`
-- [ ] Validate `build_zone` fit, gate clearance, and the staged `motion_forecast` / `payload_trajectory_definition.yaml` endpoint contract
-- [ ] Run validation and simulation until the metered release path works reliably
-- [ ] Prepare the reviewed execution handoff package
+- [ ] Read benchmark handoff package (`benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`)
+- [ ] Read reviewed planner artifacts (`plan.md`, `assembly_definition.yaml`)
+- [ ] Read drafting evidence (`solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`)
+- [ ] Implement the freestanding no-drill transfer in `solution_script.py`
+- [ ] Verify inventory matches the approved planner multiset (labels, quantities, COTS identities)
+- [ ] Run `validate_and_price` and confirm pass
+- [ ] Run `simulate` and confirm goal-zone success
+- [ ] Call `submit_for_review` with latest revision artifacts
+- [ ] Update `todo.md` and `journal.md` during execution

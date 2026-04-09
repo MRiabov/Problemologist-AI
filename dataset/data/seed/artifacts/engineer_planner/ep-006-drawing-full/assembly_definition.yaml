@@ -4,105 +4,131 @@ units:
   volume: "mm3"
   mass: "g"
   currency: "USD"
-
 constraints:
-  # Copy benchmark caps from benchmark_definition.yaml, then set tighter planner targets.
-  benchmark_max_unit_cost_usd:
-  benchmark_max_weight_g:
-  planner_target_max_unit_cost_usd:
-  planner_target_max_weight_g:
-
+  benchmark_max_unit_cost_usd: 120.0
+  benchmark_max_weight_g: 2200.0
+  planner_target_max_unit_cost_usd: 54.0
+  planner_target_max_weight_g: 900.0
 manufactured_parts:
-  # Add one item per manufactured part.
-  # Required fields:
-  # - part_name
-  # - part_id
-  # - manufacturing_method
-  # - material_id
-  # - quantity
-  # - part_volume_mm3
-  # - stock_bbox_mm: {x, y, z}
-  # - stock_volume_mm3
-  # - removed_volume_mm3
-  # - estimated_unit_cost_usd
-  # Do NOT replace these with shorthand keys like:
-  # - name
-  # - method
-  # - material
-  # - parameters
-  # Example:
-  # - part_name: bridge_deck
-  #   part_id: bridge_deck
-  #   manufacturing_method: CNC
-  #   material_id: aluminum_6061
-  #   quantity: 1
-  #   part_volume_mm3: 500000.0
-  #   stock_bbox_mm: {x: 500.0, y: 100.0, z: 10.0}
-  #   stock_volume_mm3: 500000.0
-  #   removed_volume_mm3: 0.0
-  #   estimated_unit_cost_usd: 45.0
-
-cots_parts:
-  # Add one item per COTS part.
-  # Required fields:
-  # - part_id
-  # - manufacturer
-  # - unit_cost_usd
-  # - weight_g
-  # - quantity
-  # - source
-  # - catalog_version
-  # - bd_warehouse_commit
-  # - catalog_snapshot_id
-  # - generated_at
-  # Example:
-  # - part_id: M3_BOLT
-  #   manufacturer: Generic
-  #   unit_cost_usd: 0.5
-  #   weight_g: 1.2
-  #   quantity: 8
-  #   source: catalog
-  #   catalog_version: "1.0.0"
-  #   bd_warehouse_commit: "unknown"
-  #   catalog_snapshot_id: "<catalog snapshot hash>"
-  #   generated_at: "unknown"
-
-environment_drill_operations:
-  # Optional.
-  # Declare benchmark-owned fixture drilling only when the benchmark attachment
-  # policy allows it.
-  # Example:
-  # - target_part_id: environment_fixture
-  #   hole_id: mount_left
-  #   diameter_mm: 5.0
-  #   depth_mm: 10.0
-  #   quantity: 1
-  #   notes: Fastener clearance hole into permitted fixture
-
+- part_name: guide_base
+  part_id: guide_base
+  manufacturing_method: CNC
+  material_id: aluminum_6061
+  quantity: 1
+  part_volume_mm3: 200000.0
+  stock_bbox_mm:
+    x: 350.0
+    y: 80.0
+    z: 10.0
+  stock_volume_mm3: 280000.0
+  removed_volume_mm3: 80000.0
+  estimated_unit_cost_usd: 16.0
+- part_name: left_guide
+  part_id: left_guide
+  manufacturing_method: CNC
+  material_id: hdpe
+  quantity: 1
+  part_volume_mm3: 80000.0
+  stock_bbox_mm:
+    x: 350.0
+    y: 12.0
+    z: 30.0
+  stock_volume_mm3: 126000.0
+  removed_volume_mm3: 46000.0
+  estimated_unit_cost_usd: 5.0
+- part_name: right_guide
+  part_id: right_guide
+  manufacturing_method: CNC
+  material_id: hdpe
+  quantity: 1
+  part_volume_mm3: 80000.0
+  stock_bbox_mm:
+    x: 350.0
+    y: 12.0
+    z: 30.0
+  stock_volume_mm3: 126000.0
+  removed_volume_mm3: 46000.0
+  estimated_unit_cost_usd: 5.0
+- part_name: entry_ramp
+  part_id: entry_ramp
+  manufacturing_method: CNC
+  material_id: hdpe
+  quantity: 1
+  part_volume_mm3: 30000.0
+  stock_bbox_mm:
+    x: 60.0
+    y: 80.0
+    z: 20.0
+  stock_volume_mm3: 96000.0
+  removed_volume_mm3: 66000.0
+  estimated_unit_cost_usd: 4.5
+- part_name: exit_lip
+  part_id: exit_lip
+  manufacturing_method: CNC
+  material_id: hdpe
+  quantity: 1
+  part_volume_mm3: 20000.0
+  stock_bbox_mm:
+    x: 40.0
+    y: 80.0
+    z: 15.0
+  stock_volume_mm3: 48000.0
+  removed_volume_mm3: 28000.0
+  estimated_unit_cost_usd: 4.5
+cots_parts: []
+environment_drill_operations: []
 final_assembly:
-  # Add PartConfig or SubassemblyEstimate items.
-  # Example PartConfig shape:
-  # - name: hoist_frame
-  #   config:
-  #     dofs: []
-  # Example SubassemblyEstimate shape:
-  # - subassembly_id: lift_module
-  #   parts:
-  #     - name: spool
-  #       config:
-  #         dofs: ["rotation_z"]
-  #   joints:
-  #     - joint_id: spool_axle
-  #       parts: ["spool", "frame"]
-  #       type: revolute
-  # Do NOT use a list of bare strings here.
-  # Use only canonical manufacturing enum values elsewhere in this file: CNC, 3DP, IM.
-
+- subassembly_id: cube_guide
+  parts:
+  - name: guide_base
+    config:
+      dofs: []
+  - name: left_guide
+    config:
+      dofs: []
+  - name: right_guide
+    config:
+      dofs: []
+  - name: entry_ramp
+    config:
+      dofs: []
+  - name: exit_lip
+    config:
+      dofs: []
 totals:
-  # `estimated_unit_cost_usd` must include manufactured parts, COTS parts,
-  # and any benchmark drilling cost from environment_drill_operations.
-  estimated_unit_cost_usd:
-  estimated_weight_g:
-  estimate_confidence:
-
+  estimated_unit_cost_usd: 35.0
+  estimated_weight_g: 739.50
+  estimate_confidence: high
+drafting:
+  sheet_id: "sheet_1"
+  title: "Cube guide assembly technical drawing"
+  units: "mm"
+  projection_standard: "orthographic"
+  views:
+    - view_id: "guide_front"
+      target: "cube_guide"
+      projection: "front"
+      scale: 1.0
+      datums: ["A", "B"]
+      dimensions:
+        - dimension_id: "d_base_length"
+          kind: "linear"
+          target: "guide_base"
+          value: 350.0
+      callouts:
+        - callout_id: "1"
+          label: "Aluminum 6061 base plate"
+          target: "guide_base"
+        - callout_id: "2"
+          label: "HDPE left channel wall"
+          target: "left_guide"
+        - callout_id: "3"
+          label: "HDPE right channel wall"
+          target: "right_guide"
+        - callout_id: "4"
+          label: "HDPE entry funnel"
+          target: "entry_ramp"
+        - callout_id: "5"
+          label: "HDPE exit lip"
+          target: "exit_lip"
 dfm_suggestions: []

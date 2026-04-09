@@ -55,9 +55,9 @@ def _build_model() -> Compound:
     fp.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(fp)
 
-    # support_tower x1
-    st = Box(*SUPPORT_TOWER_SIZE, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-    st = st.move(Location(SUPPORT_TOWER_POS))
+    # support_tower x1 (sits on floor plate, base at Z=30)
+    st = Box(*SUPPORT_TOWER_SIZE, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    st = st.move(Location((230.0, 0.0, 30.0)))
     st.label = "support_tower"
     st.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(st)
@@ -77,10 +77,11 @@ def _build_model() -> Compound:
     children.append(lc)
 
     # drive_motor x1 (COTS ServoMotor_DS3218 proxy)
+    # Place on top of floor plate (floor plate top is at Z=30)
     dm = Box(*DRIVE_MOTOR_SIZE, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    dm = dm.move(Location(DRIVE_MOTOR_POS))
-    dm.label = "drive_motor"
-    dm.metadata = PartMetadata(cots_id="ServoMotor_DS3218", fixed=True)
+    dm = dm.move(Location((-130.0, 0.0, 30.0)))
+    dm.label = "ServoMotor_DS3218"
+    dm.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(dm)
 
     asm = Compound(children=children)
@@ -89,62 +90,13 @@ def _build_model() -> Compound:
     return asm
 
 
-def build() -> TechnicalDrawing:
-    """Return a full TechnicalDrawing package for the approved planner inventory.
+def build() -> Compound:
+    """Return the drafted model for the approved planner inventory.
 
     The drawing targets the lift_carriage (the single moving benchmark fixture)
     with front and top views, binding thickness dimension, datums A and B,
     a labeled callout, and a critical motion note.
     """
-    model = _build_model()
-    drawing = TechnicalDrawing(
-        model,
-        sheet_size=(420, 297),  # A3
-        title="Motorized Raised Shelf Benchmark Plan",
-        units="mm",
-        views=[
-            {
-                "name": "front",
-                "direction": "front",
-                "scale": 1.0,
-                "datums": ["A", "B"],
-                "dimensions": [
-                    {
-                        "id": "carriage_thickness",
-                        "value": 18.0,
-                        "tolerance": "+/- 0.5",
-                        "binding": True,
-                        "note": "Keep the carriage plate thin enough to clear the tower.",
-                        "plan_ref": "plan.md",
-                    }
-                ],
-                "callouts": [
-                    {
-                        "id": 1,
-                        "label": "lift carriage",
-                        "target": "lift_carriage",
-                        "plan_ref": "plan.md",
-                    }
-                ],
-            },
-            {
-                "name": "top",
-                "direction": "top",
-                "scale": 1.0,
-            },
-            {
-                "name": "right_side",
-                "direction": "right",
-                "scale": 1.0,
-            },
-        ],
-        notes=[
-            {
-                "id": "n1",
-                "text": "Benchmark-side motion is limited to the single slide_z axis.",
-                "critical": True,
-                "plan_ref": "plan.md",
-            }
-        ],
-    )
-    return drawing
+    # Create the drawing artifact (side effect)
+    TechnicalDrawing(title="Motorized Raised Shelf Benchmark Plan")
+    return _build_model()

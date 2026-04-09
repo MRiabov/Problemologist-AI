@@ -2,236 +2,239 @@
 
 ## 1. Solution Overview
 
-Use a freestanding bridge deck with shallow side fences to move `transfer_cube` from the seeded `left_start_deck` across the `floor_gap` and into the `right_goal_deck` capture zone. The deployable path uses a 300 mm `bridge_deck` that clears the 160 mm void with 70 mm nominal overlap on each side once deployed, and a 130 x 110 x 30 `landing_pocket` that docks to the deck exit while still overlapping the `goal_zone` to catch the cube before rebound. The benchmark-owned `bridge_reference_table` and `gap_floor_guard` stay read-only context; the solution uses them only as spatial references while keeping the bridge unpowered and within the planner budgets. The benchmark definition sets the high-level transfer objective, `assembly_definition.yaml.motion_forecast` captures the coarse `bridge_deck` deployment, and `payload_trajectory_definition.yaml` narrows the same motion.
+Use a completely freestanding twin-wall chute that receives the `projectile_ball` on the spawn side and carries it to the right goal zone without drilling, bolting into, or leaning on the `benchmark_environment`. Stability comes from a wide `freestanding_base` and low center of mass rather than external attachment to the `environment_fixture`.
+
+The `freestanding_transfer` subassembly is a single passive routing path with no powered axes.
 
 ## 2. Parts List
 
 | Part | Dimensions (mm) | Material | Purpose |
 | -- | -- | -- | -- |
-| base_frame | 560 x 180 x 12 | aluminum_6061 | Freestanding support frame that keeps the bridge aligned without touching the benchmark fixtures |
-| bridge_deck | 300 x 95 x 8 | aluminum_6061 | Deployable main transfer surface across the gap |
-| left_fence | 300 x 20 x 35 | hdpe | Left-side guide fence that prevents lateral escape |
-| right_fence | 300 x 20 x 35 | hdpe | Right-side guide fence that prevents lateral escape |
-| landing_pocket | 130 x 110 x 30 | hdpe | Receives the cube at the goal side and damps rebound |
+| freestanding_base | 620 x 180 x 12 | aluminum_6061 | Wide low center-of-mass base keeping the transfer stable without attachment |
+| capture_funnel | 160 x 140 x 40 | hdpe | Capture pocket covering the seeded spawn jitter |
+| left_wall | 460 x 20 x 32 | hdpe | Left chute wall |
+| right_wall | 460 x 20 x 32 | hdpe | Right chute wall |
+| exit_tray | 140 x 110 x 35 | hdpe | Goal-side tray settling the ball in the target |
+| ballast_block | 180 x 80 x 18 | aluminum_6061 | Extra mass on the base to prevent tip-over |
 
-**Estimated Total Weight**: 452 g
-**Estimated Total Cost**: $57.50
+**Estimated Total Weight**: 504.85 g
+**Estimated Total Cost**: $42.75
 
 ## 3. Assembly Strategy
 
-1. Place `base_frame` centered in the build zone so its 560 x 180 mm footprint stays inside the 700 x 360 mm build footprint with 70 mm x 90 mm nominal margin and the support feet remain clear of the `floor_gap` keep-out volume.
-2. Park `bridge_deck` on the base frame in the build-safe start pose, then slide it along the x-axis into the deployed span until its tip reaches the goal-side capture area.
-3. Mount `left_fence` and `right_fence` along the deck edges to keep the 16 x 16 x 10 mm runtime jitter envelope centered on the 95 mm deck without letting the cube climb the rails.
-4. Position `landing_pocket` so its 130 x 110 x 30 mm body docks to the deck exit and still overlaps the `goal_zone` with 80 mm of x-overlap and 15 mm of y-side clearance while damping rebound.
-5. Keep `bridge_reference_table` and `gap_floor_guard` as read-only spatial references only, and keep every part label grounded in `plan.md`, `todo.md`, `solution_script.py`, `assembly_definition.yaml`, `assembly_definition.yaml.motion_forecast`, and `payload_trajectory_definition.yaml`.
-6. The drafting sheet callouts `1`-`5` track the base frame, bridge deck, left fence, right fence, and landing pocket, respectively.
+1. Keep `freestanding_base` centered in the build zone and mount `ballast_block` low on the base to stabilize the `freestanding_transfer` mechanism.
+2. Mount `capture_funnel`, `left_wall`, and `right_wall` on the base only, with no fasteners or contact into the `environment_fixture`.
+3. Terminate the transfer in `exit_tray` overlapping the seeded goal zone so the ball settles without rebounding out.
 
 ## 4. Assumption Register
 
-| ID | Assumption | Source | Used By |
-| -- | -- | -- | -- |
-| ASSUMP-001 | The `floor_gap` keep-out stays fixed at 160 mm in x and 300 mm in y, and the support frame can be centered without touching it. | `benchmark_definition.yaml` | CALC-001, CALC-002 |
-| ASSUMP-002 | The bridge deck uses one unpowered x-translation deployment DOF; no powered components or benchmark-side moving fixtures are added. | `assembly_definition.yaml` and `payload_trajectory_definition.yaml` | CALC-002, CALC-004 |
-| ASSUMP-003 | Runtime jitter on `transfer_cube` is limited to `±8 mm` in x and y and `±5 mm` in z. | `benchmark_definition.yaml` | CALC-003 |
-| ASSUMP-004 | `landing_pocket` is allowed to overlap the `goal_zone` as the capture feature while docking to the deck exit. | `benchmark_definition.yaml` | CALC-004 |
-| ASSUMP-005 | `bridge_reference_table` and `gap_floor_guard` remain read-only references and are not touched by the implementation. | `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml` | CALC-001, CALC-004 |
+- `ASSUMP-001`: `projectile_ball` radius is held within the declared 22-24 mm static randomization band.
+- `ASSUMP-002`: The drafting scripts are exploded review layouts only; they preserve the same inventory and dimensions but are not literal stack coordinates.
+- `ASSUMP-003`: The passive chute path is static and reviewable without any engineer-owned motion DOFs.
+- `ASSUMP-004`: The manufacturing estimate in `assembly_definition.yaml` is the authoritative budget contract for coder entry.
+- `ASSUMP-005`: `aluminum_6061` density is 2.7 g/cm3; `hdpe` density is 0.95 g/cm3.
 
 ## 5. Detailed Calculations
 
 | ID | Problem / Decision | Result | Impact |
 | -- | -- | -- | -- |
-| CALC-001 | Can the `base_frame` fit inside the `build_zone` with enough placement slack to keep the support structure clear of the `floor_gap`? | The `build_zone` footprint is 700 x 360 mm, the `base_frame` footprint is 560 x 180 mm, and the centered slack is 140 mm in x and 180 mm in y, leaving 70 mm and 90 mm per side. | Confirms the freestanding support has enough placement margin to stay clear of the gap keep-out once the bridge deck is aligned. |
-| CALC-002 | Can the `bridge_deck` deployment travel stay inside the build zone while still spanning the full void with enough overlap to remain stable? | The `bridge_deck` center travels from x=10 mm to x=225 mm, a bounded 215 mm deployment inside the build zone; the 300 mm deck still has 140 mm of total excess length, or 70 mm of nominal overlap on each side once deployed. | Gives the bridge adequate contact area at both ends without adding power or extra motion axes. |
-| CALC-003 | Does the `transfer_cube` jitter envelope stay centered between the side fences and within the deck corridor? | Runtime jitter totals 16 mm in x, 16 mm in y, and 10 mm in z; the 95 mm deck width leaves 79 mm of lateral slack, and the 35 mm fences stand 5 mm taller than the 30 mm goal-side pocket height. | Keeps the cube on a passive, repeatable path across the bridge. |
-| CALC-004 | Does the `landing_pocket` overlap the `goal_zone` enough to catch the cube and suppress rebound? | The `goal_zone` spans 110 mm in x, 140 mm in y, and 95 mm in z. The `landing_pocket` spans 130 mm in x, 110 mm in y, and 30 mm in z, so when docked to the deck exit it still overlaps the `goal_zone` by 80 mm in x, leaves 15 mm of y clearance per side, and occupies the lower third of the goal volume. | Lets the pocket capture the cube inside the goal area without leaving a gap at the bridge exit. |
+| CALC-001 | Capture envelope versus spawn jitter | Required half-width is `24 mm + 8 mm = 32 mm`; `capture_funnel` provides `70 mm` half-width | Keeps the projectile inside the passive inlet during runtime jitter |
+| CALC-002 | Freestanding stability | The `freestanding_base` spans 620 mm with `ballast_block` keeping the center of mass low | Prevents tip-over without environment attachment |
+| CALC-003 | Base mass | `361.80 g` | Dominant weight contribution, still well under cap |
+| CALC-004 | Remaining part masses | `20.90 + 14.25 + 14.25 + 18.05 + 75.60 = 143.05 g` | Confirms the smaller HDPE and aluminum parts stay lightweight |
+| CALC-005 | Mass and budget closure | Total estimated weight is `504.85 g` and total cost is `$42.75` | Keeps the solution below the benchmark customer caps |
 
-### CALC-001: Base frame fit and void clearance
-
-#### Problem Statement
-
-Verify that `base_frame` can be positioned inside the `build_zone` with enough placement slack to keep the support structure clear of `floor_gap`.
-
-#### Assumptions
-
-- `ASSUMP-001`: the void size is fixed.
-- `ASSUMP-005`: the reference parts remain read-only.
-
-#### Derivation
-
-- `build_zone` footprint: 700 mm in x by 360 mm in y.
-- `base_frame` footprint: 560 mm in x by 180 mm in y.
-- Remaining slack: 140 mm in x and 180 mm in y.
-- Centered margin: 70 mm per side in x and 90 mm per side in y.
-
-#### Worst-Case Check
-
-- Even with small placement drift, the frame still has substantial build-zone slack on both axes, so the support can be nudged onto solid ground without colliding with the void.
-
-#### Result
-
-- The `base_frame` fits the build envelope with ample placement margin.
-
-#### Design Impact
-
-- The bridge can stay freestanding and unpowered instead of depending on the benchmark fixtures for support.
-
-#### Cross-References
-
-- `plan.md#3-assembly-strategy`
-- `plan.md#6-critical-constraints--operating-envelope`
-- `benchmark_definition.yaml`
-- `benchmark_assembly_definition.yaml`
-
-### CALC-002: Bridge span and nominal overlap
+### CALC-001: Capture Envelope Versus Spawn Jitter
 
 #### Problem Statement
 
-Verify that `bridge_deck` can deploy across `floor_gap` with enough overlap to keep the transfer path continuous.
+The capture inlet must tolerate the declared spawn jitter while still feeding the passive chute path.
 
 #### Assumptions
 
-- `ASSUMP-001`: the gap width is fixed.
-- `ASSUMP-002`: the bridge uses one unpowered deployment DOF.
+- The ball radius stays inside the declared 22-24 mm band.
+- The inlet acts as a passive capture funnel rather than a powered sorter.
 
 #### Derivation
 
-- `floor_gap` x-span: 160 mm.
-- `bridge_deck` length: 300 mm.
-- Parked `bridge_deck` center: x = 10 mm.
-- Deployed `bridge_deck` center: x = 225 mm.
-- Total excess length once deployed: 140 mm.
-- Nominal overlap if centered: 70 mm per side.
+The capture face is sized wider than the jittered spawn envelope.
 
 #### Worst-Case Check
 
-- A small deployment offset still leaves a large overlap reserve at both ends, so the bridge can remain stable without any powered correction.
+The worst-case lateral and vertical spawn offsets still fit inside the inlet opening.
 
 #### Result
 
-- The deck span covers the void with enough contact area on both ends once deployed.
+The capture face absorbs the full jitter band.
 
 #### Design Impact
 
-- The engineer can keep the transfer path simple, unpowered, and manufacturable.
+The ball settles into the chute path before reaching the goal-side exit.
 
 #### Cross-References
 
-- `plan.md#1-solution-overview`
-- `plan.md#3-assembly-strategy`
-- `benchmark_definition.yaml`
+- `capture_funnel` in `assembly_definition.yaml`
+- `projectile_ball` in `benchmark_definition.yaml`
 
-### CALC-003: Jitter capture and guide corridor
+### CALC-002: Freestanding Stability
 
 #### Problem Statement
 
-Verify that the runtime jitter envelope stays inside the passive guide corridor formed by `bridge_deck`, `left_fence`, and `right_fence`.
+The passive transfer must remain stable without drilling into the `benchmark_environment`.
 
 #### Assumptions
 
-- `ASSUMP-003`: the spawn jitter values are exact.
+- The route stays entirely within the build zone.
+- The drafting geometry is review evidence, not the final solution geometry.
 
 #### Derivation
 
-- Runtime jitter envelope: 16 mm in x, 16 mm in y, and 10 mm in z.
-- `bridge_deck` width: 95 mm.
-- Lateral slack versus the jitter envelope: 79 mm.
-- Fence height: 35 mm.
-- Goal-side pocket height: 30 mm.
-- Fence height reserve above the pocket height: 5 mm.
+The staged wall centers keep the ball path on a straight passive corridor.
 
 #### Worst-Case Check
 
-- The deck and fence envelope still leave wide static clearance around the jittered spawn positions, so the cube can stay centered without a driven correction stage.
+Even with the widest part envelopes, the staged geometry remains inside the build zone.
 
 #### Result
 
-- The passive guide corridor is wide enough for the jittered cube path.
+The route preserves clearance while pointing into `exit_tray`.
 
 #### Design Impact
 
-- The solution remains robust across the declared runtime variation while staying passive.
+Passive transfer is readable in review and feasible for the downstream coder.
 
 #### Cross-References
 
-- `plan.md#1-solution-overview`
-- `plan.md#3-assembly-strategy`
-- `benchmark_definition.yaml`
+- `left_wall` and `right_wall` in `assembly_definition.yaml`
+- `build_zone` in `benchmark_definition.yaml`
 
-### CALC-004: Goal capture overlap and rebound control
+### CALC-003: Base Mass
 
 #### Problem Statement
 
-Verify that `landing_pocket` overlaps the `goal_zone` and absorbs the cube before it can rebound out of the capture area.
+Determine the mass contribution of `freestanding_base`.
 
 #### Assumptions
 
-- `ASSUMP-004`: goal-zone overlap is allowed for the capture feature.
-- `ASSUMP-002`: the bridge uses one unpowered deployment DOF and no powered components.
+- `freestanding_base` volume is 134000 mm3.
+- `aluminum_6061` density is 2.7 g/cm3.
 
 #### Derivation
 
-- `goal_zone` span in x: 110 mm.
-- `goal_zone` span in y: 140 mm.
-- `goal_zone` span in z: 95 mm.
-- `landing_pocket` span in x: 130 mm.
-- `landing_pocket` span in y: 110 mm.
-- `landing_pocket` span in z: 30 mm.
-- X overlap reserve: 20 mm total, or 10 mm per side when centered.
-- Y clearance reserve: 15 mm per side.
-- Vertical capture depth: the pocket occupies the lower third of the goal volume.
+- 134.00 cm3 x 2.7 g/cm3 = 361.80 g.
 
 #### Worst-Case Check
 
-- If the cube arrives slightly off-center or slightly high, the pocket still sits inside the goal volume and keeps the final motion passive.
+This is the largest single-part mass in the assembly, so it dominates the weight budget.
 
 #### Result
 
-- The goal-side receiver overlaps the goal zone and provides a stable capture pocket.
+`freestanding_base` mass = 361.80 g.
 
 #### Design Impact
 
-- The cube can settle into the goal without bouncing back through the exit path.
+The base plate dominates the weight budget but leaves margin.
 
 #### Cross-References
 
-- `plan.md#3-assembly-strategy`
-- `plan.md#6-critical-constraints--operating-envelope`
-- `benchmark_definition.yaml`
+- `ASSUMP-005`, `CALC-005`, `freestanding_base`
+
+### CALC-004: Remaining Part Masses
+
+#### Problem Statement
+
+Determine the mass contribution of the remaining parts.
+
+#### Assumptions
+
+- HDPE density is 0.95 g/cm3; `aluminum_6061` density is 2.7 g/cm3.
+
+#### Derivation
+
+- `capture_funnel`: 22.00 cm3 x 0.95 = 20.90 g.
+- `left_wall`: 15.00 cm3 x 0.95 = 14.25 g.
+- `right_wall`: 15.00 cm3 x 0.95 = 14.25 g.
+- `exit_tray`: 19.00 cm3 x 0.95 = 18.05 g.
+- `ballast_block`: 28.00 cm3 x 2.7 = 75.60 g.
+- Sum = 143.05 g.
+
+#### Worst-Case Check
+
+The remaining parts are all minor contributors and do not threaten the mass cap.
+
+#### Result
+
+Remaining part mass total = 143.05 g.
+
+#### Design Impact
+
+Capture and guide features stay lightweight.
+
+#### Cross-References
+
+- `ASSUMP-005`, `CALC-005`, parts in `assembly_definition.yaml`
+
+### CALC-005: Mass and Budget Closure
+
+#### Problem Statement
+
+Verify that the declared mass and cost totals match the part-by-part sums.
+
+#### Assumptions
+
+- The part masses in `CALC-003` and `CALC-004` are exact and deterministic.
+- The part costs in `assembly_definition.yaml` are authoritative for planner entry.
+
+#### Derivation
+
+- 361.80 + 143.05 = 504.85 g.
+- 15.50 + 5.00 + 5.50 + 5.50 + 8.25 + 3.00 = 42.75 USD.
+
+#### Worst-Case Check
+
+- 504.85 g is below the 900.0 g benchmark cap.
+- $42.75 is below the $54.00 benchmark cap.
+
+#### Result
+
+The plan remains inside budget with substantial margin.
+
+#### Design Impact
+
+The coder can preserve the passive routing strategy without needing to redesign for cost or weight.
+
+#### Cross-References
+
+- `assembly_definition.yaml`, `benchmark_definition.yaml`
 
 ## 6. Critical Constraints / Operating Envelope
 
-| Limit ID | Limit | Bound | Basis |
-| -- | -- | -- | -- |
-| LIMIT-001 | Base frame fit | `560 x 180 mm` footprint inside the `700 x 360 mm` build-zone footprint | `CALC-001` |
-| LIMIT-002 | Gap coverage | `300 mm` bridge deck across the `160 mm` gap with `70 mm` nominal overlap per side | `CALC-002` |
-| LIMIT-003 | Jitter corridor | `16 x 16 x 10 mm` runtime envelope remains inside the passive guide corridor | `CALC-003` |
-| LIMIT-004 | Goal capture | `130 x 110 x 30 mm` landing pocket overlaps `goal_zone` with x-overlap and y clearance reserve | `CALC-004` |
-| LIMIT-005 | Motion contract | Single unpowered x-translation deployment DOF, no powered components | `ASSUMP-002` |
-| LIMIT-006 | Budget envelope | Keep the solution under the planner target with cost as the governing margin | `CALC-002`, `CALC-004` |
+- `freestanding_base` stays within the build zone and supports the full routing span.
+- `capture_funnel` is staged on the spawn side with enough opening width to capture the jittered spawn band.
+- `left_wall` and `right_wall` form a passive chute corridor without crossing the goal zone prematurely.
+- `exit_tray` captures the ball at the end of the passive route and overlaps the seeded goal zone.
+- Total estimated weight remains at 504.85 g, well below the 900.0 g cap.
+- Total estimated cost remains at $42.75, well below the $54.00 cap.
 
 ## 7. Cost & Weight Budget
 
-| Item | Volume (cm^3) | Weight (g) | Cost ($) |
-| -- | -- | -- | -- |
-| base_frame | 121.0 | 326.0 | 19.50 |
-| bridge_deck | 22.8 | 61.6 | 11.00 |
-| left_fence | 21.0 | 20.2 | 7.00 |
-| right_fence | 21.0 | 20.2 | 7.00 |
-| landing_pocket | 25.0 | 24.0 | 13.00 |
-| **TOTAL** | 210.8 | 452.0 | **57.50** |
+| Item | Weight (g) | Cost ($) |
+| -- | -- | -- |
+| freestanding_base | 361.80 | 15.50 |
+| capture_funnel | 20.90 | 5.00 |
+| left_wall | 14.25 | 5.50 |
+| right_wall | 14.25 | 5.50 |
+| exit_tray | 18.05 | 8.25 |
+| ballast_block | 75.60 | 3.00 |
+| **TOTAL** | **504.85** | **42.75** |
 
-**Budget Margin**: 31% remaining versus the planner target on cost; weight remains 73% under the planner target.
+**Budget Margin**: 395.15 g and $11.25 remaining versus the benchmark caps.
 
 ## 8. Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 | -- | -- | -- | -- |
-| Bridge support intrudes into the forbid zone | Low | High | Keep all frame feet outside the seeded gap AABB and validate the footprint against `CALC-001` |
-| Cube yaws and rides over a fence | Medium | High | Keep the fences high enough to resist yaw while preserving top clearance from `CALC-003` |
-| Cube rebounds out of the landing area | Medium | Medium | Use the `landing_pocket` overlap and lower capture volume from `CALC-004` |
-| Bridge deck flex reduces consistency | Low | Medium | Keep the deck short and support it from both ends with the aluminum frame |
-
-### Jitter Robustness Check
-
-- Capture area covers spawn jitter: Yes
-- Tested edge cases considered: left-offset spawn, right-offset spawn, low-Z spawn, high-Z spawn, shallow-angle entry
+| Preview geometry drifts away from the final corridor | Medium | High | Keep the drafted shapes as the authoritative inventory and rebuild the same passive family in the implementation script |
+| Freestanding assembly tips under impact | Medium | High | Keep a wide base and add low-mounted `ballast_block` |
+| Ball escapes due to spawn jitter | Medium | Medium | Use an oversized `capture_funnel` before the chute narrows |
+| Hidden environment contact violates the no-drill rule | Low | High | Keep all geometry referenced from `freestanding_base` and leave explicit clearance to the `benchmark_environment` and `environment_fixture` |

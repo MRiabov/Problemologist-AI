@@ -77,25 +77,67 @@ manufactured_parts:
   estimated_unit_cost_usd: 13.0
 cots_parts: []
 final_assembly:
-- name: base_frame
-  config:
-    dofs: []
-- name: bridge_deck
-  config:
-    dofs: []
-- name: left_fence
-  config:
-    dofs: []
-- name: right_fence
-  config:
-    dofs: []
-- name: landing_pocket
-  config:
-    dofs: []
+- subassembly_id: bridge_crossing
+  parts:
+  - name: base_frame
+    config:
+      dofs: []
+  - name: bridge_deck
+    config:
+      dofs: []
+  - name: left_fence
+    config:
+      dofs: []
+  - name: right_fence
+    config:
+      dofs: []
+  - name: landing_pocket
+    config:
+      dofs: []
 totals:
   estimated_unit_cost_usd: 57.5
-  estimated_weight_g: 1320.0
+  estimated_weight_g: 451.91
   estimate_confidence: high
+drafting:
+  sheet_id: "sheet_1"
+  title: "Bridge crossing assembly technical drawing"
+  units: "mm"
+  projection_standard: "orthographic"
+  views:
+    - view_id: "bridge_front"
+      target: "bridge_crossing"
+      projection: "front"
+      scale: 1.0
+      datums: ["A", "B", "C"]
+      dimensions:
+        - dimension_id: "d_frame_width"
+          kind: "linear"
+          target: "base_frame"
+          value: 560.0
+        - dimension_id: "d_deck_length"
+          kind: "linear"
+          target: "bridge_deck"
+          value: 300.0
+        - dimension_id: "d_fence_height"
+          kind: "linear"
+          target: "left_fence"
+          value: 35.0
+      callouts:
+        - callout_id: "1"
+          label: "Aluminum 6061 base frame, 560x180x12 mm"
+          target: "base_frame"
+        - callout_id: "2"
+          label: "Aluminum 6061 bridge deck, 300x95x8 mm"
+          target: "bridge_deck"
+        - callout_id: "3"
+          label: "HDPE left guide fence, 300x20x35 mm"
+          target: "left_fence"
+        - callout_id: "4"
+          label: "HDPE right guide fence, 300x20x35 mm"
+          target: "right_fence"
+        - callout_id: "5"
+          label: "HDPE landing pocket, 130x110x30 mm"
+          target: "landing_pocket"
 dfm_suggestions:
 - Keep the bridge deck flat and pocket-free so it can be machined from one side.
 - Reuse the same fence profile on both sides to simplify CAM setup.

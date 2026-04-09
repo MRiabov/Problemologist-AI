@@ -245,7 +245,7 @@ drafting:
       note: "Landing pocket that contains the ball inside the goal zone."
     - callout_id: 6
       label: "motor drive"
-      target: "motor_drive"
+      target: "ServoMotor_DS3218"
       plan_ref: "plan.md#assembly-strategy"
       note: "Left-side drive motor keeps wiring out of the lane."
     notes:
@@ -253,25 +253,70 @@ drafting:
       text: "Side view fixes the vertical stack from the base plate through the goal tray."
       critical: true
       plan_ref: "plan.md#assembly-strategy"
-  - view_id: "isometric_context"
-    target: "base_plate"
-    projection: "isometric"
-    scale: 1.0
-    datums: ["A", "B", "C"]
-    notes:
-    - note_id: "n_isometric_context"
-      text: "Isometric view is reference-only and supports comprehension of the complete lane layout."
-      critical: false
-      plan_ref: "plan.md#solution-overview"
 final_assembly:
-- name: transfer_lane
-  config:
-    dofs:
-    - rotate_x
+- subassembly_id: transfer_lane
+  parts:
+  - name: base_plate
+    config:
+      dofs: []
+  - name: entry_funnel
+    config:
+      dofs: []
+  - name: roller_bed
+    config:
+      dofs: []
+  - name: idler_guide
+    config:
+      dofs: []
+  - name: goal_tray
+    config:
+      dofs: []
+  - name: motor_DS3218
+    config:
+      dofs:
+      - rotate_x
+      control:
+        mode: ON_OFF
+        speed: 1.0
+      cots_id: ServoMotor_DS3218
 totals:
   estimated_unit_cost_usd: 62.0
   estimated_weight_g: 610.9
   estimate_confidence: high
+motion_forecast:
+  moving_part_names: ["motor_DS3218"]
+  reference_frame: world
+  sample_stride_s: 0.5
+  anchors:
+    - t_s: 0.0
+      reference_point: com
+      pos_mm: [-460.0, -55.0, 30.0]
+      rot_deg: [0.0, 90.0, 0.0]
+      position_tolerance_mm: [1.0, 1.0, 1.0]
+      rotation_tolerance_deg: [0.1, 0.1, 1.0]
+      build_zone_valid: true
+      first_contacts:
+        - order: 1
+          surface: roller_bed_top
+          first_touch_window_s: [0.0, 0.2]
+    - t_s: 2.0
+      reference_point: com
+      pos_mm: [45.0, -55.0, 30.0]
+      rot_deg: [0.0, 90.0, 180.0]
+      position_tolerance_mm: [1.0, 1.0, 1.0]
+      rotation_tolerance_deg: [0.1, 0.1, 1.0]
+      first_contacts: []
+    - t_s: 4.0
+      reference_point: com
+      pos_mm: [455.0, -55.0, 30.0]
+      rot_deg: [0.0, 90.0, 360.0]
+      position_tolerance_mm: [1.0, 1.0, 1.0]
+      rotation_tolerance_deg: [0.1, 0.1, 1.0]
+      goal_zone_contact: true
+      first_contacts:
+        - order: 1
+          surface: goal_tray_interior
+          first_touch_window_s: [3.8, 4.2]
 dfm_suggestions:
 - Keep the roller lane profile constant along its length to reduce machining setups.
 - Machine the goal tray as an open pocket from a single HDPE blank.

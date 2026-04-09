@@ -1,11 +1,11 @@
 {
-  "component_label": "environment",
+  "component_label": "no_drill_benchmark",
   "entities": [
     {
-      "label": "environment",
-      "semantic_label": "environment",
-      "instance_id": "environment",
-      "instance_name": "environment",
+      "label": "environment_fixture",
+      "semantic_label": "environment_fixture",
+      "instance_id": "environment_fixture",
+      "instance_name": "environment_fixture",
       "object_type": "part",
       "object_id": 0,
       "pos": [
@@ -19,17 +19,17 @@
         -0.0
       ],
       "mesh_paths": [
-        "meshes/environment.obj"
+        "meshes/environment_fixture.obj"
       ],
       "box_size": null,
-      "material_id": null,
-      "body_name": "environment",
-      "geom_name": "environment",
+      "material_id": "aluminum_6061",
+      "body_name": "environment_fixture",
+      "geom_name": "environment_fixture",
       "zone_type": null,
       "color_rgba": [
-        0.62,
-        0.67,
-        0.73,
+        0.7529411764705882,
+        0.7529411764705882,
+        0.7529411764705882,
         1.0
       ],
       "segmentation_color_rgb": [
@@ -47,9 +47,9 @@
       "object_type": "zone",
       "object_id": 1,
       "pos": [
+        260.0,
         0.0,
-        800.0,
-        250.0
+        65.0
       ],
       "euler": [
         0.0,
@@ -58,9 +58,9 @@
       ],
       "mesh_paths": [],
       "box_size": [
-        500.0,
-        250.0,
-        250.0
+        50.0,
+        55.0,
+        45.0
       ],
       "material_id": null,
       "body_name": null,
@@ -80,56 +80,16 @@
       "include_in_segmentation": false
     },
     {
-      "label": "zone_forbid_0_center_forbid",
-      "semantic_label": "zone_forbid_0_center_forbid",
-      "instance_id": "zone_forbid_0_center_forbid",
-      "instance_name": "zone_forbid_0_center_forbid",
-      "object_type": "zone",
-      "object_id": 2,
-      "pos": [
-        0.0,
-        0.0,
-        250.0
-      ],
-      "euler": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "mesh_paths": [],
-      "box_size": [
-        250.0,
-        500.0,
-        250.0
-      ],
-      "material_id": null,
-      "body_name": null,
-      "geom_name": null,
-      "zone_type": "forbid",
-      "color_rgba": [
-        0.83,
-        0.2,
-        0.2,
-        0.2
-      ],
-      "segmentation_color_rgb": [
-        161,
-        235,
-        59
-      ],
-      "include_in_segmentation": false
-    },
-    {
       "label": "zone_build",
       "semantic_label": "zone_build",
       "instance_id": "zone_build",
       "instance_name": "zone_build",
       "object_type": "zone",
-      "object_id": 3,
+      "object_id": 2,
       "pos": [
+        10.0,
         0.0,
-        500.0,
-        1000.0
+        110.0
       ],
       "euler": [
         0.0,
@@ -138,9 +98,9 @@
       ],
       "mesh_paths": [],
       "box_size": [
-        500.0,
-        1500.0,
-        1000.0
+        330.0,
+        180.0,
+        110.0
       ],
       "material_id": null,
       "body_name": null,
@@ -153,27 +113,27 @@
         0.14
       ],
       "segmentation_color_rgb": [
+        161,
         235,
-        59,
-        213
+        59
       ],
       "include_in_segmentation": false
     }
   ],
   "bounds_min": [
-    -500.0,
-    -1000.0,
+    -320.0,
+    -180.0,
     0.0
   ],
   "bounds_max": [
-    500.0,
-    2000.0,
-    2000.0
+    340.0,
+    180.0,
+    220.0
   ],
   "center": [
+    10.0,
     0.0,
-    500.0,
-    1000.0
+    110.0
   ],
-  "diagonal": 3741.657386773941
+  "diagonal": 783.3262411026456
 }

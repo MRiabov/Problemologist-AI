@@ -133,15 +133,110 @@ electronics:
     routed_in_3d: true
 environment_drill_operations: []
 final_assembly:
-- name: shelf_lift
-  config:
-    dofs:
-    - rotate_z
-    control:
-      mode: ON_OFF
-      speed: 1.0
+- subassembly_id: shelf_lift
+  parts:
+  - name: lift_base
+    config:
+      dofs: []
+  - name: left_frame
+    config:
+      dofs: []
+  - name: right_frame
+    config:
+      dofs: []
+  - name: belt_bed
+    config:
+      dofs: []
+  - name: upper_tray
+    config:
+      dofs: []
+  - name: motor_DS3218
+    config:
+      dofs:
+      - rotate_z
+      control:
+        mode: ON_OFF
+        speed: 1.0
+      cots_id: ServoMotor_DS3218
 totals:
   estimated_unit_cost_usd: 68.5
-  estimated_weight_g: 1013.0
+  estimated_weight_g: 961.9
   estimate_confidence: high
+drafting:
+  sheet_id: "sheet_1"
+  title: "Shelf lift assembly technical drawing"
+  units: "mm"
+  projection_standard: "orthographic"
+  views:
+    - view_id: "lift_front"
+      target: "shelf_lift"
+      projection: "front"
+      scale: 1.0
+      datums: ["A", "B", "C"]
+      dimensions:
+        - dimension_id: "d_base_length"
+          kind: "linear"
+          target: "lift_base"
+          value: 280.0
+        - dimension_id: "d_frame_height"
+          kind: "linear"
+          target: "left_frame"
+          value: 120.0
+        - dimension_id: "d_belt_angle"
+          kind: "angular"
+          target: "belt_bed"
+          value: 36.3
+      callouts:
+        - callout_id: "1"
+          label: "Aluminum 6061 base plate, 280x150x10 mm"
+          target: "lift_base"
+        - callout_id: "2"
+          label: "Left structural frame, CNC aluminum"
+          target: "left_frame"
+        - callout_id: "3"
+          label: "Right structural frame, CNC aluminum"
+          target: "right_frame"
+        - callout_id: "4"
+          label: "HDPE low-friction belt bed"
+          target: "belt_bed"
+        - callout_id: "5"
+          label: "HDPE handoff tray into goal zone"
+          target: "upper_tray"
+        - callout_id: "6"
+          label: "COTS servo motor, left-side mount"
+          target: "ServoMotor_DS3218"
 dfm_suggestions: []
+motion_forecast:
+  moving_part_names: ["motor_DS3218"]
+  reference_frame: world
+  sample_stride_s: 0.5
+  anchors:
+    - t_s: 0.0
+      reference_point: com
+      pos_mm: [-200.0, 0.0, 60.0]
+      rot_deg: [0.0, 0.0, 0.0]
+      position_tolerance_mm: [1.0, 1.0, 1.0]
+      rotation_tolerance_deg: [0.1, 0.1, 1.0]
+      build_zone_valid: true
+      first_contacts:
+        - order: 1
+          surface: belt_bed_top
+          first_touch_window_s: [0.0, 0.2]
+    - t_s: 1.5
+      reference_point: com
+      pos_mm: [50.0, 0.0, 160.0]
+      rot_deg: [0.0, 0.0, 0.0]
+      position_tolerance_mm: [1.0, 1.0, 1.0]
+      rotation_tolerance_deg: [0.1, 0.1, 1.0]
+      first_contacts: []
+    - t_s: 3.0
+      reference_point: com
+      pos_mm: [375.0, 0.0, 260.0]
+      rot_deg: [0.0, 0.0, 0.0]
+      position_tolerance_mm: [1.0, 1.0, 1.0]
+      rotation_tolerance_deg: [0.1, 0.1, 1.0]
+      goal_zone_contact: true
+      first_contacts:
+        - order: 1
+          surface: upper_tray_interior
+          first_touch_window_s: [2.8, 3.2]

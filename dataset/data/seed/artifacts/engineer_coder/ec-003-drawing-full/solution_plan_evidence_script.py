@@ -1,6 +1,5 @@
 from build123d import Align, Box, Compound, Location
 
-from shared.cots.parts.motors import ServoMotor
 from utils.metadata import CompoundMetadata, PartMetadata
 
 
@@ -22,83 +21,79 @@ def _build_part(
     return part
 
 
-def _build_base_plate():
-    base_plate = Box(520.0, 130.0, 10.0, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    cutout = Box(130.0, 155.0, 12.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-    cutout = cutout.moved(Location((115.0, 0.0, 5.0)))
-    base_plate = base_plate.cut(cutout)
-    base_plate.label = "base_plate"
-    base_plate.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
-    return base_plate
-
-
-def _build_motor():
-    motor = ServoMotor.from_catalog_id("ServoMotor_DS3218")
-    motor = motor.move(Location((-92.0, -68.0, 35.0)))
-    motor.label = "drive_motor"
-    return motor
-
-
 def build():
     children = [
-        _build_base_plate(),
         _build_part(
-            label="settling_chute",
-            length=220.0,
-            width=90.0,
-            height=35.0,
-            x=-130.0,
-            y=95.0,
-            z=12.0,
+            label="freestanding_transfer",
+            length=620.0,
+            width=180.0,
+            height=2.0,
+            x=0.0,
+            y=0.0,
+            z=179.0,
+            material_id="aluminum_6061",
+        ),
+        _build_part(
+            label="freestanding_base",
+            length=620.0,
+            width=180.0,
+            height=12.0,
+            x=0.0,
+            y=0.0,
+            z=0.0,
+            material_id="aluminum_6061",
+        ),
+        _build_part(
+            label="capture_funnel",
+            length=160.0,
+            width=140.0,
+            height=40.0,
+            x=-200.0,
+            y=0.0,
+            z=20.0,
             material_id="hdpe",
         ),
         _build_part(
-            label="metering_wheel_guard",
-            length=140.0,
-            width=55.0,
+            label="left_wall",
+            length=460.0,
+            width=20.0,
             height=32.0,
-            x=-35.0,
-            y=-20.0,
-            z=50.0,
+            x=0.0,
+            y=-80.0,
+            z=60.0,
             material_id="hdpe",
         ),
         _build_part(
-            label="guide_rail",
-            length=150.0,
-            width=18.0,
-            height=24.0,
-            x=125.0,
-            y=82.0,
-            z=68.0,
+            label="right_wall",
+            length=460.0,
+            width=20.0,
+            height=32.0,
+            x=0.0,
+            y=80.0,
+            z=60.0,
             material_id="hdpe",
         ),
         _build_part(
-            label="post_gate_channel",
-            length=220.0,
-            width=70.0,
-            height=30.0,
-            x=300.0,
-            y=-60.0,
-            z=55.0,
-            material_id="hdpe",
-        ),
-        _build_part(
-            label="goal_cup",
-            length=95.0,
-            width=95.0,
+            label="exit_tray",
+            length=140.0,
+            width=110.0,
             height=35.0,
-            x=335.0,
-            y=30.0,
-            z=65.0,
+            x=260.0,
+            y=0.0,
+            z=120.0,
             material_id="hdpe",
         ),
-        _build_motor(),
+        _build_part(
+            label="ballast_block",
+            length=180.0,
+            width=80.0,
+            height=18.0,
+            x=0.0,
+            y=0.0,
+            z=140.0,
+            material_id="aluminum_6061",
+        ),
     ]
-
-    # Wrap in a subassembly compound so the inventory-exactness validator
-    # counts the subassembly_id label alongside the part labels.
-    subassembly = Compound(label="timed_metering_stage", children=children)
-    subassembly.metadata = CompoundMetadata()
-    assembly = Compound(children=[subassembly])
+    assembly = Compound(label="freestanding_transfer", children=children)
     assembly.metadata = CompoundMetadata()
     return assembly

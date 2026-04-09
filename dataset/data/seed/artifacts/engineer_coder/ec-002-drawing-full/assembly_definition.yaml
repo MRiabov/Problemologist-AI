@@ -5,245 +5,183 @@ units:
   mass: "g"
   currency: "USD"
 constraints:
-  benchmark_max_unit_cost_usd: 120.0
-  benchmark_max_weight_g: 2200.0
-  planner_target_max_unit_cost_usd: 83.0
-  planner_target_max_weight_g: 1700.0
+  benchmark_max_unit_cost_usd: 54.0
+  benchmark_max_weight_g: 900.0
+  planner_target_max_unit_cost_usd: 54.0
+  planner_target_max_weight_g: 900.0
 manufactured_parts:
-- part_name: base_frame
-  part_id: base_frame
+- part_name: freestanding_base
+  part_id: freestanding_base
   manufacturing_method: CNC
   material_id: aluminum_6061
   quantity: 1
-  part_volume_mm3: 121000.0
+  part_volume_mm3: 134000.0
   stock_bbox_mm:
-    x: 560.0
+    x: 620.0
     y: 180.0
     z: 12.0
-  stock_volume_mm3: 1209600.0
-  removed_volume_mm3: 1088600.0
-  estimated_unit_cost_usd: 19.5
-- part_name: bridge_deck
-  part_id: bridge_deck
+  stock_volume_mm3: 1339200.0
+  removed_volume_mm3: 1205200.0
+  estimated_unit_cost_usd: 15.5
+- part_name: capture_funnel
+  part_id: capture_funnel
+  manufacturing_method: CNC
+  material_id: hdpe
+  quantity: 1
+  part_volume_mm3: 22000.0
+  stock_bbox_mm:
+    x: 160.0
+    y: 140.0
+    z: 40.0
+  stock_volume_mm3: 896000.0
+  removed_volume_mm3: 874000.0
+  estimated_unit_cost_usd: 5.0
+- part_name: left_wall
+  part_id: left_wall
+  manufacturing_method: CNC
+  material_id: hdpe
+  quantity: 1
+  part_volume_mm3: 15000.0
+  stock_bbox_mm:
+    x: 460.0
+    y: 20.0
+    z: 32.0
+  stock_volume_mm3: 294400.0
+  removed_volume_mm3: 279400.0
+  estimated_unit_cost_usd: 5.5
+- part_name: right_wall
+  part_id: right_wall
+  manufacturing_method: CNC
+  material_id: hdpe
+  quantity: 1
+  part_volume_mm3: 15000.0
+  stock_bbox_mm:
+    x: 460.0
+    y: 20.0
+    z: 32.0
+  stock_volume_mm3: 294400.0
+  removed_volume_mm3: 279400.0
+  estimated_unit_cost_usd: 5.5
+- part_name: exit_tray
+  part_id: exit_tray
+  manufacturing_method: CNC
+  material_id: hdpe
+  quantity: 1
+  part_volume_mm3: 19000.0
+  stock_bbox_mm:
+    x: 140.0
+    y: 110.0
+    z: 35.0
+  stock_volume_mm3: 539000.0
+  removed_volume_mm3: 520000.0
+  estimated_unit_cost_usd: 8.25
+- part_name: ballast_block
+  part_id: ballast_block
   manufacturing_method: CNC
   material_id: aluminum_6061
   quantity: 1
-  part_volume_mm3: 22800.0
+  part_volume_mm3: 28000.0
   stock_bbox_mm:
-    x: 300.0
-    y: 95.0
-    z: 8.0
-  stock_volume_mm3: 228000.0
-  removed_volume_mm3: 205200.0
-  estimated_unit_cost_usd: 11.0
-- part_name: left_fence
-  part_id: left_fence
-  manufacturing_method: CNC
-  material_id: hdpe
-  quantity: 1
-  part_volume_mm3: 21000.0
-  stock_bbox_mm:
-    x: 300.0
-    y: 20.0
-    z: 35.0
-  stock_volume_mm3: 210000.0
-  removed_volume_mm3: 189000.0
-  estimated_unit_cost_usd: 7.0
-- part_name: right_fence
-  part_id: right_fence
-  manufacturing_method: CNC
-  material_id: hdpe
-  quantity: 1
-  part_volume_mm3: 21000.0
-  stock_bbox_mm:
-    x: 300.0
-    y: 20.0
-    z: 35.0
-  stock_volume_mm3: 210000.0
-  removed_volume_mm3: 189000.0
-  estimated_unit_cost_usd: 7.0
-- part_name: landing_pocket
-  part_id: landing_pocket
-  manufacturing_method: CNC
-  material_id: hdpe
-  quantity: 1
-  part_volume_mm3: 25000.0
-  stock_bbox_mm:
-    x: 130.0
-    y: 110.0
-    z: 30.0
-  stock_volume_mm3: 429000.0
-  removed_volume_mm3: 404000.0
-  estimated_unit_cost_usd: 13.0
+    x: 180.0
+    y: 80.0
+    z: 18.0
+  stock_volume_mm3: 259200.0
+  removed_volume_mm3: 231200.0
+  estimated_unit_cost_usd: 3.0
 cots_parts: []
-motion_forecast:
-  moving_part_names:
-  - bridge_deck
-  reference_frame: world
-  sample_stride_s: 0.5
-  anchors:
-  - t_s: 0.0
-    reference_point: bridge_deck_center
-    pos_mm:
-    - 10.0
-    - 0.0
-    - 60.0
-    rot_deg:
-    - 0.0
-    - 0.0
-    - 0.0
-    position_tolerance_mm:
-    - 1.2
-    - 1.2
-    - 1.2
-    rotation_tolerance_deg:
-    - 0.1
-    - 0.1
-    - 5.0
-    build_zone_valid: true
-    first_contacts:
-    - order: 1
-      surface: base_frame
-      first_touch_window_s:
-      - 0.0
-      - 0.5
-  - t_s: 1.0
-    reference_point: bridge_deck_center
-    pos_mm:
-    - 120.0
-    - 0.0
-    - 60.0
-    rot_deg:
-    - 0.0
-    - 0.0
-    - 0.0
-    position_tolerance_mm:
-    - 1.2
-    - 1.2
-    - 1.2
-    rotation_tolerance_deg:
-    - 0.1
-    - 0.1
-    - 5.0
-  - t_s: 2.0
-    reference_point: bridge_deck_center
-    pos_mm:
-    - 225.0
-    - 0.0
-    - 60.0
-    rot_deg:
-    - 0.0
-    - 0.0
-    - 0.0
-    position_tolerance_mm:
-    - 1.2
-    - 1.2
-    - 1.2
-    rotation_tolerance_deg:
-    - 0.1
-    - 0.1
-    - 5.0
-    first_contacts:
-    - order: 1
-      surface: landing_pocket
-      first_touch_window_s:
-      - 1.5
-      - 2.0
-    goal_zone_contact: true
 final_assembly:
-- name: base_frame
-  config:
-    dofs: []
-- name: bridge_deck
-  config:
-    dofs:
-    - translate_x
-- name: left_fence
-  config:
-    dofs: []
-- name: right_fence
-  config:
-    dofs: []
-- name: landing_pocket
-  config:
-    dofs: []
+- subassembly_id: freestanding_transfer
+  parts:
+  - name: freestanding_base
+    config:
+      dofs: []
+  - name: capture_funnel
+    config:
+      dofs: []
+  - name: left_wall
+    config:
+      dofs: []
+  - name: right_wall
+    config:
+      dofs: []
+  - name: exit_tray
+    config:
+      dofs: []
+  - name: ballast_block
+    config:
+      dofs: []
+totals:
+  estimated_unit_cost_usd: 42.75
+  estimated_weight_g: 504.85
+  estimate_confidence: high
 drafting:
   sheet_id: sheet_1
-  title: Deployable gap bridge technical drawing
+  title: Freestanding no-drill transfer
   units: mm
   projection_standard: orthographic
   views:
-  - view_id: front_bridge_base
-    target: base_frame
-    projection: front
+  - view_id: top_path_overview
+    target: freestanding_base
+    projection: top
     scale: 1.0
     datums: [A, B]
     dimensions:
-    - dimension_id: d_front_base_frame_length
+    - dimension_id: d_base_length
       kind: linear
-      target: base_frame
-      value: 560.0
+      target: freestanding_base
+      value: 620.0
       tolerance: nominal
       binding: true
-      note: Base frame spans the support footprint.
-      plan_ref: plan.md#parts-list
-    - dimension_id: d_front_bridge_deck_length
+      note: Base length spans the transfer corridor.
+    - dimension_id: d_base_width
       kind: linear
-      target: bridge_deck
-      value: 300.0
+      target: freestanding_base
+      value: 180.0
       tolerance: nominal
       binding: true
-      note: Deck spans the gap corridor.
-      plan_ref: plan.md#parts-list
-  - view_id: top_bridge_run
-    target: bridge_deck
-    projection: top
+      note: Base width provides stability without environment attachment.
+  - view_id: front_capture
+    target: capture_funnel
+    projection: front
     scale: 1.0
     datums: [A, C]
     dimensions:
-    - dimension_id: d_top_left_fence_length
+    - dimension_id: d_funnel_width
       kind: linear
-      target: left_fence
-      value: 300.0
+      target: capture_funnel
+      value: 160.0
       tolerance: nominal
       binding: true
-      note: Left fence tracks the bridge run.
-      plan_ref: plan.md#parts-list
-    - dimension_id: d_top_right_fence_length
+      note: Funnel width covers the spawn jitter band.
+    - dimension_id: d_funnel_height
       kind: linear
-      target: right_fence
-      value: 300.0
+      target: capture_funnel
+      value: 40.0
       tolerance: nominal
       binding: true
-      note: Right fence tracks the bridge run.
-      plan_ref: plan.md#parts-list
-  - view_id: side_goal_capture
-    target: landing_pocket
+      note: Funnel height gives the inlet enough vertical margin.
+  - view_id: side_exit
+    target: exit_tray
     projection: side
     scale: 1.0
     datums: [B, C]
     dimensions:
-    - dimension_id: d_side_landing_pocket_height
+    - dimension_id: d_tray_height
       kind: linear
-      target: landing_pocket
-      value: 30.0
+      target: exit_tray
+      value: 35.0
       tolerance: nominal
       binding: true
-      note: Pocket height damps the transfer cube.
-      plan_ref: plan.md#parts-list
-    - dimension_id: d_side_base_frame_height
+      note: Tray height damps the final approach into the goal zone.
+    - dimension_id: d_tray_depth
       kind: linear
-      target: base_frame
-      value: 12.0
+      target: exit_tray
+      value: 140.0
       tolerance: nominal
       binding: true
-      note: Base frame thickness preserves clearance from the floor gap.
-      plan_ref: plan.md#assembly-strategy
-  notes: []
-totals:
-  estimated_unit_cost_usd: 57.5
-  estimated_weight_g: 451.91
-  estimate_confidence: high
-dfm_suggestions:
-- Keep the bridge deck flat and pocket-free so it can be machined from one side.
-- Reuse the same fence profile on both sides to simplify CAM setup.
+      note: Tray depth overlaps the goal zone.
+  notes:
+  - note_id: note_no_attachment
+    text: "No environment attachment: all parts mount to `freestanding_base` only."
+  - note_id: note_ballast_material
+    text: "`ballast_block` uses aluminum_6061 to keep the total weight under the planner target."

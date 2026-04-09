@@ -53,9 +53,9 @@ def build() -> Compound:
     sgw.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(sgw)
 
-    # catch_bin x1
+    # catch_bin: capture goal zone - this fixture occupies the goal zone to capture the ball
     cb = Box(*CATCH_BIN_SIZE, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    cb = cb.move(Location(CATCH_BIN_POS))
+    cb = cb.move(Location((170.0, 0.0, 15.0)))
     cb.label = "catch_bin"
     cb.metadata = PartMetadata(material_id="hdpe", fixed=True)
     children.append(cb)

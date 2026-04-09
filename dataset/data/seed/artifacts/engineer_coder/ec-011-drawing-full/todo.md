@@ -1,8 +1,11 @@
-# TODO
+# Implementation Checklist
 
-- [x] Finish the diverter gate geometry and fixed mount.
-- [x] Add the motor mount and export the baseline script.
-- [ ] Define the 12V power supply and gate motor in `assembly_definition.yaml`.
-- [ ] Route positive and return wires through the left-wall cable corridor.
-- [ ] Keep total wire length under the objective limit and outside the gate swing clearance zone.
-- [ ] Validate the circuit and prepare the handoff for electronics review.
+- [ ] Read benchmark handoff package (`benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`)
+- [ ] Read reviewed planner artifacts (`plan.md`, `assembly_definition.yaml`)
+- [ ] Read drafting evidence (`solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`)
+- [ ] Implement the freestanding no-drill transfer in `solution_script.py`
+- [ ] Verify inventory matches the approved planner multiset (labels, quantities, COTS identities)
+- [ ] Run `validate_and_price` and confirm pass
+- [ ] Run `simulate` and confirm goal-zone success
+- [ ] Call `submit_for_review` with latest revision artifacts
+- [ ] Update `todo.md` and `journal.md` during execution

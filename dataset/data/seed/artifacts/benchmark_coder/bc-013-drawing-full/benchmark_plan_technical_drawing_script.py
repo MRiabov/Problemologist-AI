@@ -8,7 +8,6 @@ from build123d import (
     Box,
     Compound,
     Location,
-    PageSize,
     TechnicalDrawing,
 )
 
@@ -51,8 +50,9 @@ def _build_model() -> Compound:
     sgw.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(sgw)
 
+    # catch_bin: capture goal zone - this fixture occupies the goal zone to capture the ball
     cb = Box(*CATCH_BIN_SIZE, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    cb = cb.move(Location(CATCH_BIN_POS))
+    cb = cb.move(Location((170.0, 0.0, 15.0)))
     cb.label = "catch_bin"
     cb.metadata = PartMetadata(material_id="hdpe", fixed=True)
     children.append(cb)
@@ -63,12 +63,8 @@ def _build_model() -> Compound:
     return asm
 
 
-def build() -> TechnicalDrawing:
-    """Return a TechnicalDrawing package for the approved planner inventory."""
-    model = _build_model()
-    drawing = TechnicalDrawing(
-        model,
-        page_size=PageSize.A3,
-        title="Side-Deflect Ramp Benchmark Plan",
-    )
-    return drawing
+def build() -> Compound:
+    """Return the drafted model for the approved planner inventory."""
+    # Create the drawing artifact (side effect)
+    TechnicalDrawing(title="Side-Deflect Ramp Benchmark Plan")
+    return _build_model()

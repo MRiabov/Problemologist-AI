@@ -2,178 +2,177 @@
 
 ## 1. Solution Overview
 
-Use a passive offset rail path that routes `projectile_ball` around the seeded `central_blocker` and into the far goal zone. The mechanism widens the capture area near spawn, steers the ball around the blocker on the positive-Y side, and settles it into a downstream `goal_tray`. The `routed_transfer` subassembly is a single passive routing path with no powered axes.
+Use a completely freestanding twin-wall chute that receives the `projectile_ball` on the spawn side and carries it to the right goal zone without drilling, bolting into, or leaning on the `benchmark_environment`. Stability comes from a wide `freestanding_base` and low center of mass rather than external attachment to the `environment_fixture`.
 
-The read-only benchmark `environment_fixture` remains untouched and serves only as spatial context for the passive route.
+The `freestanding_transfer` subassembly is a single passive routing path with no powered axes.
 
 ## 2. Parts List
 
 | Part | Dimensions (mm) | Material | Purpose |
 | -- | -- | -- | -- |
-| route_base | 760 x 150 x 10 | aluminum_6061 | Freestanding base plate spanning the permitted route corridor |
-| entry_catcher | 170 x 140 x 35 | hdpe | Capture funnel that absorbs spawn jitter before the routing turn |
-| outer_rail | 560 x 18 x 28 | hdpe | Outside guide rail along the routed path |
-| inner_rail | 520 x 18 x 28 | hdpe | Inside guide rail that keeps the ball away from the central blocker |
-| blocker_skirt | 210 x 20 x 60 | hdpe | Clearance wall keeping the ball from clipping the blocker corner |
-| goal_tray | 160 x 120 x 35 | hdpe | Terminal tray overlapping the goal zone |
+| freestanding_base | 620 x 180 x 12 | aluminum_6061 | Wide low center-of-mass base keeping the transfer stable without attachment |
+| capture_funnel | 160 x 140 x 40 | hdpe | Capture pocket covering the seeded spawn jitter |
+| left_wall | 460 x 20 x 32 | hdpe | Left chute wall |
+| right_wall | 460 x 20 x 32 | hdpe | Right chute wall |
+| exit_tray | 140 x 110 x 35 | hdpe | Goal-side tray settling the ball in the target |
+| ballast_block | 180 x 80 x 18 | aluminum_6061 | Extra mass on the base to prevent tip-over |
 
-**Estimated Total Weight**: 445.70 g
-**Estimated Total Cost**: $48.50
+**Estimated Total Weight**: 504.85 g
+**Estimated Total Cost**: $42.75
 
 ## 3. Assembly Strategy
 
-1. Place `route_base` inside the seeded build zone and keep its long axis centered slightly above the blocker band so the passive path can stay on the positive-Y side of `central_blocker`.
-2. Mount `entry_catcher` near the spawn side, then mount `outer_rail` and `inner_rail` so the path bends around the blocker on the positive-Y side without crossing the forbid zone.
-3. Mount `blocker_skirt` beside the routed turn and terminate the path inside `goal_tray` so the ball settles inside the goal zone with a passive capture lip.
+1. Keep `freestanding_base` centered in the build zone and mount `ballast_block` low on the base to stabilize the `freestanding_transfer` mechanism.
+2. Mount `capture_funnel`, `left_wall`, and `right_wall` on the base only, with no fasteners or contact into the `environment_fixture`.
+3. Terminate the transfer in `exit_tray` overlapping the seeded goal zone so the ball settles without rebounding out.
 
 ## 4. Assumption Register
 
-- `ASSUMP-001`: `projectile_ball` radius is held within the declared 28-30 mm static randomization band.
+- `ASSUMP-001`: `projectile_ball` radius is held within the declared 22-24 mm static randomization band.
 - `ASSUMP-002`: The drafting scripts are exploded review layouts only; they preserve the same inventory and dimensions but are not literal stack coordinates.
-- `ASSUMP-003`: The passive rail path is static and reviewable without any engineer-owned motion DOFs.
+- `ASSUMP-003`: The passive chute path is static and reviewable without any engineer-owned motion DOFs.
 - `ASSUMP-004`: The manufacturing estimate in `assembly_definition.yaml` is the authoritative budget contract for coder entry.
+- `ASSUMP-005`: `aluminum_6061` density is 2.7 g/cm3; `hdpe` density is 0.95 g/cm3.
 
 ## 5. Detailed Calculations
 
 | ID | Problem / Decision | Result | Impact |
 | -- | -- | -- | -- |
-| CALC-001 | Capture envelope versus spawn jitter | Required half-width is `30 mm + 10 mm = 40 mm`; `entry_catcher` provides `70 mm` half-width and `route_base` provides `75 mm` half-width | Keeps the projectile inside the passive inlet during runtime jitter |
-| CALC-002 | Blocker keepout feasibility | The route must stay outside the `central_blocker` AABB `[120, 260] x [-130, 130] x [0, 150]` while preserving the positive-Y pass | Prevents the passive corridor from clipping the forbid volume |
-| CALC-003 | Route base mass | `356.40 g` | Dominant weight contribution, still well under cap |
-| CALC-004 | Remaining part masses | `22.80 + 17.10 + 16.15 + 13.30 + 19.95 = 89.30 g` | Confirms the smaller HDPE parts stay lightweight |
-| CALC-005 | Mass and budget closure | Total estimated weight is `445.70 g` and total cost is `$48.50` | Keeps the solution below the benchmark customer caps |
+| CALC-001 | Capture envelope versus spawn jitter | Required half-width is `24 mm + 8 mm = 32 mm`; `capture_funnel` provides `70 mm` half-width | Keeps the projectile inside the passive inlet during runtime jitter |
+| CALC-002 | Freestanding stability | The `freestanding_base` spans 620 mm with `ballast_block` keeping the center of mass low | Prevents tip-over without environment attachment |
+| CALC-003 | Base mass | `361.80 g` | Dominant weight contribution, still well under cap |
+| CALC-004 | Remaining part masses | `20.90 + 14.25 + 14.25 + 18.05 + 75.60 = 143.05 g` | Confirms the smaller HDPE and aluminum parts stay lightweight |
+| CALC-005 | Mass and budget closure | Total estimated weight is `504.85 g` and total cost is `$42.75` | Keeps the solution below the benchmark customer caps |
 
 ### CALC-001: Capture Envelope Versus Spawn Jitter
 
 #### Problem Statement
 
-The capture inlet must tolerate the declared spawn jitter while still feeding the passive rail path.
+The capture inlet must tolerate the declared spawn jitter while still feeding the passive chute path.
 
 #### Assumptions
 
-- The ball radius stays inside the declared 28-30 mm band.
+- The ball radius stays inside the declared 22-24 mm band.
 - The inlet acts as a passive capture funnel rather than a powered sorter.
 
 #### Derivation
 
-The capture face is sized wider than the jittered spawn envelope so that the inlet does not need precise point placement to succeed.
+The capture face is sized wider than the jittered spawn envelope.
 
 #### Worst-Case Check
 
-The worst-case lateral and vertical spawn offsets still fit inside the inlet opening with clearance on both sides.
+The worst-case lateral and vertical spawn offsets still fit inside the inlet opening.
 
 #### Result
 
-The capture face is large enough to absorb the full jitter band before the routed turn begins.
+The capture face absorbs the full jitter band.
 
 #### Design Impact
 
-The ball can settle into the rail path before it reaches the blocker clearance segment.
+The ball settles into the chute path before reaching the goal-side exit.
 
 #### Cross-References
 
-- `entry_catcher` in `assembly_definition.yaml`
+- `capture_funnel` in `assembly_definition.yaml`
 - `projectile_ball` in `benchmark_definition.yaml`
 
-### CALC-002: Blocker Keepout Feasibility
+### CALC-002: Freestanding Stability
 
 #### Problem Statement
 
-The passive transfer must pass around `central_blocker` without entering the forbid volume.
+The passive transfer must remain stable without drilling into the `benchmark_environment`.
 
 #### Assumptions
 
-- The route stays on the positive-Y side of the blocker band.
+- The route stays entirely within the build zone.
 - The drafting geometry is review evidence, not the final solution geometry.
 
 #### Derivation
 
-The staged rail centers sit outside the blocker AABB and keep the turn corridor on the positive-Y side while preserving a simple passive path.
+The staged wall centers keep the ball path on a straight passive corridor.
 
 #### Worst-Case Check
 
-Even with the widest part envelopes, the staged geometry remains outside the blocker footprint.
+Even with the widest part envelopes, the staged geometry remains inside the build zone.
 
 #### Result
 
-The route preserves a clearance margin while still pointing into `goal_tray`.
+The route preserves clearance while pointing into `exit_tray`.
 
 #### Design Impact
 
-This makes the passive transfer readable in review and feasible for the downstream coder.
+Passive transfer is readable in review and feasible for the downstream coder.
 
 #### Cross-References
 
-- `outer_rail`, `inner_rail`, and `blocker_skirt` in `assembly_definition.yaml`
-- `central_blocker` in `benchmark_definition.yaml`
+- `left_wall` and `right_wall` in `assembly_definition.yaml`
+- `build_zone` in `benchmark_definition.yaml`
 
-### CALC-003: Route Base Mass
+### CALC-003: Base Mass
 
 #### Problem Statement
 
-Determine the mass contribution of `route_base`.
+Determine the mass contribution of `freestanding_base`.
 
 #### Assumptions
 
-- `route_base` volume is fixed at 132000 mm3.
+- `freestanding_base` volume is 134000 mm3.
 - `aluminum_6061` density is 2.7 g/cm3.
 
 #### Derivation
 
-- 132000 mm3 = 132.00 cm3.
-- 132.00 cm3 x 2.7 g/cm3 = 356.40 g.
+- 134.00 cm3 x 2.7 g/cm3 = 361.80 g.
 
 #### Worst-Case Check
 
-- This is the largest single-part mass in the assembly, so it is the dominant term in the total weight sum.
+This is the largest single-part mass in the assembly, so it dominates the weight budget.
 
 #### Result
 
-- `route_base` mass = 356.40 g.
+`freestanding_base` mass = 361.80 g.
 
 #### Design Impact
 
-- The base plate dominates the weight budget but still leaves a large planner margin.
+The base plate dominates the weight budget but leaves margin.
 
 #### Cross-References
 
-- `ASSUMP-004`, `CALC-005`, `route_base`
+- `ASSUMP-005`, `CALC-005`, `freestanding_base`
 
 ### CALC-004: Remaining Part Masses
 
 #### Problem Statement
 
-Determine the mass contribution of the remaining HDPE parts.
+Determine the mass contribution of the remaining parts.
 
 #### Assumptions
 
-- `entry_catcher`, `outer_rail`, `inner_rail`, `blocker_skirt`, and `goal_tray` use HDPE density.
-- The part volumes in `assembly_definition.yaml` are deterministic.
+- HDPE density is 0.95 g/cm3; `aluminum_6061` density is 2.7 g/cm3.
 
 #### Derivation
 
-- `entry_catcher`: 24.00 cm3 x 0.95 g/cm3 = 22.80 g.
-- `outer_rail`: 18.00 cm3 x 0.95 g/cm3 = 17.10 g.
-- `inner_rail`: 17.00 cm3 x 0.95 g/cm3 = 16.15 g.
-- `blocker_skirt`: 14.00 cm3 x 0.95 g/cm3 = 13.30 g.
-- `goal_tray`: 21.00 cm3 x 0.95 g/cm3 = 19.95 g.
-- Sum = 89.30 g.
+- `capture_funnel`: 22.00 cm3 x 0.95 = 20.90 g.
+- `left_wall`: 15.00 cm3 x 0.95 = 14.25 g.
+- `right_wall`: 15.00 cm3 x 0.95 = 14.25 g.
+- `exit_tray`: 19.00 cm3 x 0.95 = 18.05 g.
+- `ballast_block`: 28.00 cm3 x 2.7 = 75.60 g.
+- Sum = 143.05 g.
 
 #### Worst-Case Check
 
-- The remaining parts are all minor contributors and do not threaten the mass cap.
+The remaining parts are all minor contributors and do not threaten the mass cap.
 
 #### Result
 
-- Remaining part mass total = 89.30 g.
+Remaining part mass total = 143.05 g.
 
 #### Design Impact
 
-- The capture and guide features stay lightweight enough for a static solution.
+Capture and guide features stay lightweight.
 
 #### Cross-References
 
-- `ASSUMP-004`, `CALC-005`, the HDPE parts in `assembly_definition.yaml`
+- `ASSUMP-005`, `CALC-005`, parts in `assembly_definition.yaml`
 
 ### CALC-005: Mass and Budget Closure
 
@@ -188,55 +187,54 @@ Verify that the declared mass and cost totals match the part-by-part sums.
 
 #### Derivation
 
-- 356.40 + 89.30 = 445.70 g.
-- 16.00 + 5.50 + 6.25 + 6.00 + 5.00 + 9.75 = 48.50 USD.
+- 361.80 + 143.05 = 504.85 g.
+- 15.50 + 5.00 + 5.50 + 5.50 + 8.25 + 3.00 = 42.75 USD.
 
 #### Worst-Case Check
 
-- 445.70 g is below the 1250 g planner target and benchmark cap.
-- $48.50 is below the $64.00 planner target and benchmark cap.
+- 504.85 g is below the 900.0 g benchmark cap.
+- $42.75 is below the $54.00 benchmark cap.
 
 #### Result
 
-- The plan remains inside budget and leaves substantial margin for implementation variation.
+The plan remains inside budget with substantial margin.
 
 #### Design Impact
 
-- The coder can preserve the passive routing strategy without needing to redesign for cost or weight.
+The coder can preserve the passive routing strategy without needing to redesign for cost or weight.
 
 #### Cross-References
 
-- `assembly_definition.yaml`
-- `benchmark_definition.yaml`
+- `assembly_definition.yaml`, `benchmark_definition.yaml`
 
 ## 6. Critical Constraints / Operating Envelope
 
-- `route_base` stays within the build zone and supports the full routing span.
-- `entry_catcher` is staged on the spawn side with enough opening width to capture the jittered spawn band.
-- `outer_rail` and `inner_rail` stay on the positive-Y side of `central_blocker`.
-- `blocker_skirt` protects the corner turn without introducing a powered axis.
-- `goal_tray` captures the ball at the end of the passive route and remains inside the build zone.
-- Total estimated weight remains at 445.70 g, well below the 1250 g cap.
-- Total estimated cost remains at $48.50, well below the $64.00 cap.
+- `freestanding_base` stays within the build zone and supports the full routing span.
+- `capture_funnel` is staged on the spawn side with enough opening width to capture the jittered spawn band.
+- `left_wall` and `right_wall` form a passive chute corridor without crossing the goal zone prematurely.
+- `exit_tray` captures the ball at the end of the passive route and overlaps the seeded goal zone.
+- Total estimated weight remains at 504.85 g, well below the 900.0 g cap.
+- Total estimated cost remains at $42.75, well below the $54.00 cap.
 
 ## 7. Cost & Weight Budget
 
 | Item | Weight (g) | Cost ($) |
 | -- | -- | -- |
-| route_base | 356.40 | 16.0 |
-| entry_catcher | 22.80 | 5.5 |
-| outer_rail | 17.10 | 6.25 |
-| inner_rail | 16.15 | 6.0 |
-| blocker_skirt | 13.30 | 5.0 |
-| goal_tray | 19.95 | 9.75 |
-| **TOTAL** | **445.70** | **48.50** |
+| freestanding_base | 361.80 | 15.50 |
+| capture_funnel | 20.90 | 5.00 |
+| left_wall | 14.25 | 5.50 |
+| right_wall | 14.25 | 5.50 |
+| exit_tray | 18.05 | 8.25 |
+| ballast_block | 75.60 | 3.00 |
+| **TOTAL** | **504.85** | **42.75** |
 
-**Budget Margin**: 804.30 g and $15.50 remaining versus the benchmark caps.
+**Budget Margin**: 395.15 g and $11.25 remaining versus the benchmark caps.
 
 ## 8. Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 | -- | -- | -- | -- |
 | Preview geometry drifts away from the final corridor | Medium | High | Keep the drafted shapes as the authoritative inventory and rebuild the same passive family in the implementation script |
-| Ball clips the blocker corner under jitter | Medium | High | Use a dedicated blocker skirt and keep the routed bend outside the forbid volume |
-| Goal tray receives the ball too fast | Low | Medium | Drop the tray slightly below the rail exit to absorb speed |
+| Freestanding assembly tips under impact | Medium | High | Keep a wide base and add low-mounted `ballast_block` |
+| Ball escapes due to spawn jitter | Medium | Medium | Use an oversized `capture_funnel` before the chute narrows |
+| Hidden environment contact violates the no-drill rule | Low | High | Keep all geometry referenced from `freestanding_base` and leave explicit clearance to the `benchmark_environment` and `environment_fixture` |

@@ -92,10 +92,30 @@ final_assembly:
     config:
       dofs: []
 totals:
-  estimated_unit_cost_usd: 56.0
+  estimated_unit_cost_usd: 49.0
   estimated_weight_g: 1260.0
   estimate_confidence: high
 dfm_suggestions:
   - Keep the route walls symmetric so the benchmark route remains clear and easy to inspect.
   - Use a shallow goal tray pocket instead of extra moving catch features.
+drafting:
+  sheet_id: sheet_bench_1
+  title: Central forbid route benchmark technical drawing
+  units: mm
+  projection_standard: orthographic
+  views:
+    - view_id: env_front
+      target: left_launch_pad
+      projection: front
+      scale: 1.0
+      datums: [A, B]
+      dimensions:
+        - dimension_id: d_launch_width
+          kind: linear
+          target: left_launch_pad
+          value: 140.0
+      callouts:
+        - callout_id: "1"
+          label: Left launch pad
+          target: left_launch_pad
 

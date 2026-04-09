@@ -120,7 +120,9 @@ class PayloadTrajectoryMonitor:
 
         if not self.policy.enabled:
             self._monitor_sample_stride_s = float(payload_definition.sample_stride_s)
-            self._configured_consecutive_miss_count = int(self.policy.consecutive_miss_count)
+            self._configured_consecutive_miss_count = int(
+                self.policy.consecutive_miss_count
+            )
             self._last_state = self._build_state()
             return
 
@@ -258,7 +260,9 @@ class PayloadTrajectoryMonitor:
         anchor_index = self._last_checked_anchor_index
         if anchor_index is None:
             anchor_index = 0
-        anchor_time = self._anchor_times_s[min(anchor_index, len(self._anchor_times_s) - 1)]
+        anchor_time = self._anchor_times_s[
+            min(anchor_index, len(self._anchor_times_s) - 1)
+        ]
         if current_time_s > anchor_time + self._monitor_sample_stride_s:
             return (
                 False,
@@ -282,8 +286,7 @@ class PayloadTrajectoryMonitor:
             last_checked_anchor_index=self._last_checked_anchor_index,
             last_checked_anchor_t_s=(
                 self._anchor_times_s[self._last_checked_anchor_index]
-                if self._last_checked_anchor_index is not None
-                and self._anchor_times_s
+                if self._last_checked_anchor_index is not None and self._anchor_times_s
                 else None
             ),
             monitor_sample_stride_s=self._monitor_sample_stride_s,
@@ -315,10 +318,12 @@ class PayloadTrajectoryMonitor:
         self._last_checked_anchor_index = anchor_index
 
         observed_pos_mm, observed_rot_deg = self._sample_reference_pose()
-        within_tolerance, pos_error_mm, rot_error_deg = self._anchor_is_within_tolerance(
-            anchor,
-            observed_pos_mm,
-            observed_rot_deg,
+        within_tolerance, pos_error_mm, rot_error_deg = (
+            self._anchor_is_within_tolerance(
+                anchor,
+                observed_pos_mm,
+                observed_rot_deg,
+            )
         )
 
         current_contacts = self._current_contact_names()
@@ -326,13 +331,12 @@ class PayloadTrajectoryMonitor:
             current_contacts, current_time_s
         )
 
-        goal_zone_required = (
-            anchor_index == len(self.payload_definition.anchors) - 1
-            and (
-                anchor.goal_zone_contact
-                or anchor.goal_zone_entry
-                or self.payload_definition.terminal_event is not None
-            )
+        goal_zone_required = anchor_index == len(
+            self.payload_definition.anchors
+        ) - 1 and (
+            anchor.goal_zone_contact
+            or anchor.goal_zone_entry
+            or self.payload_definition.terminal_event is not None
         )
         goal_zone_proven = not goal_zone_required
         if goal_zone_required:
@@ -372,7 +376,10 @@ class PayloadTrajectoryMonitor:
                 payload_trajectory_monitor=self._last_state,
             )
 
-        if not within_tolerance and miss_count >= self._configured_consecutive_miss_count:
+        if (
+            not within_tolerance
+            and miss_count >= self._configured_consecutive_miss_count
+        ):
             detail = (
                 "payload trajectory anchor deviation exceeded consecutive miss "
                 f"threshold at anchor index {anchor_index}"

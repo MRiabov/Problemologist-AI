@@ -1,37 +1,19 @@
 objectives:
   goal_zone:
-    min: [210.0, -70.0, 25.0]
-    max: [320.0, 70.0, 120.0]
-  forbid_zones:
-    - name: floor_gap
-      min: [-70.0, -150.0, -5.0]
-      max: [90.0, 150.0, 45.0]
+    min: [210.0, -55.0, 20.0]
+    max: [310.0, 55.0, 110.0]
+  forbid_zones: []
   build_zone:
-    min: [-340.0, -180.0, 0.0]
-    max: [360.0, 180.0, 260.0]
+    min: [-320.0, -180.0, 0.0]
+    max: [340.0, 180.0, 220.0]
   fluid_objectives: []
   stress_objectives: []
 benchmark_parts:
-  - part_id: left_start_deck
-    label: left_start_deck
+  - part_id: environment_fixture
+    label: environment_fixture
     metadata:
       fixed: true
       material_id: aluminum_6061
-  - part_id: right_goal_deck
-    label: right_goal_deck
-    metadata:
-      fixed: true
-      material_id: aluminum_6061
-  - part_id: bridge_reference_table
-    label: bridge_reference_table
-    metadata:
-      fixed: true
-      material_id: aluminum_6061
-  - part_id: gap_floor_guard
-    label: gap_floor_guard
-    metadata:
-      fixed: true
-      material_id: hdpe
 
 physics:
   backend: GENESIS
@@ -39,21 +21,20 @@ physics:
   compute_target: auto
 fluids: []
 simulation_bounds:
-  min: [-380.0, -220.0, -20.0]
-  max: [420.0, 220.0, 320.0]
+  min: [-380.0, -220.0, -10.0]
+  max: [400.0, 220.0, 280.0]
 moved_object:
-  label: transfer_cube
-  shape: cube
+  label: projectile_ball
+  shape: sphere
   material_id: abs
-  static_randomization: {}
+  static_randomization:
+    radius: [22.0, 24.0]
   start_position: [-250.0, 0.0, 70.0]
-  runtime_jitter: [8.0, 8.0, 5.0]
+  runtime_jitter: [10.0, 8.0, 4.0]
 constraints:
-  estimated_solution_cost_usd: 57.5
-  estimated_solution_weight_g: 451.0
-  max_unit_cost: 120.0
-  max_weight_g: 2200.0
+  max_unit_cost: 54.0
+  max_weight_g: 900.0
 randomization:
-  static_variation_id: engineer_coder_gap_bridge_v2
+  static_variation_id: engineer_coder_no_drill_v1
   runtime_jitter_enabled: true
 electronics_requirements: null

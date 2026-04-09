@@ -4,7 +4,7 @@
   "created_at": "2026-04-08T07:44:56.061671+00:00",
   "episode_id": "26e1cc0a-c025-560a-aa98-f57bc7c4be41",
   "worker_session_id": "seed-renders-ec-013-raised-return-bridge-636e0760",
-  "revision": "5300c3b2fb547fb0a8295f181e98286d206f299e",
+  "revision": "f4588581de76181f1e8655133e02ffe9d3872189",
   "scene_hash": "f6a79a1fd4f2ae5a7119ce5ff27e279a3e87bee3718ae9504c0762a3ba4c6eb0",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",

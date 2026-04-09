@@ -1,10 +1,10 @@
 {
   "artifact_hashes": {
-    "assembly_definition.yaml": "41627b60fa8163521c3fb6dd4a5e5b44b9af0f067fb1cbe6e8c60859969bcecf",
-    "plan.md": "80a7724637b71f774fa265e624f8e5c73febcde8d7db4e46e5c5d92733294db7",
+    "assembly_definition.yaml": "d94523d4accaa473501bcd8670eb2b67bcb7862192c792d834a99d97b151f78c",
+    "plan.md": "44f33ed1ec35072aee49b04442d7b95d5e9987e630976afe6941bcc35c46e0c5",
     "todo.md": "d4024a5cdf332159830e203d60cd63ff00908657b2984bb2115af732a6d9f68a",
-    "solution_plan_evidence_script.py": "320c6ebf2388663f2bd5052c0d598518343c2f39fffc1391ddfc970eecc6a10e",
-    "solution_plan_technical_drawing_script.py": "c8a2c52225ea30a1bc741df3b6476fef7b88c0f630a805262e72847228e5dda9"
+    "solution_plan_evidence_script.py": "6aadb5ffdc4c025fb8b6105f320e41263b3dfbeeee2c12c3fc25dd0b7afeb25f",
+    "solution_plan_technical_drawing_script.py": "66dc5d9765721e12e2d85d6b5671d06e07ffd9d80e59cc28fb17e4d643570714"
   },
   "planner_node_type": "engineer_planner",
   "reviewer_stage": "engineer_plan_reviewer",

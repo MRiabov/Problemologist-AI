@@ -4,9 +4,9 @@
   "session_id": "seed-bpr-001-drawing-full",
   "planner_node_type": "benchmark_planner",
   "artifact_hashes": {
-    "benchmark_assembly_definition.yaml": "305068c5ddaafaee77b315308354d8d52d37772cb0e24cd26e47e4c848c5ddbf",
+    "benchmark_assembly_definition.yaml": "83ab0016662ad91606d9236f7c2ab3d906b2c338a4ca93bc2a0b6c044c412238",
     "benchmark_definition.yaml": "d379251006d8f594dd9fac41781cdbb4b7d8d2b51d508b6419ac1dd5c4c6eb2f",
-    "plan.md": "06185e5dc5ad99eaabfcd2bae9778a320ac82eceec713fd6cd420cc3276bdb66",
+    "plan.md": "ac1c7a114259c147d5fbabcdc1bd6a6a53f9b5620ce889cc3a99c531b1903592",
     "todo.md": "3a50508b154f0193f3d1ed8a311517c284c9110737b2b33eff4f51aa69de9b64"
   }
 }

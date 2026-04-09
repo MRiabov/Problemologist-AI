@@ -10,54 +10,41 @@ def _build_part(
     width: float,
     height: float,
     x: float,
+    y: float,
+    z: float,
     material_id: str,
-    fixed: bool = True,
 ):
     part = Box(length, width, height, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    part = part.moved(Location((x, y, z)))
     part.label = label
-    part.metadata = PartMetadata(material_id=material_id, fixed=fixed)
-    return part.moved(Location((x, 0.0, 0.0)))
+    part.metadata = PartMetadata(material_id=material_id, fixed=True)
+    return part
 
 
 def build():
-    TechnicalDrawing(title="Timed gate benchmark drafting")
+    TechnicalDrawing(title="No-drill benchmark environment")
     children = [
         _build_part(
-            label="entry_ramp",
-            length=180.0,
-            width=120.0,
-            height=50.0,
-            x=-170.0,
+            label="benchmark_environment",
+            length=600.0,
+            width=300.0,
+            height=2.0,
+            x=0.0,
+            y=0.0,
+            z=11.0,
             material_id="aluminum_6061",
         ),
         _build_part(
-            label="gate_housing",
-            length=120.0,
-            width=140.0,
-            height=150.0,
-            x=-10.0,
+            label="environment_fixture",
+            length=600.0,
+            width=300.0,
+            height=10.0,
+            x=0.0,
+            y=0.0,
+            z=0.0,
             material_id="aluminum_6061",
-        ),
-        _build_part(
-            label="gate_pivot_arm",
-            length=18.0,
-            width=120.0,
-            height=90.0,
-            x=180.0,
-            material_id="steel_cold_rolled",
-            fixed=False,
-        ),
-        _build_part(
-            label="exit_tray",
-            length=160.0,
-            width=110.0,
-            height=30.0,
-            x=320.0,
-            material_id="hdpe",
         ),
     ]
-
-    assembly = Compound(children=children)
-    assembly.label = "benchmark_plan_technical_drawing"
+    assembly = Compound(label="benchmark_environment", children=children)
     assembly.metadata = CompoundMetadata()
     return assembly

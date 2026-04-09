@@ -4,105 +4,158 @@ units:
   volume: "mm3"
   mass: "g"
   currency: "USD"
-
 constraints:
-  # Copy benchmark caps from benchmark_definition.yaml, then set tighter planner targets.
-  benchmark_max_unit_cost_usd:
-  benchmark_max_weight_g:
-  planner_target_max_unit_cost_usd:
-  planner_target_max_weight_g:
-
+  benchmark_max_unit_cost_usd: 120.0
+  benchmark_max_weight_g: 2200.0
+  planner_target_max_unit_cost_usd: 100.0
+  planner_target_max_weight_g: 1800.0
 manufactured_parts:
-  # Add one item per manufactured part.
-  # Required fields:
-  # - part_name
-  # - part_id
-  # - manufacturing_method
-  # - material_id
-  # - quantity
-  # - part_volume_mm3
-  # - stock_bbox_mm: {x, y, z}
-  # - stock_volume_mm3
-  # - removed_volume_mm3
-  # - estimated_unit_cost_usd
-  # Do NOT replace these with shorthand keys like:
-  # - name
-  # - method
-  # - material
-  # - parameters
-  # Example:
-  # - part_name: bridge_deck
-  #   part_id: bridge_deck
-  #   manufacturing_method: CNC
-  #   material_id: aluminum_6061
-  #   quantity: 1
-  #   part_volume_mm3: 500000.0
-  #   stock_bbox_mm: {x: 500.0, y: 100.0, z: 10.0}
-  #   stock_volume_mm3: 500000.0
-  #   removed_volume_mm3: 0.0
-  #   estimated_unit_cost_usd: 45.0
-
-cots_parts:
-  # Add one item per COTS part.
-  # Required fields:
-  # - part_id
-  # - manufacturer
-  # - unit_cost_usd
-  # - weight_g
-  # - quantity
-  # - source
-  # - catalog_version
-  # - bd_warehouse_commit
-  # - catalog_snapshot_id
-  # - generated_at
-  # Example:
-  # - part_id: M3_BOLT
-  #   manufacturer: Generic
-  #   unit_cost_usd: 0.5
-  #   weight_g: 1.2
-  #   quantity: 8
-  #   source: catalog
-  #   catalog_version: "1.0.0"
-  #   bd_warehouse_commit: "unknown"
-  #   catalog_snapshot_id: "<catalog snapshot hash>"
-  #   generated_at: "unknown"
-
-environment_drill_operations:
-  # Optional.
-  # Declare benchmark-owned fixture drilling only when the benchmark attachment
-  # policy allows it.
-  # Example:
-  # - target_part_id: environment_fixture
-  #   hole_id: mount_left
-  #   diameter_mm: 5.0
-  #   depth_mm: 10.0
-  #   quantity: 1
-  #   notes: Fastener clearance hole into permitted fixture
-
+- part_name: ramp_base
+  part_id: ramp_base
+  manufacturing_method: CNC
+  material_id: aluminum_6061
+  quantity: 1
+  part_volume_mm3: 180000.0
+  stock_bbox_mm:
+    x: 120.0
+    y: 120.0
+    z: 10.0
+  stock_volume_mm3: 144000.0
+  removed_volume_mm3: 0.0
+  estimated_unit_cost_usd: 20.0
+- part_name: ramp_surface
+  part_id: ramp_surface
+  manufacturing_method: CNC
+  material_id: hdpe
+  quantity: 1
+  part_volume_mm3: 50000.0
+  stock_bbox_mm:
+    x: 300.0
+    y: 100.0
+    z: 8.0
+  stock_volume_mm3: 240000.0
+  removed_volume_mm3: 190000.0
+  estimated_unit_cost_usd: 9.5
+- part_name: left_wall
+  part_id: left_wall
+  manufacturing_method: CNC
+  material_id: hdpe
+  quantity: 1
+  part_volume_mm3: 30000.0
+  stock_bbox_mm:
+    x: 300.0
+    y: 16.0
+    z: 32.0
+  stock_volume_mm3: 153600.0
+  removed_volume_mm3: 123600.0
+  estimated_unit_cost_usd: 5.5
+- part_name: right_wall
+  part_id: right_wall
+  manufacturing_method: CNC
+  material_id: hdpe
+  quantity: 1
+  part_volume_mm3: 30000.0
+  stock_bbox_mm:
+    x: 300.0
+    y: 16.0
+    z: 32.0
+  stock_volume_mm3: 153600.0
+  removed_volume_mm3: 123600.0
+  estimated_unit_cost_usd: 5.5
+- part_name: capture_lip
+  part_id: capture_lip
+  manufacturing_method: CNC
+  material_id: hdpe
+  quantity: 1
+  part_volume_mm3: 5000.0
+  stock_bbox_mm:
+    x: 30.0
+    y: 100.0
+    z: 10.0
+  stock_volume_mm3: 30000.0
+  removed_volume_mm3: 25000.0
+  estimated_unit_cost_usd: 2.5
+- part_name: goal_funnel
+  part_id: goal_funnel
+  manufacturing_method: CNC
+  material_id: hdpe
+  quantity: 1
+  part_volume_mm3: 25000.0
+  stock_bbox_mm:
+    x: 80.0
+    y: 90.0
+    z: 24.0
+  stock_volume_mm3: 172800.0
+  removed_volume_mm3: 147800.0
+  estimated_unit_cost_usd: 7.0
+cots_parts: []
+environment_drill_operations: []
 final_assembly:
-  # Add PartConfig or SubassemblyEstimate items.
-  # Example PartConfig shape:
-  # - name: hoist_frame
-  #   config:
-  #     dofs: []
-  # Example SubassemblyEstimate shape:
-  # - subassembly_id: lift_module
-  #   parts:
-  #     - name: spool
-  #       config:
-  #         dofs: ["rotation_z"]
-  #   joints:
-  #     - joint_id: spool_axle
-  #       parts: ["spool", "frame"]
-  #       type: revolute
-  # Do NOT use a list of bare strings here.
-  # Use only canonical manufacturing enum values elsewhere in this file: CNC, 3DP, IM.
-
+- subassembly_id: lower_bin_ramp
+  parts:
+  - name: ramp_base
+    config:
+      dofs: []
+  - name: ramp_surface
+    config:
+      dofs: []
+  - name: left_wall
+    config:
+      dofs: []
+  - name: right_wall
+    config:
+      dofs: []
+  - name: capture_lip
+    config:
+      dofs: []
+  - name: goal_funnel
+    config:
+      dofs: []
 totals:
-  # `estimated_unit_cost_usd` must include manufactured parts, COTS parts,
-  # and any benchmark drilling cost from environment_drill_operations.
-  estimated_unit_cost_usd:
-  estimated_weight_g:
-  estimate_confidence:
-
+  estimated_unit_cost_usd: 50.0
+  estimated_weight_g: 619.0
+  estimate_confidence: high
+drafting:
+  sheet_id: "sheet_1"
+  title: "Lower bin ramp assembly technical drawing"
+  units: "mm"
+  projection_standard: "orthographic"
+  views:
+    - view_id: "ramp_front"
+      target: "lower_bin_ramp"
+      projection: "front"
+      scale: 1.0
+      datums: ["A", "B", "C"]
+      dimensions:
+        - dimension_id: "d_base_length"
+          kind: "linear"
+          target: "ramp_base"
+          value: 120.0
+        - dimension_id: "d_ramp_angle"
+          kind: "angular"
+          target: "ramp_surface"
+          value: 30.0
+        - dimension_id: "d_wall_height"
+          kind: "linear"
+          target: "left_wall"
+          value: 32.0
+      callouts:
+        - callout_id: "1"
+          label: "Aluminum 6061 base plate, 120x120x10 mm"
+          target: "ramp_base"
+        - callout_id: "2"
+          label: "HDPE sloped ramp surface"
+          target: "ramp_surface"
+        - callout_id: "3"
+          label: "Left retaining wall"
+          target: "left_wall"
+        - callout_id: "4"
+          label: "Right retaining wall"
+          target: "right_wall"
+        - callout_id: "5"
+          label: "HDPE capture lip at ramp entry"
+          target: "capture_lip"
+        - callout_id: "6"
+          label: "HDPE goal funnel aligned to goal zone"
+          target: "goal_funnel"
 dfm_suggestions: []

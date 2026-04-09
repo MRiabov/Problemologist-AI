@@ -15,14 +15,14 @@ manufactured_parts:
     manufacturing_method: CNC
     material_id: aluminum_6061
     quantity: 1
-    part_volume_mm3: 820000.0
+    part_volume_mm3: 720000.0
     stock_bbox_mm:
-      x: 560.0
+      x: 200.0
       y: 180.0
       z: 20.0
-    stock_volume_mm3: 2016000.0
-    removed_volume_mm3: 1196000.0
-    estimated_unit_cost_usd: 19.0
+    stock_volume_mm3: 720000.0
+    removed_volume_mm3: 0.0
+    estimated_unit_cost_usd: 15.0
   - part_name: support_tower
     part_id: support_tower
     manufacturing_method: CNC
@@ -86,9 +86,29 @@ final_assembly:
         mode: ON_OFF
         speed: 1.0
 totals:
-  estimated_unit_cost_usd: 73.0
+  estimated_unit_cost_usd: 69.0
   estimated_weight_g: 1275.0
   estimate_confidence: high
 dfm_suggestions:
   - Keep the lift carriage as one plate with simple guide features to avoid extra benchmark-side joints.
   - Reuse the same tower faces as the linear-guide datum to keep the benchmark local motion deterministic.
+drafting:
+  sheet_id: sheet_bench_1
+  title: Raised shelf benchmark technical drawing
+  units: mm
+  projection_standard: orthographic
+  views:
+    - view_id: env_front
+      target: floor_plate
+      projection: front
+      scale: 1.0
+      datums: [A, B]
+      dimensions:
+        - dimension_id: d_floor_width
+          kind: linear
+          target: floor_plate
+          value: 560.0
+      callouts:
+        - callout_id: "1"
+          label: Floor plate
+          target: floor_plate

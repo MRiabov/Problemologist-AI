@@ -82,8 +82,8 @@ The inventory below is the pre-cutover snapshot retained for traceability.
 ### Documentation
 
 - [x] Update `specs/architecture/agents/agent-artifacts/payload_trajectory_definition_yaml_acceptance_criteria.md` so the file-level contract explicitly includes runtime fail-fast behavior.
- - [x] Update `specs/architecture/agents/tools.md` so the engineering coder gate clearly distinguishes static trajectory validation from runtime monitor enforcement.
- - [x] Update the relevant engineer role skills so planner and coder guidance do not imply that static validation alone proves runtime compliance.
+- [x] Update `specs/architecture/agents/tools.md` so the engineering coder gate clearly distinguishes static trajectory validation from runtime monitor enforcement.
+- [x] Update the relevant engineer role skills so planner and coder guidance do not imply that static validation alone proves runtime compliance.
 
 ### Tests and fixtures
 

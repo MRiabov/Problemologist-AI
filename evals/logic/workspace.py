@@ -382,7 +382,14 @@ class InMemorySeedWorkspaceClient:
     async def exists(
         self, path: str, *, bypass_agent_permissions: bool = False
     ) -> bool:
-        return self._normalize(path) in self._files
+        key = self._normalize(path)
+        if key in self._files:
+            return True
+        # Check if any file is under this directory
+        prefix = key.rstrip("/") + "/" if key else ""
+        if prefix:
+            return any(f.startswith(prefix) for f in self._files)
+        return False
 
     async def read_file(
         self, path: str, *, bypass_agent_permissions: bool = False
@@ -425,6 +432,48 @@ class InMemorySeedWorkspaceClient:
     ) -> bool:
         self._files[self._normalize(path)] = content
         return True
+
+    async def list_files(self, path: str) -> list:
+        """List files under a directory path, returning FileEntry-like objects."""
+        from types import SimpleNamespace
+
+        prefix = self._normalize(path)
+        if prefix:
+            prefix = prefix.rstrip("/") + "/"
+        results = []
+        seen_dirs: set[str] = set()
+        for key in self._files:
+            if prefix and not key.startswith(prefix):
+                continue
+            remainder = key[len(prefix) :] if prefix else key
+            if "/" in remainder:
+                dir_name = remainder.split("/", 1)[0]
+                if dir_name not in seen_dirs:
+                    seen_dirs.add(dir_name)
+                    results.append(
+                        SimpleNamespace(
+                            path=prefix + dir_name,
+                            name=dir_name,
+                            is_dir=True,
+                        )
+                    )
+            else:
+                results.append(
+                    SimpleNamespace(
+                        path=key,
+                        name=Path(key).name,
+                        is_dir=False,
+                    )
+                )
+        return results
+
+    async def read_files_binary(self, paths: list[str]) -> dict[str, bytes | None]:
+        """Read multiple files as binary content."""
+        result = {}
+        for path in paths:
+            key = self._normalize(path)
+            result[path] = self._files.get(key)
+        return result
 
     async def aclose(self) -> None:
         return None

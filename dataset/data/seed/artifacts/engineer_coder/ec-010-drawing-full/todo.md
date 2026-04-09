@@ -1,7 +1,11 @@
-# TODO
+# Implementation Checklist
 
-- [x] Planner handoff approved
-- [ ] Implement `support_column` and `catch_plate` in `solution_script.py`
-- [ ] Implement the deflection walls and curved turn lip away from `direct_drop_dead_zone`
-- [ ] Implement the lower-bin funnel overlapping the seeded goal zone
-- [ ] Record any intercept-height or lip-angle tuning in `journal.md`
+- [ ] Read benchmark handoff package (`benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`)
+- [ ] Read reviewed planner artifacts (`plan.md`, `assembly_definition.yaml`)
+- [ ] Read drafting evidence (`solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`)
+- [ ] Implement the freestanding no-drill transfer in `solution_script.py`
+- [ ] Verify inventory matches the approved planner multiset (labels, quantities, COTS identities)
+- [ ] Run `validate_and_price` and confirm pass
+- [ ] Run `simulate` and confirm goal-zone success
+- [ ] Call `submit_for_review` with latest revision artifacts
+- [ ] Update `todo.md` and `journal.md` during execution

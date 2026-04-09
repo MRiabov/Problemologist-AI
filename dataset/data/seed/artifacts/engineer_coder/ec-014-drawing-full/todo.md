@@ -1,8 +1,11 @@
-# TODO
+# Implementation Checklist
 
-- [x] Preserve the reviewed diverter-and-latch strategy and the moving guard-arm clearance.
-- [x] Keep the planner target budget below the benchmark cap.
-- [ ] Implement the diverter gate, latch leaf, and support structure in `solution_script.py`.
-- [ ] Add the motorized electronics, relay, switch, and wiring corridor to `assembly_definition.yaml`.
-- [ ] Keep the guard-arm sweep zone and the cable path separated.
-- [ ] Validate the handoff package and record any coder follow-up notes in the journal.
+- [ ] Read benchmark handoff package (`benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_script.py`)
+- [ ] Read reviewed planner artifacts (`plan.md`, `assembly_definition.yaml`)
+- [ ] Read drafting evidence (`solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`)
+- [ ] Implement the freestanding no-drill transfer in `solution_script.py`
+- [ ] Verify inventory matches the approved planner multiset (labels, quantities, COTS identities)
+- [ ] Run `validate_and_price` and confirm pass
+- [ ] Run `simulate` and confirm goal-zone success
+- [ ] Call `submit_for_review` with latest revision artifacts
+- [ ] Update `todo.md` and `journal.md` during execution

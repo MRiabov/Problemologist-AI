@@ -46,9 +46,9 @@ def build() -> Compound:
     fp.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(fp)
 
-    # support_tower x1
-    st = Box(*SUPPORT_TOWER_SIZE, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-    st = st.move(Location(SUPPORT_TOWER_POS))
+    # support_tower x1 (sits on floor plate, base at Z=30)
+    st = Box(*SUPPORT_TOWER_SIZE, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    st = st.move(Location((230.0, 0.0, 30.0)))
     st.label = "support_tower"
     st.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(st)
@@ -68,10 +68,11 @@ def build() -> Compound:
     children.append(lc)
 
     # drive_motor x1 (COTS ServoMotor_DS3218, represented as proxy box)
+    # Place on top of floor plate (floor plate top is at Z=30)
     dm = Box(*DRIVE_MOTOR_SIZE, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    dm = dm.move(Location(DRIVE_MOTOR_POS))
+    dm = dm.move(Location((-130.0, 0.0, 30.0)))
     dm.label = "drive_motor"
-    dm.metadata = PartMetadata(cots_id="ServoMotor_DS3218", fixed=True)
+    dm.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(dm)
 
     asm = Compound(children=children)

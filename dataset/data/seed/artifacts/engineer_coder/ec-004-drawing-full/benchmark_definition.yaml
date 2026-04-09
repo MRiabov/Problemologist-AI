@@ -1,14 +1,11 @@
 objectives:
   goal_zone:
-    min: [320.0, -55.0, 220.0]
-    max: [430.0, 55.0, 300.0]
-  forbid_zones:
-    - name: shelf_support_clearance
-      min: [180.0, -95.0, 0.0]
-      max: [280.0, 95.0, 210.0]
+    min: [210.0, -55.0, 20.0]
+    max: [310.0, 55.0, 110.0]
+  forbid_zones: []
   build_zone:
-    min: [-260.0, -180.0, 0.0]
-    max: [470.0, 180.0, 340.0]
+    min: [-320.0, -180.0, 0.0]
+    max: [340.0, 180.0, 220.0]
   fluid_objectives: []
   stress_objectives: []
 benchmark_parts:
@@ -24,33 +21,20 @@ physics:
   compute_target: auto
 fluids: []
 simulation_bounds:
-  min: [-320.0, -220.0, -10.0]
-  max: [520.0, 220.0, 380.0]
+  min: [-380.0, -220.0, -10.0]
+  max: [400.0, 220.0, 280.0]
 moved_object:
   label: projectile_ball
   shape: sphere
   material_id: abs
   static_randomization:
-    radius: [44.0, 46.0]
-  start_position: [-200.0, 0.0, 60.0]
-  runtime_jitter: [10.0, 8.0, 6.0]
+    radius: [22.0, 24.0]
+  start_position: [-250.0, 0.0, 70.0]
+  runtime_jitter: [10.0, 8.0, 4.0]
 constraints:
-  estimated_solution_cost_usd: 58.0
-  estimated_solution_weight_g: 1033.3333333333333
-  max_unit_cost: 87.0
-  max_weight_g: 1550.0
+  max_unit_cost: 54.0
+  max_weight_g: 900.0
 randomization:
-  static_variation_id: engineer_coder_raised_shelf_v1
+  static_variation_id: engineer_coder_no_drill_v1
   runtime_jitter_enabled: true
-electronics_requirements:
-  power_supply_available:
-    type: mains_ac_rectified
-    voltage_dc: 24.0
-    max_current_a: 10.0
-  wiring_constraints:
-    max_total_wire_length_mm: 850.0
-    restricted_zones:
-      - name: shelf_support_clearance
-        min: [180.0, -95.0, 0.0]
-        max: [280.0, 95.0, 210.0]
-  circuit_validation_required: true
+electronics_requirements: null

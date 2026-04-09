@@ -1,100 +1,100 @@
 {
   "version": "1.0",
-  "bundle_id": "bb15ea47-410c-5344-a614-94db4a91c5d7",
-  "created_at": "2026-04-08T07:42:58.650463+00:00",
-  "episode_id": "4a516ea6-4f9f-52f3-ad30-d156ff969156",
-  "worker_session_id": "ec-010-drawing-full",
-  "revision": "5300c3b2fb547fb0a8295f181e98286d206f299e",
-  "scene_hash": "dd43d2791cc5152405d5ade60937dda09e59a7645ca059dac4bcc5c54dd236e1",
+  "bundle_id": "84dfbc4f-914e-5c80-b5ba-c43d0f93d4ce",
+  "created_at": "2026-04-08T07:39:26.902237+00:00",
+  "episode_id": "7c0457c9-99ae-50f0-9d6b-11f8023757b6",
+  "worker_session_id": "ec-006-drawing-full",
+  "revision": "f4588581de76181f1e8655133e02ffe9d3872189",
+  "scene_hash": "f69e4e0adfd47534df7749ddf1b73ff652da6796656f36b65a8bb8f293033c6a",
   "bundle_path": "renders/engineer_plan_renders",
   "environment_version": null,
   "drafting": true,
-  "source_script_sha256": "1433925a16fe03e179dd4b4459ce1bb958fba2ccefffe44a1d23f0ab9e12a567",
+  "source_script_sha256": "84eae2f74de5486d1dfcbaea96c293198851a1a547e88f15162df20aeee4027e",
   "preview_evidence_paths": [
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a0.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a0_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a0_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a135.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a135_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a135_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a180.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a180_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a180_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a225.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a225_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a225_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a270.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a270_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a270_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a315.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a315_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a315_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a45.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a45_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a45_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a90.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a90_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a90_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a0.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a0_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a0_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a135.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a135_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a135_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a180.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a180_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a180_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a225.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a225_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a225_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a270.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a270_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a270_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a315.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a315_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a315_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a45.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a45_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a45_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a90.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a90_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a90_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a0.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a0_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a0_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a135.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a135_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a135_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a180.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a180_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a180_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a225.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a225_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a225_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a270.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a270_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a270_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a315.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a315_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a315_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a45.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a45_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a45_segmentation.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a90.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a90_depth.png",
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a90_segmentation.png"
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a0.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a0_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a0_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a135.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a135_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a135_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a180.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a180_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a180_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a225.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a225_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a225_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a270.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a270_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a270_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a315.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a315_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a315_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a45.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a45_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a45_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a90.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a90_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a90_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a0.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a0_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a0_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a135.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a135_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a135_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a180.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a180_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a180_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a225.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a225_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a225_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a270.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a270_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a270_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a315.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a315_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a315_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a45.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a45_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a45_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a90.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a90_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a90_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a0.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a0_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a0_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a135.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a135_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a135_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a180.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a180_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a180_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a225.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a225_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a225_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a270.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a270_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a270_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a315.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a315_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a315_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a45.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a45_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a45_segmentation.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a90.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a90_depth.png",
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a90_segmentation.png"
   ],
   "artifacts": {
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a0.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a0.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e15_a0",
+      "group_key": "freestanding_transfer_render_e15_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a0.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a0_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a0_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a0.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a0_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -103,16 +103,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a0_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a0_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e15_a0",
+      "group_key": "freestanding_transfer_render_e15_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a0.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a0_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a0_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a0.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a0_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -121,16 +121,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a0_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a0_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e15_a0",
+      "group_key": "freestanding_transfer_render_e15_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a0.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a0_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a0_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a0.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a0_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -139,16 +139,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a45.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a45.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e15_a45",
+      "group_key": "freestanding_transfer_render_e15_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a45.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a45_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a45_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a45.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a45_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -157,16 +157,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a45_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a45_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e15_a45",
+      "group_key": "freestanding_transfer_render_e15_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a45.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a45_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a45_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a45.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a45_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -175,16 +175,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a45_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a45_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e15_a45",
+      "group_key": "freestanding_transfer_render_e15_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a45.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a45_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a45_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a45.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a45_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -193,16 +193,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a90.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a90.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e15_a90",
+      "group_key": "freestanding_transfer_render_e15_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a90.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a90_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a90_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a90.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a90_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -211,16 +211,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a90_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a90_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e15_a90",
+      "group_key": "freestanding_transfer_render_e15_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a90.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a90_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a90_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a90.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a90_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -229,16 +229,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a90_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a90_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e15_a90",
+      "group_key": "freestanding_transfer_render_e15_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a90.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a90_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a90_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a90.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a90_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -247,16 +247,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a135.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a135.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e15_a135",
+      "group_key": "freestanding_transfer_render_e15_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a135.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a135_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a135_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a135.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a135_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -265,16 +265,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a135_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a135_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e15_a135",
+      "group_key": "freestanding_transfer_render_e15_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a135.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a135_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a135_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a135.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a135_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -283,16 +283,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a135_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a135_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e15_a135",
+      "group_key": "freestanding_transfer_render_e15_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a135.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a135_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a135_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a135.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a135_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -301,16 +301,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a180.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a180.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e15_a180",
+      "group_key": "freestanding_transfer_render_e15_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a180.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a180_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a180_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a180.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a180_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -319,16 +319,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a180_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a180_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e15_a180",
+      "group_key": "freestanding_transfer_render_e15_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a180.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a180_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a180_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a180.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a180_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -337,16 +337,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a180_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a180_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e15_a180",
+      "group_key": "freestanding_transfer_render_e15_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a180.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a180_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a180_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a180.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a180_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -355,16 +355,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a225.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a225.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e15_a225",
+      "group_key": "freestanding_transfer_render_e15_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a225.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a225_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a225_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a225.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a225_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -373,16 +373,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a225_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a225_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e15_a225",
+      "group_key": "freestanding_transfer_render_e15_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a225.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a225_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a225_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a225.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a225_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -391,16 +391,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a225_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a225_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e15_a225",
+      "group_key": "freestanding_transfer_render_e15_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a225.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a225_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a225_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a225.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a225_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -409,16 +409,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a270.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a270.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e15_a270",
+      "group_key": "freestanding_transfer_render_e15_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a270.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a270_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a270_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a270.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a270_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -427,16 +427,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a270_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a270_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e15_a270",
+      "group_key": "freestanding_transfer_render_e15_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a270.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a270_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a270_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a270.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a270_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -445,16 +445,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a270_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a270_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e15_a270",
+      "group_key": "freestanding_transfer_render_e15_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a270.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a270_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a270_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a270.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a270_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -463,16 +463,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a315.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a315.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e15_a315",
+      "group_key": "freestanding_transfer_render_e15_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a315.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a315_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a315_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a315.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a315_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -481,16 +481,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a315_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a315_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e15_a315",
+      "group_key": "freestanding_transfer_render_e15_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a315.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a315_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a315_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a315.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a315_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -499,16 +499,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a315_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e15_a315_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e15_a315",
+      "group_key": "freestanding_transfer_render_e15_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a315.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a315_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e15_a315_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a315.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a315_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e15_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -517,16 +517,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a0.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a0.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e45_a0",
+      "group_key": "freestanding_transfer_render_e45_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a0.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a0_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a0_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a0.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a0_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -535,16 +535,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a0_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a0_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e45_a0",
+      "group_key": "freestanding_transfer_render_e45_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a0.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a0_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a0_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a0.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a0_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -553,16 +553,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a0_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a0_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e45_a0",
+      "group_key": "freestanding_transfer_render_e45_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a0.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a0_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a0_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a0.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a0_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -571,16 +571,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a45.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a45.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e45_a45",
+      "group_key": "freestanding_transfer_render_e45_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a45.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a45_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a45_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a45.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a45_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -589,16 +589,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a45_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a45_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e45_a45",
+      "group_key": "freestanding_transfer_render_e45_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a45.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a45_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a45_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a45.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a45_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -607,16 +607,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a45_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a45_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e45_a45",
+      "group_key": "freestanding_transfer_render_e45_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a45.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a45_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a45_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a45.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a45_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -625,16 +625,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a90.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a90.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e45_a90",
+      "group_key": "freestanding_transfer_render_e45_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a90.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a90_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a90_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a90.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a90_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -643,16 +643,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a90_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a90_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e45_a90",
+      "group_key": "freestanding_transfer_render_e45_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a90.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a90_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a90_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a90.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a90_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -661,16 +661,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a90_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a90_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e45_a90",
+      "group_key": "freestanding_transfer_render_e45_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a90.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a90_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a90_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a90.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a90_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -679,16 +679,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a135.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a135.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e45_a135",
+      "group_key": "freestanding_transfer_render_e45_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a135.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a135_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a135_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a135.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a135_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -697,16 +697,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a135_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a135_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e45_a135",
+      "group_key": "freestanding_transfer_render_e45_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a135.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a135_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a135_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a135.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a135_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -715,16 +715,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a135_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a135_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e45_a135",
+      "group_key": "freestanding_transfer_render_e45_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a135.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a135_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a135_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a135.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a135_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -733,16 +733,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a180.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a180.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e45_a180",
+      "group_key": "freestanding_transfer_render_e45_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a180.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a180_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a180_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a180.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a180_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -751,16 +751,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a180_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a180_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e45_a180",
+      "group_key": "freestanding_transfer_render_e45_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a180.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a180_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a180_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a180.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a180_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -769,16 +769,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a180_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a180_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e45_a180",
+      "group_key": "freestanding_transfer_render_e45_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a180.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a180_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a180_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a180.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a180_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -787,16 +787,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a225.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a225.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e45_a225",
+      "group_key": "freestanding_transfer_render_e45_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a225.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a225_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a225_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a225.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a225_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -805,16 +805,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a225_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a225_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e45_a225",
+      "group_key": "freestanding_transfer_render_e45_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a225.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a225_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a225_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a225.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a225_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -823,16 +823,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a225_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a225_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e45_a225",
+      "group_key": "freestanding_transfer_render_e45_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a225.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a225_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a225_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a225.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a225_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -841,16 +841,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a270.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a270.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e45_a270",
+      "group_key": "freestanding_transfer_render_e45_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a270.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a270_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a270_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a270.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a270_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -859,16 +859,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a270_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a270_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e45_a270",
+      "group_key": "freestanding_transfer_render_e45_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a270.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a270_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a270_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a270.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a270_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -877,16 +877,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a270_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a270_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e45_a270",
+      "group_key": "freestanding_transfer_render_e45_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a270.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a270_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a270_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a270.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a270_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -895,16 +895,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a315.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a315.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e45_a315",
+      "group_key": "freestanding_transfer_render_e45_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a315.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a315_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a315_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a315.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a315_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -913,16 +913,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a315_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a315_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e45_a315",
+      "group_key": "freestanding_transfer_render_e45_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a315.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a315_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a315_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a315.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a315_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -931,16 +931,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a315_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e45_a315_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e45_a315",
+      "group_key": "freestanding_transfer_render_e45_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a315.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a315_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e45_a315_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a315.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a315_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e45_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -949,16 +949,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a0.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a0.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e75_a0",
+      "group_key": "freestanding_transfer_render_e75_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a0.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a0_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a0_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a0.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a0_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -967,16 +967,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a0_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a0_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e75_a0",
+      "group_key": "freestanding_transfer_render_e75_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a0.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a0_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a0_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a0.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a0_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -985,16 +985,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a0_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a0_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e75_a0",
+      "group_key": "freestanding_transfer_render_e75_a0",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a0.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a0_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a0_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a0.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a0_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a0_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1003,16 +1003,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a45.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a45.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e75_a45",
+      "group_key": "freestanding_transfer_render_e75_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a45.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a45_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a45_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a45.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a45_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1021,16 +1021,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a45_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a45_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e75_a45",
+      "group_key": "freestanding_transfer_render_e75_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a45.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a45_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a45_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a45.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a45_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1039,16 +1039,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a45_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a45_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e75_a45",
+      "group_key": "freestanding_transfer_render_e75_a45",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a45.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a45_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a45_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a45.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a45_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a45_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1057,16 +1057,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a90.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a90.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e75_a90",
+      "group_key": "freestanding_transfer_render_e75_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a90.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a90_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a90_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a90.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a90_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1075,16 +1075,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a90_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a90_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e75_a90",
+      "group_key": "freestanding_transfer_render_e75_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a90.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a90_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a90_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a90.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a90_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1093,16 +1093,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a90_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a90_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e75_a90",
+      "group_key": "freestanding_transfer_render_e75_a90",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a90.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a90_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a90_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a90.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a90_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a90_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1111,16 +1111,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a135.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a135.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e75_a135",
+      "group_key": "freestanding_transfer_render_e75_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a135.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a135_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a135_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a135.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a135_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1129,16 +1129,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a135_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a135_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e75_a135",
+      "group_key": "freestanding_transfer_render_e75_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a135.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a135_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a135_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a135.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a135_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1147,16 +1147,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a135_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a135_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e75_a135",
+      "group_key": "freestanding_transfer_render_e75_a135",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a135.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a135_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a135_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a135.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a135_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a135_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1165,16 +1165,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a180.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a180.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e75_a180",
+      "group_key": "freestanding_transfer_render_e75_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a180.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a180_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a180_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a180.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a180_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1183,16 +1183,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a180_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a180_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e75_a180",
+      "group_key": "freestanding_transfer_render_e75_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a180.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a180_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a180_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a180.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a180_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1201,16 +1201,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a180_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a180_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e75_a180",
+      "group_key": "freestanding_transfer_render_e75_a180",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a180.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a180_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a180_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a180.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a180_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a180_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1219,16 +1219,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a225.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a225.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e75_a225",
+      "group_key": "freestanding_transfer_render_e75_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a225.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a225_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a225_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a225.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a225_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1237,16 +1237,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a225_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a225_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e75_a225",
+      "group_key": "freestanding_transfer_render_e75_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a225.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a225_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a225_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a225.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a225_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1255,16 +1255,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a225_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a225_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e75_a225",
+      "group_key": "freestanding_transfer_render_e75_a225",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a225.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a225_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a225_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a225.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a225_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a225_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1273,16 +1273,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a270.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a270.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e75_a270",
+      "group_key": "freestanding_transfer_render_e75_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a270.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a270_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a270_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a270.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a270_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1291,16 +1291,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a270_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a270_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e75_a270",
+      "group_key": "freestanding_transfer_render_e75_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a270.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a270_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a270_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a270.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a270_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1309,16 +1309,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a270_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a270_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e75_a270",
+      "group_key": "freestanding_transfer_render_e75_a270",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a270.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a270_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a270_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a270.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a270_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a270_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1327,16 +1327,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a315.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a315.png": {
       "modality": "rgb",
-      "group_key": "solution_plan_technical_drawing_render_e75_a315",
+      "group_key": "freestanding_transfer_render_e75_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a315.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a315_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a315_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a315.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a315_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1345,16 +1345,16 @@
       "depth_interpretation": null,
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a315_depth.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a315_depth.png": {
       "modality": "depth",
-      "group_key": "solution_plan_technical_drawing_render_e75_a315",
+      "group_key": "freestanding_transfer_render_e75_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a315.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a315_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a315_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a315.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a315_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },
@@ -1363,16 +1363,16 @@
       "depth_interpretation": "Camera-space depth in meters. False-color pixels are scaled from the build123d/VTK preview renderer's linear depth buffer; see depth_min_m and depth_max_m for the metric range.",
       "segmentation_legend": []
     },
-    "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a315_segmentation.png": {
+    "renders/engineer_plan_renders/freestanding_transfer_render_e75_a315_segmentation.png": {
       "modality": "segmentation",
-      "group_key": "solution_plan_technical_drawing_render_e75_a315",
+      "group_key": "freestanding_transfer_render_e75_a315",
       "view_index": null,
       "orbit_pitch": null,
       "orbit_yaw": null,
       "siblings": {
-        "rgb": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a315.png",
-        "depth": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a315_depth.png",
-        "segmentation": "renders/engineer_plan_renders/solution_plan_technical_drawing_render_e75_a315_segmentation.png",
+        "rgb": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a315.png",
+        "depth": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a315_depth.png",
+        "segmentation": "renders/engineer_plan_renders/freestanding_transfer_render_e75_a315_segmentation.png",
         "svg": null,
         "dxf": null
       },

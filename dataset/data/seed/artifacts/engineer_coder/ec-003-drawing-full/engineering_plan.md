@@ -2,263 +2,239 @@
 
 ## 1. Solution Overview
 
-Use a compact single `ServoMotor_DS3218`-driven metering wheel ahead of the benchmark `gate_housing` so the seeded `projectile_ball` is released only when the benchmark-owned `gate_pivot_arm` is in its open window. The benchmark fixtures - `entry_ramp`, `gate_housing`, `gate_pivot_arm`, and `exit_tray` - are read-only context, and the engineer-owned solution stays left of the `gate_swing_keepout` while reserving a clean wiring corridor for the motor and return wire.
+Use a completely freestanding twin-wall chute that receives the `projectile_ball` on the spawn side and carries it to the right goal zone without drilling, bolting into, or leaning on the `benchmark_environment`. Stability comes from a wide `freestanding_base` and low center of mass rather than external attachment to the `environment_fixture`.
 
-- `entry_ramp` conditions the ball before the gate timing window.
-- `gate_housing` and `gate_pivot_arm` define the only benchmark motion, a single `rotate_z` axis.
-- `exit_tray` receives the released ball after the gate opens.
-- `goal_zone` must be reached without touching `gate_swing_keepout`.
-- The engineer-owned stage is named `timed_metering_stage`.
-- The `timed_metering_stage` is the translating carriage: the benchmark definition provides the high-level gate objective context, `assembly_definition.yaml.motion_forecast` gives the planner-level coarse start-to-goal path, and `payload_trajectory_definition.yaml` refines it.
-- The only COTS motor in the plan is `ServoMotor_DS3218`.
-- Treat the benchmark definition context and the coarse `motion_forecast` in `assembly_definition.yaml` as the planner-visible trajectory, then narrow the same `timed_metering_stage` path in `payload_trajectory_definition.yaml`.
-- The numeric checks below use the exact catalog dimensions and material densities that back the assembly totals.
+The `freestanding_transfer` subassembly is a single passive routing path with no powered axes.
 
 ## 2. Parts List
 
 | Part | Dimensions (mm) | Material | Purpose |
 | -- | -- | -- | -- |
-| base_plate | 520 x 130 x 10 | aluminum_6061 | Freestanding mounting surface with a through-window over the gate swing keep-out |
-| settling_chute | 220 x 90 x 35 | hdpe | Settles the ball before it reaches the metering wheel |
-| metering_wheel_guard | 140 x 55 x 32 | hdpe | Houses the motorized escapement wheel while preserving the gate keep-out |
-| guide_rail | 150 x 18 x 24 | hdpe | Keeps the released ball on line toward the gate opening |
-| post_gate_channel | 220 x 70 x 30 | hdpe | Captures the ball after the gate and steers it into the goal zone |
-| goal_cup | 95 x 95 x 35 | hdpe | Final receiver that contains the ball once it exits the gate corridor |
-| drive_motor | catalog `ServoMotor_DS3218` motor | cots | Single motorized DOF for the metering wheel |
+| freestanding_base | 620 x 180 x 12 | aluminum_6061 | Wide low center-of-mass base keeping the transfer stable without attachment |
+| capture_funnel | 160 x 140 x 40 | hdpe | Capture pocket covering the seeded spawn jitter |
+| left_wall | 460 x 20 x 32 | hdpe | Left chute wall |
+| right_wall | 460 x 20 x 32 | hdpe | Right chute wall |
+| exit_tray | 140 x 110 x 35 | hdpe | Goal-side tray settling the ball in the target |
+| ballast_block | 180 x 80 x 18 | aluminum_6061 | Extra mass on the base to prevent tip-over |
 
-**Estimated Total Weight**: 298.95 g
-**Estimated Total Cost**: $69.00
+**Estimated Total Weight**: 504.85 g
+**Estimated Total Cost**: $42.75
 
 ## 3. Assembly Strategy
 
-1. Place the `base_plate` entirely within `build_zone` with its centerline at x = 0 and keep the gate swing keep-out open through the middle window.
-2. Mount `settling_chute` on the spawn side so the ball enters the metering wheel pocket with repeatable speed and orientation.
-3. Mount `metering_wheel_guard` and `drive_motor` on the left side of the gate and keep the wiring corridor outside the keep-out.
-4. Mount `guide_rail` and `post_gate_channel` downstream of the release point, then terminate the path in `goal_cup` whose interior overlaps `goal_zone`.
-5. Preserve the benchmark-owned `entry_ramp`, `gate_housing`, `gate_pivot_arm`, and `exit_tray` geometry as read-only context while checking the release path against the gate opening.
-6. Treat the benchmark definition as the high-level gate objective context, then treat `assembly_definition.yaml.motion_forecast` as the coarse build-safe start and goal-zone finish for the moving stage, and refine that same path in `payload_trajectory_definition.yaml` without changing the moving-part set.
-7. The drafting sheet callouts `1`-`7` track the base plate, settling chute, metering wheel guard, guide rail, post-gate channel, goal cup, and the left-side drive motor corridor, respectively.
+1. Keep `freestanding_base` centered in the build zone and mount `ballast_block` low on the base to stabilize the `freestanding_transfer` mechanism.
+2. Mount `capture_funnel`, `left_wall`, and `right_wall` on the base only, with no fasteners or contact into the `environment_fixture`.
+3. Terminate the transfer in `exit_tray` overlapping the seeded goal zone so the ball settles without rebounding out.
 
 ## 4. Assumption Register
 
-| ID | Assumption | Source | Used By |
-| -- | -- | -- | -- |
-| ASSUMP-001 | The `ServoMotor_DS3218` body proxy measures `40.0 x 20.0 x 40.5 mm` and is mounted at `(-92, -68, 35)` in the drafting companion. | `shared/cots/parts/motors.py`, `solution_plan_evidence_script.py` | CALC-002 |
-| ASSUMP-002 | Aluminum 6061 has density `2.7 g/cm^3` and HDPE has density `0.95 g/cm^3`. | `worker_heavy/workbenches/manufacturing_config.yaml` | CALC-004 |
-| ASSUMP-003 | The drafted `goal_cup` placement is the intended capture location at `(335, 30, 65)`, and the goal zone bounds in `benchmark_definition.yaml` are authoritative. | `solution_plan_evidence_script.py`, `benchmark_definition.yaml` | CALC-003 |
-| ASSUMP-004 | The benchmark-owned gate motion remains a single `rotate_z` axis on the pivot arm, and the engineer solution may rely on the open window but not on any added benchmark DOFs. | `benchmark_assembly_definition.yaml`, `benchmark_definition.yaml` | CALC-001, CALC-002 |
-| ASSUMP-005 | The benchmark definition provides the high-level gate objective context, the coarse `motion_forecast` in `assembly_definition.yaml` is the planner-visible trajectory contract, and `payload_trajectory_definition.yaml` narrows it without changing the moving part names. | `benchmark_definition.yaml`, `assembly_definition.yaml`, `payload_trajectory_definition.yaml` | CALC-001, CALC-002 |
-| ASSUMP-006 | The backend-specific precise path still begins in the build zone and ends with explicit goal-zone contact. | `payload_trajectory_definition.yaml`, `benchmark_definition.yaml` | CALC-001, CALC-003 |
+- `ASSUMP-001`: `projectile_ball` radius is held within the declared 22-24 mm static randomization band.
+- `ASSUMP-002`: The drafting scripts are exploded review layouts only; they preserve the same inventory and dimensions but are not literal stack coordinates.
+- `ASSUMP-003`: The passive chute path is static and reviewable without any engineer-owned motion DOFs.
+- `ASSUMP-004`: The manufacturing estimate in `assembly_definition.yaml` is the authoritative budget contract for coder entry.
+- `ASSUMP-005`: `aluminum_6061` density is 2.7 g/cm3; `hdpe` density is 0.95 g/cm3.
 
 ## 5. Detailed Calculations
 
 | ID | Problem / Decision | Result | Impact |
 | -- | -- | -- | -- |
-| CALC-001 | Windowed base plate fit in the build zone and clear the gate swing keep-out | Outer envelope `x [-260, 260]`, `y [-65, 65]`, `z [0, 10]`; keep-out window `x [50, 180]`, `y [-77.5, 77.5]`, `z [-1, 11]` | The stage fits on a freestanding base and leaves a `130 mm` x-window over the keep-out with `10 mm` x-margin on each side. |
-| CALC-002 | Left-side motor corridor clears the gate swing keep-out | Motor body right edge at `x = -72 mm`, so x clearance to the keep-out is `132 mm` | The motor and return wire can stay on the left side without crossing the swing volume. |
-| CALC-003 | Goal cup overlap with the goal zone | Overlap volume is `180,468.75 mm^3` with `x 82.5 mm`, `y 62.5 mm`, `z 35 mm` overlap | The cup reliably captures the ball inside the goal zone. |
-| CALC-004 | Budget rollup from part masses and costs | `298.95 g` and `$69.00` total | The plan stays below the planner caps with substantial margin. |
+| CALC-001 | Capture envelope versus spawn jitter | Required half-width is `24 mm + 8 mm = 32 mm`; `capture_funnel` provides `70 mm` half-width | Keeps the projectile inside the passive inlet during runtime jitter |
+| CALC-002 | Freestanding stability | The `freestanding_base` spans 620 mm with `ballast_block` keeping the center of mass low | Prevents tip-over without environment attachment |
+| CALC-003 | Base mass | `361.80 g` | Dominant weight contribution, still well under cap |
+| CALC-004 | Remaining part masses | `20.90 + 14.25 + 14.25 + 18.05 + 75.60 = 143.05 g` | Confirms the smaller HDPE and aluminum parts stay lightweight |
+| CALC-005 | Mass and budget closure | Total estimated weight is `504.85 g` and total cost is `$42.75` | Keeps the solution below the benchmark customer caps |
 
-### CALC-001: Windowed base plate fit in the build zone and clear the gate swing keep-out
-
-#### Problem Statement
-
-The solution needs a stable base that does not exceed the build zone and does not intrude into the gate swing keep-out.
-
-#### Assumptions
-
-- `ASSUMP-004`: The benchmark motion is fixed to the seeded gate pivot and does not require extra benchmark DOFs.
-- The base plate uses the drafted `520 x 130 x 10 mm` footprint and is implemented as a single plate with a through-window centered on the keep-out.
-- The build zone in `benchmark_definition.yaml` is authoritative.
-
-#### Derivation
-
-- Outer x span = `[-260, 260]`
-- Outer y span = `[-65, 65]`
-- Outer z span = `[0, 10]`
-- The through-window spans `x [50, 180]`, `y [-77.5, 77.5]`, `z [-1, 11]`, so the keep-out `x [60, 170]` sits fully inside the opening with 10 mm x-margin on each side and 7.5 mm y-margin on each side.
-- Margins to the build zone are 0 mm on the left, 0 mm on the right, 75 mm on both y sides, and 230 mm on top.
-
-#### Worst-Case Check
-
-- No solid occupies the keep-out x-range, and the through-window fully clears the plate thickness across the keep-out footprint.
-
-#### Result
-
-- The windowed base plate fits and clears the gate swing keep-out.
-
-#### Design Impact
-
-- Keep the outer footprint centered and preserve the 130 mm clearance window across the gate swing keep-out.
-
-#### Cross-References
-
-- `plan.md#3-assembly-strategy`
-- `benchmark_definition.yaml`
-- `assembly_definition.yaml`
-
-### CALC-002: Left-side motor corridor clears the gate swing keep-out
+### CALC-001: Capture Envelope Versus Spawn Jitter
 
 #### Problem Statement
 
-The servo and its cable exit must stay outside the benchmark `gate_swing_keepout`.
+The capture inlet must tolerate the declared spawn jitter while still feeding the passive chute path.
 
 #### Assumptions
 
-- `ASSUMP-001`: `ServoMotor_DS3218` uses the `40.0 x 20.0 x 40.5 mm` body proxy from `shared/cots/parts/motors.py`.
-- The drafted mount location in `solution_plan_evidence_script.py` is `(-92, -68, 35)`.
+- The ball radius stays inside the declared 22-24 mm band.
+- The inlet acts as a passive capture funnel rather than a powered sorter.
 
 #### Derivation
 
-- Motor body x envelope = `[-112, -72]`
-- Motor body y envelope = `[-78, -58]`
-- Motor body z envelope = `[35, 75.5]`
-- The keep-out starts at `x = 60`.
-- The x-axis clearance from the motor body's right edge to the keep-out is `60 - (-72) = 132 mm`.
-- The cable exit and shaft remain even farther left than the body envelope's right edge.
-- The full motor proxy stays below the build-zone ceiling because the shaft top is `82.79 mm`, which is under `240 mm`.
+The capture face is sized wider than the jittered spawn envelope.
 
 #### Worst-Case Check
 
-- Because the motor body never reaches x = 60, the keep-out is not intersected even though the y ranges overlap.
+The worst-case lateral and vertical spawn offsets still fit inside the inlet opening.
 
 #### Result
 
-- The motor corridor is legally left of the swing volume.
+The capture face absorbs the full jitter band.
 
 #### Design Impact
 
-- Route the motor cable and any service loop along the left side of the stage.
+The ball settles into the chute path before reaching the goal-side exit.
 
 #### Cross-References
 
-- `plan.md#3-assembly-strategy`
-- `solution_plan_evidence_script.py`
-- `benchmark_definition.yaml`
-- `shared/cots/parts/motors.py`
+- `capture_funnel` in `assembly_definition.yaml`
+- `projectile_ball` in `benchmark_definition.yaml`
 
-### CALC-003: Goal cup overlap with the goal zone
+### CALC-002: Freestanding Stability
 
 #### Problem Statement
 
-The receiver must actually intersect the goal zone rather than just sit nearby.
+The passive transfer must remain stable without drilling into the `benchmark_environment`.
 
 #### Assumptions
 
-- `ASSUMP-003`: The goal cup is centered at x = 335 mm and uses the `95 x 95 x 35 mm` draft geometry from the evidence script.
-- The goal zone bounds in `benchmark_definition.yaml` are authoritative.
+- The route stays entirely within the build zone.
+- The drafting geometry is review evidence, not the final solution geometry.
 
 #### Derivation
 
-- Goal cup x envelope = `[287.5, 382.5]`
-- Goal cup y envelope = `[-17.5, 77.5]`
-- Goal cup z envelope = `[47.5, 82.5]`
-- Goal zone x envelope = `[300, 390]`
-- Goal zone y envelope = `[-45, 45]`
-- Goal zone z envelope = `[20, 110]`
-- Overlap extents: x = `82.5 mm`, y = `62.5 mm`, z = `35 mm`
-- Overlap volume = `82.5 x 62.5 x 35 = 180,468.75 mm^3`
+The staged wall centers keep the ball path on a straight passive corridor.
 
 #### Worst-Case Check
 
-- All three axes overlap, so the cup is not merely adjacent to the goal zone.
+Even with the widest part envelopes, the staged geometry remains inside the build zone.
 
 #### Result
 
-- The goal cup is a valid capture receiver.
+The route preserves clearance while pointing into `exit_tray`.
 
 #### Design Impact
 
-- Keep the cup centered near x = 335 mm and do not lower it below z = 20 mm if the placement changes.
+Passive transfer is readable in review and feasible for the downstream coder.
 
 #### Cross-References
 
-- `plan.md#3-assembly-strategy`
-- `benchmark_definition.yaml`
-- `solution_plan_evidence_script.py`
+- `left_wall` and `right_wall` in `assembly_definition.yaml`
+- `build_zone` in `benchmark_definition.yaml`
 
-### CALC-004: Budget rollup from part masses and costs
+### CALC-003: Base Mass
 
 #### Problem Statement
 
-The plan must stay under the planner target cost and weight caps.
+Determine the mass contribution of `freestanding_base`.
 
 #### Assumptions
 
-- `ASSUMP-002`: Aluminum 6061 density is `2.7 g/cm^3` and HDPE density is `0.95 g/cm^3`.
-- The COTS servo mass and unit cost come from the catalog entry.
+- `freestanding_base` volume is 134000 mm3.
+- `aluminum_6061` density is 2.7 g/cm3.
 
 #### Derivation
 
-- Base plate weight = `67.6 cm^3 x 2.7 = 182.52 g`
-- Settling chute weight = `16.5 cm^3 x 0.95 = 15.675 g`
-- Metering wheel guard weight = `9.0 cm^3 x 0.95 = 8.55 g`
-- Guide rail weight = `6.5 cm^3 x 0.95 = 6.175 g`
-- Post-gate channel weight = `15.4 cm^3 x 0.95 = 14.63 g`
-- Goal cup weight = `12.0 cm^3 x 0.95 = 11.40 g`
-- Servo weight = `60.0 g`
-- Total weight = `298.95 g`
-- Total cost = `16.00 + 8.00 + 6.50 + 5.00 + 8.50 + 7.00 + 18.00 = $69.00`
-- Planner target headroom = `$79.00 - $69.00 = $10.00` and `1200.0 g - 298.95 g = 901.05 g`
+- 134.00 cm3 x 2.7 g/cm3 = 361.80 g.
 
 #### Worst-Case Check
 
-- Both totals stay well below the planner caps and even farther below the benchmark caps.
+This is the largest single-part mass in the assembly, so it dominates the weight budget.
 
 #### Result
 
-- The budget is feasible with substantial margin.
+`freestanding_base` mass = 361.80 g.
 
 #### Design Impact
 
-- The implementation can absorb normal revision churn without breaching the target caps.
+The base plate dominates the weight budget but leaves margin.
 
 #### Cross-References
 
-- `assembly_definition.yaml`
-- `benchmark_definition.yaml`
-- `worker_heavy/workbenches/manufacturing_config.yaml`
+- `ASSUMP-005`, `CALC-005`, `freestanding_base`
+
+### CALC-004: Remaining Part Masses
+
+#### Problem Statement
+
+Determine the mass contribution of the remaining parts.
+
+#### Assumptions
+
+- HDPE density is 0.95 g/cm3; `aluminum_6061` density is 2.7 g/cm3.
+
+#### Derivation
+
+- `capture_funnel`: 22.00 cm3 x 0.95 = 20.90 g.
+- `left_wall`: 15.00 cm3 x 0.95 = 14.25 g.
+- `right_wall`: 15.00 cm3 x 0.95 = 14.25 g.
+- `exit_tray`: 19.00 cm3 x 0.95 = 18.05 g.
+- `ballast_block`: 28.00 cm3 x 2.7 = 75.60 g.
+- Sum = 143.05 g.
+
+#### Worst-Case Check
+
+The remaining parts are all minor contributors and do not threaten the mass cap.
+
+#### Result
+
+Remaining part mass total = 143.05 g.
+
+#### Design Impact
+
+Capture and guide features stay lightweight.
+
+#### Cross-References
+
+- `ASSUMP-005`, `CALC-005`, parts in `assembly_definition.yaml`
+
+### CALC-005: Mass and Budget Closure
+
+#### Problem Statement
+
+Verify that the declared mass and cost totals match the part-by-part sums.
+
+#### Assumptions
+
+- The part masses in `CALC-003` and `CALC-004` are exact and deterministic.
+- The part costs in `assembly_definition.yaml` are authoritative for planner entry.
+
+#### Derivation
+
+- 361.80 + 143.05 = 504.85 g.
+- 15.50 + 5.00 + 5.50 + 5.50 + 8.25 + 3.00 = 42.75 USD.
+
+#### Worst-Case Check
+
+- 504.85 g is below the 900.0 g benchmark cap.
+- $42.75 is below the $54.00 benchmark cap.
+
+#### Result
+
+The plan remains inside budget with substantial margin.
+
+#### Design Impact
+
+The coder can preserve the passive routing strategy without needing to redesign for cost or weight.
+
+#### Cross-References
+
+- `assembly_definition.yaml`, `benchmark_definition.yaml`
 
 ## 6. Critical Constraints / Operating Envelope
 
-| Limit ID | Limit | Bound | Basis |
-| -- | -- | -- | -- |
-| LIMIT-001 | Base plate footprint | `x [-260, 260]`, `y [-65, 65]`, `z [0, 10]` | `CALC-001` |
-| LIMIT-002 | Motor corridor clearance | Motor body right edge stays at or below `x = -72 mm`, which is `132 mm` left of the keep-out | `CALC-002` |
-| LIMIT-003 | Goal capture overlap | Overlap extents must stay positive in x, y, and z | `CALC-003` |
-| LIMIT-004 | Budget envelope | `<= $79.00` and `<= 1200.0 g` | `CALC-004` |
-
-- Build zone: keep `base_plate` and all downstream pieces within the permitted footprint.
-- Gate keep-out: do not enter `gate_swing_keepout` with the motor, guard, or wiring.
-- Motion contract: the benchmark-owned gate remains the only moving benchmark fixture.
-- Goal zone: `goal_cup` must overlap the goal zone and absorb the released ball.
-- Budget envelope: preserve the planned cost and weight margin with a single small servo-grade motor.
+- `freestanding_base` stays within the build zone and supports the full routing span.
+- `capture_funnel` is staged on the spawn side with enough opening width to capture the jittered spawn band.
+- `left_wall` and `right_wall` form a passive chute corridor without crossing the goal zone prematurely.
+- `exit_tray` captures the ball at the end of the passive route and overlaps the seeded goal zone.
+- Total estimated weight remains at 504.85 g, well below the 900.0 g cap.
+- Total estimated cost remains at $42.75, well below the $54.00 cap.
 
 ## 7. Cost & Weight Budget
 
-| Item | Volume (cm^3) | Weight (g) | Cost ($) |
-| -- | -- | -- | -- |
-| base_plate | 67.6 | 182.52 | 16.00 |
-| settling_chute | 16.5 | 15.675 | 8.00 |
-| metering_wheel_guard | 9.0 | 8.55 | 6.50 |
-| guide_rail | 6.5 | 6.175 | 5.00 |
-| post_gate_channel | 15.4 | 14.63 | 8.50 |
-| goal_cup | 12.0 | 11.40 | 7.00 |
-| ServoMotor_DS3218 | n/a | 60.00 | 18.00 |
-| **TOTAL** | 127.0 | 298.95 | **69.00** |
+| Item | Weight (g) | Cost ($) |
+| -- | -- | -- |
+| freestanding_base | 361.80 | 15.50 |
+| capture_funnel | 20.90 | 5.00 |
+| left_wall | 14.25 | 5.50 |
+| right_wall | 14.25 | 5.50 |
+| exit_tray | 18.05 | 8.25 |
+| ballast_block | 75.60 | 3.00 |
+| **TOTAL** | **504.85** | **42.75** |
 
-**Budget Margin**: 12.7% cost headroom and 75.1% weight headroom versus the planner target.
+**Budget Margin**: 395.15 g and $11.25 remaining versus the benchmark caps.
 
 ## 8. Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 | -- | -- | -- | -- |
-| Metering wheel or wiring enters the gate swing keep-out | Low | High | Reference the seeded `gate_swing_keepout` AABB and keep the motor on the left side only |
-| Ball releases at the wrong phase and misses the gate opening | Medium | High | Use the metering wheel to hold a single ball and release only near the opening window |
-| Ball exits the gate but rebounds out of the goal | Medium | Medium | Terminate the post-gate channel in a goal cup with a small drop for energy absorption |
-| Power budget is too tight for the chosen motor | Low | Medium | Keep to one small servo-grade motor and preserve the seeded supply headroom in `assembly_definition.yaml` |
-
-### Jitter Robustness Check
-
-- Capture area covers spawn jitter: Yes
-- Tested edge cases considered: early release, late release, left-offset spawn, right-offset spawn
+| Preview geometry drifts away from the final corridor | Medium | High | Keep the drafted shapes as the authoritative inventory and rebuild the same passive family in the implementation script |
+| Freestanding assembly tips under impact | Medium | High | Keep a wide base and add low-mounted `ballast_block` |
+| Ball escapes due to spawn jitter | Medium | Medium | Use an oversized `capture_funnel` before the chute narrows |
+| Hidden environment contact violates the no-drill rule | Low | High | Keep all geometry referenced from `freestanding_base` and leave explicit clearance to the `benchmark_environment` and `environment_fixture` |

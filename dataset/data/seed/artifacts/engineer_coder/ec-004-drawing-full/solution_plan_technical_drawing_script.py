@@ -1,6 +1,5 @@
 from build123d import Align, Box, Compound, Location, TechnicalDrawing
 
-from shared.cots.parts.motors import ServoMotor
 from utils.metadata import CompoundMetadata, PartMetadata
 
 
@@ -22,81 +21,80 @@ def _build_part(
     return part
 
 
-def _build_motor():
-    motor = ServoMotor.from_catalog_id("ServoMotor_DS3218")
-    motor = motor.move(Location((-205.0, -110.0, 20.0)))
-    motor.label = "drive_motor"
-    # Preserve the COTS identity so the inventory pair (label="drive_motor",
-    # cots_id="ServoMotor_DS3218") matches assembly_definition.yaml.
-    return motor
-
-
 def build():
-    TechnicalDrawing(title="Raised shelf lift drafting")
-
-    # Build the shelf_lift subassembly containing the manufactured parts.
-    shelf_lift_parts = [
+    TechnicalDrawing(title="Freestanding no-drill transfer")
+    children = [
         _build_part(
-            label="lift_base",
-            length=280.0,
-            width=150.0,
-            height=10.0,
+            label="freestanding_transfer",
+            length=620.0,
+            width=180.0,
+            height=2.0,
+            x=0.0,
+            y=0.0,
+            z=179.0,
+            material_id="aluminum_6061",
+        ),
+        _build_part(
+            label="freestanding_base",
+            length=620.0,
+            width=180.0,
+            height=12.0,
             x=0.0,
             y=0.0,
             z=0.0,
             material_id="aluminum_6061",
         ),
         _build_part(
-            label="left_frame",
-            length=360.0,
-            width=18.0,
-            height=120.0,
-            x=-20.0,
-            y=-67.5,
-            z=10.0,
-            material_id="aluminum_6061",
+            label="capture_funnel",
+            length=160.0,
+            width=140.0,
+            height=40.0,
+            x=-200.0,
+            y=0.0,
+            z=20.0,
+            material_id="hdpe",
         ),
         _build_part(
-            label="right_frame",
-            length=360.0,
-            width=18.0,
-            height=120.0,
-            x=-20.0,
-            y=67.5,
-            z=10.0,
-            material_id="aluminum_6061",
+            label="left_wall",
+            length=460.0,
+            width=20.0,
+            height=32.0,
+            x=0.0,
+            y=-80.0,
+            z=60.0,
+            material_id="hdpe",
         ),
         _build_part(
-            label="belt_bed",
-            length=300.0,
-            width=95.0,
+            label="right_wall",
+            length=460.0,
+            width=20.0,
+            height=32.0,
+            x=0.0,
+            y=80.0,
+            z=60.0,
+            material_id="hdpe",
+        ),
+        _build_part(
+            label="exit_tray",
+            length=140.0,
+            width=110.0,
+            height=35.0,
+            x=260.0,
+            y=0.0,
+            z=120.0,
+            material_id="hdpe",
+        ),
+        _build_part(
+            label="ballast_block",
+            length=180.0,
+            width=80.0,
             height=18.0,
             x=0.0,
             y=0.0,
-            z=10.0,
-            material_id="hdpe",
-        ),
-        _build_part(
-            label="upper_tray",
-            length=160.0,
-            width=120.0,
-            height=24.0,
-            x=370.0,
-            y=0.0,
-            z=220.0,
-            material_id="hdpe",
+            z=140.0,
+            material_id="aluminum_6061",
         ),
     ]
-
-    shelf_lift = Compound(children=shelf_lift_parts)
-    shelf_lift.label = "shelf_lift"
-    shelf_lift.metadata = CompoundMetadata()
-
-    # Build the drive_motor COTS part.
-    motor = _build_motor()
-
-    # Wrap both in an unlabeled root so the identity-pair validator counts
-    # shelf_lift and drive_motor as top-level inventory items.
-    assembly = Compound(children=[shelf_lift, motor])
+    assembly = Compound(label="freestanding_transfer", children=children)
     assembly.metadata = CompoundMetadata()
     return assembly

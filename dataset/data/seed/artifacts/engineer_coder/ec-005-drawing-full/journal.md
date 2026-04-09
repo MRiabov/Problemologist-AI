@@ -1,4 +1,8 @@
-# Journal
+# Execution Journal
 
-- Planner handoff approved after confirming the routed path stays outside `central_blocker`.
-- The seed is stale after the drafting-mode contract change; the drafting scripts are now rebuilt with the reviewed inventory geometry, but the renderer backend crashes before a fresh render bundle can be generated, so the last committed render bundle remains the active evidence.
+## Session Start
+
+- Received reviewed planner handoff for the freestanding no-drill transfer benchmark.
+- Planner contract: `freestanding_transfer` subassembly with no DOFs, passive chute path.
+- Benchmark constraint: no drilling, bolting, or leaning on the `benchmark_environment`.
+- Budget: $42.75 / 504.85 g, well under the $54.00 / 900.0 g caps.

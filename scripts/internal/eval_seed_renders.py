@@ -120,7 +120,7 @@ _RENDER_ROLE_WITH_DEFINITION_PREVIEW = {
 # Render bundles are refreshed as a prefix of the workflow stage order.
 _ROLE_RENDER_STAGE_INDEX: dict[str, int] = {
     "benchmark_planner": 0,
-    "benchmark_plan_reviewer": 0,
+    "benchmark_plan_reviewer": 1,
     "benchmark_coder": 1,
     "benchmark_reviewer": 1,
     "engineer_planner": 1,
@@ -382,11 +382,29 @@ def _refresh_benchmark_bundle(
         renders_root = artifact_dir / "renders"
         renders_root.mkdir(parents=True, exist_ok=True)
         bundle_dir = renders_root / "benchmark_renders"
+
+        # Remap object_store_keys: keep S3 key as-is, but change local path
+        # from current-episode to benchmark_renders
+        remapped_keys = {
+            k.replace("renders/current-episode/", "renders/benchmark_renders/"): v
+            for k, v in response.object_store_keys.items()
+        }
+        remapped_blobs = {
+            k.replace("renders/current-episode/", "renders/benchmark_renders/"): v
+            for k, v in response.render_blobs_base64.items()
+        }
+
+        # Create a simple object with the remapped attributes
+        class _RemappedArtifacts:
+            render_blobs_base64 = remapped_blobs
+            object_store_keys = remapped_keys
+            render_paths = []
+
         with tempfile.TemporaryDirectory(
             prefix="benchmark_renders_", dir=str(renders_root)
         ) as tmpdir:
             tmp_root = Path(tmpdir)
-            saved_paths = materialize_render_artifacts(response.artifacts, tmp_root)
+            saved_paths = materialize_render_artifacts(_RemappedArtifacts(), tmp_root)
             if not saved_paths:
                 raise RuntimeError(
                     "render regeneration produced no materialized drafting artifacts"
@@ -394,7 +412,8 @@ def _refresh_benchmark_bundle(
             source_bundle_dir = tmp_root / "renders" / "benchmark_renders"
             if bundle_dir.exists():
                 shutil.rmtree(bundle_dir)
-            shutil.copytree(source_bundle_dir, bundle_dir)
+            if source_bundle_dir.exists():
+                shutil.copytree(source_bundle_dir, bundle_dir)
         return saved_paths
     else:
         response = render_static_preview(

@@ -44,34 +44,11 @@ drafting:
       tolerance: nominal
       binding: true
       note: Fixture width for the seeded benchmark context.
-  - view_id: top
-    target: environment_fixture
-    projection: top
-    scale: 1.0
-    datums: [A, C]
-    dimensions:
-    - dimension_id: depth
-      kind: linear
-      target: environment_fixture
-      value: 10.0
-      tolerance: nominal
-      binding: true
-      note: Fixture depth for the seeded benchmark context.
-  - view_id: side
-    target: environment_fixture
-    projection: side
-    scale: 1.0
-    datums: [B, C]
-    dimensions:
-    - dimension_id: height
-      kind: linear
-      target: environment_fixture
-      value: 10.0
-      tolerance: nominal
-      binding: true
-      note: Fixture height for the seeded benchmark context.
   notes: []
-final_assembly: []
+final_assembly:
+- name: environment_fixture
+  config:
+    dofs: []
 totals:
   estimated_unit_cost_usd: 10.0
   estimated_weight_g: 0.0

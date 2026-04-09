@@ -2,301 +2,239 @@
 
 ## 1. Solution Overview
 
-Use a compact single-`ServoMotor_DS3218` shelf-lift stage that keeps the drive train left of `shelf_support_clearance` while carrying the `projectile_ball` into the `goal_zone` through the `upper_tray`. The benchmark gives the broad left-to-right objective trajectory, the planner narrows it with a coarse `motion_forecast` on `shelf_lift`, and the engineer-coder tightens the same path in `payload_trajectory_definition.yaml`. The drafting package is anchored around the exact `starter_assembly` label, and the engineer-owned geometry stays inside the `build_zone`, uses a single rotate axis, and preserves the reviewed planning contract for `lift_base`, `left_frame`, `right_frame`, `belt_bed`, `upper_tray`, `shelf_lift`, and `drive_motor`.
+Use a completely freestanding twin-wall chute that receives the `projectile_ball` on the spawn side and carries it to the right goal zone without drilling, bolting into, or leaning on the `benchmark_environment`. Stability comes from a wide `freestanding_base` and low center of mass rather than external attachment to the `environment_fixture`.
 
-- `lift_base` anchors the stage and keeps the lift foot print stable on the floor.
-- `left_frame` and `right_frame` form the side rails that carry the inclined belt path.
-- `belt_bed` provides the low-friction transfer surface that raises the ball.
-- `upper_tray` is the capture surface that overlaps the `goal_zone`.
-- `drive_motor` is the only COTS actuator in the plan and stays left of the shelf-support keepout.
-- The final assembly `shelf_lift` uses a single `rotate_z` drive.
-- `assembly_definition.yaml.motion_forecast` keeps the coarse build-safe start and goal-contact finish reviewable.
-- `payload_trajectory_definition.yaml` narrows that same motion with a denser engineer-coder path and the same endpoint proof.
-- The benchmark-owned `environment_fixture` remains read-only context and does not change the engineer-owned motion contract.
+The `freestanding_transfer` subassembly is a single passive routing path with no powered axes.
 
 ## 2. Parts List
 
 | Part | Dimensions (mm) | Material | Purpose |
 | -- | -- | -- | -- |
-| lift_base | 280 x 150 x 10 | aluminum_6061 | Freestanding base for the incline frame and motor mount |
-| left_frame | 360 x 18 x 120 | aluminum_6061 | Left structural side of the lift |
-| right_frame | 360 x 18 x 120 | aluminum_6061 | Right structural side of the lift |
-| belt_bed | 300 x 95 x 18 | hdpe | Low-friction bed supporting the cleated belt path |
-| upper_tray | 160 x 120 x 24 | hdpe | Shelf-height handoff tray into the goal zone |
-| drive_motor | catalog `ServoMotor_DS3218` motor | cots | Single motorized DOF driving the lift |
+| freestanding_base | 620 x 180 x 12 | aluminum_6061 | Wide low center-of-mass base keeping the transfer stable without attachment |
+| capture_funnel | 160 x 140 x 40 | hdpe | Capture pocket covering the seeded spawn jitter |
+| left_wall | 460 x 20 x 32 | hdpe | Left chute wall |
+| right_wall | 460 x 20 x 32 | hdpe | Right chute wall |
+| exit_tray | 140 x 110 x 35 | hdpe | Goal-side tray settling the ball in the target |
+| ballast_block | 180 x 80 x 18 | aluminum_6061 | Extra mass on the base to prevent tip-over |
 
-**Estimated Total Weight**: 1490 g
-**Estimated Total Cost**: $68.50
+**Estimated Total Weight**: 504.85 g
+**Estimated Total Cost**: $42.75
 
 ## 3. Assembly Strategy
 
-1. Bolt `lift_base` down inside the `build_zone` and keep the floor footprint well clear of the `shelf_support_clearance` forbid zone.
-2. Mount `left_frame` and `right_frame` to the outer edges of the base so the incline rises without crossing the benchmark keepout volume.
-3. Place `belt_bed` between the frames and keep the `drive_motor` on the left side with its wiring corridor staying outside the forbidden shelf-support volume.
-4. Fit `upper_tray` at the top exit so it overlaps the `goal_zone` and gives the ball a short, reliable handoff.
-5. Preserve the reviewed `environment_fixture` as read-only benchmark context while keeping the engineer-owned stage to a single rotate-axis drive.
-6. Keep the coarse `motion_forecast` in `assembly_definition.yaml` aligned with the same `shelf_lift` trajectory that the engineer-coder will narrow in `payload_trajectory_definition.yaml`.
+1. Keep `freestanding_base` centered in the build zone and mount `ballast_block` low on the base to stabilize the `freestanding_transfer` mechanism.
+2. Mount `capture_funnel`, `left_wall`, and `right_wall` on the base only, with no fasteners or contact into the `environment_fixture`.
+3. Terminate the transfer in `exit_tray` overlapping the seeded goal zone so the ball settles without rebounding out.
 
 ## 4. Assumption Register
 
-| ID | Assumption | Source | Used By |
-| -- | -- | -- | -- |
-| ASSUMP-001 | The `ServoMotor_DS3218` body proxy measures `40.0 x 20.0 x 40.5 mm` and is mounted at `(-205, -110, 20)` in the drafting companion. | `shared/cots/parts/motors.py`, `solution_plan_evidence_script.py` | CALC-002 |
-| ASSUMP-002 | Aluminum 6061 has density `2.7 g/cm^3` and HDPE has density `0.95 g/cm^3`. | `worker_heavy/workbenches/manufacturing_config.yaml` | CALC-004 |
-| ASSUMP-003 | The drafted `upper_tray` placement at x = `370 mm` is the intended capture location and the goal zone bounds in `benchmark_definition.yaml` are authoritative. | `solution_plan_evidence_script.py`, `benchmark_definition.yaml` | CALC-003 |
-| ASSUMP-004 | The engineer solution uses one `rotate_z` drive on the lift stage, and the benchmark-owned `environment_fixture` stays fixed and read-only. | `assembly_definition.yaml`, `benchmark_definition.yaml` | CALC-001, CALC-002 |
-| ASSUMP-005 | The `shelf_lift` motion forecast starts build-zone valid in `assembly_definition.yaml`, keeps the same upper-tray contact window around 1.5 s, and then narrows to the same endpoint proof in `payload_trajectory_definition.yaml`. | `assembly_definition.yaml`, `payload_trajectory_definition.yaml` | CALC-001, CALC-003, CALC-005 |
+- `ASSUMP-001`: `projectile_ball` radius is held within the declared 22-24 mm static randomization band.
+- `ASSUMP-002`: The drafting scripts are exploded review layouts only; they preserve the same inventory and dimensions but are not literal stack coordinates.
+- `ASSUMP-003`: The passive chute path is static and reviewable without any engineer-owned motion DOFs.
+- `ASSUMP-004`: The manufacturing estimate in `assembly_definition.yaml` is the authoritative budget contract for coder entry.
+- `ASSUMP-005`: `aluminum_6061` density is 2.7 g/cm3; `hdpe` density is 0.95 g/cm3.
 
 ## 5. Detailed Calculations
 
 | ID | Problem / Decision | Result | Impact |
 | -- | -- | -- | -- |
-| CALC-001 | Base, frame, and tray envelopes fit the build zone and stay clear of `shelf_support_clearance` | `lift_base` spans `x [-140, 140]`, `y [-75, 75]`, `z [0, 10]`; `left_frame` and `right_frame` stay within `x [-200, 160]` and their narrow side bands; `upper_tray` stays above the shelf-support volume at `z >= 220` | The lift occupies a narrow floor footprint and keeps the shelf-support keepout open |
-| CALC-002 | Left-side motor corridor clears the shelf-support keepout | Motor body right edge at `x = -185 mm`, so x clearance to the forbid zone starts at `180 - (-185) = 365 mm` | The actuator and cable route can stay entirely left of the forbidden shelf-support volume |
-| CALC-003 | Upper tray overlap with the goal zone | `upper_tray` envelope `x [270, 430]`, `y [-60, 60]`, `z [220, 244]`; goal zone overlap extents `x 110 mm`, `y 110 mm`, `z 24 mm` | The tray positively intersects the goal zone instead of sitting adjacent to it |
-| CALC-004 | Budget rollup from part masses and costs | `648.01 g` and `$68.50` total | The plan stays below the planner caps with a small but intentional weight margin |
-| CALC-005 | Motion forecast speed envelope | Waypoint segment averages for the refined path are `144.2 mm/s`, `144.2 mm/s`, `144.2 mm/s`, `134.2 mm/s`, `156.5 mm/s`, and `130.0 mm/s`; peak commanded yaw rate is `50 deg/s`, which is `0.133x` the DS3218 nominal `375 deg/s` shaft speed | The motion forecast is conservative relative to the motor envelope, but it is still an envelope, not a proof of instantaneous runtime speed |
+| CALC-001 | Capture envelope versus spawn jitter | Required half-width is `24 mm + 8 mm = 32 mm`; `capture_funnel` provides `70 mm` half-width | Keeps the projectile inside the passive inlet during runtime jitter |
+| CALC-002 | Freestanding stability | The `freestanding_base` spans 620 mm with `ballast_block` keeping the center of mass low | Prevents tip-over without environment attachment |
+| CALC-003 | Base mass | `361.80 g` | Dominant weight contribution, still well under cap |
+| CALC-004 | Remaining part masses | `20.90 + 14.25 + 14.25 + 18.05 + 75.60 = 143.05 g` | Confirms the smaller HDPE and aluminum parts stay lightweight |
+| CALC-005 | Mass and budget closure | Total estimated weight is `504.85 g` and total cost is `$42.75` | Keeps the solution below the benchmark customer caps |
 
-### CALC-001: Base, frame, and tray envelopes fit the build zone and stay clear of `shelf_support_clearance`
-
-#### Problem Statement
-
-The stage must fit inside the build zone while leaving the benchmark shelf-support keepout open for the raised shelf structure.
-
-#### Assumptions
-
-- `ASSUMP-004`: The lift uses one rotate-axis drive and the benchmark environment fixture remains fixed.
-- The base plate uses the drafted `280 x 150 x 10 mm` footprint and the upper tray is mounted above the shelf-support volume.
-- The build zone in `benchmark_definition.yaml` is authoritative.
-
-#### Derivation
-
-- `lift_base` outer envelope = `x [-140, 140]`, `y [-75, 75]`, `z [0, 10]`
-- `left_frame` outer envelope = `x [-200, 160]`, `y [-76.5, -58.5]`, `z [10, 130]`
-- `right_frame` outer envelope = `x [-200, 160]`, `y [58.5, 76.5]`, `z [10, 130]`
-- `belt_bed` outer envelope = `x [-150, 150]`, `y [-47.5, 47.5]`, `z [10, 28]`
-- `upper_tray` stays at `z [220, 244]`, above the forbid zone ceiling of `210 mm`
-
-#### Worst-Case Check
-
-- No floor-level part reaches `x >= 180` while `z <= 210`, so the shelf-support keepout remains open.
-
-#### Result
-
-- The lift stage fits the build zone and leaves the shelf-support volume available.
-
-#### Design Impact
-
-- Keep all low-mounted geometry below `z = 210 mm` if the floor layout changes later.
-
-#### Cross-References
-
-- `engineering_plan.md#3-assembly-strategy`
-- `benchmark_definition.yaml`
-- `assembly_definition.yaml`
-
-### CALC-002: Left-side motor corridor clears the shelf-support keepout
+### CALC-001: Capture Envelope Versus Spawn Jitter
 
 #### Problem Statement
 
-The servo and its cable exit must stay outside the benchmark `shelf_support_clearance` zone.
+The capture inlet must tolerate the declared spawn jitter while still feeding the passive chute path.
 
 #### Assumptions
 
-- `ASSUMP-001`: `ServoMotor_DS3218` uses the `40.0 x 20.0 x 40.5 mm` body proxy from `shared/cots/parts/motors.py`.
-- The drafted mount location in `solution_plan_evidence_script.py` is `(-205, -110, 20)`.
+- The ball radius stays inside the declared 22-24 mm band.
+- The inlet acts as a passive capture funnel rather than a powered sorter.
 
 #### Derivation
 
-- Motor body x envelope = `[-225, -185]`
-- Motor body y envelope = `[-120, -100]`
-- Motor body z envelope = `[20, 60.5]`
-- The keepout starts at `x = 180`.
-- The x-axis clearance from the motor body's right edge to the keepout is `180 - (-185) = 365 mm`.
+The capture face is sized wider than the jittered spawn envelope.
 
 #### Worst-Case Check
 
-- The motor body never reaches the shelf-support zone in x, so the floor keepout is not intersected.
+The worst-case lateral and vertical spawn offsets still fit inside the inlet opening.
 
 #### Result
 
-- The actuator corridor remains legally left of the shelf-support volume.
+The capture face absorbs the full jitter band.
 
 #### Design Impact
 
-- Route the motor cable and service loop along the left side of the stage.
+The ball settles into the chute path before reaching the goal-side exit.
 
 #### Cross-References
 
-- `engineering_plan.md#3-assembly-strategy`
-- `solution_plan_evidence_script.py`
-- `benchmark_definition.yaml`
-- `shared/cots/parts/motors.py`
+- `capture_funnel` in `assembly_definition.yaml`
+- `projectile_ball` in `benchmark_definition.yaml`
 
-### CALC-003: Upper tray overlap with the goal zone
+### CALC-002: Freestanding Stability
 
 #### Problem Statement
 
-The receiver must actually intersect the goal zone rather than just sit nearby.
+The passive transfer must remain stable without drilling into the `benchmark_environment`.
 
 #### Assumptions
 
-- `ASSUMP-003`: The `upper_tray` is centered at x = 370 mm and uses the `160 x 120 x 24 mm` draft geometry from the evidence script.
-- The goal zone bounds in `benchmark_definition.yaml` are authoritative.
+- The route stays entirely within the build zone.
+- The drafting geometry is review evidence, not the final solution geometry.
 
 #### Derivation
 
-- `upper_tray` x envelope = `[290, 450]`
-- `upper_tray` y envelope = `[-60, 60]`
-- `upper_tray` z envelope = `[220, 244]`
-- Goal zone x envelope = `[320, 430]`
-- Goal zone y envelope = `[-55, 55]`
-- Goal zone z envelope = `[220, 300]`
-- Overlap extents: x = `110 mm`, y = `110 mm`, z = `24 mm`
-- Overlap volume = `110 x 110 x 24 = 290,400 mm^3`
+The staged wall centers keep the ball path on a straight passive corridor.
 
 #### Worst-Case Check
 
-- All three axes overlap, so the tray is not merely adjacent to the goal zone.
+Even with the widest part envelopes, the staged geometry remains inside the build zone.
 
 #### Result
 
-- The upper tray is a valid capture receiver for the raised shelf.
+The route preserves clearance while pointing into `exit_tray`.
 
 #### Design Impact
 
-- Keep the tray centered near x = 370 mm and maintain its top face at or below the goal-zone roof.
+Passive transfer is readable in review and feasible for the downstream coder.
 
 #### Cross-References
 
-- `engineering_plan.md#3-assembly-strategy`
-- `benchmark_definition.yaml`
-- `solution_plan_evidence_script.py`
+- `left_wall` and `right_wall` in `assembly_definition.yaml`
+- `build_zone` in `benchmark_definition.yaml`
 
-### CALC-004: Budget rollup from part masses and costs
+### CALC-003: Base Mass
 
 #### Problem Statement
 
-The plan must stay under the planner target cost and weight caps.
+Determine the mass contribution of `freestanding_base`.
 
 #### Assumptions
 
-- `ASSUMP-002`: Aluminum 6061 density is `2.7 g/cm^3` and HDPE density is `0.95 g/cm^3`.
-- The COTS servo mass and unit cost come from the catalog entry.
+- `freestanding_base` volume is 134000 mm3.
+- `aluminum_6061` density is 2.7 g/cm3.
 
 #### Derivation
 
-- `lift_base` weight = `28.0 cm^3 x 2.7 = 75.60 g`
-- `left_frame` weight = `77.76 cm^3 x 2.7 = 209.95 g`
-- `right_frame` weight = `77.76 cm^3 x 2.7 = 209.95 g`
-- `belt_bed` weight = `51.30 cm^3 x 0.95 = 48.74 g`
-- `upper_tray` weight = `46.08 cm^3 x 0.95 = 43.78 g`
-- Servo weight = `60.0 g`
-- Total weight = `648.01 g`
-- Total cost = `14.00 + 11.00 + 11.00 + 7.50 + 7.00 + 18.00 = $68.50`
-- Planner target headroom = `$75.00 - $68.50 = $6.50` and `1500.0 g - 648.01 g = 851.99 g`
+- 134.00 cm3 x 2.7 g/cm3 = 361.80 g.
 
 #### Worst-Case Check
 
-- Both totals stay below the planner caps and well below the benchmark caps.
+This is the largest single-part mass in the assembly, so it dominates the weight budget.
 
 #### Result
 
-- The budget is feasible with ample room for implementation changes.
+`freestanding_base` mass = 361.80 g.
 
 #### Design Impact
 
-- The implementation can absorb normal revision churn without breaching the target caps.
+The base plate dominates the weight budget but leaves margin.
 
 #### Cross-References
 
-- `assembly_definition.yaml`
-- `benchmark_definition.yaml`
-- `worker_heavy/workbenches/manufacturing_config.yaml`
+- `ASSUMP-005`, `CALC-005`, `freestanding_base`
 
-### CALC-005: Motion forecast speed envelope
+### CALC-004: Remaining Part Masses
 
 #### Problem Statement
 
-The precise path should be fast enough to remain realistic, but the plan must be explicit about what the forecast proves and what it does not.
+Determine the mass contribution of the remaining parts.
 
 #### Assumptions
 
-- `payload_trajectory_definition.yaml` is the engineer-owned waypoint envelope for the `shelf_lift` motion.
-- The DS3218 catalog entry implies a nominal shaft speed of `60 deg / 0.16 s = 375 deg/s`.
-- Segment averages are computed from straight-line distance between successive anchors divided by elapsed time.
+- HDPE density is 0.95 g/cm3; `aluminum_6061` density is 2.7 g/cm3.
 
 #### Derivation
 
-- Segment 1: `sqrt(60^2 + 40^2) / 0.5 = 72.111 / 0.5 = 144.222 mm/s`
-- Segment 2: `sqrt(60^2 + 40^2) / 0.5 = 72.111 / 0.5 = 144.222 mm/s`
-- Segment 3: `sqrt(60^2 + 40^2) / 0.5 = 72.111 / 0.5 = 144.222 mm/s`
-- Segment 4: `sqrt(60^2 + 30^2) / 0.5 = 67.082 / 0.5 = 134.164 mm/s`
-- Segment 5: `sqrt(70^2 + 35^2) / 0.5 = 78.262 / 0.5 = 156.523 mm/s`
-- Segment 6: `sqrt(60^2 + 25^2) / 0.5 = 65.000 / 0.5 = 130.000 mm/s`
-- Peak average linear segment speed = `156.523 mm/s`
-- Peak commanded yaw rate = `25 deg / 0.5 s = 50 deg/s`
-- Servo headroom against nominal shaft speed = `375 / 50 = 7.5x`
+- `capture_funnel`: 22.00 cm3 x 0.95 = 20.90 g.
+- `left_wall`: 15.00 cm3 x 0.95 = 14.25 g.
+- `right_wall`: 15.00 cm3 x 0.95 = 14.25 g.
+- `exit_tray`: 19.00 cm3 x 0.95 = 18.05 g.
+- `ballast_block`: 28.00 cm3 x 2.7 = 75.60 g.
+- Sum = 143.05 g.
 
 #### Worst-Case Check
 
-- The commanded yaw rate stays comfortably below the servo nominal shaft speed.
-- The waypoint speeds are average segment speeds, so they bound the forecast envelope but do not claim an exact instantaneous velocity profile.
+The remaining parts are all minor contributors and do not threaten the mass cap.
 
 #### Result
 
-- The path is kinematically plausible for a single `ServoMotor_DS3218` driven shelf lift.
+Remaining part mass total = 143.05 g.
 
 #### Design Impact
 
-- The handoff should describe this as a conservative motion envelope, not as a proof of the final simulated speed trace.
+Capture and guide features stay lightweight.
 
 #### Cross-References
 
-- `payload_trajectory_definition.yaml`
-- `assembly_definition.yaml`
-- `shared/cots/parts/motors.py`
+- `ASSUMP-005`, `CALC-005`, parts in `assembly_definition.yaml`
+
+### CALC-005: Mass and Budget Closure
+
+#### Problem Statement
+
+Verify that the declared mass and cost totals match the part-by-part sums.
+
+#### Assumptions
+
+- The part masses in `CALC-003` and `CALC-004` are exact and deterministic.
+- The part costs in `assembly_definition.yaml` are authoritative for planner entry.
+
+#### Derivation
+
+- 361.80 + 143.05 = 504.85 g.
+- 15.50 + 5.00 + 5.50 + 5.50 + 8.25 + 3.00 = 42.75 USD.
+
+#### Worst-Case Check
+
+- 504.85 g is below the 900.0 g benchmark cap.
+- $42.75 is below the $54.00 benchmark cap.
+
+#### Result
+
+The plan remains inside budget with substantial margin.
+
+#### Design Impact
+
+The coder can preserve the passive routing strategy without needing to redesign for cost or weight.
+
+#### Cross-References
+
+- `assembly_definition.yaml`, `benchmark_definition.yaml`
 
 ## 6. Critical Constraints / Operating Envelope
 
-| Limit ID | Limit | Bound | Basis |
-| -- | -- | -- | -- |
-| LIMIT-001 | Base plate footprint | `x [-140, 140]`, `y [-75, 75]`, `z [0, 10]` | `CALC-001` |
-| LIMIT-002 | Motor corridor clearance | Motor body right edge stays at or below `x = -185 mm`, which is `365 mm` left of the keepout | `CALC-002` |
-| LIMIT-003 | Goal capture overlap | Overlap extents must stay positive in x, y, and z | `CALC-003` |
-| LIMIT-004 | Budget envelope | `<= $75.00` and `<= 1500.0 g` | `CALC-004` |
-
-- Build zone: keep `lift_base` and all downstream pieces within the permitted footprint.
-- Shelf-support keepout: do not enter `shelf_support_clearance` with the motor, belt bed, or wiring.
-- Motion contract: the benchmark-owned environment fixture stays fixed; the engineer-owned stage uses one rotate-axis drive.
-- Goal zone: `upper_tray` must overlap the goal zone and absorb the released ball.
-- Motion contract: `assembly_definition.yaml.motion_forecast` starts with a build-zone-valid `shelf_lift` pose and `payload_trajectory_definition.yaml` tightens the same motion without changing the terminal goal-zone proof.
-- Budget envelope: preserve the planned cost and weight margin with one small servo-grade motor.
+- `freestanding_base` stays within the build zone and supports the full routing span.
+- `capture_funnel` is staged on the spawn side with enough opening width to capture the jittered spawn band.
+- `left_wall` and `right_wall` form a passive chute corridor without crossing the goal zone prematurely.
+- `exit_tray` captures the ball at the end of the passive route and overlaps the seeded goal zone.
+- Total estimated weight remains at 504.85 g, well below the 900.0 g cap.
+- Total estimated cost remains at $42.75, well below the $54.00 cap.
 
 ## 7. Cost & Weight Budget
 
-| Item | Volume (cm^3) | Weight (g) | Cost ($) |
-| -- | -- | -- | -- |
-| lift_base | 28.0 | 75.60 | 14.00 |
-| left_frame | 77.76 | 209.95 | 11.00 |
-| right_frame | 77.76 | 209.95 | 11.00 |
-| belt_bed | 51.30 | 48.74 | 7.50 |
-| upper_tray | 46.08 | 43.78 | 7.00 |
-| ServoMotor_DS3218 | n/a | 60.00 | 18.00 |
-| **TOTAL** | 280.90 | 648.01 | **68.50** |
+| Item | Weight (g) | Cost ($) |
+| -- | -- | -- |
+| freestanding_base | 361.80 | 15.50 |
+| capture_funnel | 20.90 | 5.00 |
+| left_wall | 14.25 | 5.50 |
+| right_wall | 14.25 | 5.50 |
+| exit_tray | 18.05 | 8.25 |
+| ballast_block | 75.60 | 3.00 |
+| **TOTAL** | **504.85** | **42.75** |
 
-**Budget Margin**: 8.7% cost headroom and 56.8% weight headroom versus the planner target.
+**Budget Margin**: 395.15 g and $11.25 remaining versus the benchmark caps.
 
 ## 8. Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 | -- | -- | -- | -- |
-| Motor or wiring enters the shelf-support keepout | Low | High | Keep the drive motor on the left side only and route service loops below `x = 180 mm` |
-| Ball releases too early and misses the upper tray | Medium | High | Keep the belt bed shallow and let the upper tray overlap the goal zone with a generous x/y envelope |
-| Tray height or angle is off by a small amount | Medium | Medium | Preserve the top tray as a simple fixed capture shelf and tune the final mount height in `solution_script.py` |
-| Budget drifts upward after implementation changes | Low | Medium | Hold the manufactured parts to the declared stock sizes and keep the servo count at one |
-
-### Jitter Robustness Check
-
-- Capture area covers spawn jitter: Yes
-- Tested edge cases considered: early release, late release, left-offset spawn, right-offset spawn
+| Preview geometry drifts away from the final corridor | Medium | High | Keep the drafted shapes as the authoritative inventory and rebuild the same passive family in the implementation script |
+| Freestanding assembly tips under impact | Medium | High | Keep a wide base and add low-mounted `ballast_block` |
+| Ball escapes due to spawn jitter | Medium | Medium | Use an oversized `capture_funnel` before the chute narrows |
+| Hidden environment contact violates the no-drill rule | Low | High | Keep all geometry referenced from `freestanding_base` and leave explicit clearance to the `benchmark_environment` and `environment_fixture` |
