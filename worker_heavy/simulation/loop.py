@@ -66,6 +66,7 @@ class SimulationLoop:
         particle_budget: int | None = None,
         manufactured_part_labels: set[str] | None = None,
         require_goal_completion: bool = True,
+        benchmark_payload_observation_window_s: float | None = 1.5,
     ):
         from worker_heavy.config import settings
 
@@ -92,6 +93,13 @@ class SimulationLoop:
         self.backend_type = resolved_backend_type
         self.session_id = session_id
         self.require_goal_completion = require_goal_completion
+        self.benchmark_payload_observation_window_s = (
+            float(benchmark_payload_observation_window_s)
+            if benchmark_payload_observation_window_s is not None
+            else None
+        )
+        self.benchmark_payload_body_name: str | None = None
+        self._benchmark_payload_out_of_bounds_recorded = False
         # Propagate smoke test mode to backend for optimization (in case of cache hit)
         if hasattr(self.backend, "smoke_test_mode"):
             self.backend.smoke_test_mode = smoke_test_mode
@@ -230,6 +238,9 @@ class SimulationLoop:
                 goal_sites=self.goal_sites,
                 forbidden_sites=self.forbidden_sites,
             )
+
+            if self.objectives and self.objectives.moved_object:
+                self.benchmark_payload_body_name = self._identify_target_body()
 
             # Configurable timeout (capped at hard limit)
             self.max_simulation_time = min(
@@ -591,6 +602,55 @@ class SimulationLoop:
                     return b
         return None
 
+    def _benchmark_payload_out_of_bounds_grace_applies(
+        self, body_name: str, current_time: float
+    ) -> bool:
+        if self.require_goal_completion:
+            return False
+        if self.benchmark_payload_body_name is None:
+            return False
+        if not self.objectives or not self.objectives.moved_object:
+            return False
+        if body_name != self.benchmark_payload_body_name:
+            return False
+        if self.benchmark_payload_observation_window_s is None:
+            return False
+        return current_time >= self.benchmark_payload_observation_window_s
+
+    def _record_benchmark_payload_out_of_bounds_evidence(
+        self, body_name: str, current_time: float
+    ) -> None:
+        if self._benchmark_payload_out_of_bounds_recorded:
+            return
+
+        payload_label = (
+            str(self.objectives.moved_object.label).strip()
+            if self.objectives and self.objectives.moved_object
+            else body_name
+        )
+        self.metric_collector.add_event(
+            "benchmark_payload_out_of_bounds_after_window",
+            {
+                "body": body_name,
+                "payload_label": payload_label,
+                "time_s": current_time,
+                "observation_window_s": self.benchmark_payload_observation_window_s,
+                "bounds": (
+                    self.objectives.simulation_bounds.model_dump()
+                    if self.objectives and self.objectives.simulation_bounds
+                    else None
+                ),
+            },
+        )
+        logger.info(
+            "benchmark_payload_out_of_bounds_after_window_recorded",
+            body=body_name,
+            payload_label=payload_label,
+            time_s=current_time,
+            observation_window_s=self.benchmark_payload_observation_window_s,
+        )
+        self._benchmark_payload_out_of_bounds_recorded = True
+
     def _perform_pre_simulation_validation(self) -> SimulationMetrics | None:
         """Check validation status before starting simulation."""
         if self.validation_report and not getattr(
@@ -759,6 +819,13 @@ class SimulationLoop:
                     bname in self.fixed_body_names
                     or bname.startswith(self.fixed_body_prefixes)
                 ):
+                    continue
+                if self._benchmark_payload_out_of_bounds_grace_applies(
+                    bname, current_time
+                ):
+                    self._record_benchmark_payload_out_of_bounds_evidence(
+                        bname, current_time
+                    )
                     continue
                 if eval_fail_reason == FailureReason.OUT_OF_BOUNDS:
                     logger.warning(

@@ -17,6 +17,12 @@ This script is stricter than the fixture normalizer:
 Reviewer-only transcript nodes are skipped when the scenario does not include a
 corresponding preflightable artifact directory. Those nodes are materialized by
 runtime handoff logic, not by the static fixture inputs themselves.
+
+Backend-owned `.manifests/current_role.json` fixtures are treated specially:
+they are required inside each entry directory, validated against the active
+node, and written into the workspace separately from authored `write_file`
+steps so the corpus can carry the manifest without inflating the transcript
+count.
 """
 
 from __future__ import annotations
@@ -66,6 +72,7 @@ from controller.agent.node_entry_validation import (
     validate_seeded_workspace_handoff_artifacts,
 )
 from controller.clients.worker import WorkerClient
+from shared.current_role import parse_current_role_manifest
 from shared.enums import AgentName
 from shared.logging import get_logger
 from shared.models.schemas import (
@@ -74,6 +81,7 @@ from shared.models.schemas import (
     BenchmarkDefinition,
     CostTotals,
 )
+from shared.script_contracts import CURRENT_ROLE_MANIFEST_PATH
 
 logger = get_logger(__name__)
 
@@ -327,8 +335,35 @@ def _apply_entry_dir_to_workspace(
     workspace_root: Path,
     entry_dir: Path,
     target_paths: list[str],
+    agent_name: AgentName,
 ) -> None:
-    entry_files = sorted(p for p in entry_dir.rglob("*") if p.is_file())
+    current_role_path = entry_dir / CURRENT_ROLE_MANIFEST_PATH
+    if not current_role_path.is_file():
+        raise RuntimeError(
+            f"Entry dir {entry_dir} is missing required backend manifest "
+            f"{CURRENT_ROLE_MANIFEST_PATH.as_posix()}."
+        )
+
+    current_role_content = current_role_path.read_text(encoding="utf-8")
+    try:
+        current_role_manifest = parse_current_role_manifest(current_role_content)
+    except Exception as exc:  # pragma: no cover - defensive validation
+        raise RuntimeError(
+            f"Entry dir {entry_dir} has invalid current role manifest "
+            f"{CURRENT_ROLE_MANIFEST_PATH.as_posix()}: {exc}"
+        ) from exc
+    if current_role_manifest.agent_name != agent_name:
+        raise RuntimeError(
+            f"Entry dir {entry_dir} current role "
+            f"{current_role_manifest.agent_name.value} does not match transcript "
+            f"node {agent_name.value}."
+        )
+
+    entry_files = sorted(
+        p
+        for p in entry_dir.rglob("*")
+        if p.is_file() and p.relative_to(entry_dir) != CURRENT_ROLE_MANIFEST_PATH
+    )
     if len(entry_files) != len(target_paths):
         raise RuntimeError(
             f"Entry dir {entry_dir} has {len(entry_files)} files but the node "
@@ -339,6 +374,10 @@ def _apply_entry_dir_to_workspace(
         dest_path = workspace_root / target_path
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         dest_path.write_bytes(source_path.read_bytes())
+
+    workspace_current_role_path = workspace_root / CURRENT_ROLE_MANIFEST_PATH
+    workspace_current_role_path.parent.mkdir(parents=True, exist_ok=True)
+    workspace_current_role_path.write_text(current_role_content, encoding="utf-8")
 
 
 def _seed_benchmark_assembly_from_benchmark_definition(
@@ -477,6 +516,7 @@ async def _validate_scenario(
                                 workspace_root=workspace_root,
                                 entry_dir=entry_dir,
                                 target_paths=_node_write_paths(node_block),
+                                agent_name=agent_name,
                             )
                             _seed_benchmark_assembly_from_benchmark_definition(
                                 workspace_root

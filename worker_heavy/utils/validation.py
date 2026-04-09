@@ -38,6 +38,7 @@ from shared.models.schemas import (
 )
 from shared.models.simulation import (
     SimulationFailure,
+    SimulationMetrics,
     SimulationResult,
     StressFieldData,
     StressSummary,
@@ -903,6 +904,44 @@ def load_simulation_result(path: Path) -> SimulationResult | None:
             session_id=None,
         )
         return None
+
+
+def _benchmark_payload_out_of_bounds_summary(
+    metrics: SimulationMetrics,
+    *,
+    benchmark_mode: bool,
+) -> str | None:
+    if not benchmark_mode:
+        return None
+
+    for event in metrics.events:
+        if event.get("type") != "benchmark_payload_out_of_bounds_after_window":
+            continue
+
+        data = event.get("data") if isinstance(event, dict) else None
+        if not isinstance(data, dict):
+            return "Benchmark payload left simulation bounds after the observation window; recorded as evidence."
+
+        payload_label = str(
+            data.get("payload_label") or data.get("body") or "benchmark payload"
+        ).strip()
+        observation_window_s = data.get("observation_window_s")
+        if observation_window_s is not None:
+            try:
+                window_text = f"{float(observation_window_s):.1f}s"
+            except (TypeError, ValueError):
+                window_text = f"{observation_window_s!s}s"
+            return (
+                f"Benchmark payload {payload_label} left simulation bounds after "
+                f"{window_text}; recorded as evidence."
+            )
+
+        return (
+            f"Benchmark payload {payload_label} left simulation bounds; "
+            "recorded as evidence."
+        )
+
+    return None
 
 
 def save_simulation_result(result: SimulationResult, path: Path):
@@ -1839,6 +1878,11 @@ def simulate(
         payload_trajectory_definition=payload_trajectory_definition,
         smoke_test_mode=smoke_test_mode,
         require_goal_completion=not benchmark_mode,
+        benchmark_payload_observation_window_s=(
+            load_agents_config().benchmark_payload_observation.window_s
+            if benchmark_mode
+            else None
+        ),
         session_id=session_id,
         particle_budget=particle_budget,
         manufactured_part_labels=manufactured_part_labels,
@@ -2138,6 +2182,12 @@ def simulate(
             )
         if payload_position_summary:
             result.summary = f"{result.summary}\n{payload_position_summary}"
+
+        benchmark_payload_evidence_summary = _benchmark_payload_out_of_bounds_summary(
+            metrics, benchmark_mode=benchmark_mode
+        )
+        if benchmark_payload_evidence_summary:
+            result.summary = f"{result.summary}\n{benchmark_payload_evidence_summary}"
 
         # T023: Generate stress heatmaps and append to render_paths
         if metrics.stress_fields:

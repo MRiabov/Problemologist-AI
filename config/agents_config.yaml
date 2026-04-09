@@ -113,6 +113,8 @@ payload_trajectory_monitor:
   enabled: true
   monitor_sample_stride_s: 0.3
   consecutive_miss_count: 2
+benchmark_payload_observation:
+  window_s: 1.5
 defaults:
   reasoning_effort: high
   filesystem_permissions:

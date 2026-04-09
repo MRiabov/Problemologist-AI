@@ -97,6 +97,10 @@ class PayloadTrajectoryMonitorPolicy(BaseModel):
     consecutive_miss_count: int = Field(default=2, ge=1)
 
 
+class BenchmarkPayloadObservationPolicy(BaseModel):
+    window_s: float = Field(default=1.5, gt=0)
+
+
 class AgentPolicy(BaseModel):
     filesystem_permissions: FilesystemPermissions = Field(
         default_factory=FilesystemPermissions
@@ -308,6 +312,9 @@ class AgentsConfig(BaseModel):
     motion_forecast: MotionForecastPolicy = Field(default_factory=MotionForecastPolicy)
     payload_trajectory_monitor: PayloadTrajectoryMonitorPolicy = Field(
         default_factory=PayloadTrajectoryMonitorPolicy
+    )
+    benchmark_payload_observation: BenchmarkPayloadObservationPolicy = Field(
+        default_factory=BenchmarkPayloadObservationPolicy
     )
     payload_trajectory_clearance: PayloadTrajectoryClearanceBudget = Field(
         default_factory=PayloadTrajectoryClearanceBudget
