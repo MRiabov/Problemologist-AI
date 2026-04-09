@@ -23,5 +23,5 @@
 
 - [ ] Verify geometry, objective clearance, and runtime jitter robustness.
 - [ ] Reject any actuators, FEM, or fluids before submission.
-- [ ] Call `submit_plan()` only after the handoff files are internally
+- [ ] Call `submit_benchmark_plan()` only after the handoff files are internally
   consistent.

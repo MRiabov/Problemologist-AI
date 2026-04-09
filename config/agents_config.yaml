@@ -189,7 +189,7 @@ agents:
     - edit_file
     - invoke_cots_search_subagent
     - validate_costing_and_price
-    - submit_plan
+    - submit_engineering_plan
     allowed_during_unit_eval:
     - engineer_planner
     - engineer_plan_reviewer
@@ -473,7 +473,7 @@ agents:
     - execute_command
     - invoke_cots_search_subagent
     - render_technical_drawing
-    - submit_plan
+    - submit_benchmark_plan
     allowed_during_unit_eval:
     - benchmark_planner
     - benchmark_plan_reviewer
@@ -604,7 +604,7 @@ agents:
     - edit_file
     - grep
     - execute_command
-    - submit_plan
+    - submit_engineering_plan
     allowed_during_unit_eval:
     - engineer_planner
     - electronics_planner

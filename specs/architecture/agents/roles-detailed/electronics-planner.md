@@ -35,7 +35,7 @@ The Electronics Planner is a companion planner for explicit electromechanical ha
 - `edit_file`
 - `grep`
 - `execute_command`
-- `submit_plan`
+- `submit_engineering_plan`
 
 ## What Humans Must Tell It
 

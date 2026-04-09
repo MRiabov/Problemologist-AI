@@ -258,7 +258,7 @@ The safe order is:
 - [x] Update `evals/logic/specs.py` and `shared/eval_artifacts.py`.
 - [x] Update the role-sensitive integration tests in
   `tests/integration/architecture_p0/` and `tests/integration/architecture_p1/`.
-- [ ] Refresh `tests/integration/mock_responses/**` and
+- [x] Refresh `tests/integration/mock_responses/**` and
   `dataset/data/seed/role_based/**`.
 - [x] Add a mixed-workspace regression test that proves the role file wins
   over file presence.

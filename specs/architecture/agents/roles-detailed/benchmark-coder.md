@@ -44,7 +44,7 @@ The Benchmark Coder turns an approved benchmark handoff into `benchmark_script.p
 
 ## Runtime Helpers To Use From Scripts
 
-- `from utils.submission import validate, simulate, submit_for_review`
+- `from utils.submission import validate_benchmark, simulate_benchmark, submit_benchmark_for_review`
 - `from utils.preview import render_cad, render_technical_drawing, objectives_geometry, list_render_bundles, query_render_bundle, pick_preview_pixel, pick_preview_pixels`
 
 ## What Humans Must Tell It
@@ -53,7 +53,7 @@ The Benchmark Coder turns an approved benchmark handoff into `benchmark_script.p
 - The benchmark coder preserves the approved labels, repeated quantities, and COTS identities exactly.
 - `benchmark_plan_evidence_script.py` is the inspectable source of the approved geometry; do not reinterpret it.
 - `benchmark_plan_technical_drawing_script.py` is the presentation companion, not a second geometry contract.
-- The coder should validate and simulate the latest revision before any review handoff.
+- The coder should validate and simulate the latest revision with `validate_benchmark()` / `simulate_benchmark()` before any review handoff, then call `submit_benchmark_for_review()`.
 - If render images or simulation video exist, the coder must inspect them before finishing.
 - `plan_refusal.md` is only valid when the approved plan is infeasible, not when the implementation is merely inconvenient.
 

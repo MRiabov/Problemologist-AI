@@ -49,7 +49,7 @@ The Engineering Coder turns the approved engineering handoff into `solution_scri
 
 ## Runtime Helpers To Use From Scripts
 
-- `from utils.submission import validate, simulate, submit_for_review`
+- `from utils.submission import validate_engineering, simulate_engineering, submit_engineering_for_review`
 - `from utils.preview import render_cad, render_technical_drawing, objectives_geometry, list_render_bundles, query_render_bundle, pick_preview_pixel, pick_preview_pixels`
 
 ## What Humans Must Tell It
@@ -58,7 +58,7 @@ The Engineering Coder turns the approved engineering handoff into `solution_scri
 - `assembly_definition.yaml`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, and the planner drafting scripts are read-only context after plan approval.
 - The coder preserves the exact labels, repeated quantities, COTS identities, budgets, and geometry relationships in the handoff.
 - `solution_plan_technical_drawing_script.py` is the presentation companion, not a second geometry contract.
-- Validate and simulate the latest revision before requesting review.
+- Validate and simulate the latest revision with `validate_engineering()` / `simulate_engineering()` before requesting review, then call `submit_engineering_for_review()`.
 - Inspect render or video evidence when it exists; do not rely on text-only summaries.
 - Use `plan_refusal.md` only when the approved plan is genuinely infeasible.
 - If payload trajectory data exists, keep the coarse and fine motion contracts aligned.

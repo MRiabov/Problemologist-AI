@@ -13,9 +13,9 @@
 - Planner and reviewer handoff artifacts are stage-scoped and fail closed on mismatch.
 - If the detailed sheet, prompt, and skill disagree, the stricter approved handoff wins.
 - Human revisions should keep the detailed sheet, `config/prompts.yaml`, and the role skill aligned.
-- Planners use `submit_plan()` as the completion gate.
+- Planners use `submit_benchmark_plan()` or `submit_engineering_plan()` as the completion gate, depending on graph.
 - Reviewers write the stage YAML pair and then run `bash scripts/submit_review.sh`.
-- Coder roles validate and simulate the latest revision before review handoff.
+- Coder roles validate and simulate the latest revision before calling their role-scoped review helper (`submit_benchmark_for_review()` or `submit_engineering_for_review()`).
 - Coder roles may write `plan_refusal.md` only when the approved plan is genuinely infeasible.
 - Technical-drawing companions are presentation layers, not second geometry contracts.
 - When a role has render, drawing, or simulation evidence, inspect it after any significant blocker or repeated failure on the same issue before the next attempt. If the same issue has failed more than three times in a row, inspect render evidence on every subsequent retry until the blocker changes. Use `.agents/skills/render-evidence/SKILL.md` as the visual-inspection playbook.

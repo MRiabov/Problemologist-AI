@@ -198,6 +198,59 @@
         }
       }
     },
+    "/engineering/validate": {
+      "post": {
+        "tags": [
+          "worker-light"
+        ],
+        "summary": "Api Validate",
+        "description": "Geometric validity check in isolated session.",
+        "operationId": "api_validate_engineering_validate_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenchmarkToolRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkToolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/benchmark/validate": {
       "post": {
         "tags": [
@@ -1940,6 +1993,59 @@
         }
       }
     },
+    "/engineering/simulate": {
+      "post": {
+        "tags": [
+          "worker-heavy"
+        ],
+        "summary": "Api Simulate",
+        "description": "Physics-backed stability check in isolated session.",
+        "operationId": "api_simulate_engineering_simulate_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenchmarkToolRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkToolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/benchmark/simulate": {
       "post": {
         "tags": [
@@ -2124,6 +2230,59 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/PreviewDesignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkToolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/engineering/submit": {
+      "post": {
+        "tags": [
+          "worker-heavy"
+        ],
+        "summary": "Api Submit",
+        "description": "Handover to reviewer in isolated session (moved to heavy due to DFM dependencies).",
+        "operationId": "api_submit_engineering_submit_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenchmarkToolRequest"
               }
             }
           }
@@ -2378,7 +2537,7 @@
               }
             ],
             "title": "Reviewer Stage",
-            "description": "Reviewer stage when calling /benchmark/submit."
+            "description": "Reviewer stage when calling the benchmark or engineering submit route."
           },
           "episode_id": {
             "anyOf": [
@@ -5296,7 +5455,7 @@
               }
             ],
             "title": "Reviewer Stage",
-            "description": "Reviewer stage when calling /benchmark/submit."
+            "description": "Reviewer stage when calling the benchmark or engineering submit route."
           },
           "episode_id": {
             "anyOf": [
@@ -5644,7 +5803,7 @@
               }
             ],
             "title": "Reviewer Stage",
-            "description": "Reviewer stage when calling /benchmark/submit."
+            "description": "Reviewer stage when calling the benchmark or engineering submit route."
           },
           "episode_id": {
             "anyOf": [

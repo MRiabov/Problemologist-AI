@@ -15,7 +15,7 @@ The Engineering Planner turns benchmark context into an implementation-ready eng
 - `journal.md`
 - `renders/engineer_plan_renders/` persistent render evidence
 - `renders/current-episode/` scratch evidence during the active run
-- `.manifests/engineering_plan_review_manifest.json` via `submit_plan()`
+- `.manifests/engineering_plan_review_manifest.json` via `submit_engineering_plan()`
 
 ## What It Reads
 
@@ -45,7 +45,7 @@ The Engineering Planner turns benchmark context into an implementation-ready eng
 - `edit_file`
 - `invoke_cots_search_subagent`
 - `validate_costing_and_price`
-- `submit_plan`
+- `submit_engineering_plan`
 
 ## Runtime Helpers To Use From Scripts
 
@@ -71,7 +71,7 @@ The Engineering Planner turns benchmark context into an implementation-ready eng
 - The chosen mechanism is the smallest credible one that solves the task.
 - Cost and weight stay under the benchmark caps.
 - The drafting package has been inspected when drafting mode is active.
-- `submit_plan()` is the final gate, not a substitute for a coherent handoff.
+- `submit_engineering_plan()` is the final gate, not a substitute for a coherent handoff.
 
 ## Related Skills
 

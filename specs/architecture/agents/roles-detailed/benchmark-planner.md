@@ -15,7 +15,7 @@ The Benchmark Planner turns a problem brief into a benchmark handoff package. It
 - `journal.md`
 - `renders/benchmark_renders/` persistent render evidence
 - `renders/current-episode/` scratch evidence during the active run
-- `.manifests/benchmark_plan_review_manifest.json` via `submit_plan()`
+- `.manifests/benchmark_plan_review_manifest.json` via `submit_benchmark_plan()`
 
 ## What It Reads
 
@@ -41,7 +41,7 @@ The Benchmark Planner turns a problem brief into a benchmark handoff package. It
 - `inspect_topology`
 - `invoke_cots_search_subagent`
 - `render_technical_drawing`
-- `submit_plan`
+- `submit_benchmark_plan`
 
 ## Runtime Helpers To Use From Scripts
 
@@ -60,7 +60,7 @@ The Benchmark Planner turns a problem brief into a benchmark handoff package. It
 - Do not expect `benchmark_script.py` in the workspace until after plan approval.
 - Treat `benchmark_plan_technical_drawing_script.py` as the presentation companion, not a second geometry contract.
 - `invoke_cots_search_subagent` is for engineer-side candidate parts, not for benchmark-owned fixtures.
-- `submit_plan()` is the only completion gate; do not hand off before the package is internally consistent.
+- `submit_benchmark_plan()` is the only completion gate; do not hand off before the package is internally consistent.
 
 ## Acceptance Checklist
 
