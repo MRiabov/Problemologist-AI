@@ -32,6 +32,7 @@ from evals.logic.models import AgentEvalSpec, EvalDatasetItem
 from evals.logic.seed_maintenance import refresh_seed_artifact_manifests
 from shared.agent_templates import load_common_template_files, load_template_repo_files
 from shared.agents.config import DraftingMode, load_agents_config
+from shared.current_role import current_role_manifest_json
 from shared.enums import AgentName, EvalMode
 from shared.models.schemas import (
     AssemblyConstraints,
@@ -136,6 +137,7 @@ def collect_seed_workspace_artifact_paths(
             expected_paths.add(path.relative_to(artifact_dir).as_posix())
 
     expected_paths.update((item.seed_files or {}).keys())
+    expected_paths.add(".manifests/current_role.json")
     return sorted(expected_paths)
 
 
@@ -590,6 +592,14 @@ async def materialize_seed_workspace_snapshot(
         seeded_paths.extend(
             await _ensure_drafting_prompt(workspace_client, agent_name=agent_name)
         )
+
+    await workspace_client.write_file(
+        ".manifests/current_role.json",
+        current_role_manifest_json(agent_name),
+        overwrite=True,
+        bypass_agent_permissions=True,
+    )
+    seeded_paths.append(".manifests/current_role.json")
 
     return seeded_paths
 

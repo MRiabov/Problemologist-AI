@@ -39,8 +39,8 @@ from shared.agent_templates import (
     load_template_repo_files,
 )
 from shared.agents.config import DraftingMode, load_agents_config
-from shared.enums import AgentName
 from shared.current_role import current_role_manifest_json, parse_current_role_manifest
+from shared.enums import AgentName
 from shared.git_utils import init_workspace_repo
 from shared.models.schemas import (
     AssemblyConstraints,
@@ -57,6 +57,7 @@ from shared.models.schemas import (
     ReviewComments,
     ReviewFrontmatter,
 )
+from shared.script_contracts import plan_path_for_agent
 from shared.workers.filesystem.backend import FileInfo
 from worker_heavy.utils.file_validation import (
     validate_node_output,
@@ -1072,7 +1073,6 @@ def materialize_seed_workspace(
         _write_template_files(workspace_dir, load_common_template_files())
     )
     copied_paths.extend(_copy_skills_tree(workspace_dir))
-    copied_paths.append(_write_current_role_manifest(workspace_dir, agent_name))
 
     if is_planner_agent(agent_name):
         copied_paths.extend(
@@ -1121,6 +1121,16 @@ def materialize_seed_workspace(
             },
         )
     )
+
+    if is_planner_agent(agent_name):
+        canonical_plan_path = workspace_dir / plan_path_for_agent(agent_name)
+        if canonical_plan_path.exists():
+            legacy_plan_path = workspace_dir / "plan.md"
+            legacy_plan_path.write_text(
+                canonical_plan_path.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            copied_paths.append("plan.md")
 
     if (
         agent_name in _ENGINEER_DRAFTING_TARGETS
@@ -1182,10 +1192,20 @@ def materialize_seed_workspace(
 
     init_workspace_repo(workspace_dir)
 
+    copied_paths.append(_write_current_role_manifest(workspace_dir, agent_name))
+
     helper_script_paths = []
     if is_planner_agent(agent_name):
+        if agent_name == AgentName.BENCHMARK_PLANNER:
+            helper_script_paths.append("scripts/submit_benchmark_plan.sh")
+        else:
+            helper_script_paths.append("scripts/submit_engineering_plan.sh")
         helper_script_paths.append("scripts/submit_plan.sh")
     elif is_coder_agent(agent_name):
+        if agent_name == AgentName.BENCHMARK_CODER:
+            helper_script_paths.append("scripts/submit_benchmark_for_review.sh")
+        else:
+            helper_script_paths.append("scripts/submit_engineering_for_review.sh")
         helper_script_paths.append("scripts/submit_for_review.sh")
     elif is_reviewer_agent(agent_name):
         helper_script_paths.append("scripts/submit_review.sh")
@@ -1211,18 +1231,24 @@ def build_cli_env(
     provider_name: str | None = None,
 ) -> dict[str, str]:
     """Prepare a generic CLI-provider subprocess environment for a local workspace run."""
+    integration_test_enabled = os.environ.get("IS_INTEGRATION_TEST")
+    if agent_name is not None:
+        _write_current_role_manifest(workspace_dir.expanduser().resolve(), agent_name)
     provider = (
         get_cli_provider(provider_name)
         if provider_name is not None
         else get_cli_provider()
     )
-    return provider.build_env(
+    env = provider.build_env(
         task_id=task_id,
         workspace_dir=workspace_dir,
         codex_home_root=codex_home_root,
         session_id=session_id,
         agent_name=agent_name,
     )
+    if integration_test_enabled is not None:
+        env["IS_INTEGRATION_TEST"] = integration_test_enabled
+    return env
 
 
 def launch_cli_exec(
@@ -1620,6 +1646,14 @@ async def verify_coder_workspace(
         workspace_dir / "scripts" / "submit_for_review.sh",
         workspace_dir / "scripts" / "submit_for_review.py",
     ]
+    if agent_name == AgentName.BENCHMARK_CODER:
+        required_helper_files.insert(
+            0, workspace_dir / "scripts" / "submit_benchmark_for_review.sh"
+        )
+    elif agent_name == AgentName.ENGINEER_CODER:
+        required_helper_files.insert(
+            0, workspace_dir / "scripts" / "submit_engineering_for_review.sh"
+        )
     missing_helpers = [
         str(path.relative_to(workspace_dir))
         for path in required_helper_files

@@ -263,8 +263,6 @@ class CodexCliProvider:
         env["PYTHONPATH"] = os.pathsep.join(
             entry for entry in pythonpath_entries if entry
         )
-        if agent_name is not None:
-            env.setdefault("AGENT_NAME", agent_name.value)
         return env
 
     def _build_exec_argv(
