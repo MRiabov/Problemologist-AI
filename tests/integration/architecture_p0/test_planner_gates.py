@@ -19,6 +19,7 @@ from controller.api.schemas import (
     ConfirmRequest,
     EpisodeResponse,
 )
+from shared.current_role import current_role_manifest_json
 from shared.enums import AgentName, EpisodeStatus, ReviewDecision, TraceType
 from shared.models.schemas import (
     AssemblyConstraints,
@@ -218,6 +219,13 @@ def build():
 
 async def setup_workspace(client, headers, files):
     """Utility to setup a workspace. Overwrites if exists."""
+    if ".manifests/current_role.json" not in files:
+        files = {
+            **files,
+            ".manifests/current_role.json": current_role_manifest_json(
+                AgentName.BENCHMARK_CODER
+            ),
+        }
     for path, content in files.items():
         if isinstance(content, (BenchmarkDefinition, AssemblyDefinition)):
             content_str = yaml.dump(content.model_dump(mode="json", by_alias=True))

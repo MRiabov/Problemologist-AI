@@ -1277,19 +1277,17 @@ async def validate_seeded_workspace_handoff_artifacts(
                     artifact_path="prompt.md",
                 )
             )
-        elif (
-            "render_technical_drawing()" not in prompt_text
-        ):
-                errors.append(
-                    _seeded_schema_error(
-                        message=(
-                            "prompt.md must instruct the agent to call "
-                            f"render_technical_drawing() before {planner_submit_tool_name}() when drafting "
-                            "mode is active"
-                        ),
-                        artifact_path="prompt.md",
-                    )
+        elif "render_technical_drawing()" not in prompt_text:
+            errors.append(
+                _seeded_schema_error(
+                    message=(
+                        "prompt.md must instruct the agent to call "
+                        f"render_technical_drawing() before {planner_submit_tool_name}() when drafting "
+                        "mode is active"
+                    ),
+                    artifact_path="prompt.md",
                 )
+            )
 
     for rel_path, content in contents.items():
         if rel_path in {plan_artifact_name, legacy_plan_artifact_name}:
