@@ -4,6 +4,8 @@ import pytest
 
 from controller.agent.mock_scenarios import load_integration_mock_scenarios
 from shared.agent_templates import load_common_template_files, load_template_text
+from shared.current_role import parse_current_role_manifest
+from shared.enums import AgentName
 
 
 @pytest.mark.integration_p0
@@ -60,3 +62,22 @@ def test_template_file_expands_from_shared_agent_templates(tmp_path: Path):
             encoding="utf-8"
         )
     )
+
+
+@pytest.mark.integration_p0
+def test_mock_response_entry_dirs_include_current_role_manifest():
+    mock_root = Path("tests/integration/mock_responses")
+    entry_dirs = sorted(p for p in mock_root.rglob("entry_*") if p.is_dir())
+    assert entry_dirs, "Expected integration mock-response entry directories."
+
+    for entry_dir in entry_dirs:
+        role_dir = entry_dir.parent
+        agent_name = AgentName(role_dir.name)
+        manifest_path = entry_dir / ".manifests" / "current_role.json"
+        assert manifest_path.is_file(), f"Missing manifest in {entry_dir}"
+
+        manifest_text = manifest_path.read_text(encoding="utf-8")
+        manifest = parse_current_role_manifest(manifest_text)
+        assert manifest.agent_name == agent_name, (
+            f"{manifest_path} does not match node role {agent_name.value}"
+        )
