@@ -7,6 +7,8 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
+from shared.current_role import current_role_agent_name
+from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.workers.schema import (
     RenderArtifactMetadata,
@@ -397,21 +399,20 @@ def select_scratch_preview_render_subdir(
 def select_static_preview_render_subdir(
     workspace_root: Path, *, agent_role: str | None = None
 ) -> str:
-    if agent_role:
-        return (
-            "benchmark_renders"
-            if _is_benchmark_role(agent_role)
-            else "final_solution_submission_renders"
+    active_role = current_role_agent_name(workspace_root)
+    if agent_role is not None and agent_role != active_role.value:
+        raise ValueError(
+            "select_static_preview_render_subdir received a role that does not "
+            f"match .manifests/current_role.json: {agent_role} != {active_role.value}"
         )
-
-    benchmark_context = _workspace_has_benchmark_preview_context(workspace_root)
-    engineer_context = _workspace_has_engineer_preview_context(workspace_root)
-    if benchmark_context and not engineer_context:
-        return "benchmark_renders"
-    if engineer_context and not benchmark_context:
-        return "final_solution_submission_renders"
-    if benchmark_context:
-        return "benchmark_renders"
-    if engineer_context:
-        return "final_solution_submission_renders"
-    return "benchmark_renders"
+    return (
+        "benchmark_renders"
+        if active_role
+        in {
+            AgentName.BENCHMARK_PLANNER,
+            AgentName.BENCHMARK_PLAN_REVIEWER,
+            AgentName.BENCHMARK_CODER,
+            AgentName.BENCHMARK_REVIEWER,
+        }
+        else "final_solution_submission_renders"
+    )

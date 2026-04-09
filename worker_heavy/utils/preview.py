@@ -101,9 +101,7 @@ def preview(
         output_dir = (
             workspace_root
             / "renders"
-            / select_single_preview_render_subdir(
-                workspace_root, agent_role=os.getenv("AGENT_NAME") or None
-            )
+            / select_single_preview_render_subdir(workspace_root, agent_role=agent_role)
         )
     output_dir.mkdir(parents=True, exist_ok=True)
     materialized_path = materialize_preview_response(response, output_dir)

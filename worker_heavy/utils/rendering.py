@@ -7,6 +7,8 @@ import structlog
 from build123d import Compound
 
 from shared.agents.config import load_agents_config
+from shared.current_role import current_role_agent_name
+from shared.enums import AgentName
 from shared.models.schemas import BenchmarkDefinition
 from shared.observability.events import emit_event
 from shared.rendering import (
@@ -219,25 +221,23 @@ def select_static_preview_render_subdir(
     workspace_root: Path, *, agent_role: str | None = None
 ) -> str:
     """Choose the 24-view static render bundle directory for the workspace."""
-
-    if agent_role:
-        return (
-            "benchmark_renders"
-            if _is_benchmark_role(agent_role)
-            else "final_solution_submission_renders"
+    active_role = current_role_agent_name(workspace_root)
+    if agent_role is not None and agent_role != active_role.value:
+        raise ValueError(
+            "select_static_preview_render_subdir received a role that does not "
+            f"match .manifests/current_role.json: {agent_role} != {active_role.value}"
         )
-
-    benchmark_context = _workspace_has_benchmark_preview_context(workspace_root)
-    engineer_context = _workspace_has_engineer_preview_context(workspace_root)
-    if benchmark_context and not engineer_context:
-        return "benchmark_renders"
-    if engineer_context and not benchmark_context:
-        return "final_solution_submission_renders"
-    if benchmark_context:
-        return "benchmark_renders"
-    if engineer_context:
-        return "final_solution_submission_renders"
-    return "benchmark_renders"
+    return (
+        "benchmark_renders"
+        if active_role
+        in {
+            AgentName.BENCHMARK_PLANNER,
+            AgentName.BENCHMARK_PLAN_REVIEWER,
+            AgentName.BENCHMARK_CODER,
+            AgentName.BENCHMARK_REVIEWER,
+        }
+        else "final_solution_submission_renders"
+    )
 
 
 def _build_preview_artifacts(
@@ -427,7 +427,7 @@ def prerender_24_views(
             bundle_base64=bundle_base64,
             script_path="preview_scene.json",
             session_id=session_id or "renderer",
-            agent_role=os.getenv("AGENT_NAME") or None,
+            agent_role=current_role_agent_name(resolved_workspace_root).value,
             smoke_test_mode=smoke_test_mode,
             particle_budget=particle_budget,
         )

@@ -53,8 +53,6 @@ from shared.rendering import (
     select_scratch_preview_render_subdir,
 )
 from shared.script_contracts import (
-    BENCHMARK_SCRIPT_PATH,
-    SOLUTION_SCRIPT_PATH,
     drafting_render_manifest_path_for_agent,
     plan_path_for_agent,
     planner_role_for_drafting_script_path,
@@ -1610,24 +1608,13 @@ def simulate(
         exists=working_dir.exists(),
         files=list(working_dir.iterdir()) if working_dir.exists() else [],
     )
-    current_role = current_role_agent_name(Path.cwd())
+    current_role = current_role_agent_name(working_dir)
     renders_dir = (
         working_dir
         / "renders"
         / select_scratch_preview_render_subdir(
             working_dir,
-            agent_role=(
-                current_role.value
-                if current_role
-                in {
-                    AgentName.BENCHMARK_CODER,
-                    AgentName.BENCHMARK_REVIEWER,
-                    AgentName.ENGINEER_CODER,
-                    AgentName.ENGINEER_EXECUTION_REVIEWER,
-                    AgentName.ELECTRONICS_REVIEWER,
-                }
-                else None
-            ),
+            agent_role=current_role.value,
         )
     )
     renders_dir.mkdir(parents=True, exist_ok=True)
