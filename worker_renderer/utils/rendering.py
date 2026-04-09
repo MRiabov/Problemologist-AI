@@ -230,11 +230,21 @@ def _render_group_key(render_path: str) -> tuple[str, str]:
 def _infer_render_artifact_metadata(
     render_path: str,
     *,
+    workspace_root: Path | None = None,
     existing: RenderArtifactMetadata | None = None,
 ) -> RenderArtifactMetadata:
     group_key, modality = _render_group_key(render_path)
     rel_path = Path(render_path)
     render_dir = rel_path.parent
+    svg_candidate = rel_path.with_suffix(".svg")
+    dxf_candidate = rel_path.with_suffix(".dxf")
+    svg_path = None
+    dxf_path = None
+    if workspace_root is not None:
+        if (workspace_root / svg_candidate).exists():
+            svg_path = svg_candidate.as_posix()
+        if (workspace_root / dxf_candidate).exists():
+            dxf_path = dxf_candidate.as_posix()
     metadata = RenderArtifactMetadata(
         modality=modality,
         group_key=group_key,
@@ -242,6 +252,8 @@ def _infer_render_artifact_metadata(
             rgb=str(render_dir / f"{group_key}.png"),
             depth=str(render_dir / f"{group_key}_depth.png"),
             segmentation=str(render_dir / f"{group_key}_segmentation.png"),
+            svg=svg_path,
+            dxf=dxf_path,
         ),
     )
 
@@ -295,7 +307,9 @@ def normalize_render_manifest(
         if suffix not in {".png", ".jpg", ".jpeg", ".mp4"}:
             continue
         normalized_artifacts[render_path] = _infer_render_artifact_metadata(
-            render_path, existing=existing_artifacts.get(render_path)
+            render_path,
+            workspace_root=workspace_root,
+            existing=existing_artifacts.get(render_path),
         )
 
     resolved_revision = revision
