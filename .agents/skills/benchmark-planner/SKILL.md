@@ -88,7 +88,7 @@ Read these before drafting or revising the handoff:
 - After any significant blocker or repeated failure on the same issue, inspect the current render or drawing evidence before the next plan revision. If the same issue has failed more than three times in a row, keep inspecting render evidence on every subsequent retry until the blocker changes; use `../render-evidence/SKILL.md` as the visual-inspection playbook.
 - If simulation evidence already exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
 - If the review depends on bundle identity or a click-to-world answer, select the exact bundle with `list_render_bundles()` and inspect or query that bundle-local snapshot instead of assuming the newest visible render is the right one.
-- Make the benchmark-owned motion contract explicit if any fixture moves. In this repo, keep each moving fixture to one explicit DOF axis and spell out the controller facts and limits.
+- Make the benchmark-owned motion contract explicit if any fixture moves. State the motion topology / DOF profile, the motion kind, and any axis or path reference when applicable; spell out the controller facts and limits.
 - Keep the payload inside `build_zone` under static variation plus runtime jitter.
 - Keep goal and forbid zones non-overlapping with the payload at spawn.
 - Treat `submit_benchmark_plan()` as the final gate, not as a shortcut around an incomplete handoff.

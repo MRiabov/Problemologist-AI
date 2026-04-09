@@ -72,7 +72,7 @@ Before submission, verify all of the following:
 - `payload.start_position` is a top-level field under `payload`.
 - The payload stays inside `build_zone` after applying static randomization and runtime jitter.
 - Goal and forbid zones do not intersect the payload at spawn.
-- Any benchmark-owned moving fixture declares its motion explicitly, with one axis and clear bounds or controller facts.
+- Any benchmark-owned moving fixture declares its motion explicitly, with motion topology / DOF profile, motion kind, and clear bounds or controller facts. Include an axis or path reference when applicable.
 - The assembly file stays schema-valid and does not rely on template placeholders.
 - The evidence and technical-drawing scripts match the same geometry and do not drift from the YAML.
 - When drawings are part of the handoff, inspect the drafted package with `render_technical_drawing()` before `submit_benchmark_plan()`.

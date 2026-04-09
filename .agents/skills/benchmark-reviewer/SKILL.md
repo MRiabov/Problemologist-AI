@@ -25,7 +25,7 @@ When render evidence or objective overlays are present, use the shared preview h
 - [ ] Read `benchmark_script.py`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan.md`, `todo.md`, `validation_results.json`, `simulation_result.json`, `scene.json`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`, and any `renders/benchmark_renders/**` as read-only context.
 - [ ] Read `plan_refusal.md` when present.
 - [ ] Read `renders/current-episode/**` when it exists.
-- [ ] Require validation and simulation success for the latest revision, and confirm `goal_reached` in the manifest/result.
+- [ ] Require validation and simulation success for the latest revision; benchmark approval does not depend on `goal_reached`.
 - [ ] Inspect render images with `inspect_media(...)` whenever they exist; if moving benchmark fixtures exist, inspect the latest dynamic simulation evidence before approval.
 - [ ] If simulation evidence exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
 - [ ] If bundle identity or a pixel-to-world question matters, resolve the exact bundle with `list_render_bundles()` and query that bundle-local snapshot before approval.
@@ -40,7 +40,7 @@ When render evidence or objective overlays are present, use the shared preview h
 
 ## Comment Checklist
 
-- [ ] Record the stage evidence fields needed by the reviewer schema, including `latest_revision_verified`, `review_manifest_revision`, `validation_success`, `simulation_success`, `goal_reached`, `solvability_summary`, `attachment_policy_summary`, `render_count`, `inspected_render_count`, `visual_inspection_min_images`, `visual_inspection_satisfied`, `visual_evidence_checked`, `deterministic_error_count`, and `deterministic_refusal_reason` as applicable.
+- [ ] Record the stage evidence fields needed by the reviewer schema, including `latest_revision_verified`, `review_manifest_revision`, `validation_success`, `simulation_success`, `solvability_summary`, `attachment_policy_summary`, `render_count`, `inspected_render_count`, `visual_inspection_min_images`, `visual_inspection_satisfied`, `visual_evidence_checked`, `deterministic_error_count`, and `deterministic_refusal_reason` as applicable. Include `goal_reached` only if the schema or manifest already provides it as an engineer-owned field.
 - [ ] Add `dynamic_evidence_checked` or equivalent motion-evidence notes when benchmark-owned motion exists.
 - [ ] Keep the summary factual and the required fixes concrete.
 

@@ -8,8 +8,8 @@
 - Use `inspect_media(...)` for render, image, or video evidence. Do not rely on filenames or text summaries alone.
 - Use `specs/architecture/agents/agent-artifacts/README.md` for the file-level acceptance criteria that sit underneath this review contract.
 - Require validation and simulation success for the latest revision.
-- Confirm `goal_reached` before approval.
 - If moving benchmark fixtures exist, require dynamic simulation evidence for the latest revision.
+- Do not require benchmark-side goal completion; `goal_reached` is engineer-owned and should only be referenced if the reviewer schema or manifest already exposes it as a separate field.
 - Keep the decision YAML as the routing source of truth. Keep the comments YAML factual and evidence-based.
 - Treat `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as the inspectable source of the approved benchmark contract.
 
@@ -30,7 +30,7 @@
 
 ## Review checklist
 
-- Verify that the benchmark reaches the goal or is correctly rejected for a concrete, evidence-backed reason.
+- Verify that the benchmark is a valid, stable problem instance or is correctly rejected for a concrete, evidence-backed reason.
 - Verify geometric validity, solvability, runtime randomization, and exact inventory grounding.
 - Verify validation and simulation success for the latest revision.
 - Reject invalid geometry, out-of-bounds placement, unsolved tasks, or randomization failures.
@@ -44,7 +44,6 @@
 - `review_manifest_revision`
 - `validation_success`
 - `simulation_success`
-- `goal_reached`
 - `solvability_summary`
 - `attachment_policy_summary`
 - `render_count`
