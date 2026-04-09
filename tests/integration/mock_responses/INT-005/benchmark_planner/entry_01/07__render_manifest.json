@@ -9,7 +9,7 @@
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",
   "drafting": true,
-  "source_script_sha256": "2467c820f1b781fda5e1757f817825fae65a26046ff1809beaf8c26cf57f0b93",
+  "source_script_sha256": "1c6d6db9d7b062b818818a45fbe562d44a8c067ac1455aedde3d127185f86f95",
   "preview_evidence_paths": [
     "renders/cad_preview.png",
     "renders/simulation_preview.png"

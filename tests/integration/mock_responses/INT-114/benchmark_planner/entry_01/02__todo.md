@@ -5,6 +5,6 @@
 - [x] Write `benchmark_definition.yaml` with rigid-body-only scope and explicit bounds.
 - [x] Write `benchmark_assembly_definition.yaml` with a schema-valid passive fixture handoff.
 - [x] Write `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` for the drafting-enabled fixture.
-- [x] Call `preview_drawing()` so `renders/benchmark_renders/render_manifest.json` is materialized before submission.
+- [x] Call `render_technical_drawing()` so `renders/benchmark_renders/render_manifest.json` is materialized before submission.
 - [x] Reject any actuators, FEM, or fluids before submission.
-- [x] Call `submit_plan()` only after the handoff files are internally consistent.
+- [x] Call `submit_benchmark_plan()` only after the handoff files are internally consistent.

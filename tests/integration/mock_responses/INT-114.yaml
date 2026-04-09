@@ -39,13 +39,34 @@ transcript:
       content_file: INT-114/benchmark_planner/entry_01/06__benchmark_plan_technical_drawing_script.py
     expected_observation: success
   - thought: Materialize the drafting preview before submitting the planner handoff.
-    tool_name: preview_drawing
+    tool_name: render_technical_drawing
     tool_args: {}
     expected_observation: success
-  - tool_name: submit_plan
+  - tool_name: submit_benchmark_plan
     expected_observation: submitted
   - finished: true
     summary: INT-114 benchmark planner artifacts submitted after drafting preview materialization.
+    plan:
+      theme: gravity_passive_drop_v1
+      target_object_properties:
+        label: projectile_ball
+        shape: sphere
+        static_randomization:
+          radius:
+          - 4.0
+          - 6.0
+        start_position:
+        - 0.0
+        - 0.0
+        - 48.0
+        runtime_jitter:
+        - 2.0
+        - 2.0
+        - 1.0
+      environment_perturbations:
+        static_geometry: Passive rigid-body shell with side walls and a central blocker.
+      difficulty_score: 0.3
+      reasoning: Passive geometry and small spawn jitter are sufficient to exercise gravity-first routing without introducing moving fixtures.
 - node: benchmark_plan_reviewer
   steps:
   - thought: Inspect the latest revision render bundle before approval.

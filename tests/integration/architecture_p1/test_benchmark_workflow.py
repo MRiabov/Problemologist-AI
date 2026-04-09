@@ -139,7 +139,7 @@ async def test_benchmark_planner_cad_reviewer_path():
         submit_plan_traces = [
             t
             for t in traces
-            if t.trace_type.value == "TOOL_START" and t.name == "submit_plan"
+            if t.trace_type.value == "TOOL_START" and t.name == "submit_benchmark_plan"
         ]
         inspect_media_traces = [
             t
@@ -225,7 +225,7 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert benchmark_assembly_definition.cots_parts == []
         assert benchmark_assembly_definition.final_assembly == []
         assert submit_plan_traces, (
-            "Expected planner to call submit_plan before workflow completion."
+            "Expected planner to call submit_benchmark_plan before workflow completion."
         )
         assert inspect_media_traces, (
             "Expected benchmark reviewer to inspect a render before approval."
@@ -524,10 +524,11 @@ async def test_int_200_benchmark_workflow_rejects_hidden_motion_handoff():
         submit_plan_traces = [
             trace
             for trace in traces
-            if trace.trace_type == TraceType.TOOL_START and trace.name == "submit_plan"
+            if trace.trace_type == TraceType.TOOL_START
+            and trace.name == "submit_benchmark_plan"
         ]
         assert len(submit_plan_traces) >= 2, (
-            "Benchmark workflow must retry submit_plan before fail-closed rejection."
+            "Benchmark workflow must retry submit_benchmark_plan before fail-closed rejection."
         )
         assert not any(
             trace.name == "benchmark_plan_reviewer"
@@ -588,10 +589,11 @@ async def test_int_202_benchmark_workflow_rejects_unsupported_motion_handoff():
         submit_plan_traces = [
             trace
             for trace in traces
-            if trace.trace_type == TraceType.TOOL_START and trace.name == "submit_plan"
+            if trace.trace_type == TraceType.TOOL_START
+            and trace.name == "submit_benchmark_plan"
         ]
         assert len(submit_plan_traces) >= 2, (
-            "Benchmark workflow must retry submit_plan before fail-closed rejection."
+            "Benchmark workflow must retry submit_benchmark_plan before fail-closed rejection."
         )
         assert not any(
             trace.name == "benchmark_plan_reviewer"

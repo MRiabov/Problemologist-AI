@@ -257,10 +257,12 @@ def _parse_submit_observation_node_type(observation: str | None) -> str | None:
     return None
 
 
-def _submit_plan_node_types_from_episode_traces(traces) -> set[str]:
+def _submit_plan_node_types_from_episode_traces(
+    traces, *, submit_tool_name: str
+) -> set[str]:
     node_types: set[str] = set()
     for trace in traces or []:
-        if trace.trace_type != TraceType.TOOL_START or trace.name != "submit_plan":
+        if trace.trace_type != TraceType.TOOL_START or trace.name != submit_tool_name:
             continue
         metadata = trace.metadata_vars
         if metadata is None:
@@ -272,7 +274,11 @@ def _submit_plan_node_types_from_episode_traces(traces) -> set[str]:
 
 
 async def _wait_for_submit_plan_node_types(
-    client: httpx.AsyncClient, episode_id: str, required_node_type: str
+    client: httpx.AsyncClient,
+    episode_id: str,
+    required_node_type: str,
+    *,
+    submit_tool_name: str,
 ) -> tuple[EpisodeStatus | None, set[str]]:
     target_statuses = {EpisodeStatus.COMPLETED, EpisodeStatus.FAILED}
     status: EpisodeStatus | None = None
@@ -283,7 +289,7 @@ async def _wait_for_submit_plan_node_types(
         episode = EpisodeResponse.model_validate(ep_resp.json())
         status = episode.status
         submit_node_types = _submit_plan_node_types_from_episode_traces(
-            episode.traces or []
+            episode.traces or [], submit_tool_name=submit_tool_name
         )
         if required_node_type in submit_node_types:
             break
@@ -309,7 +315,11 @@ async def _wait_for_planned_after_submit_plan(
 
 
 async def _wait_for_submit_plan_node_types_benchmark(
-    client: httpx.AsyncClient, session_id: str, required_node_type: str
+    client: httpx.AsyncClient,
+    session_id: str,
+    required_node_type: str,
+    *,
+    submit_tool_name: str,
 ) -> tuple[EpisodeStatus | None, set[str]]:
     episode = EpisodeResponse.model_validate(
         await wait_for_benchmark_state(
@@ -323,13 +333,17 @@ async def _wait_for_submit_plan_node_types_benchmark(
             },
             predicate=lambda candidate: (
                 required_node_type
-                in _submit_plan_node_types_from_episode_traces(candidate.traces or [])
+                in _submit_plan_node_types_from_episode_traces(
+                    candidate.traces or [], submit_tool_name=submit_tool_name
+                )
             ),
         )
     )
     return (
         episode.status,
-        _submit_plan_node_types_from_episode_traces(episode.traces or []),
+        _submit_plan_node_types_from_episode_traces(
+            episode.traces or [], submit_tool_name=submit_tool_name
+        ),
     )
 
 
@@ -524,8 +538,8 @@ async def test_int_005_mandatory_artifacts_gate(
 @pytest.mark.integration_p0
 @pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.asyncio
-async def test_int_005_engineer_planner_flow_emits_submit_plan_trace():
-    """INT-005: Engineer planner must emit explicit submit_plan TOOL_START before completion."""
+async def test_int_005_engineer_planner_flow_emits_submit_engineering_plan_trace():
+    """INT-005: Engineer planner must emit explicit submit_engineering_plan TOOL_START before completion."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         benchmark_session_id = await _generate_ready_benchmark_session(
             client, prompt="INT-005 benchmark setup for engineer planner trace test."
@@ -545,20 +559,23 @@ async def test_int_005_engineer_planner_flow_emits_submit_plan_trace():
         episode_id = str(run_resp.episode_id)
 
         status, submit_node_types = await _wait_for_submit_plan_node_types(
-            client, episode_id, AgentName.ENGINEER_PLANNER.value
+            client,
+            episode_id,
+            AgentName.ENGINEER_PLANNER.value,
+            submit_tool_name="submit_engineering_plan",
         )
         assert AgentName.ENGINEER_PLANNER.value in submit_node_types, (
-            "Expected submit_plan TOOL_START trace with node_type=engineer_planner "
+            "Expected submit_engineering_plan TOOL_START trace with node_type=engineer_planner "
             f"in engineer planner flow. Observed node_types={sorted(submit_node_types)}, status={status}"
         )
         post_submit_status = await _wait_for_planned_after_submit_plan(
             client, episode_id
         )
         assert post_submit_status != EpisodeStatus.FAILED, (
-            "Engineer planner reached FAILED after submit_plan; expected PLANNED."
+            "Engineer planner reached FAILED after submit_engineering_plan; expected PLANNED."
         )
         assert post_submit_status == EpisodeStatus.PLANNED, (
-            f"Expected engineer planner to reach PLANNED after submit_plan, got {post_submit_status}."
+            f"Expected engineer planner to reach PLANNED after submit_engineering_plan, got {post_submit_status}."
         )
 
         manifest_resp = await client.get(
@@ -579,8 +596,8 @@ async def test_int_005_engineer_planner_flow_emits_submit_plan_trace():
 @pytest.mark.integration_p0
 @pytest.mark.xdist_group(name="physics_sims")
 @pytest.mark.asyncio
-async def test_int_113_electronics_planner_flow_emits_submit_plan_trace():
-    """INT-113: Electronics planner must emit explicit submit_plan TOOL_START before completion."""
+async def test_int_113_electronics_planner_flow_emits_submit_engineering_plan_trace():
+    """INT-113: Electronics planner must emit explicit submit_engineering_plan TOOL_START before completion."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         benchmark_session_id = await _generate_ready_benchmark_session(
             client,
@@ -601,20 +618,23 @@ async def test_int_113_electronics_planner_flow_emits_submit_plan_trace():
         episode_id = str(run_resp.episode_id)
 
         status, submit_node_types = await _wait_for_submit_plan_node_types(
-            client, episode_id, AgentName.ELECTRONICS_PLANNER.value
+            client,
+            episode_id,
+            AgentName.ELECTRONICS_PLANNER.value,
+            submit_tool_name="submit_engineering_plan",
         )
         assert AgentName.ELECTRONICS_PLANNER.value in submit_node_types, (
-            "Expected submit_plan TOOL_START trace with node_type=electronics_planner "
+            "Expected submit_engineering_plan TOOL_START trace with node_type=electronics_planner "
             f"in electronics planner flow. Observed node_types={sorted(submit_node_types)}, status={status}"
         )
         post_submit_status = await _wait_for_planned_after_submit_plan(
             client, episode_id
         )
         assert post_submit_status != EpisodeStatus.FAILED, (
-            "Electronics planner reached FAILED after submit_plan; expected PLANNED."
+            "Electronics planner reached FAILED after submit_engineering_plan; expected PLANNED."
         )
         assert post_submit_status == EpisodeStatus.PLANNED, (
-            f"Expected electronics planner to reach PLANNED after submit_plan, got {post_submit_status}."
+            f"Expected electronics planner to reach PLANNED after submit_engineering_plan, got {post_submit_status}."
         )
 
 
@@ -628,7 +648,7 @@ async def test_int_113_electronics_planner_flow_emits_submit_plan_trace():
     ]
 )
 @pytest.mark.asyncio
-async def test_int_114_benchmark_planner_flow_emits_submit_plan_trace():
+async def test_int_114_benchmark_planner_flow_emits_submit_benchmark_plan_trace():
     """INT-114: Benchmark planner must submit to plan review before reaching PLANNED."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         req = BenchmarkGenerateRequest(
@@ -643,17 +663,20 @@ async def test_int_114_benchmark_planner_flow_emits_submit_plan_trace():
         episode_id = str(run_resp.episode_id)
 
         status, submit_node_types = await _wait_for_submit_plan_node_types_benchmark(
-            client, episode_id, AgentName.BENCHMARK_PLANNER.value
+            client,
+            episode_id,
+            AgentName.BENCHMARK_PLANNER.value,
+            submit_tool_name="submit_benchmark_plan",
         )
         assert AgentName.BENCHMARK_PLANNER.value in submit_node_types, (
-            "Expected submit_plan TOOL_START trace with node_type=benchmark_planner "
+            "Expected submit_benchmark_plan TOOL_START trace with node_type=benchmark_planner "
             f"in benchmark planner flow. Observed node_types={sorted(submit_node_types)}, status={status}"
         )
         plan_review_manifest_paths = await _wait_for_benchmark_asset(
             client, episode_id, "benchmark_plan_review_manifest.json"
         )
         assert plan_review_manifest_paths, (
-            "Expected benchmark plan review manifest after planner submit_plan. "
+            "Expected benchmark plan review manifest after planner submit_benchmark_plan. "
             f"episode_id={episode_id}"
         )
         plan_review_paths = await _wait_for_benchmark_asset(
@@ -728,7 +751,7 @@ async def test_int_114_benchmark_planner_flow_emits_submit_plan_trace():
             client, episode_id
         )
         assert post_submit_status != EpisodeStatus.FAILED, (
-            "Benchmark plan-review flow reached FAILED after submit_plan; expected PLANNED."
+            "Benchmark plan-review flow reached FAILED after submit_benchmark_plan; expected PLANNED."
         )
         assert post_submit_status == EpisodeStatus.PLANNED, (
             "Expected benchmark plan-review approval to reach PLANNED, "

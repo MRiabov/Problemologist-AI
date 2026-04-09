@@ -3028,6 +3028,69 @@ async def test_codex_materialized_planner_workspace_submits(
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+async def test_codex_role_scoped_planner_wrapper_rejects_mismatched_role(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv(TECHNICAL_DRAWING_MODE_ENV, DraftingMode.OFF.value)
+    item = _load_dataset_item(
+        "dataset/data/seed/role_based/engineer_plan_reviewer.json",
+        "epr-001-sideways-transfer",
+    )
+    workspace_dir = tmp_path / AgentName.ENGINEER_PLANNER.value / item.id
+    materialize_seed_workspace(
+        item=item,
+        agent_name=AgentName.ENGINEER_PLANNER,
+        workspace_dir=workspace_dir,
+    )
+
+    source_auth_path = tmp_path / "source-home" / ".codex" / "auth.json"
+    source_auth_path.parent.mkdir(parents=True, exist_ok=True)
+    source_auth_path.write_text(
+        json.dumps(
+            {
+                "OPENAI_API_KEY": None,
+                "tokens": {"account_id": "acct-1", "access_token": "token-1"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    codex_home_root = tmp_path / "codex-home"
+    prepare_cli_home(
+        codex_home_root=codex_home_root,
+        workspace_dir=workspace_dir,
+        source_auth_path=source_auth_path,
+    )
+
+    env = build_cli_env(
+        task_id=item.id,
+        workspace_dir=workspace_dir,
+        codex_home_root=codex_home_root,
+        session_id=f"INT-CODEX-{AgentName.ENGINEER_PLANNER.value}-{item.id}",
+        agent_name=AgentName.ENGINEER_PLANNER,
+    )
+
+    completed = subprocess.run(
+        ["bash", "scripts/submit_benchmark_plan.sh"],
+        cwd=workspace_dir,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    assert completed.returncode != 0
+    assert (
+        "submit_benchmark_plan.sh requires current role benchmark_planner"
+        in completed.stderr
+    )
+    assert "found engineer_planner" in completed.stderr
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     (
         "seed_dataset",
@@ -3119,7 +3182,7 @@ async def test_codex_materialized_planner_workspace_submits(
                 "scripts/submit_for_review.py",
             ),
             (
-                "scripts/submit_engineering_for_review.sh",
+                "scripts/submit_solution_for_review.sh",
                 "scripts/submit_for_review.sh",
             ),
         ),

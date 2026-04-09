@@ -57,7 +57,7 @@
 - Keep the geometry readable and aligned to world axes so the gravity path is
   obvious to the reviewer.
 - Materialize a compact drafting package for the passive fixture and inspect it
-  with `preview_drawing()` before submission.
+  with `render_technical_drawing()` before submission.
 
 ## 8. Cost & Weight Envelope
 
