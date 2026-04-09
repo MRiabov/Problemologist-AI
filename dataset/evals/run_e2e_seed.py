@@ -5,7 +5,6 @@ import asyncio
 import os
 import subprocess
 import sys
-import tempfile
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +14,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from evals.logic.models import E2EResumeStageRecord, EvalDatasetItem  # noqa: E402
+from evals.logic.temp_paths import mkdtemp_in_eval_temp_root  # noqa: E402
 from shared.agents.config import DraftingMode  # noqa: E402
 from shared.enums import AgentName, ReviewDecision  # noqa: E402
 from shared.logging import get_logger  # noqa: E402
@@ -98,7 +98,8 @@ def _parse_args() -> argparse.Namespace:
         default=None,
         help=(
             "Optional root directory for stage workspaces and CLI runtime state. "
-            "If omitted, a persistent temp directory is created."
+            "If omitted, a persistent temp directory is created under "
+            "/tmp/problemologist-evals/e2e_seed/."
         ),
     )
     parser.add_argument(
@@ -115,9 +116,11 @@ def _parse_args() -> argparse.Namespace:
         type=str,
         default=None,
         help=(
-            "Resume from a prior stage handle. Accepts agent@workspace_dir, a "
+            "Resume from a stage handle. Accepts agent@workspace_dir, a "
             "workspace directory path, or an agent name when used with "
-            "--resume-from-dir."
+            "--resume-from-dir. Bare agent names require an existing "
+            "checkpoint and no longer autodetect a stage from the workspace "
+            "root."
         ),
     )
     parser.add_argument(
@@ -288,60 +291,18 @@ class ResumePlan:
     resume_label: str | None = None
 
 
-def _stage_workspace_candidates(
-    workspace_root: Path,
+def _latest_completed_stage_before(
+    stages: list[E2EResumeStageRecord],
     *,
-    agent_name: AgentName | None = None,
-) -> list[Path]:
-    candidates: list[Path] = []
-    if not workspace_root.exists():
-        return []
-
-    for prompt_path in sorted(workspace_root.rglob("prompt.md")):
-        child = prompt_path.parent
-        if not child.is_dir():
-            continue
-        inferred_agent = _infer_agent_name_from_workspace_dir(child)
-        if inferred_agent is None:
-            continue
-        if agent_name is not None and inferred_agent != agent_name:
-            continue
-        candidates.append(child.resolve())
-
-    return sorted(
-        candidates,
-        key=lambda path: (
-            path.stat().st_mtime,
-            path.name,
-        ),
-    )
-
-
-def _infer_resume_stage_record(
-    workspace_root: Path,
-    *,
-    agent_name: AgentName | None = None,
+    stage_index: int,
 ) -> E2EResumeStageRecord | None:
-    candidates = _stage_workspace_candidates(workspace_root, agent_name=agent_name)
-    if not candidates:
+    prior_stages = [stage for stage in stages if stage.stage_index < stage_index]
+    if not prior_stages:
         return None
-
-    stage_workspace_dir = candidates[-1]
-    stage_agent = _infer_agent_name_from_workspace_dir(stage_workspace_dir)
-    if stage_agent is None:
+    latest_prior_stage = max(prior_stages, key=lambda stage: stage.stage_index)
+    if latest_prior_stage.stage_index != stage_index - 1:
         return None
-
-    return E2EResumeStageRecord(
-        stage_index=_stage_index_for_agent(stage_agent),
-        agent_name=stage_agent,
-        workspace_dir=stage_workspace_dir,
-        session_id=None,
-        launch_return_code=None,
-        verification_name="inferred-from-workspace-dir",
-        verification_success=True,
-        simulation_success=_simulation_success(stage_workspace_dir),
-        review_decision=None,
-    )
+    return latest_prior_stage
 
 
 def _build_resume_plan(
@@ -366,6 +327,7 @@ def _build_resume_plan(
     source_seed_dir = seed_dir
     resume_label: str | None = None
     selected_stage_index: int | None = None
+    resume_state = None
 
     if resume_from_dir is not None:
         resume_root = resume_from_dir.expanduser().resolve()
@@ -383,18 +345,10 @@ def _build_resume_plan(
         else:
             resume_state = _load_resume_state(resume_root)
             if resume_state is None:
-                inferred_stage = _infer_resume_stage_record(resume_root)
-                if inferred_stage is None:
-                    raise SystemExit(
-                        f"Resume state missing from {resume_root}. "
-                        f"Expected {_resume_state_path(resume_root)}."
-                    )
-                completed_stages = [inferred_stage]
-                selected_stage_index = inferred_stage.stage_index
-                start_stage_index = selected_stage_index + 1
-                source_seed_dir = inferred_stage.workspace_dir
-                resume_label = (
-                    f"{inferred_stage.agent_name.value}@{inferred_stage.workspace_dir}"
+                raise SystemExit(
+                    f"Resume state missing from {resume_root}. "
+                    f"Expected {_resume_state_path(resume_root)} or an explicit "
+                    "stage workspace directory."
                 )
             else:
                 completed_stages = list(resume_state.stages)
@@ -407,17 +361,6 @@ def _build_resume_plan(
                         f"{last_stage.agent_name.value}@{last_stage.workspace_dir}"
                     )
                     resume_root = resume_state.workspace_root
-                else:
-                    inferred_stage = _infer_resume_stage_record(resume_root)
-                    if inferred_stage is not None:
-                        completed_stages = [inferred_stage]
-                        selected_stage_index = inferred_stage.stage_index
-                        start_stage_index = selected_stage_index + 1
-                        source_seed_dir = inferred_stage.workspace_dir
-                        resume_label = (
-                            f"{inferred_stage.agent_name.value}@"
-                            f"{inferred_stage.workspace_dir}"
-                        )
 
     handle = _parse_resume_handle(resume_from_agent)
     if handle is not None:
@@ -438,76 +381,33 @@ def _build_resume_plan(
             source_seed_dir = handle.workspace_dir
             resume_label = handle.label()
         elif handle.agent_name is not None:
-            resume_state = _load_resume_state(resume_root)
             if resume_state is None:
-                inferred_stage = _infer_resume_stage_record(
-                    resume_root, agent_name=handle.agent_name
+                raise SystemExit(
+                    "Bare resume-from-agent names require an existing checkpoint "
+                    f"under {resume_root}."
                 )
-                if inferred_stage is None:
-                    inferred_stage = _infer_resume_stage_record(resume_root)
-                if inferred_stage is None:
-                    raise SystemExit(
-                        f"Resume state missing from {resume_root}. "
-                        f"Expected {_resume_state_path(resume_root)}."
-                    )
-                completed_stages = [inferred_stage]
-                selected_stage_index = inferred_stage.stage_index
-                start_stage_index = selected_stage_index + 1
-                source_seed_dir = inferred_stage.workspace_dir
-                resume_label = (
-                    f"{inferred_stage.agent_name.value}@{inferred_stage.workspace_dir}"
+            target_stage_index = _stage_index_for_agent(handle.agent_name)
+            previous_stage = _latest_completed_stage_before(
+                list(resume_state.stages), stage_index=target_stage_index
+            )
+            if previous_stage is None and target_stage_index > 0:
+                previous_name = STAGES[target_stage_index - 1].agent_name.value
+                raise SystemExit(
+                    f"Cannot resume {handle.agent_name.value} without a completed "
+                    f"{previous_name} stage in {resume_root}."
                 )
+            if previous_stage is None:
+                source_seed_dir = seed_dir
             else:
-                matching_stages = [
-                    stage
-                    for stage in resume_state.stages
-                    if stage.agent_name == handle.agent_name
-                ]
-                if not matching_stages:
-                    raise SystemExit(
-                        f"No completed stage for agent '{handle.agent_name.value}' "
-                        f"found in {resume_root}."
-                    )
-                stage_record = matching_stages[-1]
-                completed_stages = [
-                    stage
-                    for stage in resume_state.stages
-                    if stage.stage_index <= stage_record.stage_index
-                ]
-                selected_stage_index = stage_record.stage_index
-                start_stage_index = selected_stage_index + 1
-                source_seed_dir = stage_record.workspace_dir
-                resume_label = (
-                    f"{stage_record.agent_name.value}@{stage_record.workspace_dir}"
-                )
-        elif handle.workspace_dir is not None:
-            if (handle.workspace_dir / "prompt.md").exists():
-                stage_agent = _infer_agent_name_from_workspace_dir(handle.workspace_dir)
-                if stage_agent is None:
-                    raise SystemExit(
-                        f"Could not infer agent name from resume handle: {resume_from_agent}"
-                    )
-                resume_root = _resume_root_from_stage_dir(handle.workspace_dir)
-                selected_stage_index = _stage_index_for_agent(stage_agent)
-                start_stage_index = selected_stage_index + 1
-                source_seed_dir = handle.workspace_dir
-                resume_label = handle.label()
-            else:
-                stage_agent = handle.agent_name
-                inferred_stage = _infer_resume_stage_record(
-                    handle.workspace_dir, agent_name=stage_agent
-                )
-                if inferred_stage is None:
-                    raise SystemExit(
-                        f"Could not infer a resumable stage from {handle.workspace_dir}."
-                    )
-                resume_root = handle.workspace_dir
-                selected_stage_index = inferred_stage.stage_index
-                start_stage_index = selected_stage_index + 1
-                source_seed_dir = inferred_stage.workspace_dir
-                resume_label = (
-                    f"{inferred_stage.agent_name.value}@{inferred_stage.workspace_dir}"
-                )
+                source_seed_dir = previous_stage.workspace_dir
+            completed_stages = [
+                stage
+                for stage in resume_state.stages
+                if stage.stage_index < target_stage_index
+            ]
+            selected_stage_index = target_stage_index
+            start_stage_index = selected_stage_index
+            resume_label = f"{handle.agent_name.value}@{source_seed_dir}"
 
     if selected_stage_index is not None and completed_stages:
         completed_stages = [
@@ -685,7 +585,10 @@ async def _run_chain(args: argparse.Namespace) -> int:
         workspace_root = args.resume_from_dir.expanduser().resolve()
         workspace_root.mkdir(parents=True, exist_ok=True)
     elif args.workspace_root is None:
-        workspace_root = Path(tempfile.mkdtemp(prefix="problemologist-e2e-seed-"))
+        workspace_root = mkdtemp_in_eval_temp_root(
+            family_name="e2e_seed",
+            prefix="problemologist-e2e-seed-",
+        )
     else:
         workspace_root = args.workspace_root.expanduser().resolve()
         workspace_root.mkdir(parents=True, exist_ok=True)

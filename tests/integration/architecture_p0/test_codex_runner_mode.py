@@ -776,9 +776,7 @@ def test_run_e2e_seed_resume_from_dir_uses_checkpoint(tmp_path: Path):
 
 
 @pytest.mark.integration_p0
-def test_run_e2e_seed_resume_from_dir_infers_latest_stage_without_checkpoint(
-    tmp_path: Path,
-):
+def test_run_e2e_seed_resume_from_dir_requires_checkpoint(tmp_path: Path):
     import dataset.evals.run_e2e_seed as run_e2e_seed_module
 
     seed_dir = tmp_path / "seed"
@@ -788,18 +786,13 @@ def test_run_e2e_seed_resume_from_dir_infers_latest_stage_without_checkpoint(
     stage_dir.mkdir(parents=True)
     (stage_dir / "prompt.md").write_text("prompt\n", encoding="utf-8")
 
-    plan = run_e2e_seed_module._build_resume_plan(
-        seed_dir=seed_dir,
-        workspace_root=workspace_root,
-        resume_from_dir=workspace_root,
-        resume_from_agent=None,
-    )
-
-    assert plan.workspace_root == workspace_root
-    assert plan.start_stage_index == 1
-    assert plan.source_seed_dir == stage_dir
-    assert plan.resume_label == f"benchmark_planner@{stage_dir}"
-    assert len(plan.completed_stages) == 1
+    with pytest.raises(SystemExit, match="Resume state missing"):
+        run_e2e_seed_module._build_resume_plan(
+            seed_dir=seed_dir,
+            workspace_root=workspace_root,
+            resume_from_dir=workspace_root,
+            resume_from_agent=None,
+        )
 
 
 @pytest.mark.integration_p0
@@ -827,33 +820,54 @@ def test_run_e2e_seed_resume_from_agent_handle_uses_stage_dir(tmp_path: Path):
 
 
 @pytest.mark.integration_p0
-def test_run_e2e_seed_resume_from_agent_handle_infers_latest_stage_from_root(
+def test_run_e2e_seed_resume_from_agent_handle_uses_checkpoint_chain(
     tmp_path: Path,
 ):
     import dataset.evals.run_e2e_seed as run_e2e_seed_module
+    from evals.logic.models import E2EResumeStageRecord
 
     seed_dir = tmp_path / "seed"
     seed_dir.mkdir()
     workspace_root = tmp_path / "resume-root"
-    stage_dir = workspace_root / "workspaces" / "benchmark_planner-1111aaaa"
-    stage_dir.mkdir(parents=True)
-    (stage_dir / "prompt.md").write_text("prompt\n", encoding="utf-8")
+    planner_dir = workspace_root / "workspaces" / "benchmark_planner-1111aaaa"
+    planner_dir.mkdir(parents=True)
+
+    planner_stage = E2EResumeStageRecord(
+        stage_index=0,
+        agent_name=AgentName.BENCHMARK_PLANNER,
+        workspace_dir=planner_dir,
+        session_id="session-1",
+        launch_return_code=0,
+        verification_name="local-verification",
+        verification_success=True,
+        simulation_success=None,
+        review_decision=None,
+    )
+
+    run_e2e_seed_module._save_resume_state(
+        workspace_root=workspace_root,
+        seed_dir=seed_dir,
+        completed_stages=[planner_stage],
+    )
 
     plan = run_e2e_seed_module._build_resume_plan(
         seed_dir=seed_dir,
         workspace_root=workspace_root,
-        resume_from_dir=None,
-        resume_from_agent=f"benchmark_planner@{workspace_root}",
+        resume_from_dir=workspace_root,
+        resume_from_agent="benchmark_plan_reviewer",
     )
 
     assert plan.workspace_root == workspace_root
     assert plan.start_stage_index == 1
-    assert plan.source_seed_dir == stage_dir
-    assert plan.resume_label == f"benchmark_planner@{stage_dir}"
+    assert plan.source_seed_dir == planner_dir
+    assert plan.resume_label == f"benchmark_plan_reviewer@{planner_dir}"
+    assert [stage.agent_name for stage in plan.completed_stages] == [
+        AgentName.BENCHMARK_PLANNER
+    ]
 
 
 @pytest.mark.integration_p0
-def test_run_e2e_seed_resume_from_agent_handle_falls_back_to_latest_stage_when_missing(
+def test_run_e2e_seed_resume_from_agent_handle_requires_completed_predecessor(
     tmp_path: Path,
 ):
     import dataset.evals.run_e2e_seed as run_e2e_seed_module
@@ -861,21 +875,15 @@ def test_run_e2e_seed_resume_from_agent_handle_falls_back_to_latest_stage_when_m
     seed_dir = tmp_path / "seed"
     seed_dir.mkdir()
     workspace_root = tmp_path / "resume-root"
-    stage_dir = workspace_root / "workspaces" / "benchmark_planner-1111aaaa"
-    stage_dir.mkdir(parents=True)
-    (stage_dir / "prompt.md").write_text("prompt\n", encoding="utf-8")
+    workspace_root.mkdir()
 
-    plan = run_e2e_seed_module._build_resume_plan(
-        seed_dir=seed_dir,
-        workspace_root=workspace_root,
-        resume_from_dir=None,
-        resume_from_agent="benchmark_coder",
-    )
-
-    assert plan.workspace_root == workspace_root
-    assert plan.start_stage_index == 1
-    assert plan.source_seed_dir == stage_dir
-    assert plan.resume_label == f"benchmark_planner@{stage_dir}"
+    with pytest.raises(SystemExit, match="Resume state missing"):
+        run_e2e_seed_module._build_resume_plan(
+            seed_dir=seed_dir,
+            workspace_root=workspace_root,
+            resume_from_dir=workspace_root,
+            resume_from_agent="benchmark_plan_reviewer",
+        )
 
 
 @pytest.mark.asyncio
