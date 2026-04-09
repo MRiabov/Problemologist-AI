@@ -234,18 +234,25 @@ The safe implementation order is:
 - [ ] Thread that intent through the controller RPC and the heavy-worker
   simulation entrypoint so benchmark simulation can choose a stability/evidence
   mode without copying engineer solve semantics.
-- [ ] Update `worker_heavy/simulation/loop.py` so benchmark mode records
+- [ ] Add a benchmark-payload observation window to the benchmark simulation
+  path, with a policy default of 1.5 seconds, so payload out-of-bounds before
+  that window is a hard failure and payload out-of-bounds after that window is
+  recorded as benchmark evidence rather than a benchmark-simulation failure.
+- [ ] Keep that grace-window exception scoped to the benchmark payload only;
+  benchmark-owned fixtures and simulation bounds remain fail-closed at all
+  times.
+- [x] Update `worker_heavy/simulation/loop.py` so benchmark mode records
   stability and benchmark motion evidence without converting goal-zone reach
   into benchmark approval success.
-- [ ] Update `worker_heavy/utils/validation.py` so benchmark-side success text
+- [x] Update `worker_heavy/utils/validation.py` so benchmark-side success text
   is benchmark-neutral while engineer-side success text remains
   goal-oriented.
-- [ ] Remove benchmark review gating on `_goal_reached(...)` from
+- [x] Remove benchmark review gating on `_goal_reached(...)` from
   `worker_heavy/utils/handover.py`, `controller/agent/review_handover.py`, and
   `controller/agent/benchmark/nodes.py`.
-- [ ] Keep benchmark render persistence, attachment summaries, and review
+- [x] Keep benchmark render persistence, attachment summaries, and review
   manifest artifacts intact while omitting benchmark-side `goal_reached`.
-- [ ] If a machine-readable benchmark motion status is still needed, rename it
+- [x] If a machine-readable benchmark motion status is still needed, rename it
   to a benchmark-neutral evidence field and define it on the shared base
   contract instead of reusing solve-completion wording.
 
@@ -255,7 +262,7 @@ The safe implementation order is:
   simulation is described as a stability/evidence pass, not a solve pass.
 - [ ] Update `specs/architecture/agents/tools.md` so `simulate_benchmark()`
   is benchmark-neutral and does not imply goal completion.
-- [ ] Update `specs/architecture/agents/handover-contracts.md` so benchmark
+- [x] Update `specs/architecture/agents/handover-contracts.md` so benchmark
   review routes on benchmark stability and evidence rather than benchmark-side
   goal completion.
 - [ ] Update `specs/architecture/agents/roles-detailed/benchmark-coder.md`
@@ -268,16 +275,19 @@ The safe implementation order is:
 
 ### Tests, fixtures, and evals
 
-- [ ] Update `tests/integration/architecture_p1/test_benchmark_workflow.py`
+- [x] Update `tests/integration/architecture_p1/test_benchmark_workflow.py`
   so benchmark handoff passes without `manifest.goal_reached is True`.
-- [ ] Update `tests/integration/architecture_p1/test_handover.py` so the
+- [x] Update `tests/integration/architecture_p1/test_handover.py` so the
   benchmark handoff path asserts stability and evidence instead of benchmark
   goal completion.
-- [ ] Add a regression that approves a benchmark when simulation is stable and
+- [x] Add a regression that approves a benchmark when simulation is stable and
   evidence is present even if the summary does not mention goal completion.
-- [ ] Add regressions that still reject invalid geometry, missing motion
+- [x] Add regressions that still reject invalid geometry, missing motion
   metadata, stale simulations, and contradictory evidence.
-- [ ] Refresh benchmark-side mock responses, seeded episodes, and review
+- [ ] Add regression coverage for early benchmark-payload out-of-bounds
+  failing benchmark simulation and late benchmark-payload out-of-bounds not
+  failing benchmark simulation after the configured grace window.
+- [x] Refresh benchmark-side mock responses, seeded episodes, and review
   manifests that still encode `goal_reached` as the benchmark success marker.
 - [ ] Update `specs/integration-test-list.md` and any eval rows that still map
   benchmark approval to solve completion.
@@ -286,7 +296,7 @@ The safe implementation order is:
 
 ### Cutover verification
 
-- [ ] Run the narrow benchmark handoff and review integration slice first.
+- [x] Run the narrow benchmark handoff and review integration slice first.
 - [ ] Widen to reviewer-evidence and node-entry validation slices only if the
   narrow slice exposes shared-contract fallout.
 - [ ] Confirm no new benchmark `verify` path, route, or handoff prerequisite
