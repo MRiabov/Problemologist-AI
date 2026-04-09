@@ -1,14 +1,14 @@
 [
   {
     "id": "bc-011-sideways-ball",
-    "task": "Confirm `.manifests/current_role.json` names `benchmark_coder` before using the seeded artifacts. Use the seeded benchmark planner artifacts in the workspace to implement the sideways-ball benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Render preview artifacts must write to `renders/current-episode/` (scratch-only, deleted at handoff); persistent render bundles under `renders/benchmark_renders/`, `renders/engineer_plan_renders/`, and `renders/final_solution_submission_renders/` are backend-owned read-only paths.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the sideways-ball benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Render preview artifacts must write to `renders/current-episode/` (scratch-only, deleted at handoff); persistent render bundles under `renders/benchmark_renders/`, `renders/engineer_plan_renders/`, and `renders/final_solution_submission_renders/` are backend-owned read-only paths.",
     "complexity_level": 0,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-011-sideways-ball",
     "expected_criteria": "Requires `.manifests/current_role.json` to name `benchmark_coder` and the seeded workspace to match that role. Writes benchmark implementation artifacts and runnable benchmark code consistent with 40mm-radius steel sphere moved 1m sideways while preserving the seeded benchmark drafting context. Render scratch path uses `renders/current-episode/` only; persistent bundles remain read-only to agent roles."
   },
   {
     "id": "bc-011-drawing-off",
-    "task": "Confirm `.manifests/current_role.json` names `benchmark_coder` before using the seeded artifacts. Use the seeded benchmark planner artifacts in the workspace to implement the sideways-ball benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-011-sideways-ball`. Technical drawing mode: off.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the sideways-ball benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-011-sideways-ball`. Technical drawing mode: off.",
     "complexity_level": 0,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-011-drawing-off",
     "technical_drawing_mode": "off",
@@ -17,7 +17,7 @@
   },
   {
     "id": "bc-011-drawing-minimal",
-    "task": "Confirm `.manifests/current_role.json` names `benchmark_coder` before using the seeded artifacts. Use the seeded benchmark planner artifacts in the workspace to implement the sideways-ball benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-011-sideways-ball`. Technical drawing mode: minimal.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the sideways-ball benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-011-sideways-ball`. Technical drawing mode: minimal.",
     "complexity_level": 0,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-011-drawing-minimal",
     "technical_drawing_mode": "minimal",
@@ -26,7 +26,7 @@
   },
   {
     "id": "bc-011-drawing-full",
-    "task": "Confirm `.manifests/current_role.json` names `benchmark_coder` before using the seeded artifacts. Use the seeded benchmark planner artifacts in the workspace to implement the sideways-ball benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-011-sideways-ball`. Technical drawing mode: full.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the sideways-ball benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-011-sideways-ball`. Technical drawing mode: full.",
     "complexity_level": 0,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-011-drawing-full",
     "technical_drawing_mode": "full",
@@ -35,14 +35,14 @@
   },
   {
     "id": "bc-002-tunnel",
-    "task": "Confirm `.manifests/current_role.json` names `benchmark_coder` before using the seeded artifacts. Use the seeded benchmark planner artifacts in the workspace to implement the tunnel benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the tunnel benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-002-tunnel",
     "expected_criteria": "Requires `.manifests/current_role.json` to name `benchmark_coder` and the seeded workspace to match that role. Implements geometry and goal artifacts without planner-file regressions while preserving the seeded benchmark drafting context."
   },
   {
     "id": "bc-002-drawing-off",
-    "task": "Confirm `.manifests/current_role.json` names `benchmark_coder` before using the seeded artifacts. Use the seeded benchmark planner artifacts in the workspace to implement the tunnel benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-002-tunnel`. Technical drawing mode: off.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the tunnel benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-002-tunnel`. Technical drawing mode: off.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-002-drawing-off",
     "technical_drawing_mode": "off",
@@ -51,7 +51,7 @@
   },
   {
     "id": "bc-002-drawing-minimal",
-    "task": "Confirm `.manifests/current_role.json` names `benchmark_coder` before using the seeded artifacts. Use the seeded benchmark planner artifacts in the workspace to implement the tunnel benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-002-tunnel`. Technical drawing mode: minimal.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the tunnel benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-002-tunnel`. Technical drawing mode: minimal.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-002-drawing-minimal",
     "technical_drawing_mode": "minimal",
@@ -60,7 +60,7 @@
   },
   {
     "id": "bc-002-drawing-full",
-    "task": "Confirm `.manifests/current_role.json` names `benchmark_coder` before using the seeded artifacts. Use the seeded benchmark planner artifacts in the workspace to implement the tunnel benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-002-tunnel`. Technical drawing mode: full.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the tunnel benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-002-tunnel`. Technical drawing mode: full.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-002-drawing-full",
     "technical_drawing_mode": "full",
@@ -69,14 +69,14 @@
   },
   {
     "id": "bc-012-raised-shelf-motor",
-    "task": "Confirm `.manifests/current_role.json` names `benchmark_coder` before using the seeded artifacts. Use the seeded benchmark planner artifacts in the workspace to implement the motorized raised-shelf benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, instantiate the benchmark-owned servo through `ServoMotor.from_catalog_id(\"ServoMotor_DS3218\")`, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the motorized raised-shelf benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, instantiate the benchmark-owned servo through `ServoMotor.from_catalog_id(\"ServoMotor_DS3218\")`, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-012-raised-shelf-motor",
     "expected_criteria": "Requires `.manifests/current_role.json` to name `benchmark_coder` and the seeded workspace to match that role. Writes benchmark implementation artifacts that preserve the drafting companions and exercise the class-aware COTS motor import path via `ServoMotor.from_catalog_id`."
   },
   {
     "id": "bc-012-drawing-off",
-    "task": "Confirm `.manifests/current_role.json` names `benchmark_coder` before using the seeded artifacts. Use the seeded benchmark planner artifacts in the workspace to implement the motorized raised-shelf benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, instantiate the benchmark-owned servo through `ServoMotor.from_catalog_id(\"ServoMotor_DS3218\")`, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-012-raised-shelf-motor`. Technical drawing mode: off.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the motorized raised-shelf benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, instantiate the benchmark-owned servo through `ServoMotor.from_catalog_id(\"ServoMotor_DS3218\")`, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-012-raised-shelf-motor`. Technical drawing mode: off.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-012-drawing-off",
     "technical_drawing_mode": "off",
@@ -85,7 +85,7 @@
   },
   {
     "id": "bc-012-drawing-minimal",
-    "task": "Confirm `.manifests/current_role.json` names `benchmark_coder` before using the seeded artifacts. Use the seeded benchmark planner artifacts in the workspace to implement the motorized raised-shelf benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, instantiate the benchmark-owned servo through `ServoMotor.from_catalog_id(\"ServoMotor_DS3218\")`, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-012-raised-shelf-motor`. Technical drawing mode: minimal.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the motorized raised-shelf benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, instantiate the benchmark-owned servo through `ServoMotor.from_catalog_id(\"ServoMotor_DS3218\")`, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-012-raised-shelf-motor`. Technical drawing mode: minimal.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-012-drawing-minimal",
     "technical_drawing_mode": "minimal",
@@ -94,7 +94,7 @@
   },
   {
     "id": "bc-012-drawing-full",
-    "task": "Confirm `.manifests/current_role.json` names `benchmark_coder` before using the seeded artifacts. Use the seeded benchmark planner artifacts in the workspace to implement the motorized raised-shelf benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, instantiate the benchmark-owned servo through `ServoMotor.from_catalog_id(\"ServoMotor_DS3218\")`, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-012-raised-shelf-motor`. Technical drawing mode: full.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the motorized raised-shelf benchmark in `benchmark_script.py`. Keep `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, instantiate the benchmark-owned servo through `ServoMotor.from_catalog_id(\"ServoMotor_DS3218\")`, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-012-raised-shelf-motor`. Technical drawing mode: full.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-012-drawing-full",
     "technical_drawing_mode": "full",
@@ -103,14 +103,14 @@
   },
   {
     "id": "bc-013-sidedeflect",
-    "task": "Confirm `.manifests/current_role.json` names `benchmark_coder` before using the seeded artifacts. Use the seeded benchmark planner artifacts in the workspace to implement the side-deflect ramp benchmark in `benchmark_script.py`. The benchmark drops an ABS sphere from [0, 0, 120] mm onto a 30° angled deflector ramp that must redirect the ball into a side goal bin while avoiding a forbid zone below the spawn. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the side-deflect ramp benchmark in `benchmark_script.py`. The benchmark drops an ABS sphere from [0, 0, 120] mm onto a 30° angled deflector ramp that must redirect the ball into a side goal bin while avoiding a forbid zone below the spawn. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-013-sidedeflect",
     "expected_criteria": "Requires `.manifests/current_role.json` to name `benchmark_coder` and the seeded workspace to match that role. Writes benchmark implementation artifacts for a gravity-driven ball-deflection benchmark with `base_plate`, `deflector_ramp`, `side_goal_wall`, and `catch_bin` geometry that preserves the seeded benchmark drafting context and handles the payload contract correctly."
   },
   {
     "id": "bc-013-drawing-off",
-    "task": "Confirm `.manifests/current_role.json` names `benchmark_coder` before using the seeded artifacts. Use the seeded benchmark planner artifacts in the workspace to implement the side-deflect ramp benchmark in `benchmark_script.py`. The benchmark drops an ABS sphere from [0, 0, 120] mm onto a 30° angled deflector ramp that must redirect the ball into a side goal bin while avoiding a forbid zone below the spawn. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-013-sidedeflect`. Technical drawing mode: off.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the side-deflect ramp benchmark in `benchmark_script.py`. The benchmark drops an ABS sphere from [0, 0, 120] mm onto a 30° angled deflector ramp that must redirect the ball into a side goal bin while avoiding a forbid zone below the spawn. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-013-sidedeflect`. Technical drawing mode: off.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-013-drawing-off",
     "technical_drawing_mode": "off",
@@ -119,7 +119,7 @@
   },
   {
     "id": "bc-013-drawing-minimal",
-    "task": "Confirm `.manifests/current_role.json` names `benchmark_coder` before using the seeded artifacts. Use the seeded benchmark planner artifacts in the workspace to implement the side-deflect ramp benchmark in `benchmark_script.py`. The benchmark drops an ABS sphere from [0, 0, 120] mm onto a 30° angled deflector ramp that must redirect the ball into a side goal bin while avoiding a forbid zone below the spawn. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-013-sidedeflect`. Technical drawing mode: minimal.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the side-deflect ramp benchmark in `benchmark_script.py`. The benchmark drops an ABS sphere from [0, 0, 120] mm onto a 30° angled deflector ramp that must redirect the ball into a side goal bin while avoiding a forbid zone below the spawn. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-013-sidedeflect`. Technical drawing mode: minimal.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-013-drawing-minimal",
     "technical_drawing_mode": "minimal",
@@ -128,7 +128,7 @@
   },
   {
     "id": "bc-013-drawing-full",
-    "task": "Confirm `.manifests/current_role.json` names `benchmark_coder` before using the seeded artifacts. Use the seeded benchmark planner artifacts in the workspace to implement the side-deflect ramp benchmark in `benchmark_script.py`. The benchmark drops an ABS sphere from [0, 0, 120] mm onto a 30° angled deflector ramp that must redirect the ball into a side goal bin while avoiding a forbid zone below the spawn. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-013-sidedeflect`. Technical drawing mode: full.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the side-deflect ramp benchmark in `benchmark_script.py`. The benchmark drops an ABS sphere from [0, 0, 120] mm onto a 30° angled deflector ramp that must redirect the ball into a side goal bin while avoiding a forbid zone below the spawn. Keep `plan.md`, `todo.md`, and `benchmark_definition.yaml` consistent, preserve `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as read-only planner context, update `journal.md`, and keep `benchmark_script.py` import-safe with no `__main__` block or in-module review submission call. Split variant for `bc-013-sidedeflect`. Technical drawing mode: full.",
     "complexity_level": 1,
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-013-drawing-full",
     "technical_drawing_mode": "full",
