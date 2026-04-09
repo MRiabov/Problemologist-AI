@@ -1073,7 +1073,7 @@ class WorkerClient:
     ) -> BenchmarkToolResponse:
         """Trigger physics simulation via worker."""
         resolved_backend = backend or get_default_simulator_backend()
-        role_family = self._role_family()
+        role_family = await self._role_family()
         ensure_smoke_test_mode_allowed(
             smoke_test_mode, integration_enabled=settings.is_integration_test
         )
@@ -1144,7 +1144,7 @@ class WorkerClient:
         bundle_base64: str | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger geometric validation via worker."""
-        role_family = self._role_family()
+        role_family = await self._role_family()
         if self.controller_url:
             payload = {
                 "script_path": script_path,
@@ -1308,7 +1308,7 @@ class WorkerClient:
         effective_stage = reviewer_stage or self._default_reviewer_stage(
             self.agent_role
         )
-        role_family = self._role_family()
+        role_family = await self._role_family()
         if self.controller_url:
             payload = {
                 "script_path": script_path,
