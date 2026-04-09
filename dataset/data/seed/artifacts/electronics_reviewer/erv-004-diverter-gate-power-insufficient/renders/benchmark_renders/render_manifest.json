@@ -4,7 +4,7 @@
   "created_at": "2026-04-08T07:06:50.081964+00:00",
   "episode_id": "32b01db2-178f-5085-a233-0bcd40d161bb",
   "worker_session_id": "seed-renders-erv-004-diverter-gate-power-insufficient-c5629319",
-  "revision": "4f817a7eb5180721726984e615e0928e21898a50",
+  "revision": "02f32cdb93380db67316855772a96d60f4276b3c",
   "scene_hash": "589ef4dcb97e15f6d2cf4cf5858f04394858c2032a58bf42d633df6213d57807",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",

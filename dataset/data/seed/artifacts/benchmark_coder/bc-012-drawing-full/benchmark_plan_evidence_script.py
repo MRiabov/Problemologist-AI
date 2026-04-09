@@ -75,6 +75,13 @@ def build() -> Compound:
     dm.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(dm)
 
+    # final_assembly reference for drive_motor (same physical motor)
+    dm_fa = Box(*DRIVE_MOTOR_SIZE, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    dm_fa = dm_fa.move(Location((-130.0, -80.0, 30.0)))
+    dm_fa.label = "drive_motor"
+    dm_fa.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    children.append(dm_fa)
+
     asm = Compound(children=children)
     asm.label = "benchmark_plan_evidence"
     asm.metadata = CompoundMetadata()

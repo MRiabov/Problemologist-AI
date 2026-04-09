@@ -85,6 +85,13 @@ def _build_model() -> Compound:
     dm.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(dm)
 
+    # COTS part reference for ServoMotor_DS3218
+    dm_cots = Box(*DRIVE_MOTOR_SIZE, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    dm_cots = dm_cots.move(Location((-130.0, -80.0, 30.0)))
+    dm_cots.label = "ServoMotor_DS3218"
+    dm_cots.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    children.append(dm_cots)
+
     asm = Compound(children=children)
     asm.label = "benchmark_plan_technical_drawing"
     asm.metadata = CompoundMetadata()
