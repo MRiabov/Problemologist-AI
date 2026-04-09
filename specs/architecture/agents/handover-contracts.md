@@ -115,7 +115,7 @@ Rules:
 01. The planner-authored evidence script and technical-drawing script must preserve the same multiset of authored labels and quantities as the associated plan/YAML inventory.
 02. Inventory equality is checked by label and COTS-identity multiplicity, not by ordering. For COTS-bearing rows, the label and COTS identity travel together as one identity-bearing pair; validators must reject pair-swaps that preserve the separate label and COTS-ID counts but assign them to different rows.
 03. Repeated references in `final_assembly` count as quantity and must survive into the planner drafting scripts and downstream implementation.
-04. The planner must self-validate this exactness before `submit_plan()`; if the evidence or drawing script drifts, the handoff is invalid.
+04. The planner must self-validate this exactness before the role-scoped planner submission helper (`submit_benchmark_plan()` or `submit_engineering_plan()`, depending on graph); if the evidence or drawing script drifts, the handoff is invalid.
 05. The coder and reviewer must compare the implemented model against the approved inventory and reject missing, extra, or relabeled items.
 06. The technical-drawing companion may be a convenience template, but it may not add, remove, or rename inventory items.
 07. Every planner-declared inventory label and selected COTS `part_id` must appear at least once in the stage-specific plan file as an exact identifier mention. Backticks are preferred for the first mention, but the exact string match is what matters for validation.
@@ -150,7 +150,7 @@ The plan will have the following bullet points. The plan will be validated for c
 4. A draft of `benchmark_assembly_definition.yaml` with per-part motion contracts in `benchmark_assembly.parts` (`dofs`, `control`, and any explicit operating limits). This is benchmark-owned read-only handoff context for downstream engineer stages and must still be a schema-valid full `AssemblyDefinition` artifact, even when the benchmark planner uses a fully free or fully constrained fixture declaration.
 5. `benchmark_plan_evidence_script.py`, the benchmark-owned build123d evidence script that makes the draft geometry legible as a sketch/previewable scene for the benchmark plan reviewers and downstream engineer intake.
 6. `benchmark_plan_technical_drawing_script.py`, the benchmark-owned technical-drawing companion that renders the same benchmark planning intent into orthographic drawing output.
-7. An explicit `submit_plan()` handoff action which persists `.manifests/benchmark_plan_review_manifest.json`.
+7. An explicit `submit_benchmark_plan()` handoff action which persists `.manifests/benchmark_plan_review_manifest.json`.
 
 <!-- Note: it may be interesting that the Coder could try a few "approaches" on how to reduce costs without actually editing CAD, and would get fast response for cost by just editing YAML. However, it will almost by definition deviate from the plan. -->
 
@@ -312,7 +312,7 @@ Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
 
 - Source of truth contract: `ENGINEER_PLANNER_HANDOFF_ARTIFACTS` in node-entry validation.
 - Required artifacts: `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, `solution_plan_technical_drawing_script.py`
-- Those planner-authored scripts must preserve the same labels, repeated quantities, and COTS identities as the approved inventory, and the planner must self-validate that exactness before `submit_plan()`.
+- Those planner-authored scripts must preserve the same labels, repeated quantities, and COTS identities as the approved inventory, and the planner must self-validate that exactness before `submit_benchmark_plan()`.
 - If the approved solution includes moving engineer-owned parts, `assembly_definition.yaml` must also carry a reviewable `motion_forecast` section with ordered world-frame anchors, explicit `rot_deg` pose data, a build-zone-valid first anchor, an explicit goal-zone terminal proof, tolerance bands, and first-contact order.
 - Reviewer-stage manifest: `.manifests/engineering_plan_review_manifest.json` (planner handoff materialization for the plan-review stage)
 - Entry guard behavior:
@@ -467,7 +467,7 @@ moved_object:
 # YOUR CONSTRAINTS
 # -----------------------------------------------------------------------------
 # Benchmark planner authors realistic estimate fields.
-# Runtime derives max caps as `1.5x` those estimates during `submit_plan()`.
+# Runtime derives max caps as `1.5x` those estimates during `submit_engineering_plan()`.
 constraints:
   estimated_solution_cost_usd: 33.33
   estimated_solution_weight_g: 800.0
@@ -494,7 +494,7 @@ randomization:
    - `attachment_policy.notes` is reviewer-facing guidance only and must not be treated as a machine-enforced fallback.
 3. It does not own engineer solution metadata, part costing inputs, or engineer motion/control metadata.
 4. Engineer solution metadata stays in `assembly_definition.yaml` and runtime CAD `.metadata`.
-5. `moved_object.material_id` is mandatory and must be a known material ID from `manufacturing_config.yaml`, and for benchmark-planner handoff `constraints.estimated_solution_cost_usd` and `constraints.estimated_solution_weight_g` are planner-authored while runtime derives `max_unit_cost` and `max_weight_g` from those estimates during `submit_plan()`.
+5. `moved_object.material_id` is mandatory and must be a known material ID from `manufacturing_config.yaml`, and for benchmark-planner handoff `constraints.estimated_solution_cost_usd` and `constraints.estimated_solution_weight_g` are planner-authored while runtime derives `max_unit_cost` and `max_weight_g` from those estimates during `submit_benchmark_plan()`.
 
 <!-- Note: we are using metric units and degrees. -->
 

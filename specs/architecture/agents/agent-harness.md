@@ -63,8 +63,8 @@ The workspace contract is:
 02. The initial prompt is written to `prompt.md` at the workspace root.
 03. Shared boilerplate starter files and prompt-context material come from `shared/agent_templates/`.
 04. Role-specific planner starter files come from the role template repositories under `shared/assets/template_repos/`.
-05. Planner workspaces include `scripts/submit_plan.sh` from `shared/agent_templates/codex/`.
-06. Coder workspaces include `scripts/submit_for_review.sh` from `shared/agent_templates/codex/`.
+05. Planner workspaces include the role-scoped submission helper from `shared/agent_templates/codex/`: `scripts/submit_benchmark_plan.sh` for benchmark planners and `scripts/submit_engineering_plan.sh` for engineering planners.
+06. Coder workspaces include the role-scoped review submission helper from `shared/agent_templates/codex/`: `scripts/submit_benchmark_for_review.sh` for benchmark coders and `scripts/submit_engineering_for_review.sh` for engineering coders.
 07. Reviewer workspaces include `scripts/submit_review.sh` from `shared/agent_templates/codex/`.
 08. Benchmark planner workspaces do not receive `benchmark_script.py`. Benchmark coder and benchmark reviewer workspaces copy `benchmark_script.py` as read-only geometry context after plan approval, and engineer workspaces copy `solution_script.py` as the authored implementation source. Runtime-owned wrappers remain separate from both.
 09. Seed-row artifacts are copied into the workspace before prompt generation.
@@ -85,8 +85,8 @@ The canonical prompt rules are:
 01. The prompt says `Workspace: current directory`.
 02. The prompt tells the agent to use workspace-relative paths only.
 03. The prompt does not mention `/workspace` as the workspace root.
-04. Planner prompts instruct `bash scripts/submit_plan.sh` as the submission command.
-05. Benchmark planner prompts do not include `benchmark_script.py`; that file is introduced only after benchmark plan approval. Coder prompts instruct editing the role-owned authored source file (`solution_script.py` for engineer roles, `benchmark_script.py` for benchmark coder roles) and supporting `*.py` files, then either running `bash scripts/submit_for_review.sh` or using the Python submission utility from `utils.submission` in a supporting script. In that route, `validate` and `simulate` are intermediate checks before `submit_for_review`.
+04. Planner prompts instruct the role-scoped submission command (`bash scripts/submit_benchmark_plan.sh` or `bash scripts/submit_engineering_plan.sh`) as appropriate for the active planner role.
+05. Benchmark planner prompts do not include `benchmark_script.py`; that file is introduced only after benchmark plan approval. Coder prompts instruct editing the role-owned authored source file (`solution_script.py` for engineering roles, `benchmark_script.py` for benchmark coder roles) and supporting `*.py` files, then either running `bash scripts/submit_benchmark_for_review.sh` / `bash scripts/submit_engineering_for_review.sh` or using the matching Python submission utility from `utils.submission` in a supporting script. In that route, `validate_benchmark()` / `simulate_benchmark()` or `validate_engineering()` / `simulate_engineering()` are intermediate checks before `submit_benchmark_for_review()` / `submit_engineering_for_review()`.
 06. Reviewer prompts instruct writing stage-specific review artifacts under `reviews/`, then running `bash scripts/submit_review.sh`.
 07. The prompt also advertises `python .admin/clear_env.py` as the in-workspace reset helper for clean retries.
 08. The prompt includes the task text, agent name, task ID, and seed dataset name when available.
@@ -98,18 +98,18 @@ PromptManager is the canonical merge point for that prompt text; runtime code su
 
 ## Role behavior
 
-Planner roles are the only roles that use the local submission helper.
+Planner roles are the only roles that use the local planner submission helper.
 
 Planner behavior is:
 
 1. Edit the planner-owned workspace files for the current stage.
 2. Keep the workspace relative-path contract intact.
-3. Run `bash scripts/submit_plan.sh` from the materialized workspace.
+3. Run the role-scoped planner submission helper from the materialized workspace (`bash scripts/submit_benchmark_plan.sh` for benchmark planners, `bash scripts/submit_engineering_plan.sh` for engineering planners).
 4. Iterate until the helper reports `ok=true` and `status=submitted`.
 5. Treat `.manifests/` as system-owned output, not as editable planner input.
 
 Coder roles use the same CLI-provider workspace contract, but they do not submit plans through the planner helper.
-The prompt tells them to work in the role-owned authored source file, supporting implementation files, and the local execution-review helper.
+The prompt tells them to work in the role-owned authored source file, supporting implementation files, and the local execution-review helper (`bash scripts/submit_benchmark_for_review.sh` or `bash scripts/submit_engineering_for_review.sh`).
 
 Reviewer roles operate on the same workspace but write review artifacts instead of planner output.
 The CLI-provider prompt must direct reviewers to the stage-specific `reviews/` files and must not ask them to rewrite planner-owned source files.

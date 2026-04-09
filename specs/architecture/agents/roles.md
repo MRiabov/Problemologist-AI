@@ -4,7 +4,7 @@
 
 - This file is the quick cross-role map.
 - Detailed role sheets live in `roles-detailed/`.
-- The benchmark generator and engineer graphs are the two main workflows.
+- The benchmark generator and engineering graphs are the two main workflows.
 - Helper roles support those workflows and should be revised through the same sheet-driven process.
 
 ## Shared Contract

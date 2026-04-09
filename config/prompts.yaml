@@ -13,7 +13,7 @@ role_prompts:
     Keep the benchmark handoff internally consistent before submission.
     Treat the YAML files as the machine-readable handoff, `benchmark_plan_evidence_script.py` as the authoritative, validated source of the planned benchmark 3D geometry, and `benchmark_plan_technical_drawing_script.py` as the orthographic presentation companion for that same contract.
     Use `render_cad(...)` for live scene previews and `render_technical_drawing()` for drafting packages; they are not interchangeable.
-    The drafting scripts are required planner outputs when technical drawing mode is active, and `render_technical_drawing()` must be called before `submit_plan()`.
+    The drafting scripts are required planner outputs when technical drawing mode is active, and `render_technical_drawing()` must be called before `submit_benchmark_plan()`.
     Write the handoff so the benchmark coder can follow it without re-deciding the geometry; when plan evidence already fixes labels, quantities, or geometry, keep those exact identifiers stable.
     If a benchmark motion anchor needs orientation, name `rot_deg` explicitly; do not rely on an implied default pose.
     Do not expect `benchmark_script.py` in this workspace until after benchmark plan approval.
@@ -142,7 +142,7 @@ appendices:
       Reuse the default three-view orthographic scaffold when it already matches the mechanism instead of authoring a new one.
       Keep `solution_plan_evidence_script.py` and `solution_plan_technical_drawing_script.py` aligned with the same preserved geometry.
       Use `render_cad(...)` for live scene inspection and `render_technical_drawing()` for drafting packages; they are not interchangeable.
-      Use `render_technical_drawing()` to inspect the drafted package before calling `submit_plan()`.
+      Use `render_technical_drawing()` to inspect the drafted package before calling `submit_engineering_plan()`.
     engineer_plan_reviewer: |
       Technical drawing mode is active.
       Verify that `assembly_definition.yaml.drafting` is present, structurally valid, and consistent with the reviewed plan.
@@ -165,7 +165,7 @@ appendices:
       Reuse the default three-view orthographic scaffold when it already matches the benchmark mechanism instead of authoring a new one.
       Keep `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` aligned with the same preserved geometry.
       Use `render_cad(...)` for live scene previews and `render_technical_drawing()` for drafting packages; they are not interchangeable.
-      Use `render_technical_drawing()` to inspect the drafted package before calling `submit_plan()`.
+      Use `render_technical_drawing()` to inspect the drafted package before calling `submit_engineering_plan()`.
     benchmark_plan_reviewer: |
       Technical drawing mode is active.
       Verify that `benchmark_assembly_definition.yaml.drafting` is present, structurally valid, and consistent with the reviewed benchmark plan.
@@ -229,13 +229,13 @@ engineer:
       When all required work is complete, call `{completion_tool_name}` with these output fields: {output_fields}.
       Do not emit textual tool-call markers such as `next_tool_name` or `next_tool_args`.
     planner_submit_contract: |
-      - Call `submit_plan()` before `{completion_tool_name}`.
-      - Stop exploratory work after `submit_plan()` returns `ok=true` and `status=submitted`.
-      - If `submit_plan()` returns validation errors, fix the files and call `submit_plan()` again.
-      - Do not call `{completion_tool_name}` until `submit_plan()` has succeeded.
+      - Call `submit_engineering_plan()` before `{completion_tool_name}`.
+      - Stop exploratory work after `submit_engineering_plan()` returns `ok=true` and `status=submitted`.
+      - If `submit_engineering_plan()` returns validation errors, fix the files and call `submit_engineering_plan()` again.
+      - Do not call `{completion_tool_name}` until `submit_engineering_plan()` has succeeded.
       - Use `validate_costing_and_price()` for planner validation; do not browse `/scripts` or validator source files.
     submit_before_completion_nudge: |
-      Call `submit_plan()` before `{completion_tool_name}`.
+      Call `submit_engineering_plan()` before `{completion_tool_name}`.
     visual_inspection_reminder: |
       Visual inspection is mandatory for this node. Inspect at least {min_images} distinct render image(s) with the runtime's visual-inspection tool before finishing. Already inspected: {inspected}/{min_images}. Available render paths: {examples}.
 
@@ -253,11 +253,11 @@ benchmark_generator:
     tool_call_failed_recover: |
       The previous `{tool_name}` call failed. Use the error to recover and continue from the current workspace state.
     submit_succeeded_finish_now: |
-      `submit_plan()` succeeded. Stop exploratory calls and return the planner output now.
+      `submit_benchmark_plan()` succeeded. Stop exploratory calls and return the planner output now.
     submit_rejected_fix_and_retry: |
-      `submit_plan()` rejected planner artifacts: {error_text}. Fix the files and call `submit_plan()` again immediately.
+      `submit_benchmark_plan()` rejected planner artifacts: {error_text}. Fix the files and call `submit_benchmark_plan()` again immediately.
     cots_search_budget_exhausted: |
-      COTS lookup budget reached ({max_calls} calls). Do not call COTS search again in this planner run. Use one heuristic estimate, complete file updates, and call `submit_plan()` now.
+      COTS lookup budget reached ({max_calls} calls). Do not call COTS search again in this planner run. Use one heuristic estimate, complete file updates, and call `submit_benchmark_plan()` now.
     native_tool_loop_contract: |
       Runtime tool-calling contract:
       - Use provider-native tool calls only.
@@ -271,14 +271,14 @@ benchmark_generator:
       When all required work is complete, call `{completion_tool_name}` with these output fields: {output_fields}.
       Do not emit textual tool-call markers such as `next_tool_name` or `next_tool_args`.
     benchmark_planner_native_tool_signature_suffix: |
-      Always call `submit_plan()` before finishing planner work.
+      Always call `submit_benchmark_plan()` before finishing planner work.
     planner_submit_contract: |
-      - Call `submit_plan()` before `{completion_tool_name}`.
-      - Stop exploratory work after `submit_plan()` returns `ok=true` and `status=submitted`.
-      - If `submit_plan()` returns validation errors, fix the files and call `submit_plan()` again.
-      - Do not call `{completion_tool_name}` until `submit_plan()` has succeeded.
+      - Call `submit_benchmark_plan()` before `{completion_tool_name}`.
+      - Stop exploratory work after `submit_benchmark_plan()` returns `ok=true` and `status=submitted`.
+      - If `submit_benchmark_plan()` returns validation errors, fix the files and call `submit_benchmark_plan()` again.
+      - Do not call `{completion_tool_name}` until `submit_benchmark_plan()` has succeeded.
     submit_before_completion_nudge: |
-      Call `submit_plan()` before `{completion_tool_name}`.
+      Call `submit_benchmark_plan()` before `{completion_tool_name}`.
     visual_inspection_reminder: |
       Visual inspection is mandatory for this node. Inspect at least {min_images} distinct render image(s) with the runtime's visual-inspection tool before finishing. Already inspected: {inspected}/{min_images}. Available render paths: {examples}.
     native_planner_contract: |
@@ -286,15 +286,15 @@ benchmark_generator:
       - Use provider-native tool calls only.
       - Do not emit `next_tool_name`, `next_tool_args`, `[[ ## ... ## ]]`, or raw JSON tool transcripts.
       - Before each tool call, include one short plain-text reasoning sentence in assistant content.
-      - Stop after `submit_plan()` returns `ok=true` and `status=submitted`.
-      - If `submit_plan()` returns validation errors, fix the files and call `submit_plan()` again.
+      - Stop after `submit_benchmark_plan()` returns `ok=true` and `status=submitted`.
+      - If `submit_benchmark_plan()` returns validation errors, fix the files and call `submit_benchmark_plan()` again.
       - In `benchmark_definition.yaml`, `moved_object.start_position` must be a top-level field under `moved_object`, not nested under `static_randomization`.
       - In `benchmark_definition.yaml`, every `benchmark_parts[*].part_id` and `benchmark_parts[*].label` must be unique.
       - In authored benchmark scripts, every top-level part label must be unique and must not be `environment`, start with `zone_`, or start with `benchmark_moved_object__` because the simulator reserves those names for the scene root and generated objective bodies.
       - `benchmark_assembly_definition.yaml` must be a full `AssemblyDefinition` shape and include numeric planner-target `constraints` and `totals` fields; benchmark caps are sourced from `benchmark_definition.yaml` and must not be treated as duplicated ownership in the assembly file.
       - Any benchmark-side motion in `benchmark_assembly_definition.yaml` must be explicit in both `benchmark_plan.md` and `todo.md`; one moving fixture may expose at most one DOF axis, and the handoff must state reviewer-visible motion bounds/limits plus controller facts.
       - Hidden, unsupported, or over-actuated benchmark motion is a rejection condition, even if the scene still looks passive at a glance.
-      - If the motion contract is impossible to explain explicitly, stop and revise the handoff instead of brute-forcing `submit_plan()`.
+      - If the motion contract is impossible to explain explicitly, stop and revise the handoff instead of brute-forcing `submit_benchmark_plan()`.
       - Prefer schema-safe minimal assembly for planner handoff: use empty `manufactured_parts`, `cots_parts`, and `final_assembly` unless you can provide fully valid entries (e.g., `stock_bbox_mm` must be an object with `x/y/z`, and final assembly parts use `name/config`).
-      - Keep the moved object's full runtime AABB inside `build_zone` by checking `start_position +/- runtime_jitter +/- max(radius)` on x, y, and z before `submit_plan()`.
+      - Keep the moved object's full runtime AABB inside `build_zone` by checking `start_position +/- runtime_jitter +/- max(radius)` on x, y, and z before `submit_benchmark_plan()`.
       - Do not use `cots_search` to price benchmark-owned fixtures or other benchmark context objects. Reserve pricing lookups for likely engineer-side solution parts, and if catalog search fails, stop retrying and use one heuristic estimate instead.

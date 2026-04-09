@@ -10,7 +10,7 @@ This is the backend-first reference for the repository. It covers the controller
 
 | Output family | What the backend must preserve |
 | -- | -- |
-| Benchmarks | Randomized physics problems that can be handed to the engineer graph |
+| Benchmarks | Randomized physics problems that can be handed to the engineering graph |
 | Reasoning traces | Tool calls, planner and reviewer reasoning, execution summaries, and refusal evidence |
 | Solutions | CAD scripts, simulation artifacts, MJCF, renders, and review manifests |
 | Skills | Learned `SKILL.md` artifacts, session-local skill worktrees/checkpoints, and supporting files |
@@ -38,7 +38,7 @@ The main operational priority is backend dataset generation. The frontend is an 
 | Graph | Stage order | Required artifacts | Gate behavior |
 | -- | -- | -- | -- |
 | Benchmark generator | Planner -> Plan Reviewer -> Coder -> Reviewer | `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml` | Plan review before implementation, execution review after validation and simulation |
-| Engineer | Planner -> Plan Reviewer -> Coder -> Electronics Reviewer when needed -> Execution Reviewer | `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `script.py` | Plan review before coding, execution review after validated simulation |
+| Engineering | Planner -> Plan Reviewer -> Coder -> Electronics Reviewer when needed -> Execution Reviewer | `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `script.py` | Plan review before coding, execution review after validated simulation |
 
 Runtime conversations use four message roles: `system`, `user`, `assistant`, and `tool`.
 
@@ -85,10 +85,10 @@ Runtime conversations use four message roles: `system`, `user`, `assistant`, and
 | `execute_command` | Shell execution from the session workspace root |
 | `read_file` / `write_file` / `edit_file` / `grep` / `list_files` | Respect path policy and session isolation |
 | `inspect_media` | The only agent-facing tool that counts as visual inspection |
-| `submit_plan` | Mandatory planner completion gate |
+| `submit_benchmark_plan()` / `submit_engineering_plan()` | Mandatory planner completion gate |
 | `submit_review` | Mandatory reviewer completion gate |
-| `validate` | Benchmark geometry validation plus fast preview generation |
-| `simulate` | Physics-backed simulation or benchmark simulation path |
+| `validate_benchmark()` / `validate_engineering()` | Role-scoped geometry validation plus fast preview generation |
+| `simulate_benchmark()` / `simulate_engineering()` | Physics-backed simulation or benchmark simulation path |
 | `validate_and_price` | Manufacturability and price validation for engineer-owned parts and assemblies |
 | `invoke_cots_search_subagent` | Single prompt-only request to the shared COTS Search node |
 | Workspace paths | Canonical paths are workspace-relative; `/workspace` exists only as a compatibility alias |
@@ -113,7 +113,7 @@ Runtime conversations use four message roles: `system`, `user`, `assistant`, and
 | Temporal boundary | Long-running heavy work goes through Temporal-backed orchestration |
 | Admission control | Heavy workers are single-flight and return deterministic busy responses |
 | Session isolation | Every episode uses a session-scoped workspace keyed by `X-Session-ID` |
-| Validation preview split | `/benchmark/validate` produces fast preview artifacts and does not double as the Genesis parity path |
+| Validation preview split | `/benchmark/validate` and `/engineering/validate` produce fast preview artifacts and do not double as the Genesis parity path |
 | Heavy requests | Controller path proxies through the orchestration layer; direct worker-heavy HTTP is reserved for integration boundaries |
 
 ## 7. CAD, Workbench, and Artifact Rules
@@ -136,7 +136,7 @@ Runtime conversations use four message roles: `system`, `user`, `assistant`, and
 | Topic | Contract |
 | -- | -- |
 | Backend selection | `physics.backend` selects MuJoCo or Genesis; Genesis is required for fluids, deformables, and stress-aware runs |
-| Validation | `/benchmark/validate` uses MuJoCo for static preview by default even if the simulation backend is Genesis |
+| Validation | `/benchmark/validate` and `/engineering/validate` use MuJoCo for static preview by default even if the simulation backend is Genesis |
 | Success | The target object reaches the goal zone without violating forbid zones or other success constraints |
 | Failure taxonomy | Out-of-bounds, timeout, instability, breakage, forbidden contact, and circuit/power failures must be classified explicitly |
 | Constraint realism | Engineer-authored constraints must be physically plausible; CAD constraints cannot stand in for real-world fasteners or joints |
@@ -162,7 +162,7 @@ Runtime conversations use four message roles: `system`, `user`, `assistant`, and
 
 | Gate | Contract |
 | -- | -- |
-| Planner submission | Must call `submit_plan()` and receive `ok=true` before handoff |
+| Planner submission | Must call `submit_benchmark_plan()` or `submit_engineering_plan()` and receive `ok=true` before handoff |
 | Reviewer completion | Must use the stage-correct manifest and review persistence files |
 | Visual inspection | If renders exist for a required role, the role must call `inspect_media(...)` before approval or finish |
 | Skill training | `train_skills.py` or equivalent owns the standalone replay/training loop over retained bundles and session-local skill overlays; a separate promotion arbiter publishes approved diffs into canonical `.agents/skills/`; `run_evals.py` stays a thin eval launcher |

@@ -266,7 +266,7 @@ The preview contract may consume either planner graph's drafting scripts, but th
 
 Drafting-enabled revisions have a mandatory usage gate:
 
-1. The planner that authors the drafting package must call `render_technical_drawing()` at least once on the current revision before `submit_plan()`.
+1. The planner that authors the drafting package must call `render_technical_drawing()` at least once on the current revision before the role-scoped planner submission helper (`submit_engineering_plan()` or `submit_benchmark_plan()`, depending on graph).
 2. Any coder or reviewer that is expected to read the drafting package must also call `render_technical_drawing()` at least once on the current revision before its own completion or approval gate.
 3. Missing recorded calls are deterministic validation failures and route the node back through the normal retry loop.
 4. The same gate applies to the mirrored Benchmark Planner drafting package and its downstream coder/reviewer stages.

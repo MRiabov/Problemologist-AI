@@ -97,11 +97,11 @@ Published render bundles may also contain bundle-local `preview_scene.json` snap
 
 <!-- FIXME: consider moving render metadata manifests into `.manifests/` in a future refactor so render metadata and handoff metadata share one backend-owned manifest bucket. The root renders/render_manifest.json path stays a compatibility alias only. -->
 
-| Benchmark plan-review manifest | backend runtime utility invoked by `submit_plan()` | Successful `Benchmark Planner` `submit_plan()` | `.manifests/benchmark_plan_review_manifest.json` |
-| Engineering plan-review manifest | backend runtime utility invoked by `submit_plan()` | Successful `Engineering Planner` `submit_plan()` | `.manifests/engineering_plan_review_manifest.json` |
-| Benchmark review manifest | backend runtime utility invoked by `submit_for_review(...)` | Successful benchmark `submit_for_review(...)` | `.manifests/benchmark_review_manifest.json` |
-| Engineering execution-review handoff manifest | backend runtime utility invoked by `submit_for_review(...)` | Successful engineering `submit_for_review(...)` | `.manifests/engineering_execution_handoff_manifest.json` |
-| Electronics review manifest | backend runtime utility invoked by `submit_for_review(...)` | Successful electronics `submit_for_review(...)` | `.manifests/electronics_review_manifest.json` |
+| Benchmark plan-review manifest | backend runtime utility invoked by `submit_benchmark_plan()` | Successful `Benchmark Planner` `submit_benchmark_plan()` | `.manifests/benchmark_plan_review_manifest.json` |
+| Engineering plan-review manifest | backend runtime utility invoked by `submit_engineering_plan()` | Successful `Engineering Planner` `submit_engineering_plan()` | `.manifests/engineering_plan_review_manifest.json` |
+| Benchmark review manifest | backend runtime utility invoked by `submit_benchmark_for_review()` | Successful benchmark `submit_benchmark_for_review()` | `.manifests/benchmark_review_manifest.json` |
+| Engineering execution-review handoff manifest | backend runtime utility invoked by `submit_engineering_for_review()` | Successful engineering `submit_engineering_for_review()` | `.manifests/engineering_execution_handoff_manifest.json` |
+| Electronics review manifest | backend runtime utility invoked by `submit_engineering_for_review()` | Successful electronics `submit_engineering_for_review()` | `.manifests/electronics_review_manifest.json` |
 
 The agent-facing tools are the submission triggers. The actual manifest write
 happens in the backend runtime utility, and `.manifests/**` remains
@@ -114,7 +114,7 @@ when the same workspace is reused by a different role.
 The engineering execution-review manifest is the same file on both sides of
 the handoff:
 
-- the coder writes it by successfully calling `submit_for_review(...)`
+- the coder writes it by successfully calling the matching role-scoped review submission helper (`submit_benchmark_for_review(...)` or `submit_engineering_for_review(...)`)
 - the Engineering Execution Reviewer later reads it as the latest-revision
   entry gate
 

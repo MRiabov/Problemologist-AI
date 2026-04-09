@@ -211,7 +211,7 @@ appendices:
       shared: |
         Use the local workspace and shell helpers when they are available.
       engineer_coder: |
-        Use scripts/submit_for_review.sh or the Python submission helper.
+        Use scripts/submit_engineering_for_review.sh or the Python submission helper.
     api_based:
       shared: |
         Use the controller-backed runtime and native tool loop.

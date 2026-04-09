@@ -80,7 +80,8 @@ This is mostly for integration tests where such bypass is convenient (for system
 - `inspect_topology` Inspect assembly/topology metadata.
 - `search_cots_catalog` Search COTS parts catalog.
 - `invoke_cots_search_subagent(query: str)` Hand off one request string to the shared COTS Search node.
-- `submit_plan` Validate and submit planner handoff artifacts.
+- `submit_benchmark_plan` Validate and submit benchmark planner handoff artifacts.
+- `submit_engineering_plan` Validate and submit engineering planner handoff artifacts.
 - `save_suggested_skill` Persist skill-agent suggested skill output.
 
 `invoke_cots_search_subagent(query: str)` is a prompt-only handoff. It passes exactly one request string to the shared `COTS Search` node and does not inherit planner/coder `task`, `plan`, or `journal` state or use graph-specific signature variants.
@@ -104,8 +105,10 @@ When the architecture needs a command-like capability but does not expose it as 
 The shell script is the canonical command surface for that capability.
 It preserves the same runtime intent as a direct tool call, but it keeps the contract visible in the repository and callable from the workspace shell.
 Reviewer submission and planner/coder submission both use this shell-script pattern when a role needs an explicit command-like completion gate.
+For planner roles, the local bridges are `scripts/submit_benchmark_plan.sh` and `scripts/submit_engineering_plan.sh`.
+For coder review submission, the local bridges are `scripts/submit_benchmark_for_review.sh` and `scripts/submit_engineering_for_review.sh`.
 For reviewer roles, the local bridge is `scripts/submit_review.sh`.
-Prompts may also reference the underlying Python utility (`utils.submission.submit_for_review(...)`) as an alternative completion path when a supporting script is clearer for the role; the shell bridge remains the default command-like surface.
+Prompts may also reference the underlying Python utilities (`utils.submission.submit_benchmark_plan(...)`, `utils.submission.submit_engineering_plan(...)`, `utils.submission.submit_benchmark_for_review(...)`, and `utils.submission.submit_engineering_for_review(...)`) as alternative completion paths when a supporting script is clearer for the role; the shell bridge remains the default command-like surface.
 These submission bridges read `.manifests/current_role.json` to decide which stage contract is active; they do not infer role from `AGENT_NAME` or workspace file shape.
 
 Input handling follows a simple split:
@@ -132,7 +135,7 @@ Native completion-call naming contract:
 
 1. Native tool-loop reviewer nodes terminate by writing the stage-owned review artifacts with `write_file` and then running `bash scripts/submit_review.sh` exactly once.
 2. Native tool-loop non-reviewer nodes terminate by calling `finish(...)` exactly once with required signature output fields.
-3. Planner nodes still require `submit_plan()` success before their final completion call.
+3. Planner nodes still require `submit_benchmark_plan()` or `submit_engineering_plan()` success before their final completion call.
 
 ### Config-driven anti-stall reminder policy
 
@@ -145,7 +148,14 @@ For submission scripts, the canonical import surface is a top-level `utils` pack
 Canonical submission-script imports:
 
 ```py
-from utils.submission import validate, simulate, submit_for_review
+from utils.submission import (
+    validate_benchmark,
+    simulate_benchmark,
+    submit_benchmark_for_review,
+    validate_engineering,
+    simulate_engineering,
+    submit_engineering_for_review,
+)
 from utils.metadata import PartMetadata, CompoundMetadata
 ```
 
@@ -153,23 +163,23 @@ from utils.metadata import PartMetadata, CompoundMetadata
 
 I propose the following set of tools (their usage is below). Notably, the tools are python imports and functions, called right in one of the edited files!
 
-#### Engineer tools
+#### Engineering tools
 
 - `validate_and_price(component: Part|Compound) -> float|dict[str, float]`: validates a part by for manufacturability, then prices it if valid using its workbench's cost calculation interface, or returns an error with a description and a location
   - If validating a compound, it will also check for unusual DOFs, e.g. a part has >=4 DOFs, which is unusual in engineering. It won't raise immediately, but it will throw a "warning". The reviewer will also get notified that DOFs are excessive in this part in particular, and will be more strict in review.
-- `simulate(Compound) -> SimulationResult` - Submits a model for a simulation. Robustness checking uses runtime randomization by executing one heavy-worker job with one backend scene build/load and `num_scenes` parallel jittered scene instances inside that one backend run. `num_scenes` is batch width, not permission for serialized whole-scene reruns or multiple heavy jobs on one worker; nor multithreaded implementation - only batch width.
+- `simulate_engineering(Compound) -> SimulationResult` - Submits a model for a simulation. Robustness checking uses runtime randomization by executing one heavy-worker job with one backend scene build/load and `num_scenes` parallel jittered scene instances inside that one backend run. `num_scenes` is batch width, not permission for serialized whole-scene reruns or multiple heavy jobs on one worker; nor multithreaded implementation - only batch width.
 
 <!-- dev note: assert against submitting a BuildPart builders, or other types. -->
 
 <!-- should it contain its environment model or only the generated model?  -->
 
-- `submit_for_review(Compound)` - submits the whole assembly for a review to `Reviewer` agent node, which can later approve it and submit return the final design to the user.
+- `submit_engineering_for_review(Compound)` - submits the whole assembly for a review to `Reviewer` agent node, which can later approve it and submit return the final design to the user.
 
 <!-- Same: what's in the compound? -->
 
 - `render_cad(component: Part|Compound, orbit_pitch: float|list[float] = 45.0, orbit_yaw: float|list[float] = 45.0, rgb: bool = True, depth: bool = True, segmentation: bool = False, payload_path: bool = False) -> PreviewJobAck` - async on-demand preview submission for benchmark, engineer, and reviewer nodes. The runtime normalizes scalar camera inputs to lists, zip-pairs views by index, enforces the 64-view cap, and streams queued/view-ready/completed status over the worker-light control path while `worker-renderer` materializes the images into `renders/current-episode/`. When `payload_path=True`, the render bundle also includes a static payload-path overlay rendered from the finest available payload-trajectory artifact for the current workflow, preferring engineer-coder `payload_trajectory_definition.yaml` when present and otherwise the coarse planner `motion_forecast` or benchmark motion evidence as applicable. The helper returns a structured job ack; controller/API-backed multimodal runs use `inspect_media(...)` to view the resulting images. Benchmark callers compose benchmark `build()` output with objective overlays from `utils.objectives_geometry()` before previewing benchmark context.
 - `render_technical_drawing(...)` - async on-demand preview submission for technical drawing packages authored by planners and consumed by coders/reviewers. The runtime renders the drafting package, 2D projection set, and any vector sidecars needed for review, then persists the result into `renders/current-episode/` for the active stage. The tool is for inspection, not source authoring; controller/API-backed runs use `inspect_media(...)` to view the persisted render files. Drafting-enabled roles must call it at least once before their node can pass validation; missing calls fail closed and route the node back through the normal retry loop. The implementation may use `TechnicalDrawing`, `project_to_viewport()`, `ExportSVG`, and `ExportDXF`, but those names are implementation details rather than the agent-facing contract. When a workspace starts from the convenience scaffold, that scaffold is the reusable default 3-view orthographic template, not a separate authoring path.
-- `objectives_geometry()` - a zero-argument utility re-exported by the public `utils` package, alongside `render_cad()` and `validate()`, that reconstructs the benchmark objective overlay geometry from the `objectives` section of the canonical `benchmark_definition.yaml` path for the current workspace. It is shared runtime utility, not agent-authored geometry code. Preview callers combine its output with benchmark `build()` output before rendering benchmark context.
+- `objectives_geometry()` - a zero-argument utility re-exported by the public `utils` package, alongside `render_cad()` and `validate_benchmark()`, that reconstructs the benchmark objective overlay geometry from the `objectives` section of the canonical `benchmark_definition.yaml` path for the current workspace. It is shared runtime utility, not agent-authored geometry code. Preview callers combine its output with benchmark `build()` output before rendering benchmark context.
 
 #### Reviewer / media-inspection tool
 
@@ -210,47 +220,42 @@ I propose the following set of tools (their usage is below). Notably, the tools 
   - for reviewer roles, approval is invalid unless required media inspection occurred during the current review attempt (enforced before accepting `submit_review.sh`)
 - `read_file(...)` never satisfies visual-inspection policy, even if it points at a render path.
 
-#### Benchmark generator (CAD editor) tools
+#### Benchmark tools
 
-- `validate(Compound) -> bool` the benchmark is validated to not be out of bounds, and not have intersecting:
+- `validate_benchmark(Compound) -> bool` the benchmark is validated to not be out of bounds, and not have intersecting:
 
   - Input object with environment
   - Goal objective with forbid objective
   - Input objective with goal or forbid objectives.
   - Top-level authored part labels must be non-empty, unique, and must not be `environment` or start with `zone_`, because the runtime reserves those names for the scene root and generated objective bodies.
-  - `validate()` fails closed on missing or blank authored labels and does not invent fallback names for unlabeled parts.
-  - Benchmark-owned moving fixtures must declare their motion contract explicitly; validate rejects missing, contradictory, or unsupported motion metadata, but it does not apply the engineering minimum-DOF rule to benchmark fixtures.
+  - `validate_benchmark()` fails closed on missing or blank authored labels and does not invent fallback names for unlabeled parts.
+  - Benchmark-owned moving fixtures must declare their motion contract explicitly; `validate_benchmark()` rejects missing, contradictory, or unsupported motion metadata, but it does not apply the engineering minimum-DOF rule to benchmark fixtures.
 
   Validated under all environment randomization.
 
   - `utils.objectives_geometry()` returns benchmark objective overlay geometry for the current workspace. It takes no arguments because the benchmark objective zones are defined in the `objectives` section of the canonical `benchmark_definition.yaml` path for the current workspace, and preview callers compose the returned geometry with the benchmark `build()` output before rendering. The helper is a shared importable utility, not benchmark-authored geometry logic.
 
-  - `validate()` is therefore a fast geometry gate, not a render gate or Genesis-runtime parity gate.
+  - `validate_benchmark()` is therefore a fast geometry gate, not a render gate or Genesis-runtime parity gate.
 
-  - Current implementation bug to eliminate: `validate()` must fail closed if the compound being validated can only be reproduced from transient shell state and not from the persisted script/workspace snapshot. A minimal fix is to derive a canonical semantic signature from the compound's child/component history, using primitive/component types, authored parameters, label, bounding box, rounded volume, face count, and wire length with tolerance-aware normalization, and compare it against the persisted authored script state; any mismatch is a fail-fast validation error. Raw mesh equality and direct volume equality are too brittle for this gate.
+  - Current implementation bug to eliminate: `validate_benchmark()` must fail closed if the compound being validated can only be reproduced from transient shell state and not from the persisted script/workspace snapshot. A minimal fix is to derive a canonical semantic signature from the compound's child/component history, using primitive/component types, authored parameters, label, bounding box, rounded volume, face count, and wire length with tolerance-aware normalization, and compare it against the persisted authored script state; any mismatch is a fail-fast validation error. Raw mesh equality and direct volume equality are too brittle for this gate.
 
-- `simulate(Compound) -> SimulationResult` - a simulation that, unlike the engineering simulation, can not fail, except if not valid as per `validate()`.
+- `simulate_benchmark(Compound) -> SimulationResult` - a simulation that, unlike the engineering simulation, can not fail, except if not valid as per `validate_benchmark()`.
 
-- `submit_for_review(Compound)` - submits the whole benchmark compound for a review to `Reviewer` agent node, which can later approve it and thus putting it to the "to solve" pipeline. This call is valid only after current-revision validation/simulation succeed.
+- `submit_benchmark_for_review(Compound)` - submits the whole benchmark compound for a review to `Reviewer` agent node, which can later approve it and thus putting it to the "to solve" pipeline. This call is valid only after current-revision validation/simulation succeed.
 
-<!-- Note 2: LangGraph subgraphs/subagents composed with DSPy modules are what we'll use here.-->
+#### Shared preview tools
 
-For benchmark and engineering submission scripts, direct Python calls inside the submission script are the canonical usage. The intended pattern is to run `validate` and `simulate` as intermediate checks before `submit_for_review`:
+- `render_cad(component: Part|Compound, orbit_pitch: float|list[float] = 45.0, orbit_yaw: float|list[float] = 45.0, rgb: bool = True, depth: bool = True, segmentation: bool = False, payload_path: bool = False) -> PreviewJobAck` - async on-demand preview submission for benchmark, engineer, and reviewer nodes. The runtime normalizes scalar camera inputs to lists, zip-pairs views by index, enforces the 64-view cap, and streams queued/view-ready/completed status over the worker-light control path while `worker-renderer` materializes the images into `renders/current-episode/`. When `payload_path=True`, the render bundle also includes a static payload-path overlay rendered from the finest available payload-trajectory artifact for the current workflow, preferring engineer-coder `payload_trajectory_definition.yaml` when present and otherwise the coarse planner `motion_forecast` or benchmark motion evidence as applicable. The helper returns a structured job ack; controller/API-backed multimodal runs use `inspect_media(...)` to view the resulting images. Benchmark callers compose benchmark `build()` output with objective overlays from `utils.objectives_geometry()` before previewing benchmark context.
+- `render_technical_drawing(...)` - async on-demand preview submission for technical drawing packages authored by planners and consumed by coders/reviewers. The runtime renders the drafting package, 2D projection set, and any vector sidecars needed for review, then persists the result into `renders/current-episode/` for the active stage. The tool is for inspection, not source authoring; controller/API-backed runs use `inspect_media(...)` to view the persisted render files. Drafting-enabled roles must call it at least once before their node can pass validation; missing calls fail closed and route the node back through the normal retry loop. The implementation may use `TechnicalDrawing`, `project_to_viewport()`, `ExportSVG`, and `ExportDXF`, but those names are implementation details rather than the agent-facing contract. When a workspace starts from the convenience scaffold, that scaffold is the reusable default 3-view orthographic template, not a separate authoring path.
+- `objectives_geometry()` - a zero-argument utility re-exported by the public `utils` package, alongside `render_cad()` and `validate_benchmark()`, that reconstructs the benchmark objective overlay geometry from the `objectives` section of the canonical `benchmark_definition.yaml` path for the current workspace. It is shared runtime utility, not agent-authored geometry code. Preview callers combine its output with benchmark `build()` output before rendering benchmark context.
 
-```py
-from utils.submission import validate, simulate, submit_for_review
-from utils.metadata import PartMetadata, CompoundMetadata
+#### Engineering tools
 
-# construct geometry / assembly
-
-validate(result)
-simulate(result)
-submit_for_review(result)
-```
-
-The preferred execution path for the agent is to run the checked-in shell helper (`bash scripts/submit_for_review.sh`). The underlying Python utility `utils.submission.submit_for_review(...)` is also available for direct invocation in a supporting script when a prompt explicitly chooses that route; `validate` and `simulate` remain intermediate checks.
-
-For benchmark scripts, `build()` remains the assembly constructor; for other authored scripts, it may remain a compatibility helper. It is not a required submission-script entrypoint. The architecture contract is the submission script itself, not an import-only `build()` API.
+- `validate_and_price(component: Part|Compound) -> float|dict[str, float]`: validates a part by for manufacturability, then prices it if valid using its workbench's cost calculation interface, or returns an error with a description and a location
+  - If validating a compound, it will also check for unusual DOFs, e.g. a part has >=4 DOFs, which is unusual in engineering. It won't raise immediately, but it will throw a "warning". The reviewer will also get notified that DOFs are excessive in this part in particular, and will be more strict in review.
+- `validate_engineering(Compound) -> tuple[bool, str | None]` - the engineering geometry gate. It validates the approved solution assembly against the current revision, uses `validate_and_price(...)` for manufacturability and pricing prechecks, and fails closed if the assembly cannot be reproduced from the persisted workspace snapshot or does not satisfy the engineering constraints.
+- `simulate_engineering(Compound) -> BenchmarkToolResponse` - Submits a model for a simulation. Robustness checking uses runtime randomization by executing one heavy-worker job with one backend scene build/load and `num_scenes` parallel jittered scene instances inside that one backend run. `num_scenes` is batch width, not permission for serialized whole-scene reruns or multiple heavy jobs on one worker; nor multithreaded implementation - only batch width.
+- `submit_engineering_for_review(Compound)` - submits the whole assembly for a review to `Reviewer` agent node, which can later approve it and submit return the final design to the user.
 
 ### Planner tools
 
@@ -263,7 +268,7 @@ For benchmark scripts, `build()` remains the assembly constructor; for other aut
 
 <!-- Future: will also add some basic planning suggestions. e.g.: i"t appears you are trying to CNC away over 80% of the stock. Consider picking a planning to use a smaller stock if possible."-->
 
-`submit_plan()`. Will:
+`submit_benchmark_plan()` / `submit_engineering_plan()`. Will:
 
 01. Validate planner-required files for the planner role (Engineering Planner/Electronics Planner/Benchmark Planner).
 02. Return structured submission status (`ok`, `status`, `errors`) to the ReAct loop.
@@ -299,7 +304,7 @@ I will define exact tool (function) logic to avoid confusion.
 Run the workbench interface to validate the part for manufacturability; if passes - also run the pricing, if not, return a validation error with fix suggestions. Detects both assemblies and individual parts.
 
 1. Check cache for if we need to reverify the solution, early exit if not,
-2. If there is the environment in the assembly (as required by `simulate` command), assert that it is in the correct position,
+2. If there is the environment in the assembly (as required by `simulate_engineering` command), assert that it is in the correct position,
 3. Split the assembly into benchmark-owned read-only fixtures versus engineer-owned manufactured parts / COTS parts.
 4. Validate manufacturability as per the Workbench interface only for engineer-owned manufactured parts. Do not reject because benchmark environment/input-objective fixtures lack manufacturing metadata.
 5. Validate full-assembly placement and build-zone bounds, including interactions with the benchmark environment/objectives.
@@ -307,7 +312,7 @@ Run the workbench interface to validate the part for manufacturability; if passe
 7. Validate for cost,
 8. Validate for weight.
 
-##### `simulate(Compound)`
+##### `simulate_engineering(Compound)`
 
 Simulate the compound. Must have the environment at the exact point where we it was defined in the task. Must have price and manufacturability checked
 So:
@@ -316,20 +321,20 @@ So:
    - if valid, pass, if not valid, fail.
 2. Git commit all files.
 3. Start simulation, locally.
-4. If simulation passes, notify the engineer via logs. (don't ask the agent to improve for now, though it could be well cost-efficient and useful). The agent will then run a `submit_for_review(final_compound)`.
+4. If simulation passes, notify the engineer via logs. (don't ask the agent to improve for now, though it could be well cost-efficient and useful). The agent will then run a `submit_engineering_for_review(final_compound)`.
    - Don't render the video yet! If the simulation didn't pass, maybe we don't need to render the video. We can instead print positions (probably just final positions) of all parts in the simulation and let the agent introspect them.
      The simulation will produce video. The issue is, it's expensive to render.
 5. If doesn't, retry the simulation.
 
-#### submit_for_review(compound: Compound)
+#### submit_engineering_for_review(compound: Compound)
 
-The Engineering Coder calls `submit_for_review(compound)` after validation and simulation pass for the latest code revision. This utility persists handover artifacts and marks the submission candidate as ready for review.
+The Engineering Coder calls `submit_engineering_for_review(compound)` after validation and simulation pass for the latest code revision. This utility persists handover artifacts and marks the submission candidate as ready for review.
 
 Submission-stage contract:
 
 1. The submission call is reviewer-stage explicit; runtime must not guess a default reviewer stage when review submission is requested.
-2. Benchmark submission targets `Benchmark Reviewer` and resolves `benchmark_assembly_definition.yaml` as the stage-correct assembly artifact.
-3. Engineering and electronics submission targets resolve `assembly_definition.yaml` as the stage-correct assembly artifact.
+2. Benchmark submissions target `Benchmark Reviewer` and resolve `benchmark_assembly_definition.yaml` as the stage-correct assembly artifact.
+3. Engineering and electronics submissions target `assembly_definition.yaml` as the stage-correct assembly artifact.
 
 ## Prompt vs skill guidance
 
@@ -348,14 +353,14 @@ Manifest persistence contract:
    - Benchmark Reviewer submission: `.manifests/benchmark_review_manifest.json`
    - Engineering Execution Reviewer submission: `.manifests/engineering_execution_handoff_manifest.json`
    - Electronics Reviewer submission: `.manifests/electronics_review_manifest.json`
-3. Planner `submit_plan` persists the plan-review manifest:
+3. Planner `submit_benchmark_plan()` / `submit_engineering_plan()` persist the plan-review manifest:
    - Benchmark Plan Reviewer: `.manifests/benchmark_plan_review_manifest.json`
    - Engineering Plan Reviewer: `.manifests/engineering_plan_review_manifest.json`
 
 Reviewer entry preconditions are explicit and fail-closed:
 
-1. `submit_for_review(compound)` must be called in the latest code revision (latest candidate script state), not in an earlier failed revision.
-2. The latest validation artifacts must indicate success (`validate()` in benchmark / `validate_and_price()` in pass).
+1. `submit_benchmark_for_review(compound)` or `submit_engineering_for_review(compound)` must be called in the latest code revision (latest candidate script state), not in an earlier failed revision.
+2. The latest validation artifacts must indicate success (`validate_benchmark()` in benchmark / `validate_engineering()` in engineering).
 3. The latest simulation artifact must indicate success and objective completion (target payload reached the green/goal zone).
 4. The reviewer-stage manifest must parse into a typed model (`ReviewManifest`) with `status=ready_for_review`, matching session/revision metadata, and correct `reviewer_stage`.
 5. Reviewer model access to `.manifests/**` is denied by policy; reviewer eligibility is evaluated by deterministic system checks, not model-side reads of manifest files.

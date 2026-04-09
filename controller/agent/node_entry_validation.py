@@ -1205,6 +1205,12 @@ async def validate_seeded_workspace_handoff_artifacts(
         )
     )
 
+    planner_submit_tool_name = (
+        "submit_benchmark_plan"
+        if target_node == AgentName.BENCHMARK_PLANNER
+        else "submit_engineering_plan"
+    )
+
     if target_node in {
         AgentName.BENCHMARK_PLANNER,
         AgentName.ENGINEER_PLANNER,
@@ -1273,18 +1279,17 @@ async def validate_seeded_workspace_handoff_artifacts(
             )
         elif (
             "render_technical_drawing()" not in prompt_text
-            and "preview_drawing()" not in prompt_text
         ):
-            errors.append(
-                _seeded_schema_error(
-                    message=(
-                        "prompt.md must instruct the agent to call "
-                        "render_technical_drawing() before submit_engineering_plan() when drafting "
-                        "mode is active"
-                    ),
-                    artifact_path="prompt.md",
+                errors.append(
+                    _seeded_schema_error(
+                        message=(
+                            "prompt.md must instruct the agent to call "
+                            f"render_technical_drawing() before {planner_submit_tool_name}() when drafting "
+                            "mode is active"
+                        ),
+                        artifact_path="prompt.md",
+                    )
                 )
-            )
 
     for rel_path, content in contents.items():
         if rel_path in {plan_artifact_name, legacy_plan_artifact_name}:
