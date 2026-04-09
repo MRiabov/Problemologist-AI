@@ -1,83 +1,32 @@
 from __future__ import annotations
 
-import math
-
 import yaml
 from build123d import (
     Align,
     Box,
     Compound,
-    Cylinder,
     Location,
-    Sphere,
 )
 
 from utils.metadata import CompoundMetadata, PartMetadata
-
-
-def _load_moved_object() -> dict:
-    """Load moved_object contract from planner handoff."""
-    with open("benchmark_definition.yaml", encoding="utf-8") as fh:
-        payload = yaml.safe_load(fh) or {}
-    moved = payload.get("moved_object", {})
-    return moved if isinstance(moved, dict) else {}
-
-
-def _build_moved_object(moved: dict):
-    """Construct the moved object from the benchmark_definition.yaml contract."""
-    label = str(moved.get("label", "")).strip()
-    if not label:
-        raise ValueError("moved_object.label must be a non-empty string")
-    start = moved.get("start_position", [0.0, 0.0, 0.0])
-    radius_range = moved.get("static_randomization", {}).get("radius", [0.01, 0.01])
-    radius = float(max(radius_range)) if radius_range else 0.01
-    shape = str(moved.get("shape", "sphere")).strip().lower()
-    material_id = str(moved.get("material_id", "abs")).strip()
-    if not material_id:
-        raise ValueError("moved_object.material_id must be a non-empty string")
-
-    if shape == "sphere":
-        moved_part = Sphere(radius, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-    elif shape in {"cube", "box"}:
-        edge = radius * 2.0
-        moved_part = Box(
-            edge, edge, edge, align=(Align.CENTER, Align.CENTER, Align.CENTER)
-        )
-    elif shape == "cylinder":
-        moved_part = Cylinder(
-            radius=radius,
-            height=radius * 2.0,
-            align=(Align.CENTER, Align.CENTER, Align.CENTER),
-        )
-    else:
-        raise ValueError(
-            f"Unsupported moved_object.shape '{shape}'. Expected sphere, cube, box, or cylinder."
-        )
-
-    moved_part = moved_part.move(
-        Location((float(start[0]), float(start[1]), float(start[2])))
-    )
-    moved_part.label = label
-    moved_part.metadata = PartMetadata(material_id=material_id, fixed=False)
-    return moved_part
-
-
-_moved_object_contract = _load_moved_object()
-_moved_object = _build_moved_object(_moved_object_contract)
 
 
 def build() -> Compound:
     """Return the benchmark assembly geometry for this workspace.
 
     Benchmark fixtures (all fixed):
-    - `base_plate`: 300×200×10 mm floor plate at [0, 0, 5] mm.
-    - `deflector_ramp`: 120×160×15 mm ramp tilted 30°, centered at [40, 0, 60] mm.
+    - `base_plate`: 300x200x10 mm floor plate at [0, 0, 5] mm.
+    - `deflector_ramp`: 120x160x15 mm ramp tilted 30 degrees, centered at [40, 0, 60] mm.
     - `side_goal_wall`: vertical wall at goal zone near [170, 0, 50] mm.
-    - `catch_bin`: goal bin at [170, 0, 15] mm, 60×70×20 mm.
+    - `catch_bin`: goal bin at [170, 0, 15] mm, 60x70x20 mm.
     """
-    children = [_moved_object]
+    # NOTE: Do NOT include the moved object here -- the simulation system spawns
+    # `benchmark_moved_object__projectile_ball` independently from `benchmark_definition.yaml`.
+    # Returning it from build() creates a duplicate body that collides with the spawned ball,
+    # causing instant OUT_OF_BOUNDS.
+    children = []
 
-    # base_plate: 300×200×10, centered at [0, 0, 5]
+    # base_plate: 300x200x10, centered at [0, 0, 5]
     base_plate = Box(
         300.0,
         200.0,
@@ -88,13 +37,12 @@ def build() -> Compound:
     base_plate.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(base_plate)
 
-    # deflector_ramp: 120×160×15, tilted 30° about Y axis, centered at [40, 0, 60]
+    # deflector_ramp: 120x160x15, tilted 30 degrees about Y axis, centered at [40, 0, 60]
     # The ramp surface must angle downward toward +X so the ball deflects sideways into the goal.
     ramp_width = 120.0  # X dimension
     ramp_depth = 160.0  # Y dimension
     ramp_thick = 15.0  # Z dimension
     ramp_angle_deg = 30.0
-    math.radians(ramp_angle_deg)
 
     ramp_body = Box(
         ramp_width,
@@ -103,7 +51,7 @@ def build() -> Compound:
         align=(Align.CENTER, Align.CENTER, Align.CENTER),
     )
     # Tilt the ramp about the Y axis so the +X edge is lower than the -X edge.
-    # Rotation order: (RX, RY, RZ) - we rotate about Y by 30°.
+    # Rotation order: (RX, RY, RZ) - we rotate about Y by 30 degrees.
     ramp_body = ramp_body.rotate(
         center=(0.0, 0.0, 0.0),
         rotation=(0.0, ramp_angle_deg, 0.0),
@@ -123,7 +71,7 @@ def build() -> Compound:
     wall_thick = 8.0
     wall_height = 40.0
 
-    # Back wall: 60×8×40 at [170, -35, wall_height/2]
+    # Back wall: 60x8x40 at [170, -35, wall_height/2]
     back_wall = Box(
         60.0,
         wall_thick,
@@ -136,7 +84,7 @@ def build() -> Compound:
     back_wall.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(back_wall)
 
-    # Left wall: 8×70×40
+    # Left wall: 8x70x40
     left_wall = Box(
         wall_thick,
         70.0,
@@ -149,7 +97,7 @@ def build() -> Compound:
     left_wall.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(left_wall)
 
-    # Right wall: 8×70×40
+    # Right wall: 8x70x40
     right_wall = Box(
         wall_thick,
         70.0,
@@ -162,7 +110,7 @@ def build() -> Compound:
     right_wall.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(right_wall)
 
-    # catch_bin: floor of the goal bin, 60×70×5 at [170, 0, 5]
+    # catch_bin: floor of the goal bin, 60x70x5 at [170, 0, 5]
     catch_bin = Box(
         60.0,
         70.0,

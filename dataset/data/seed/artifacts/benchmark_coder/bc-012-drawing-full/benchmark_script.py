@@ -15,61 +15,10 @@ Inventory (exact match with planner handoff):
 from __future__ import annotations
 
 import yaml
-from build123d import Align, Box, Compound, Cylinder, Location, Sphere
+from build123d import Align, Box, Compound, Location
 
 from shared.cots.parts.motors import ServoMotor
 from utils.metadata import CompoundMetadata, PartMetadata
-
-
-def _load_moved_object() -> dict:
-    """Load moved_object contract from benchmark_definition.yaml."""
-    with open("benchmark_definition.yaml", encoding="utf-8") as fh:
-        payload = yaml.safe_load(fh) or {}
-    moved = payload.get("moved_object", {})
-    return moved if isinstance(moved, dict) else {}
-
-
-def _build_moved_object(moved: dict):
-    """Build the projectile ball from the moved_object contract."""
-    label = str(moved.get("label", "")).strip()
-    if not label:
-        raise ValueError("moved_object.label must be a non-empty string")
-    start = moved.get("start_position", [0.0, 0.0, 0.0])
-    radius_range = moved.get("static_randomization", {}).get("radius", [0.01, 0.01])
-    radius = float(max(radius_range)) if radius_range else 0.01
-    shape = str(moved.get("shape", "sphere")).strip().lower()
-    material_id = str(moved.get("material_id", "abs")).strip()
-    if not material_id:
-        raise ValueError("moved_object.material_id must be a non-empty string")
-
-    if shape == "sphere":
-        moved_part = Sphere(radius, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-    elif shape in {"cube", "box"}:
-        edge = radius * 2.0
-        moved_part = Box(
-            edge, edge, edge, align=(Align.CENTER, Align.CENTER, Align.CENTER)
-        )
-    elif shape == "cylinder":
-        moved_part = Cylinder(
-            radius=radius,
-            height=radius * 2.0,
-            align=(Align.CENTER, Align.CENTER, Align.CENTER),
-        )
-    else:
-        raise ValueError(
-            f"Unsupported moved_object.shape '{shape}'. Expected sphere, cube, box, or cylinder."
-        )
-
-    moved_part = moved_part.move(
-        Location((float(start[0]), float(start[1]), float(start[2])))
-    )
-    moved_part.label = label
-    moved_part.metadata = PartMetadata(material_id=material_id, fixed=False)
-    return moved_part
-
-
-_moved_object_contract = _load_moved_object()
-_moved_object = _build_moved_object(_moved_object_contract)
 
 
 def _build_floor_plate() -> Box:
@@ -126,8 +75,11 @@ def build() -> Compound:
     ``environment``, does not start with ``zone_``, and does not start with
     ``benchmark_moved_object__`` because the simulator reserves those names.
     """
+    # NOTE: Do NOT include the moved object here — the simulation system spawns
+    # `benchmark_moved_object__projectile_ball` independently from
+    # `benchmark_definition.yaml`. Returning it from build() creates a duplicate
+    # body that collides with the spawned ball, causing instant OUT_OF_BOUNDS.
     children = [
-        _moved_object,
         _build_floor_plate(),
         _build_support_tower(),
         _build_raised_goal_shelf(),
