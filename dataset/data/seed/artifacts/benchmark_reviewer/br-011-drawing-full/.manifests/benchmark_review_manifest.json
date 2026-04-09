@@ -3,7 +3,7 @@
   "reviewer_stage": "benchmark_reviewer",
   "timestamp": "2026-04-02T09:10:00Z",
   "session_id": "seed-br-011-drawing-full",
-  "revision": "08100d0dd4ee20b042f7042fe26807e6575faf18",
+  "revision": "18f4358b4ae3fae2034ec0478ff607c67ed59079",
   "episode_id": "seed-br-011-drawing-full",
   "worker_session_id": "seed-br-011-drawing-full",
   "benchmark_episode_id": "seed-br-011-drawing-full",
