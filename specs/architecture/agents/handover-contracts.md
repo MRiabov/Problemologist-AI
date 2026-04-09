@@ -16,7 +16,7 @@ Benchmark-side routing rules:
 
 - `Benchmark Plan Reviewer` rejects planner handoff when the plan contains conflicting geometry, ambiguous/randomization-invalid benchmark definitions, or references to nonexistent benchmark objects across planner artifacts. Rejection routes back to `Benchmark Planner`.
 - `Benchmark Coder` can refuse and route back to `Benchmark Planner` when the approved plan is infeasible to implement. Benchmark Coder refusal is valid only for plan infeasibility, not for generic coding failure.
-- `Benchmark Reviewer` routes back to `Benchmark Coder` when the implemented environment CAD model does not adhere to the approved plan inventory, has invalid geometry such as intersections, or is impossible to solve.
+- `Benchmark Reviewer` routes back to `Benchmark Coder` when the implemented environment CAD model does not adhere to the approved plan inventory, has invalid geometry such as intersections, violates the declared benchmark motion contract, or is unstable under benchmark simulation.
 
 Benchmark Reviewer "accepts" and passes the environment to the Engineering Planner model. (indirect contact - no actual "communication")
 
@@ -273,7 +273,8 @@ For moving benchmarks, dynamic evidence is a separate requirement:
 1. static preview images remain required context artifacts,
 2. they are not sufficient evidence for benchmark-owned motion or powered fixture behavior,
 3. benchmark approval for moving benchmarks requires latest-revision simulation evidence, normally video,
-4. the `Benchmark Reviewer` must inspect that dynamic evidence before approval when it exists.
+4. benchmark approval does not require benchmark-side goal completion,
+5. the `Benchmark Reviewer` must inspect that dynamic evidence before approval when it exists.
 
 ### A benchmark is reused multiple times
 
@@ -486,7 +487,7 @@ randomization:
    - `attachment_policy.attachment_methods` is the allowlist of permitted engineer-to-fixture attachment methods.
    - Use `attachment_methods: ["none"]` to mark a fixture as explicitly non-attachable.
    - If `attachment_policy` is absent, the fixture is treated as non-attachable by default.
-   - `attachment_policy` is permissive, not mandatory. The engineer may use the allowed attachment path from `benchmark_definition.yaml`, but does not need to use it if the benchmark can be solved another way.
+   - `attachment_policy` is permissive, not mandatory. The engineer may use the allowed attachment path from `benchmark_definition.yaml`, but does not need to use it if the benchmark can be satisfied another way.
    - Engineer-owned parts in `assembly_definition.yaml` may only attach to benchmark-owned parts that are declared in `benchmark_definition.yaml`.
    - `attachment_policy.drill_policy` controls whether the engineer may create new fastener holes in that benchmark fixture, and under what numeric limits.
    - Drillability is whole-part in MVP. The Benchmark Planner and Benchmark Coder declare whether the part is drillable and the allowed numeric limits, but do not narrow drilling down to a sub-zone or exact coordinates on the part.

@@ -230,6 +230,32 @@ The safe order is:
 5. Refresh integration coverage and seed corpora.
 6. Remove the compatibility aliases only after the new names are stable.
 
+## Cleanup Checklist
+
+- [ ] Remove the generic wrappers from `shared/utils/agent/__init__.py` and
+  `utils/submission.py` after every internal caller has been moved to the
+  role-scoped helpers.
+- [ ] Remove the `submit_plan` alias from the planner tool surfaces in
+  `controller/agent/tools.py`, `controller/agent/benchmark/tools.py`, and
+  `shared/agent_templates/codex/scripts/submit_plan.py` once the role-scoped
+  planner names are the only ones taught to prompts and fixtures.
+- [ ] Remove any remaining generic submission wording from
+  `config/prompts.yaml`, `docs/backend-reference.md`,
+  `specs/architecture/agents/tools.md`, and
+  `specs/architecture/agents/agent-harness.md`.
+- [ ] Update seeded workspaces and mock responses under `dataset/data/seed/`
+  and `tests/integration/mock_responses/` so they call only the role-scoped
+  helpers.
+- [ ] Remove compatibility aliases for benchmark-branded transport paths only
+  after `controller/clients/worker.py`,
+  `controller/middleware/remote_fs.py`,
+  `controller/api/routes/script_tools.py`, and `worker_heavy/api/routes.py`
+  all agree on the final route labels.
+- [ ] Verify the cleanup with the narrowest integration slice that covers the
+  changed surface, then widen only if a regression points at another layer.
+- [ ] Re-run the repo-wide search for `submit_plan()`, `validate()`,
+  `simulate()`, and `submit_for_review()` before deleting the last alias.
+
 ## Acceptance Criteria
 
 1. Benchmark and engineering planner tools have distinct public names.

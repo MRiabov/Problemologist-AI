@@ -43,8 +43,9 @@ The Benchmark Reviewer decides whether the implemented benchmark is ready to han
 - Inspect render images when they exist, and inspect simulation video when moving benchmark fixtures exist.
 - If render images exist, inspect them with `inspect_media()` before approval.
 - Treat `frames.jsonl` as timing metadata, not pose history; use the sampled `objects.parquet` sidecar for motion review.
-- Verify exact inventory grounding, geometry validity, solvability, randomization, and motion plausibility against the approved contract.
+- Verify exact inventory grounding, geometry validity, benchmark stability, randomization, and motion plausibility against the approved contract.
 - If moving benchmark fixtures exist, inspect the latest simulation video and the sampled `objects.parquet` sidecar before approval.
+- Do not require benchmark-side goal completion; benchmark review is about approving a valid, stable problem instance for the engineering graph.
 - Keep the review read-only.
 - Write only the stage-owned decision/comments YAML pair, then finish with `bash scripts/submit_review.sh`.
 
@@ -52,7 +53,7 @@ The Benchmark Reviewer decides whether the implemented benchmark is ready to han
 
 - The benchmark still matches the approved handoff.
 - The benchmark is geometrically valid.
-- The benchmark is solvable.
+- The benchmark is a valid, stable problem instance for the engineering graph.
 - Benchmark-side motion, if present, matches the declared contract and observed simulation evidence.
 - The stage-scoped review YAML pair is the only output.
 

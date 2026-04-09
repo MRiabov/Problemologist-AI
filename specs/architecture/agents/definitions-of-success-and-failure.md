@@ -36,7 +36,7 @@ The benchmarks are randomized to enable a wider data distribution with less gene
 - The benchmark volume size can vary 2x in all sides, and will be rescaled to random values, e.g. 1.68\*0.8\*1.3; the benchmark generator agent can narrow the scaling down if somehing is expected to break; however it is undesirable as we want to keep randomization higher.
   - The environment - objectives (goals, forbids, build zones) are rescaled respectively.
 - Goal, and obstacle positions are randomized by up to 40% of their size inwards (meaning they are becoming smaller and repositioned anywhere in the region where they are becoming smaller; smaller by their own size. They will always stay within original (maximum) bounds for safety).
-- The models that make up the scene can and should be different. Up to the point where it can be solved; but the benchmark generation agent must ensure randomization of the environment too; which can be also made quite extreme (which is preferred - we are not to make it easy.)
+- The models that make up the scene can and should be different. Up to the point where it remains a valid problem instance for the engineering graph; but the benchmark generation agent must ensure randomization of the environment too; which can be also made quite extreme (which is preferred - we are not to make it easy.)
 
 ##### Material static randomization
 

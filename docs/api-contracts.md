@@ -117,7 +117,7 @@ direct fixture seed would be clearer.
 | GET | `/health` | Health check | Reports the API process health |
 | GET | `/ready` | Admission readiness | Returns `503` and `WORKER_BUSY` when a heavy job is active |
 | POST | `/benchmark/verify` | Batched runtime-randomization verification | Produces multi-run verification results |
-| POST | `/benchmark/simulate` | Physics-backed simulation | Returns simulation results, MJCF, renders, and failure details |
+| POST | `/benchmark/simulate` | Physics-backed benchmark stability/evidence simulation | Returns simulation results, MJCF, renders, and failure details |
 | POST | `/benchmark/validate` | Geometric validation and preview generation | Returns validation results and preview artifacts |
 | POST | `/benchmark/validate_circuit` | Validate an electronics section | Builds and checks a circuit from the electronics schema |
 | POST | `/benchmark/analyze` | Manufacturing analysis | Returns a workbench result with cost and manufacturability data |

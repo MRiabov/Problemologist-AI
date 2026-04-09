@@ -64,7 +64,7 @@ The Benchmark Planner turns a problem brief into a benchmark handoff package. It
 
 ## Acceptance Checklist
 
-- The benchmark is solvable in principle.
+- The benchmark is a valid problem instance for the engineering graph.
 - The geometry is valid and the objective bodies do not overlap the forbidden or spawn regions.
 - The planner scripts preserve the same labels, repeated quantities, and COTS identities as the plan.
 - Drafting mode, when enabled, has been inspected with `render_technical_drawing()`.

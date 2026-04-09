@@ -235,13 +235,13 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 
   - `utils.objectives_geometry()` returns benchmark objective overlay geometry for the current workspace. It takes no arguments because the benchmark objective zones are defined in the `objectives` section of the canonical `benchmark_definition.yaml` path for the current workspace, and preview callers compose the returned geometry with the benchmark `build()` output before rendering. The helper is a shared importable utility, not benchmark-authored geometry logic.
 
-  - `validate_benchmark()` is therefore a fast geometry gate, not a render gate or Genesis-runtime parity gate.
+  - `validate_benchmark()` is therefore a fast geometry gate, not a render gate, benchmark-success gate, or Genesis-runtime parity gate.
 
   - Current implementation bug to eliminate: `validate_benchmark()` must fail closed if the compound being validated can only be reproduced from transient shell state and not from the persisted script/workspace snapshot. A minimal fix is to derive a canonical semantic signature from the compound's child/component history, using primitive/component types, authored parameters, label, bounding box, rounded volume, face count, and wire length with tolerance-aware normalization, and compare it against the persisted authored script state; any mismatch is a fail-fast validation error. Raw mesh equality and direct volume equality are too brittle for this gate.
 
-- `simulate_benchmark(Compound) -> SimulationResult` - a simulation that, unlike the engineering simulation, can not fail, except if not valid as per `validate_benchmark()`.
+- `simulate_benchmark(Compound) -> BenchmarkToolResponse` - the benchmark-side stability/evidence simulation. It may fail on invalid benchmark motion metadata, physics instability, or other simulation errors, but it does not use goal completion as the benchmark-side success criterion.
 
-- `submit_benchmark_for_review(Compound)` - submits the whole benchmark compound for a review to `Reviewer` agent node, which can later approve it and thus putting it to the "to solve" pipeline. This call is valid only after current-revision validation/simulation succeed.
+- `submit_benchmark_for_review(Compound)` - submits the whole benchmark compound for a review to `Reviewer` agent node, which can later approve it and pass it to the engineering graph. This call is valid only after current-revision validation and benchmark-stability simulation succeed.
 
 #### Shared preview tools
 

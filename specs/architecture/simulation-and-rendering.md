@@ -156,8 +156,9 @@ This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asy
    - fails closed on duplicate top-level labels or labels that use the reserved `environment` or `zone_` namespaces, because MJCF mesh/body names are derived from authored labels and the simulator owns the scene root and `zone_*` bodies.
 2. `/benchmark/simulate`
    - runs the selected physics backend,
-   - remains the runtime path for Genesis-specific behavior when Genesis is selected.
-   - produces dynamic render/video artifacts through the worker-heavy simulation pipeline when simulation evidence is needed.
+   - remains the runtime path for Genesis-specific behavior when Genesis is selected,
+   - produces dynamic render/video artifacts through the worker-heavy simulation pipeline when simulation evidence is needed,
+   - serves as the benchmark-side stability/evidence run for benchmark-owned fixtures rather than a solve gate.
 
 Genesis-specific runtime behavior is therefore established by actual Genesis simulation runs where Genesis behavior is required, not by duplicating a Genesis render/build check inside fast validation.
 
@@ -204,7 +205,7 @@ The low-frequency simulation-time frame sync path is now supported as an opt-in 
 
 We operate in a real-world-like scenario, with rigid bodies, gravity, real-world materials, and standard properties like friction and restitution (bounciness).
 
-Benchmark-owned fixtures may be fixed, partially constrained, motorized, or fully free when they are part of the benchmark contract. That benchmark-side contract can be weaker than the engineer-solution contract, but it still must stay deterministic, reviewable, and compatible with the simulation evidence path. Engineer-authored objects remain physically realistic and must satisfy the normal constraint rules.
+Benchmark-owned fixtures may be fixed, partially constrained, motorized, or fully free when they are part of the benchmark contract. That benchmark-side contract can be weaker than the engineer-solution contract, but it still must stay deterministic, reviewable, and compatible with the simulation evidence path. Benchmark-side simulation validates the declared fixture motion and stability; it does not ask the benchmark generator to solve the benchmark. Engineer-authored objects remain physically realistic and must satisfy the normal constraint rules.
 
 Benchmarked time of execution for Genesis, simulating one-two FEM parts - 20s on dev mode.
 
@@ -447,7 +448,7 @@ The Benchmark Planner creates explicit drillable or non-drillable constraints on
 The Engineering Planner will get a visual confirmation of drillable/non-drillable objects via a texture or a separate set of renders, and the machine-readable handoff path is:
 
 1. benchmark-side attachment and drill permissions live in `benchmark_definition.yaml`,
-2. the engineer may use that attachment policy, but does not need to use it if the benchmark can be solved another way,
+2. the engineer may use that attachment policy, but does not need to use it if the benchmark can be satisfied another way,
 3. if a benchmark-owned part is declared in `benchmark_definition.yaml`, engineer-owned parts in `assembly_definition.yaml` may attach to it only through the permitted attachment policy,
 4. planner-declared intended drilled fastener holes live in `assembly_definition.yaml.environment_drill_operations`,
 5. planner handoff submission and reviewer entry both fail closed if those planned drill operations violate the benchmark-side drill policy.
