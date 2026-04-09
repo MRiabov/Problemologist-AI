@@ -663,7 +663,7 @@ async def seed_approved_benchmark_bundle(
     )
     simulation_result = SimulationResult(
         success=True,
-        summary="Goal achieved in green zone.",
+        summary="Benchmark simulation stable.",
         render_paths=[render_rgb_path, render_depth_path, render_segmentation_path],
         confidence="high",
     )
@@ -703,9 +703,10 @@ async def seed_approved_benchmark_bundle(
         validation_success=True,
         validation_timestamp=seed_ts,
         simulation_success=True,
-        simulation_summary="Goal achieved in green zone.",
+        simulation_summary="Benchmark simulation stable.",
         simulation_timestamp=seed_ts,
-        goal_reached=True,
+        motion_evidence_verified=True,
+        goal_reached=None,
         renders=[
             render_rgb_path,
             render_depth_path,
