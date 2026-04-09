@@ -34,6 +34,8 @@ from shared.models.schemas import (
     CostTotals,
     DraftingCallout,
     DraftingDimension,
+    DraftingLayout,
+    DraftingLayoutView,
     DraftingSheet,
     DraftingView,
     EntryValidationContext,
@@ -211,6 +213,12 @@ def _drafting_validation_payloads(
                     ],
                 )
             ],
+            layout=DraftingLayout(
+                mode="orthographic_trio",
+                views=[
+                    DraftingLayoutView(view_id="front"),
+                ],
+            ),
         ),
     )
     return (
@@ -1561,6 +1569,11 @@ async def test_int_184_seeded_benchmark_workspace_rejects_unknown_drafting_targe
             "not tied to a declared assembly part",
             id="unknown-dimension-target",
         ),
+        pytest.param(
+            "unknown_layout_view",
+            "references unknown authored view_id",
+            id="unknown-layout-view",
+        ),
     ],
 )
 async def test_int_184_seeded_workspace_rejects_invalid_drafting_contract(
@@ -1606,6 +1619,14 @@ async def test_int_184_seeded_workspace_rejects_invalid_drafting_contract(
             drafting_view["callouts"][0]["target"] = ghost_target
         elif drafting_case == "unknown_dimension_target":
             drafting_view["dimensions"][0]["target"] = ghost_target
+        elif drafting_case == "unknown_layout_view":
+            assembly_payload["drafting"]["layout"]["views"] = [
+                {
+                    "view_id": "ghost_view",
+                    "display_offset_mm": [0.0, 0.0],
+                    "exploded": False,
+                }
+            ]
         else:
             raise AssertionError(f"Unknown drafting case: {drafting_case}")
 
@@ -1686,6 +1707,123 @@ async def test_int_184_seeded_workspace_rejects_invalid_drafting_contract(
     assert errors, "Expected malformed drafting content to fail validation."
     assert any(error.artifact_path == assembly_artifact for error in errors), errors
     assert any(expected_error in error.message for error in errors), errors
+
+
+@pytest.mark.integration_p0
+def test_int_184_drafting_layout_round_trips_through_schema():
+    """INT-184: drafting.layout values must survive schema round-tripping."""
+    assembly_definition = AssemblyDefinition(
+        version="1.0",
+        constraints=AssemblyConstraints(
+            planner_target_max_unit_cost_usd=90.0,
+            planner_target_max_weight_g=900.0,
+        ),
+        manufactured_parts=[],
+        cots_parts=[],
+        final_assembly=[PartConfig(name="target_box", config=AssemblyPartConfig())],
+        totals=CostTotals(
+            estimated_unit_cost_usd=0.0,
+            estimated_weight_g=0.0,
+            estimate_confidence="high",
+        ),
+        drafting=DraftingSheet(
+            sheet_id="sheet-1",
+            title="Roundtrip Drafting",
+            views=[
+                DraftingView(
+                    view_id="front",
+                    target="target_box",
+                    projection="front",
+                    datums=["A"],
+                    dimensions=[
+                        DraftingDimension(
+                            dimension_id="width",
+                            kind="linear",
+                            target="target_box",
+                            value=10.0,
+                            binding=True,
+                        )
+                    ],
+                    callouts=[
+                        DraftingCallout(
+                            callout_id="1",
+                            label="Target box",
+                            target="target_box",
+                        )
+                    ],
+                ),
+                DraftingView(
+                    view_id="top",
+                    target="target_box",
+                    projection="top",
+                    datums=["A"],
+                    dimensions=[
+                        DraftingDimension(
+                            dimension_id="depth",
+                            kind="linear",
+                            target="target_box",
+                            value=10.0,
+                            binding=True,
+                        )
+                    ],
+                    callouts=[
+                        DraftingCallout(
+                            callout_id="2",
+                            label="Target box",
+                            target="target_box",
+                        )
+                    ],
+                ),
+                DraftingView(
+                    view_id="side",
+                    target="target_box",
+                    projection="side",
+                    datums=["B"],
+                    dimensions=[
+                        DraftingDimension(
+                            dimension_id="height",
+                            kind="linear",
+                            target="target_box",
+                            value=8.0,
+                            binding=True,
+                        )
+                    ],
+                    callouts=[
+                        DraftingCallout(
+                            callout_id="3",
+                            label="Target box",
+                            target="target_box",
+                        )
+                    ],
+                ),
+            ],
+            layout=DraftingLayout(
+                mode="orthographic_trio",
+                views=[
+                    DraftingLayoutView(view_id="front", display_offset_mm=(0.0, 0.0)),
+                    DraftingLayoutView(view_id="top", display_offset_mm=(32.0, 0.0)),
+                    DraftingLayoutView(
+                        view_id="side",
+                        display_offset_mm=(64.0, 0.0),
+                        exploded=True,
+                    ),
+                ],
+            ),
+        ),
+    )
+    round_tripped = AssemblyDefinition.model_validate_json(
+        assembly_definition.model_dump_json(by_alias=True, exclude_none=True)
+    )
+
+    assert round_tripped.drafting is not None
+    assert round_tripped.drafting.layout is not None
+    assert round_tripped.drafting.layout.mode == "orthographic_trio"
+    assert [view.view_id for view in round_tripped.drafting.layout.views] == [
+        "front",
+        "top",
+        "side",
+    ]
+    assert round_tripped.drafting.layout.views[0].display_offset_mm == (0.0, 0.0)
 
 
 @pytest.mark.integration_p0

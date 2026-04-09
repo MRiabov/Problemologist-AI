@@ -10,6 +10,7 @@ import yaml
 from websockets.asyncio.client import connect as websocket_connect
 
 from controller.api.schemas import AgentRunRequest, EpisodeCreateResponse
+from shared.current_role import current_role_manifest_json
 from shared.enums import AgentName
 from shared.models.schemas import (
     AssemblyConstraints,
@@ -418,6 +419,17 @@ async def _write_preview_workspace(
 ) -> None:
     headers = {"X-Session-ID": session_id}
 
+    current_role_resp = await client.post(
+        f"{WORKER_LIGHT_URL}/fs/write",
+        json=WriteFileRequest(
+            path=".manifests/current_role.json",
+            content=current_role_manifest_json(AgentName.ENGINEER_CODER),
+            overwrite=True,
+        ).model_dump(mode="json"),
+        headers=headers,
+    )
+    assert current_role_resp.status_code == 200, current_role_resp.text
+
     solution_resp = await client.post(
         f"{WORKER_LIGHT_URL}/fs/write",
         json=WriteFileRequest(
@@ -459,6 +471,9 @@ async def _write_benchmark_drafting_workspace(
     headers = {"X-Session-ID": session_id}
 
     workspace_files = {
+        ".manifests/current_role.json": current_role_manifest_json(
+            AgentName.BENCHMARK_PLANNER
+        ),
         "benchmark_plan.md": "Benchmark plan.\n",
         "benchmark_assembly_definition.yaml": yaml.safe_dump(
             AssemblyDefinition(
@@ -931,7 +946,10 @@ async def test_int_212_utils_preview_materializes_modality_manifest_and_depth_ar
         manifest_content = manifest_resp.json()["content"]
         manifest = RenderManifest.model_validate_json(manifest_content)
         assert manifest.worker_session_id == session_id
-        assert manifest.preview_evidence_paths == [artifact_path]
+        assert len(manifest.preview_evidence_paths) == 3, (
+            manifest.preview_evidence_paths
+        )
+        assert manifest.preview_evidence_paths[0] == artifact_path
         assert artifact_path in manifest.artifacts
         artifact_metadata = manifest.artifacts[artifact_path]
         assert artifact_metadata.modality == "depth"
@@ -1168,13 +1186,22 @@ async def test_int_216_utils_render_technical_drawing_uses_benchmark_drafting_sc
         manifest = RenderManifest.model_validate_json(manifest_resp.json()["content"])
         assert manifest.drafting is True
         assert manifest.source_script_sha256 is not None
-        assert manifest.preview_evidence_paths == [artifact_path], (
+        assert len(manifest.preview_evidence_paths) == 3, (
+            manifest.preview_evidence_paths
+        )
+        assert artifact_path in manifest.preview_evidence_paths, (
             manifest.preview_evidence_paths
         )
         assert artifact_path in manifest.artifacts
         artifact_metadata = manifest.artifacts[artifact_path]
         assert artifact_metadata.siblings.svg.endswith(".svg")
         assert artifact_metadata.siblings.dxf.endswith(".dxf")
+        view_indices = sorted(
+            metadata.view_index
+            for metadata in manifest.artifacts.values()
+            if metadata.view_index is not None
+        )
+        assert view_indices == [0, 1, 2], view_indices
 
         ls_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/ls",

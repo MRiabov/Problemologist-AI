@@ -184,7 +184,7 @@ async def _create_benchmark_session(
         backend=SimulatorBackendType.MUJOCO,
     )
     resp = await client.post(
-        f"http://127.0.0.1:18000/benchmark/generate",
+        "http://127.0.0.1:18000/benchmark/generate",
         json=request.model_dump(mode="json"),
     )
     assert resp.status_code in {200, 202}, resp.text

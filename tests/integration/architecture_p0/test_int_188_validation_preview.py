@@ -1257,7 +1257,7 @@ def build():
             preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
             assert preview_data.success, preview_data.message
             assert preview_data.drafting is True
-            assert preview_data.view_count == 1
+            assert preview_data.view_count == 3
             assert preview_data.image_path is not None
             assert preview_data.image_path.endswith(".png")
             assert (
