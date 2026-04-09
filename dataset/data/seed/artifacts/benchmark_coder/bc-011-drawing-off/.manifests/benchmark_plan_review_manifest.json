@@ -1,0 +1,12 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "benchmark_plan_reviewer",
+  "session_id": "seed-bc-011-drawing-off",
+  "planner_node_type": "benchmark_planner",
+  "artifact_hashes": {
+    "benchmark_plan.md": "9332a08e74a4b8400a897d349972b6c79741669e",
+    "todo.md": "e5f6a533c1fc94a8fb29807dc281a265f1c0838f",
+    "benchmark_definition.yaml": "41e5fc7d3c2a581e927853f6761b9f9be4bc35af",
+    "benchmark_assembly_definition.yaml": "5994d4afc5e3cb724adb0c708422f0434be5340b"
+  }
+}
