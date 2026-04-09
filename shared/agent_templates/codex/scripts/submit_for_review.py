@@ -16,7 +16,13 @@ from shared.enums import AgentName
 from shared.git_utils import commit_submission_attempt
 from shared.script_contracts import authored_script_path_for_agent
 from shared.workers.persistence import record_validation_result
-from utils.submission import simulate, validate
+from shared.script_contracts import role_family_for_agent
+from utils.submission import (
+    simulate_benchmark,
+    simulate_engineering,
+    validate_benchmark,
+    validate_engineering,
+)
 from worker_heavy.utils.handover import submit_for_review as _handover_submit_for_review
 
 
@@ -51,8 +57,31 @@ def _reviewer_stage_for_agent(agent_name: AgentName) -> str:
         raise ValueError(f"Unsupported submission agent: {agent_name}") from exc
 
 
+def _manifest_path_for_agent(agent_name: AgentName) -> Path:
+    if agent_name in {
+        AgentName.BENCHMARK_CODER,
+        AgentName.BENCHMARK_REVIEWER,
+    }:
+        return Path(".manifests/benchmark_review_manifest.json")
+    if agent_name in {
+        AgentName.ENGINEER_CODER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+    }:
+        return Path(".manifests/engineering_execution_handoff_manifest.json")
+    if agent_name == AgentName.ELECTRONICS_REVIEWER:
+        return Path(".manifests/electronics_review_manifest.json")
+    raise ValueError(f"Unsupported submission agent: {agent_name}")
+
+
 def _script_path_for_agent(agent_name: AgentName) -> Path:
     return authored_script_path_for_agent(agent_name)
+
+
+def _role_family_for_submission(agent_name: AgentName) -> str:
+    family = role_family_for_agent(agent_name)
+    if family is None:
+        raise ValueError(f"Unsupported submission agent: {agent_name}")
+    return family
 
 
 def _load_solution(script_path: Path) -> Compound:
@@ -114,27 +143,26 @@ def main() -> int:
     episode_id = os.getenv("EPISODE_ID") or None
     agent_name = _submission_agent(workspace)
     log_path = _submission_log_path(workspace)
-    manifest_path = (
-        workspace / ".manifests" / "engineering_execution_handoff_manifest.json"
-    )
     commit_message = "submit_for_review: unknown rejected"
     payload: dict[str, Any]
     exit_code = 1
 
     if agent_name is None:
         payload = {
-                "ok": False,
-                "status": "rejected",
-                "stage": "load",
-                "message": (
-                    "Unable to infer submission agent from .manifests/current_role.json"
-                ),
-                "log_path": str(log_path.relative_to(workspace)),
-            }
+            "ok": False,
+            "status": "rejected",
+            "stage": "load",
+            "message": (
+                "Unable to infer submission agent from .manifests/current_role.json"
+            ),
+            "log_path": str(log_path.relative_to(workspace)),
+        }
     else:
         rejection: dict[str, Any] | None = None
         validation_ok = False
         simulation_success = False
+        family = _role_family_for_submission(agent_name)
+        manifest_path = workspace / _manifest_path_for_agent(agent_name)
 
         with _capture_submission_output(log_path):
             try:
@@ -150,11 +178,18 @@ def main() -> int:
                     "message": str(exc),
                 }
             else:
-                validation_ok, validation_message = validate(
-                    solution,
-                    output_dir=str(workspace),
-                    session_id=session_id,
-                )
+                if family == "benchmark":
+                    validation_ok, validation_message = validate_benchmark(
+                        solution,
+                        output_dir=str(workspace),
+                        session_id=session_id,
+                    )
+                else:
+                    validation_ok, validation_message = validate_engineering(
+                        solution,
+                        output_dir=str(workspace),
+                        session_id=session_id,
+                    )
                 record_validation_result(
                     workspace,
                     validation_ok,
@@ -170,11 +205,18 @@ def main() -> int:
                         "message": validation_message,
                     }
                 else:
-                    simulation_result = simulate(
-                        solution,
-                        output_dir=str(workspace),
-                        session_id=session_id,
-                    )
+                    if family == "benchmark":
+                        simulation_result = simulate_benchmark(
+                            solution,
+                            output_dir=str(workspace),
+                            session_id=session_id,
+                        )
+                    else:
+                        simulation_result = simulate_engineering(
+                            solution,
+                            output_dir=str(workspace),
+                            session_id=session_id,
+                        )
                     simulation_success = simulation_result.success
                     if not simulation_result.success:
                         rejection = {
