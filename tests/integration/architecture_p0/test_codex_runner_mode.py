@@ -45,6 +45,7 @@ from shared.agents.config import (
     AgentsConfig,
     DraftingMode,
 )
+from shared.current_role import parse_current_role_manifest
 from shared.enums import AgentName, ManufacturingMethod, ReviewDecision
 from shared.eval_artifacts import plan_artifacts_for_agent
 from shared.models.schemas import (
@@ -915,6 +916,7 @@ async def test_seed_workspace_artifacts_skip_git_metadata(
 
     expected_paths = collect_seed_workspace_artifact_paths(item, root=tmp_path)
     assert "benchmark_plan.md" in expected_paths
+    assert ".manifests/current_role.json" in expected_paths
     assert not any(path.startswith(".git/") for path in expected_paths)
 
     workspace_client = InMemorySeedWorkspaceClient(session_id="session-1")
@@ -927,9 +929,19 @@ async def test_seed_workspace_artifacts_skip_git_metadata(
     )
 
     assert "benchmark_plan.md" in seeded_paths
+    assert ".manifests/current_role.json" in seeded_paths
     assert not any(path.startswith(".git/") for path in seeded_paths)
     assert all(
         not path.startswith(".git/") for path, _ in workspace_client.snapshot_files()
+    )
+    current_role = await workspace_client.read_file_optional(
+        ".manifests/current_role.json",
+        bypass_agent_permissions=True,
+    )
+    assert current_role is not None
+    assert (
+        parse_current_role_manifest(current_role).agent_name
+        == AgentName.BENCHMARK_PLANNER
     )
 
 
@@ -2938,6 +2950,14 @@ async def test_codex_materialized_planner_workspace_submits(
     assert not any(path.endswith("result.py") for path in materialized.copied_paths)
     for rel_path in expected_files:
         assert (workspace_dir / rel_path).exists(), rel_path
+    current_role_path = workspace_dir / ".manifests" / "current_role.json"
+    assert current_role_path.exists()
+    assert (
+        parse_current_role_manifest(
+            current_role_path.read_text(encoding="utf-8")
+        ).agent_name
+        == agent_name
+    )
 
     shutil.rmtree(workspace_dir / ".manifests", ignore_errors=True)
 
@@ -2966,10 +2986,18 @@ async def test_codex_materialized_planner_workspace_submits(
         workspace_dir=workspace_dir,
         codex_home_root=codex_home_root,
         session_id=f"INT-CODEX-{agent_name.value}-{row_id}",
+        agent_name=agent_name,
     )
     assert "AGENT_NAME" not in env
     assert env["PROBLEMOLOGIST_REPO_ROOT"] == str(ROOT)
     assert str(ROOT) in env["PYTHONPATH"].split(os.pathsep)
+    assert current_role_path.exists()
+    assert (
+        parse_current_role_manifest(
+            current_role_path.read_text(encoding="utf-8")
+        ).agent_name
+        == agent_name
+    )
 
     completed = subprocess.run(
         ["bash", "scripts/submit_plan.sh"],

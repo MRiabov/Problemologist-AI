@@ -227,45 +227,45 @@ The safe order is:
 
 ### Artifact contract
 
-- [ ] Define the `.manifests/current_role.json` schema.
-- [ ] Add an artifact-criteria doc for `current_role.json`.
-- [ ] Update `specs/architecture/agents/artifacts-and-filesystem.md` to list
+- [x] Define the `.manifests/current_role.json` schema.
+- [x] Add an artifact-criteria doc for `current_role.json`.
+- [x] Update `specs/architecture/agents/artifacts-and-filesystem.md` to list
   the artifact as system-owned metadata.
 
 ### Workspace materialization
 
-- [ ] Write `current_role.json` in `evals/logic/codex_workspace.py`.
-- [ ] Refresh `current_role.json` in controller-backed initialization and
+- [x] Write `current_role.json` in `evals/logic/codex_workspace.py`.
+- [x] Refresh `current_role.json` in controller-backed initialization and
   node-transition paths.
-- [ ] Ensure copied workspaces are rewritten before the next node starts.
+- [x] Ensure copied workspaces are rewritten before the next node starts.
 
 ### Role routing
 
-- [ ] Update `shared/utils/agent/__init__.py` to read the file first.
-- [ ] Update `shared/agent_templates/codex/scripts/submit_plan.py`.
-- [ ] Update `shared/agent_templates/codex/scripts/submit_review.py`.
-- [ ] Update `shared/agent_templates/codex/scripts/submit_for_review.py`.
-- [ ] Update `worker_heavy/utils/handover.py`.
-- [ ] Update `worker_heavy/utils/validation.py`.
-- [ ] Update `worker_heavy/utils/preview.py`.
-- [ ] Update `worker_heavy/utils/rendering.py`.
-- [ ] Remove the old filename and prompt-marker heuristics.
+- [x] Update `shared/utils/agent/__init__.py` to read the file first.
+- [x] Update `shared/agent_templates/codex/scripts/submit_plan.py`.
+- [x] Update `shared/agent_templates/codex/scripts/submit_review.py`.
+- [x] Update `shared/agent_templates/codex/scripts/submit_for_review.py`.
+- [x] Update `worker_heavy/utils/handover.py`.
+- [x] Update `worker_heavy/utils/validation.py`.
+- [x] Update `worker_heavy/utils/preview.py`.
+- [x] Update `worker_heavy/utils/rendering.py`.
+- [x] Remove the old filename and prompt-marker heuristics.
 
 ### Validation and evals
 
-- [ ] Update `controller/agent/node_entry_validation.py` to enforce the role
+- [x] Update `controller/agent/node_entry_validation.py` to enforce the role
   match.
-- [ ] Update `evals/logic/specs.py` and `shared/eval_artifacts.py`.
-- [ ] Update the role-sensitive integration tests in
+- [x] Update `evals/logic/specs.py` and `shared/eval_artifacts.py`.
+- [x] Update the role-sensitive integration tests in
   `tests/integration/architecture_p0/` and `tests/integration/architecture_p1/`.
 - [ ] Refresh `tests/integration/mock_responses/**` and
   `dataset/data/seed/role_based/**`.
-- [ ] Add a mixed-workspace regression test that proves the role file wins
+- [x] Add a mixed-workspace regression test that proves the role file wins
   over file presence.
 
 ### Docs
 
-- [ ] Update the agent-harness, tools, handover-contracts, and role-sheet
+- [x] Update the agent-harness, tools, handover-contracts, and role-sheet
   docs.
 
 ## Test Impact

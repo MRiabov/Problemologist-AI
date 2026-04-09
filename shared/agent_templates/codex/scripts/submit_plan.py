@@ -6,8 +6,8 @@ import uuid
 from pathlib import Path
 
 from controller.agent.benchmark.tools import _canonicalize_benchmark_constraints
-from shared.current_role import current_role_agent_name
 from shared.agents.config import DraftingMode, load_agents_config
+from shared.current_role import current_role_agent_name
 from shared.enums import AgentName
 from shared.git_utils import commit_submission_attempt, repo_revision
 from shared.models.schemas import PlannerSubmissionResult
@@ -166,9 +166,7 @@ def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
         return PlannerSubmissionResult(
             ok=False,
             status="rejected",
-            errors=[
-                "Unable to infer planner agent from .manifests/current_role.json"
-            ],
+            errors=["Unable to infer planner agent from .manifests/current_role.json"],
             node_type=AgentName.ENGINEER_PLANNER,
         )
 
@@ -274,6 +272,14 @@ def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
     )
 
 
+def submit_benchmark_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
+    return submit_plan(workspace)
+
+
+def submit_engineering_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
+    return submit_plan(workspace)
+
+
 def main() -> int:
     workspace = Path.cwd()
     commit_message = "submit_plan: unknown rejected"
@@ -286,13 +292,13 @@ def main() -> int:
             errors=[f"submit_plan execution failed: {exc}"],
             node_type=_planner_agent() or AgentName.ENGINEER_PLANNER,
         )
-        print(result.model_dump_json(indent=2))
         commit_message = f"submit_plan: {result.node_type.value} rejected"
         commit_submission_attempt(workspace, commit_message)
+        print(result.model_dump_json(indent=2))
         return 1
     commit_message = f"submit_plan: {result.node_type.value} {result.status}"
-    print(result.model_dump_json(indent=2))
     commit_submission_attempt(workspace, commit_message)
+    print(result.model_dump_json(indent=2))
     return 0
 
 
