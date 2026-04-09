@@ -14,7 +14,14 @@ from .preview import (
     render_cad,
     render_technical_drawing,
 )
-from .submission import simulate, submit_for_review, validate
+from .submission import (
+    simulate_benchmark,
+    simulate_engineering,
+    submit_benchmark_for_review,
+    submit_solution_for_review,
+    validate_benchmark,
+    validate_engineering,
+)
 
 __all__ = [
     "CompoundMetadata",
@@ -31,7 +38,10 @@ __all__ = [
     "preview",
     "preview_drawing",
     "query_render_bundle",
-    "simulate",
-    "submit_for_review",
-    "validate",
+    "simulate_benchmark",
+    "simulate_engineering",
+    "submit_benchmark_for_review",
+    "submit_solution_for_review",
+    "validate_benchmark",
+    "validate_engineering",
 ]

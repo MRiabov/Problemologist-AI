@@ -705,22 +705,6 @@ def submit_solution_for_review(compound: Compound) -> bool:
     return _submit_for_review_submission(compound, family="engineering")
 
 
-def validate(compound: Compound, **kwargs) -> tuple[bool, str | None]:
-    if _script_agent_family() == "benchmark":
-        return validate_benchmark(compound, **kwargs)
-    if _script_agent_family() == "engineering":
-        return validate_engineering(compound, **kwargs)
-    return _validate_submission(compound, **kwargs)
-
-
-def simulate(compound: Compound, **kwargs) -> BenchmarkToolResponse:
-    if _script_agent_family() == "benchmark":
-        return simulate_benchmark(compound, **kwargs)
-    if _script_agent_family() == "engineering":
-        return simulate_engineering(compound, **kwargs)
-    return _simulate_submission(compound, **kwargs)
-
-
 def validate_and_price(
     part: Any, method: Any = None, config: Any = None
 ) -> BenchmarkToolResponse:
@@ -744,14 +728,6 @@ def validate_and_price(
     }
     res = _call_heavy_worker("/benchmark/analyze", payload)
     return BenchmarkToolResponse.model_validate(res)
-
-
-def submit_for_review(compound: Compound) -> bool:
-    if _script_agent_family() == "benchmark":
-        return submit_benchmark_for_review(compound)
-    if _script_agent_family() == "engineering":
-        return submit_solution_for_review(compound)
-    return _submit_for_review_submission(compound)
 
 
 class _PreviewResponseProxy:

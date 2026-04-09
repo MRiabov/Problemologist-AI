@@ -1008,10 +1008,6 @@ def get_engineer_planner_tools(
         )
         return result.model_dump(mode="json")
 
-    async def submit_plan() -> dict:
-        """Compatibility alias for submit_engineering_plan()."""
-        return await submit_engineering_plan()
-
     planner_common_tools = [
         tool
         for tool in common_tools
@@ -1025,6 +1021,5 @@ def get_engineer_planner_tools(
             invoke_cots_search_subagent,
             validate_costing_and_price,
             submit_engineering_plan,
-            submit_plan,
         ],
     )
