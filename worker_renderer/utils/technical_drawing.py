@@ -10,12 +10,12 @@ from typing import TYPE_CHECKING, Any
 import matplotlib.pyplot as plt
 import structlog
 import yaml
-from build123d import ExportDXF, ExportSVG, LineType, Part
+from build123d import ExportDXF, LineType, Part, Pos
 from build123d.build_enums import Unit
 from PIL import Image
 
 from shared.agents import load_agents_config
-from shared.models.schemas import AssemblyDefinition, DraftingView
+from shared.models.schemas import AssemblyDefinition, DraftingLayout, DraftingView
 from shared.rendering import build_render_manifest
 from shared.workers.loader import load_component_from_script
 from shared.workers.schema import (
@@ -68,6 +68,8 @@ _VIEW_CAMERA_MAP: dict[
         45.0,
     ),
 }
+
+_ORTHOGRAPHIC_TRIO = ("front", "top", "side")
 
 
 def _vector_tuple(value: Any) -> tuple[float, float, float]:
@@ -186,32 +188,273 @@ def _edge_segments(
     return segments
 
 
+def _shift_segments(
+    segments: list[tuple[tuple[float, float], tuple[float, float]]],
+    offset: tuple[float, float],
+) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+    if offset == (0.0, 0.0):
+        return segments
+    shifted: list[tuple[tuple[float, float], tuple[float, float]]] = []
+    for start, end in segments:
+        shifted.append(
+            (
+                (start[0] + offset[0], start[1] + offset[1]),
+                (end[0] + offset[0], end[1] + offset[1]),
+            )
+        )
+    return shifted
+
+
+def _segment_bounds(
+    segments: list[tuple[tuple[float, float], tuple[float, float]]],
+) -> tuple[float, float, float, float]:
+    points = [point for segment in segments for point in segment]
+    if not points:
+        raise ValueError("drafting preview produced no projected edges")
+    xs = [point[0] for point in points]
+    ys = [point[1] for point in points]
+    return min(xs), max(xs), min(ys), max(ys)
+
+
+def _resolve_layout_offset(
+    drafting_layout: DraftingLayout | None,
+    view_id: str,
+) -> tuple[float, float]:
+    if drafting_layout is None:
+        return (0.0, 0.0)
+    for layout_view in drafting_layout.views:
+        if layout_view.view_id == view_id:
+            return tuple(float(value) for value in layout_view.display_offset_mm)
+    return (0.0, 0.0)
+
+
+def _clone_drafting_view(
+    view: DraftingView,
+    *,
+    view_id: str | None = None,
+    projection: str | None = None,
+) -> DraftingView:
+    update: dict[str, Any] = {}
+    if view_id is not None:
+        update["view_id"] = view_id
+    if projection is not None:
+        update["projection"] = projection
+    return view.model_copy(update=update, deep=True)
+
+
+def _drafting_preview_views(
+    drafting: Any,
+) -> list[tuple[DraftingView, tuple[float, float], str | None]]:
+    authored_views = list(drafting.views)
+    if not authored_views:
+        return []
+
+    if drafting.layout is None and len(authored_views) == 1:
+        source_view = authored_views[0]
+        return [
+            (
+                _clone_drafting_view(
+                    source_view,
+                    view_id=view_id,
+                    projection=view_id,
+                ),
+                (0.0, 0.0),
+                None,
+            )
+            for view_id in _ORTHOGRAPHIC_TRIO
+        ]
+
+    return [
+        (
+            view,
+            _resolve_layout_offset(drafting.layout, view.view_id),
+            (
+                f"{drafting.layout.mode}"
+                + (
+                    "+exploded"
+                    if any(
+                        layout_view.view_id == view.view_id and layout_view.exploded
+                        for layout_view in drafting.layout.views
+                    )
+                    else ""
+                )
+                if drafting.layout
+                else None
+            ),
+        )
+        for view in authored_views
+    ]
+
+
+def _render_annotation_panel(
+    *,
+    ax: Any,
+    view: DraftingView,
+    bounds: tuple[float, float, float, float],
+    title: str,
+    layout_mode: str | None,
+) -> None:
+    min_x, max_x, min_y, max_y = bounds
+    x_span = max(max_x - min_x, 1.0)
+    y_span = max(max_y - min_y, 1.0)
+    x_pad = max(x_span * 0.12, 1.0)
+    y_pad = max(y_span * 0.12, 1.0)
+    center_x = (min_x + max_x) / 2.0
+
+    title_text = title
+    if layout_mode:
+        title_text = f"{title_text} [{layout_mode}]"
+    if view.projection in {"section", "detail"}:
+        suffix = (
+            view.section_marker if view.projection == "section" else view.detail_target
+        )
+        if suffix:
+            title_text = f"{title_text} - {suffix}"
+    ax.set_title(title_text, fontsize=10, pad=12)
+
+    header_y = max_y + y_pad * 0.95
+    ax.text(
+        center_x,
+        header_y,
+        f"View {view.view_id} ({view.projection})",
+        ha="center",
+        va="bottom",
+        fontsize=9,
+        fontweight="bold",
+        bbox=dict(boxstyle="round,pad=0.2", facecolor="#f7f7f7", edgecolor="#333333"),
+    )
+
+    if view.section_marker:
+        ax.text(
+            min_x,
+            header_y,
+            f"Section {view.section_marker}",
+            ha="left",
+            va="bottom",
+            fontsize=8,
+            bbox=dict(
+                boxstyle="round,pad=0.15", facecolor="#ffffff", edgecolor="#555555"
+            ),
+        )
+    if view.detail_target:
+        ax.text(
+            max_x,
+            header_y,
+            f"Detail {view.detail_target}",
+            ha="right",
+            va="bottom",
+            fontsize=8,
+            bbox=dict(
+                boxstyle="round,pad=0.15", facecolor="#ffffff", edgecolor="#555555"
+            ),
+        )
+
+    for index, datum in enumerate(view.datums):
+        ax.text(
+            min_x,
+            max_y + y_pad * (0.58 - index * 0.26),
+            f"Datum {datum}",
+            ha="left",
+            va="bottom",
+            fontsize=8,
+            bbox=dict(
+                boxstyle="round,pad=0.15", facecolor="#eef6ff", edgecolor="#4a6fa5"
+            ),
+        )
+
+    for index, dimension in enumerate(view.dimensions):
+        dim_y = min_y - y_pad * (0.85 + index * 0.28)
+        dim_label = f"{dimension.dimension_id} ({dimension.kind}) = {dimension.value:g}"
+        if dimension.tolerance:
+            dim_label = f"{dim_label} ± {dimension.tolerance}"
+        if not dimension.binding:
+            dim_label = f"{dim_label} [explanatory]"
+        ax.annotate(
+            dim_label,
+            xy=(min_x, dim_y),
+            xytext=(max_x, dim_y),
+            ha="center",
+            va="center",
+            fontsize=8,
+            bbox=dict(
+                boxstyle="round,pad=0.18", facecolor="#fff6e8", edgecolor="#b26b00"
+            ),
+            arrowprops=dict(
+                arrowstyle="<->",
+                lw=0.8,
+                color="#b26b00",
+                shrinkA=0,
+                shrinkB=0,
+            ),
+        )
+
+    for index, callout in enumerate(view.callouts):
+        callout_y = max_y - index * y_pad * 0.22
+        ax.text(
+            max_x + x_pad * 0.18,
+            callout_y,
+            f"{callout.callout_id}. {callout.label}",
+            ha="left",
+            va="center",
+            fontsize=8,
+            bbox=dict(
+                boxstyle="round,pad=0.15", facecolor="#f4f4f4", edgecolor="#666666"
+            ),
+        )
+
+    for index, note in enumerate(view.notes):
+        note_y = min_y - y_pad * (1.38 + index * 0.3)
+        note_face = "#fff0f0" if note.critical else "#fafafa"
+        note_edge = "#b00020" if note.critical else "#777777"
+        note_weight = "bold" if note.critical else "normal"
+        ax.text(
+            min_x,
+            note_y,
+            f"Note {note.note_id}: {note.text}",
+            ha="left",
+            va="center",
+            fontsize=8,
+            fontweight=note_weight,
+            bbox=dict(
+                boxstyle="round,pad=0.18", facecolor=note_face, edgecolor=note_edge
+            ),
+        )
+
+
 def _plot_drawing(
     *,
     png_path: Path,
+    svg_path: Path,
     title: str,
     visible_edges: list[Any],
     hidden_edges: list[Any],
+    view: DraftingView,
     width: int,
     height: int,
+    display_offset: tuple[float, float] = (0.0, 0.0),
+    layout_mode: str | None = None,
 ) -> None:
     visible_segments = _edge_segments(visible_edges)
     hidden_segments = _edge_segments(hidden_edges)
-    points = [
-        point for segment in visible_segments + hidden_segments for point in segment
-    ]
-    if not points:
-        raise ValueError("drafting preview produced no projected edges")
-
-    xs = [point[0] for point in points]
-    ys = [point[1] for point in points]
-    x_pad = max((max(xs) - min(xs)) * 0.08, 1.0)
-    y_pad = max((max(ys) - min(ys)) * 0.08, 1.0)
+    visible_segments = _shift_segments(visible_segments, display_offset)
+    hidden_segments = _shift_segments(hidden_segments, display_offset)
+    bounds = _segment_bounds(visible_segments + hidden_segments)
+    min_x, max_x, min_y, max_y = bounds
+    x_span = max(max_x - min_x, 1.0)
+    y_span = max(max_y - min_y, 1.0)
+    x_pad = max(x_span * 0.12, 1.0)
+    y_pad = max(y_span * 0.12, 1.0)
 
     fig, ax = plt.subplots(figsize=(width / 100, height / 100))
     ax.set_aspect("equal", adjustable="box")
     ax.axis("off")
-    ax.set_title(title, fontsize=10, pad=12)
+    _render_annotation_panel(
+        ax=ax,
+        view=view,
+        bounds=bounds,
+        title=title,
+        layout_mode=layout_mode,
+    )
 
     for start, end in visible_segments:
         ax.plot((start[0], end[0]), (start[1], end[1]), color="#111111", linewidth=1.4)
@@ -224,8 +467,8 @@ def _plot_drawing(
             linestyle="--",
         )
 
-    ax.set_xlim(min(xs) - x_pad, max(xs) + x_pad)
-    ax.set_ylim(min(ys) - y_pad, max(ys) + y_pad)
+    ax.set_xlim(min_x - x_pad * 1.8, max_x + x_pad * 1.8)
+    ax.set_ylim(min_y - y_pad * 2.2, max_y + y_pad * 2.0)
     min_width = 640
     min_height = 480
     dpi = 150
@@ -233,6 +476,7 @@ def _plot_drawing(
     try:
         for _attempt in range(max_attempts):
             fig.savefig(png_path, dpi=dpi, bbox_inches="tight")
+            fig.savefig(svg_path, bbox_inches="tight")
             with Image.open(png_path) as image:
                 width, height = image.size
             if width >= min_width and height >= min_height:
@@ -249,25 +493,19 @@ def _plot_drawing(
         plt.close(fig)
 
 
-def _export_vector_sidecars(
+def _export_dxf_sidecar(
     *,
-    svg_path: Path,
     dxf_path: Path,
     visible_edges: list[Any],
     hidden_edges: list[Any],
+    display_offset: tuple[float, float] = (0.0, 0.0),
 ) -> None:
-    svg = ExportSVG(unit=Unit.MM)
-    svg.add_layer("visible", line_type=LineType.CONTINUOUS)
-    svg.add_layer("hidden", line_type=LineType.HIDDEN)
-    svg.add_shape(visible_edges, layer="visible")
-    svg.add_shape(hidden_edges, layer="hidden")
-    svg.write(str(svg_path))
-
     dxf = ExportDXF(unit=Unit.MM, line_type=LineType.CONTINUOUS)
     dxf.add_layer("visible", line_type=LineType.CONTINUOUS)
     dxf.add_layer("hidden", line_type=LineType.HIDDEN)
-    dxf.add_shape(visible_edges, layer="visible")
-    dxf.add_shape(hidden_edges, layer="hidden")
+    offset_location = Pos(display_offset[0], display_offset[1], 0.0)
+    dxf.add_shape([offset_location * edge for edge in visible_edges], layer="visible")
+    dxf.add_shape([offset_location * edge for edge in hidden_edges], layer="hidden")
     dxf.write(str(dxf_path))
 
 
@@ -326,7 +564,9 @@ def render_technical_drawing_preview(
     first_image_path: Path | None = None
     preview_client = _preview_storage_client()
 
-    for index, view in enumerate(drafting.views):
+    for index, (view, display_offset, layout_mode) in enumerate(
+        _drafting_preview_views(drafting)
+    ):
         visible_edges, hidden_edges, view_spec = _project_edges(
             component,
             view,
@@ -341,17 +581,21 @@ def render_technical_drawing_preview(
 
         _plot_drawing(
             png_path=png_path,
+            svg_path=svg_path,
             title=f"{drafting.title} - {view.view_id}",
             visible_edges=visible_edges,
             hidden_edges=hidden_edges,
+            display_offset=display_offset,
+            layout_mode=layout_mode,
+            view=view,
             width=render_width,
             height=render_height,
         )
-        _export_vector_sidecars(
-            svg_path=svg_path,
+        _export_dxf_sidecar(
             dxf_path=dxf_path,
             visible_edges=visible_edges,
             hidden_edges=hidden_edges,
+            display_offset=display_offset,
         )
 
         png_rel = str(png_path.relative_to(root))
