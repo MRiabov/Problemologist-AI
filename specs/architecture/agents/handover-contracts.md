@@ -54,6 +54,7 @@ Validation rule:
 - Reviewer entry is blocked if the reviewer-specific manifest for that stage is missing, stale, or invalid for the latest revision.
 - The stage-specific manifest must carry valid revision/session metadata and `reviewer_stage`; mismatch is a fail-closed handover error.
 - Review-content validation and `plan_refusal.md` checks must run against the worker filesystem session (`metadata.worker_session_id` when present, otherwise `episode_id` fallback) to prevent cross-session artifact lookups.
+- Benchmark review manifests record benchmark-neutral motion evidence verification, not benchmark-side goal completion. `goal_reached` remains engineer-owned.
 
 ## Current Role Manifest Contract
 
