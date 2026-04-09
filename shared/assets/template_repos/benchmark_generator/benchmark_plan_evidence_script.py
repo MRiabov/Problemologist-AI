@@ -11,7 +11,6 @@ def _make_box(label: str, size: tuple[float, float, float], center: tuple[float,
     part.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     return part
 
-
 def build():
     fixtures = Compound(
         children=[

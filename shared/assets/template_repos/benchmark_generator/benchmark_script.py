@@ -20,7 +20,6 @@ def _make_box(label: str, size: tuple[float, float, float], center: tuple[float,
     part.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     return part
 
-
 def _build_static_fixtures() -> Compound:
     children = [
         _make_box("left_start_deck", (28.0, 18.0, 4.0), (-30.0, 0.0, 2.0)),
@@ -84,75 +83,6 @@ def build() -> Compound:
     environment.label = "benchmark_environment"
     environment.metadata = CompoundMetadata()
     return environment
-
-
-def _load_objectives() -> dict:
-    payload = _load_yaml("benchmark_definition.yaml")
-    objectives = payload.get("objectives", {})
-    return objectives if isinstance(objectives, dict) else {}
-
-
-def _build_objective_zone(label: str, bounds_min, bounds_max):
-    size_x = float(bounds_max[0]) - float(bounds_min[0])
-    size_y = float(bounds_max[1]) - float(bounds_min[1])
-    size_z = float(bounds_max[2]) - float(bounds_min[2])
-    center = (
-        (float(bounds_min[0]) + float(bounds_max[0])) / 2.0,
-        (float(bounds_min[1]) + float(bounds_max[1])) / 2.0,
-        (float(bounds_min[2]) + float(bounds_max[2])) / 2.0,
-    )
-    zone = Box(
-        max(size_x, 0.0),
-        max(size_y, 0.0),
-        max(size_z, 0.0),
-        align=(Align.CENTER, Align.CENTER, Align.CENTER),
-    ).move(Location(center))
-    zone.label = label
-    zone.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
-    return zone
-
-
-def objectives_geometry() -> Compound:
-    """Return the benchmark objective overlay geometry for this workspace."""
-
-    objectives = _load_objectives()
-    children = []
-
-    goal_zone = objectives.get("goal_zone")
-    if isinstance(goal_zone, dict):
-        children.append(
-            _build_objective_zone(
-                "zone_goal",
-                goal_zone.get("min", [0.0, 0.0, 0.0]),
-                goal_zone.get("max", [0.0, 0.0, 0.0]),
-            )
-        )
-
-    for index, forbid_zone in enumerate(objectives.get("forbid_zones", []) or []):
-        if isinstance(forbid_zone, dict):
-            zone_name = str(forbid_zone.get("name", f"forbid_{index}")).strip() or f"forbid_{index}"
-            children.append(
-                _build_objective_zone(
-                    f"zone_forbid_{index}_{zone_name}",
-                    forbid_zone.get("min", [0.0, 0.0, 0.0]),
-                    forbid_zone.get("max", [0.0, 0.0, 0.0]),
-                )
-            )
-
-    build_zone = objectives.get("build_zone")
-    if isinstance(build_zone, dict):
-        children.append(
-            _build_objective_zone(
-                "zone_build",
-                build_zone.get("min", [0.0, 0.0, 0.0]),
-                build_zone.get("max", [0.0, 0.0, 0.0]),
-            )
-        )
-
-    overlay = Compound(children=children) if children else Compound()
-    overlay.label = "benchmark_objectives"
-    overlay.metadata = CompoundMetadata()
-    return overlay
 
 
 result = build()
