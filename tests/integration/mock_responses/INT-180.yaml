@@ -30,7 +30,7 @@ transcript:
       overwrite: true
       content_file: INT-180/benchmark_planner/entry_01/05__benchmark_definition.yaml
     expected_observation: success
-  - tool_name: submit_plan
+  - tool_name: submit_benchmark_plan
     expected_observation: submitted
   - finished: true
     summary: INT-180 planning artifacts generated.

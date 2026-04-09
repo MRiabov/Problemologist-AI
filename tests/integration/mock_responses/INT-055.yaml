@@ -25,13 +25,13 @@ transcript:
       overwrite: true
       content_file: INT-055/engineer_planner/entry_01/04__benchmark_definition.yaml
     expected_observation: success
-  - tool_name: submit_plan
+  - tool_name: submit_engineering_plan
     expected_observation: submitted
   - finished: true
     summary: INT-055 planner artifacts generated and submitted.
 - node: electronics_planner
   steps:
-  - tool_name: submit_plan
+  - tool_name: submit_engineering_plan
     expected_observation: submitted
   - finished: true
     summary: INT-055 electronics planner submission complete.

@@ -26,14 +26,14 @@ transcript:
       overwrite: true
       content_file: INT-038/engineer_planner/entry_01/04__benchmark_definition.yaml
     expected_observation: success
-  - tool_name: submit_plan
+  - tool_name: submit_engineering_plan
     expected_observation: submitted
   - finished: true
     summary: INT-038 planner artifacts generated and submitted.
 - node: electronics_planner
   steps:
   - thought: No electronics changes are needed for INT-038; submit the handoff.
-    tool_name: submit_plan
+    tool_name: submit_engineering_plan
     expected_observation: submitted
   - finished: true
     summary: INT-038 electronics planner submission complete.

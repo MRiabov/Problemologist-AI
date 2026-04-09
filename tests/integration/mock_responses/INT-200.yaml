@@ -26,7 +26,7 @@ transcript:
       overwrite: true
       content_file: INT-200/benchmark_planner/entry_01/04__benchmark_definition.yaml
     expected_observation: success
-  - tool_name: submit_plan
+  - tool_name: submit_benchmark_plan
     expected_observation: rejected
   - finished: true
     summary: INT-200 benchmark planner rejected the hidden-motion handoff as contradictory constraints and will retry.
@@ -66,7 +66,7 @@ transcript:
       overwrite: true
       content_file: INT-200/benchmark_planner/entry_02/04__benchmark_definition.yaml
     expected_observation: success
-  - tool_name: submit_plan
+  - tool_name: submit_benchmark_plan
     expected_observation: submitted
 - node: benchmark_plan_reviewer
   steps:

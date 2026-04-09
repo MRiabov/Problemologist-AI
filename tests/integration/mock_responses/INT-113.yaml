@@ -26,7 +26,7 @@ transcript:
       overwrite: true
       content_file: INT-113/benchmark_planner/entry_01/04__benchmark_definition.yaml
     expected_observation: success
-  - tool_name: submit_plan
+  - tool_name: submit_benchmark_plan
     expected_observation: submitted
   - finished: true
     summary: INT-113 benchmark planner artifacts generated and submitted.
@@ -100,7 +100,7 @@ transcript:
       overwrite: true
       content_file: INT-113/engineer_planner/entry_01/04__benchmark_definition.yaml
     expected_observation: success
-  - tool_name: submit_plan
+  - tool_name: submit_engineering_plan
     expected_observation: submitted
   - finished: true
     summary: INT-113 engineer planner artifacts submitted.
@@ -131,7 +131,7 @@ transcript:
       overwrite: true
       content_file: INT-113/electronics_planner/entry_01/04__todo.md
     expected_observation: success
-  - tool_name: submit_plan
+  - tool_name: submit_engineering_plan
     expected_observation: submitted
   - finished: true
     summary: INT-113 electronics planner artifacts generated and submitted.
