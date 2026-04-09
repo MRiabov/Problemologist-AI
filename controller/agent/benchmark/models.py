@@ -35,6 +35,18 @@ class BenchmarkItem(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
+class BenchmarkExampleInputs(BaseModel):
+    task: str | None = None
+    prompt: str | None = None
+    context: str | None = None
+    expected_criteria: str | list[str] | None = None
+    objectives: dict[str, Any] = Field(default_factory=dict)
+    goals: str | None = None
+    constraints: dict[str, Any] | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class GenerationSession(BaseModel):
     session_id: UUID
     prompt: str

@@ -31,25 +31,25 @@ def load_benchmark_dataset(agent_type: AgentName) -> list[dspy.Example]:
     with dataset_path.open("r") as f:
         data = json.load(f)
 
-    from .models import BenchmarkItem
+    from .models import BenchmarkExampleInputs, BenchmarkItem
 
     examples = []
     for item_raw in data:
         item = BenchmarkItem(**item_raw)
-        inputs = {}
-        # Convert model back to dict for dspy.Example, but validated
-        item_dict = item.model_dump()
-        for k, v in item_dict.items():
-            if k in ["task", "prompt", "context", "expected_criteria"]:
-                inputs[k] = v
-            elif k in ["objectives", "goals", "constraints"]:
-                inputs["objectives"] = v
-
-        if "objectives" not in inputs:
-            inputs["objectives"] = {"max_unit_cost": 100.0, "max_weight": 50.0}
+        # Preserve the validated schema fields as a typed transfer object.
+        inputs = BenchmarkExampleInputs(
+            task=item.task,
+            prompt=item.prompt,
+            context=item.context,
+            expected_criteria=item.expected_criteria,
+            objectives=item.objectives or {"max_unit_cost": 100.0, "max_weight": 50.0},
+            goals=item.goals,
+            constraints=item.constraints,
+        )
+        payload = inputs.model_dump()
 
         # Create the example
-        example = dspy.Example(**inputs).with_inputs(*inputs.keys())
+        example = dspy.Example(**payload).with_inputs(*payload.keys())
         example.agent_name = agent_type
         examples.append(example)
 
