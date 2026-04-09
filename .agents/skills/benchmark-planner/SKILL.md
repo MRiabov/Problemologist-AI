@@ -89,13 +89,13 @@ Read these before drafting or revising the handoff:
 - If simulation evidence already exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
 - If the review depends on bundle identity or a click-to-world answer, select the exact bundle with `list_render_bundles()` and inspect or query that bundle-local snapshot instead of assuming the newest visible render is the right one.
 - Make the benchmark-owned motion contract explicit if any fixture moves. In this repo, keep each moving fixture to one explicit DOF axis and spell out the controller facts and limits.
-- Keep the moved object inside `build_zone` under static variation plus runtime jitter.
-- Keep goal and forbid zones non-overlapping with the moved object at spawn.
+- Keep the payload inside `build_zone` under static variation plus runtime jitter.
+- Keep goal and forbid zones non-overlapping with the payload at spawn.
 - Treat `submit_benchmark_plan()` as the final gate, not as a shortcut around an incomplete handoff.
 
 ## Common Failure Modes
 
-- Goal or forbid zones overlap the moved object path.
+- Goal or forbid zones overlap the payload path.
 - Runtime AABB escapes the build zone.
 - Labels collide with reserved names or with each other.
 - The inventory is only semantically similar, not exact, across `benchmark_plan.md`, the YAML, and the planner scripts.

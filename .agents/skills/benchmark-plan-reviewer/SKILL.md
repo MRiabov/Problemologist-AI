@@ -46,7 +46,7 @@ Treat `payload_trajectory_definition.yaml` as binding path-contract evidence whe
 - [ ] After any significant blocker or repeated failure on the same issue, inspect the current render or drawing evidence before the next review decision. If the same issue has failed more than three times in a row, keep inspecting render evidence on every subsequent retry until the blocker changes; use `../render-evidence/SKILL.md` as the visual-inspection playbook.
 - [ ] Treat `benchmark_plan_evidence_script.py` and `benchmark_plan_technical_drawing_script.py` as the inspectable source of the approved benchmark solution, not just helper files.
 - [ ] Verify cross-artifact consistency for labels, repeated quantities, COTS identities, zone geometry, randomization, bounds, runtime jitter, and motion facts. See `references/review_contracts.md`.
-- [ ] Verify `moved_object.material_id` resolves to a known material and `benchmark_assembly_definition.yaml` is a schema-valid full `AssemblyDefinition`.
+- [ ] Verify `payload.material_id` resolves to a known material and `benchmark_assembly_definition.yaml` is a schema-valid full `AssemblyDefinition`.
 - [ ] Reject planner drafts that depend on free-form XYZ placement as the primary positioning mechanism; require selector-driven placement, explicit mates/joints, or clearly bounded absolute anchors.
 - [ ] Verify benchmark-side motion is explicit, reconstructable, and feasible; reject hidden motion, unsupported motion, or any drafting script that lacks a real `TechnicalDrawing` construction path.
 - [ ] Reject invented defaults, placeholder geometry, unlabeled inventory drift, or mismatched object references across planner artifacts.

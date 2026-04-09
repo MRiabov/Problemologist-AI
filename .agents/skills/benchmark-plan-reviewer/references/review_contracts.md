@@ -29,7 +29,7 @@
 - Ensure every planner-declared inventory label and selected COTS `part_id` appears in `benchmark_plan.md` as an exact identifier mention.
 - Reject nonexistent objects, relabeled inventory, silent renames, or missing repeated entries.
 - Require `benchmark_assembly_definition.yaml` to be a schema-valid full `AssemblyDefinition`.
-- Require `moved_object.material_id` to be present and to reference a known material from `manufacturing_config.yaml`.
+- Require `payload.material_id` to be present and to reference a known material from `manufacturing_config.yaml`.
 - Require zone geometry, randomization, runtime jitter, and build-zone bounds to stay mutually consistent.
 - Reject planner drafting scripts that drift from the approved inventory or omit a real `TechnicalDrawing` construction path.
 

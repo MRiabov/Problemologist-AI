@@ -86,7 +86,7 @@ When `benchmark_plan.md` or the planner-authored evidence/drawing scripts alread
 Treat the planner YAML handoff as the machine-readable source of truth and the two planner scripts as the inspectable source of the approved benchmark solution.
 Because the approved planner handoff has already passed collision and geometry review, treat its layout as collision-validated and preserve the exact dimensions, offsets, and clearances whenever the plan is feasible to implement as written.
 That collision review does not imply manufacturability validation or simulation coverage; the coder still has to validate and simulate the implemented revision before handoff.
-When the benchmark planner uses its structured template, read `benchmark_plan.md` as a sectioned contract, not prose: the useful sections include `Learning objective`, `Environment geometry (with static randomization)`, `Input objective (moved object)`, `Objective locations`, `Simulation bounds`, `Constraints handed to engineering`, `Success criteria`, and `Planner artifacts`.
+When the benchmark planner uses its structured template, read `benchmark_plan.md` as a sectioned contract, not prose: the useful sections include `Learning objective`, `Environment geometry (with static randomization)`, `Input objective (payload)`, `Objective locations`, `Simulation bounds`, `Constraints handed to engineering`, `Success criteria`, and `Planner artifacts`.
 
 Load sibling skill guidance only when it changes the implementation outcome:
 
@@ -140,7 +140,7 @@ Do not invent fallback behavior to paper over contradictions. If the approved pl
 
 When the benchmark involves a spawned payload ball rolling along a transfer surface:
 
-- **Do NOT include the moved object in `build()`** — the simulation system spawns `benchmark_moved_object__projectile_ball` independently from `benchmark_definition.yaml`. Returning it from `build()` creates a duplicate body at the same position; the two balls collide and explode apart, causing instant `OUT_OF_BOUNDS`. The evidence script (`benchmark_plan_evidence_script.py`) returns fixtures only — match that pattern.
+- **Do NOT include the payload in `build()`** — the simulation system spawns `benchmark_moved_object__projectile_ball` independently from `benchmark_definition.yaml`. Returning it from `build()` creates a duplicate body at the same position; the two balls collide and explode apart, causing instant `OUT_OF_BOUNDS`. The evidence script (`benchmark_plan_evidence_script.py`) returns fixtures only — match that pattern.
 - **Ball drop distance controls bounce** — a drop of ≤ 2 mm onto the transfer surface minimises bounce. If the ball bounces wildly, the surface is too far below the spawn point. Raise the surface until the gap is small; do not widen walls or add mass to compensate.
 - **Forbid-zone ceiling constraint** — the ball centre must stay above the forbid zone's max-Z while crossing the forbid zone's X,Y bounds. For a sphere of radius *r*, the surface height *h* at any point inside the forbid zone must satisfy *h + r > forbid_zone_max_z*. With *r* ∈ [4, 6] mm and a forbid zone ceiling at Z = 14, the surface needs *h* > 8–10 mm at the crossing point.
 - **Lateral containment is valid** — thin side walls placed outside the forbid zone Y-bounds are a legitimate strategy for keeping the ball on a sloped surface. Verify walls do not intersect the forbid zone, existing fixtures, or the gap floor guard.
@@ -179,7 +179,7 @@ for _, row in ball.iterrows():
     print(f'  frame={row.frame_index} pos={row.position}')
 ```
 
-- **1–2 frames captured, position jumps to ~±48**: the ball never landed on any surface. It either fell through a gap or was launched by a collision with a duplicate body. Check: (a) the moved object is NOT in `build()`, (b) every fixture that should catch the ball actually exists and is positioned correctly.
+- **1–2 frames captured, position jumps to ~±48**: the ball never landed on any surface. It either fell through a gap or was launched by a collision with a duplicate body. Check: (a) the payload is NOT in `build()`, (b) every fixture that should catch the ball actually exists and is positioned correctly.
 - **Many frames, gradual drift off an edge**: the ball is on a surface but the slope or exit trajectory carries it past the bounds. Adjust the bridge end height or add lateral containment.
 - **`FORBID_ZONE_HIT`**: the ball centre entered the forbid zone. Raise the transfer surface at the crossing point so that `surface_height + ball_radius > forbid_max_z`.
 - **`PHYSICS_INSTABILITY` with `[Errno 111] Connection refused`**: the physics engine crashed, often due to intersecting geometry or extreme velocities. Run validation first — geometric intersections in the fixture set cause this.

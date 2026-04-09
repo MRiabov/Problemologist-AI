@@ -95,7 +95,7 @@ Signals:
 - Unstable motion or flakiness
 - Static validation passes, but the moving object exits the build zone or goes the wrong way
 - A mirrored or reversed transfer path in video despite a plausible static layout
-- Static validation passes, the scene looks coherent in preview, but the moved object never gets onto the intended support surface
+- Static validation passes, the scene looks coherent in preview, but the payload never gets onto the intended support surface
 - The first simulation frame shows the object falling through open space or landing below the path before any meaningful transfer begins
 
 Likely causes:

@@ -42,7 +42,7 @@ List the concrete planner-to-coder work items in execution order.
 
 ### `benchmark_definition.yaml`
 
-Own the benchmark/task geometry, objective zones, moved object, randomization, benchmark-owned fixture metadata, and benchmark estimate fields.
+Own the benchmark/task geometry, objective zones, payload, randomization, benchmark-owned fixture metadata, and benchmark estimate fields.
 
 ### `benchmark_assembly_definition.yaml`
 
@@ -68,10 +68,10 @@ Before submission, verify all of the following:
 - Geometry or physics that cannot be derived rigorously should be treated as a hard failure. In practice, weak derivations have repeatedly led to downstream failure, so the handoff should be fixed before submission.
 - Any moving fixture position is defined by its joint frame or axis, not by an arbitrary world coordinate.
 - Every top-level authored label is unique and not `environment` or `zone_*`.
-- `moved_object.material_id` is a known material from `manufacturing_config.yaml`.
-- `moved_object.start_position` is a top-level field under `moved_object`.
-- The moved object stays inside `build_zone` after applying static randomization and runtime jitter.
-- Goal and forbid zones do not intersect the moved object at spawn.
+- `payload.material_id` is a known material from `manufacturing_config.yaml`.
+- `payload.start_position` is a top-level field under `payload`.
+- The payload stays inside `build_zone` after applying static randomization and runtime jitter.
+- Goal and forbid zones do not intersect the payload at spawn.
 - Any benchmark-owned moving fixture declares its motion explicitly, with one axis and clear bounds or controller facts.
 - The assembly file stays schema-valid and does not rely on template placeholders.
 - The evidence and technical-drawing scripts match the same geometry and do not drift from the YAML.

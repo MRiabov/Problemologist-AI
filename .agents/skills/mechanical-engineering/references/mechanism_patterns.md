@@ -22,7 +22,7 @@ Start with the minimum mechanism that can satisfy the objective.
 
 ### Continuous runway
 
-Use when the moved object starts above the target path and only needs directed travel.
+Use when the payload starts above the target path and only needs directed travel.
 
 - Provide one continuous support path from spawn support to goal support.
 - Ensure the travel direction has a real downhill component.
@@ -61,7 +61,7 @@ Reject these drafts before simulation:
 - Two flat platforms with a gap and no transport surface between them.
 - A passive-transfer design whose lateral motion depends on bounce, spawn jitter, or collision luck.
 - Geometry that changes support heights but never creates a sloped contact surface.
-- A design where the only authored parts are a start pedestal, some rails, and the moved object.
+- A design where the only authored parts are a start pedestal, some rails, and the payload.
 - Added DOFs or actuators that are not required by the task.
 - Rotated or exotic primitives chosen only because they look mechanical, when a simpler guide surface would work.
 
@@ -79,7 +79,7 @@ If those answers are unclear, the mechanism is underspecified.
 
 ### Capture width
 
-Size the support path from the moved object envelope, not only from nominal geometry.
+Size the support path from the payload envelope, not only from nominal geometry.
 
 - Include object radius or body size.
 - Include runtime jitter.
