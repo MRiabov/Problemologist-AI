@@ -168,9 +168,8 @@ def _workspace_script_path() -> str:
     script_path = authored_script_path_for_agent(current_role)
     if script_path.as_posix() == "script.py":
         raise ValueError(
-            "Unsupported current role for script-path resolution: "
-            f"{current_role}"
-    )
+            f"Unsupported current role for script-path resolution: {current_role}"
+        )
     return script_path.as_posix()
 
 
@@ -700,7 +699,7 @@ def submit_benchmark_for_review(compound: Compound) -> bool:
     return _submit_for_review_submission(compound, family="benchmark")
 
 
-def submit_engineering_for_review(compound: Compound) -> bool:
+def submit_solution_for_review(compound: Compound) -> bool:
     if _script_agent_family() != "engineering":
         return False
     return _submit_for_review_submission(compound, family="engineering")
@@ -751,7 +750,7 @@ def submit_for_review(compound: Compound) -> bool:
     if _script_agent_family() == "benchmark":
         return submit_benchmark_for_review(compound)
     if _script_agent_family() == "engineering":
-        return submit_engineering_for_review(compound)
+        return submit_solution_for_review(compound)
     return _submit_for_review_submission(compound)
 
 

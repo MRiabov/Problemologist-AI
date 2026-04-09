@@ -93,18 +93,23 @@ class ElectronicsPlannerNode(BaseNode):
         submission, submit_err = await self._get_latest_submit_plan_result(
             AgentName.ELECTRONICS_PLANNER
         )
+        submit_tool_name = self._planner_submission_tool_name(
+            AgentName.ELECTRONICS_PLANNER
+        )
         if submission is None or not submission.ok or submission.status != "submitted":
             submit_errors = (
                 [submit_err]
                 if submit_err
-                else (submission.errors if submission else ["submit_plan failed"])
+                else (
+                    submission.errors if submission else [f"{submit_tool_name} failed"]
+                )
             )
             return state.model_copy(
                 update={
                     "status": AgentStatus.FAILED,
                     "journal": (
                         state.journal
-                        + "\n[Electronics Planner] submit_plan validation failed: "
+                        + f"\n[Electronics Planner] {submit_tool_name} validation failed: "
                         + "; ".join([e for e in submit_errors if e])
                         + journal_entry
                     ),

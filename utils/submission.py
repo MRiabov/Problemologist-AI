@@ -1,31 +1,31 @@
 from build123d import Compound
 
 from shared.utils.agent import (
+    simulate as _simulate,
+)
+from shared.utils.agent import (
     simulate_benchmark as _simulate_benchmark,
 )
 from shared.utils.agent import (
     simulate_engineering as _simulate_engineering,
 )
 from shared.utils.agent import (
-    simulate as _simulate,
-)
-from shared.utils.agent import (
     submit_benchmark_for_review as _submit_benchmark_for_review,
 )
 from shared.utils.agent import (
-    submit_engineering_for_review as _submit_engineering_for_review,
+    submit_for_review as _submit_for_review,
 )
 from shared.utils.agent import (
-    submit_for_review as _submit_for_review,
+    submit_solution_for_review as _submit_solution_for_review,
+)
+from shared.utils.agent import (
+    validate as _validate,
 )
 from shared.utils.agent import (
     validate_benchmark as _validate_benchmark,
 )
 from shared.utils.agent import (
     validate_engineering as _validate_engineering,
-)
-from shared.utils.agent import (
-    validate as _validate,
 )
 from shared.workers.schema import BenchmarkToolResponse
 
@@ -58,8 +58,8 @@ def submit_benchmark_for_review(compound: Compound) -> bool:
     return _submit_benchmark_for_review(compound)
 
 
-def submit_engineering_for_review(compound: Compound) -> bool:
-    return _submit_engineering_for_review(compound)
+def submit_solution_for_review(compound: Compound) -> bool:
+    return _submit_solution_for_review(compound)
 
 
 def submit_for_review(compound: Compound) -> bool:
@@ -72,7 +72,7 @@ __all__ = [
     "simulate_engineering",
     "submit_for_review",
     "submit_benchmark_for_review",
-    "submit_engineering_for_review",
+    "submit_solution_for_review",
     "validate",
     "validate_benchmark",
     "validate_engineering",

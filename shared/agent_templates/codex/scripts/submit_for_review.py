@@ -14,9 +14,11 @@ from build123d import Compound
 from shared.current_role import current_role_agent_name
 from shared.enums import AgentName
 from shared.git_utils import commit_submission_attempt
-from shared.script_contracts import authored_script_path_for_agent
+from shared.script_contracts import (
+    authored_script_path_for_agent,
+    role_family_for_agent,
+)
 from shared.workers.persistence import record_validation_result
-from shared.script_contracts import role_family_for_agent
 from utils.submission import (
     simulate_benchmark,
     simulate_engineering,

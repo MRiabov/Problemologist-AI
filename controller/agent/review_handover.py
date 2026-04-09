@@ -227,15 +227,31 @@ def _drafting_mode_for_reviewer_stage(reviewer_stage: ReviewerStage) -> Drafting
         return DraftingMode.OFF
 
 
+def _planner_submission_helper_name_for_stage(stage: PlanReviewerStage) -> str:
+    if stage == AgentName.BENCHMARK_PLAN_REVIEWER:
+        return "submit_benchmark_plan"
+    return "submit_engineering_plan"
+
+
+def _review_submission_helper_name_for_stage(reviewer_stage: ReviewerStage) -> str:
+    if reviewer_stage == "benchmark_reviewer":
+        return "submit_benchmark_for_review"
+    return "submit_solution_for_review"
+
+
 async def _load_review_manifest(
     worker_client: WorkerClient,
     *,
     manifest_path: str,
+    submission_helper_name: str,
     require_git_revision: bool = True,
 ) -> tuple[ReviewManifest | None, str | None]:
     manifest_raw = await worker_client.read_file_optional(manifest_path)
     if manifest_raw is None:
-        return None, f"{manifest_path} missing; call submit_for_review(compound) first."
+        return (
+            None,
+            f"{manifest_path} missing; call {submission_helper_name}(compound) first.",
+        )
 
     try:
         manifest = ReviewManifest.model_validate_json(manifest_raw)
@@ -255,7 +271,7 @@ async def _load_review_manifest(
             return (
                 None,
                 "review manifest revision does not match the latest repository git "
-                "revision; re-run validate, simulate, and submit_for_review(compound).",
+                f"revision; re-run validate, simulate, and {submission_helper_name}(compound).",
             )
 
     required_paths: list[str] = [manifest.script_path]
@@ -301,7 +317,13 @@ async def collect_plan_reviewer_handover_evidence(
     """Collect latest-revision evidence for the benchmark plan reviewer."""
     plan_manifest_raw = await worker_client.read_file_optional(manifest_path)
     if plan_manifest_raw is None:
-        return None, f"{manifest_path} missing; call submit_plan() first."
+        submission_helper_name = _planner_submission_helper_name_for_stage(
+            expected_stage
+        )
+        return (
+            None,
+            f"{manifest_path} missing; call {submission_helper_name}() first.",
+        )
 
     try:
         plan_manifest = PlanReviewManifest.model_validate_json(plan_manifest_raw)
@@ -410,6 +432,7 @@ async def validate_reviewer_handover(
     review_manifest, manifest_error = await _load_review_manifest(
         worker_client,
         manifest_path=manifest_path,
+        submission_helper_name=_review_submission_helper_name_for_stage(expected_stage),
         require_git_revision=require_git_revision,
     )
     if manifest_error is not None:
@@ -421,7 +444,8 @@ async def validate_reviewer_handover(
     if script_sha != review_manifest.script_sha256:
         return (
             "review manifest does not match latest script revision; "
-            "re-run validate, simulate, and submit_for_review(compound)."
+            f"re-run validate, simulate, and "
+            f"{_review_submission_helper_name_for_stage(expected_stage)}(compound)."
         )
 
     try:
@@ -436,7 +460,8 @@ async def validate_reviewer_handover(
     if val_record.script_sha256 != review_manifest.script_sha256:
         return (
             "validation results do not match review manifest script revision; "
-            "re-run validate, simulate, and submit_for_review(compound)."
+            f"re-run validate, simulate, and "
+            f"{_review_submission_helper_name_for_stage(expected_stage)}(compound)."
         )
 
     drafting_mode = _drafting_mode_for_reviewer_stage(expected_stage)
@@ -639,6 +664,7 @@ async def validate_approved_benchmark_bundle(
     manifest, manifest_error = await _load_review_manifest(
         worker_client,
         manifest_path=".manifests/benchmark_review_manifest.json",
+        submission_helper_name="submit_benchmark_for_review",
         require_git_revision=True,
     )
     if manifest_error is not None:
@@ -696,7 +722,10 @@ async def validate_plan_reviewer_handover(
     try:
         manifest_raw = await worker_client.read_file_optional(manifest_path)
         if manifest_raw is None:
-            return f"{manifest_path} missing; call submit_plan() first."
+            return (
+                f"{manifest_path} missing; call "
+                f"{_planner_submission_helper_name_for_stage(expected_stage)}() first."
+            )
         manifest = PlanReviewManifest.model_validate_json(manifest_raw)
     except Exception as e:
         return f"{manifest_path} invalid: {e}"
@@ -720,7 +749,8 @@ async def validate_plan_reviewer_handover(
         if actual_hash != expected_hash:
             return (
                 f"planner artifact hash mismatch for {rel_path}; "
-                "re-run submit_plan() for latest planner revision."
+                f"re-run {_planner_submission_helper_name_for_stage(expected_stage)}() "
+                "for latest planner revision."
             )
 
     return await validate_planner_artifacts_cross_contract(

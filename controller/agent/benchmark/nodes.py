@@ -236,21 +236,27 @@ class BenchmarkPlannerNode(BaseNode):
         submission, submit_err = await self._get_latest_submit_plan_result(
             AgentName.BENCHMARK_PLANNER
         )
+        submit_tool_name = self._planner_submission_tool_name(
+            AgentName.BENCHMARK_PLANNER
+        )
         if submission is None or not submission.ok or submission.status != "submitted":
             submit_errors = (
                 [submit_err]
                 if submit_err
-                else (submission.errors if submission else ["submit_plan failed"])
+                else (
+                    submission.errors if submission else [f"{submit_tool_name} failed"]
+                )
             )
             error_text = (
-                "; ".join([e for e in submit_errors if e]) or "submit_plan failed"
+                "; ".join([e for e in submit_errors if e])
+                or f"{submit_tool_name} failed"
             )
             state.plan = None
             state.session.validation_logs.append(
-                f"benchmark_planner submit_plan validation failed: {error_text}"
+                f"benchmark_planner {submit_tool_name} validation failed: {error_text}"
             )
             state.journal += (
-                "\n[Planner] submit_plan validation failed: "
+                f"\n[Planner] {submit_tool_name} validation failed: "
                 + error_text
                 + journal_entry
             )
@@ -281,7 +287,7 @@ class BenchmarkPlannerNode(BaseNode):
             state.plan = None
             state.session.validation_logs.append(
                 "benchmark_planner failed: plan output is missing or invalid. "
-                "Retry planner and call submit_plan() with schema-valid artifacts."
+                f"Retry planner and call {submit_tool_name}() with schema-valid artifacts."
             )
             state.journal += (
                 "\n[Planner] Invalid or missing structured plan output. "
@@ -671,6 +677,9 @@ class BenchmarkPlannerNode(BaseNode):
                 reasoning_chunks: list[str] = []
                 messages = self._build_native_planner_messages(inputs)
                 request_config = self._resolve_native_dspy_model()
+                submit_tool_name = self._planner_submission_tool_name(
+                    AgentName.BENCHMARK_PLANNER
+                )
 
                 submitted = False
                 last_submit_error_text: str | None = None
@@ -773,7 +782,7 @@ class BenchmarkPlannerNode(BaseNode):
                         if no_tool_call_streak >= 6:
                             raise ValueError(
                                 "Native benchmark planner returned no tool calls "
-                                "repeatedly before submit_plan."
+                                f"repeatedly before {submit_tool_name}()."
                             )
                         continue
 
@@ -845,7 +854,7 @@ class BenchmarkPlannerNode(BaseNode):
                             messages.append({"role": "system", "content": budget_msg})
                             continue
 
-                        if tool_name == "submit_plan":
+                        if tool_name == submit_tool_name:
                             await self._normalize_benchmark_definition_yaml_artifact()
                             await self._normalize_todo_markdown_artifact()
                         try:
@@ -892,7 +901,7 @@ class BenchmarkPlannerNode(BaseNode):
                         if tool_name == "invoke_cots_search_subagent":
                             cots_search_calls += 1
 
-                        if tool_name == "submit_plan":
+                        if tool_name == submit_tool_name:
                             submission = result
                             if isinstance(submission, str):
                                 with suppress(Exception):
@@ -924,10 +933,10 @@ class BenchmarkPlannerNode(BaseNode):
                                         {
                                             "role": "system",
                                             "content": (
-                                                "submit_plan() rejected terminal "
+                                                f"{submit_tool_name}() rejected terminal "
                                                 "contradictory benchmark motion: "
                                                 f"{last_submit_error_text}. Stop "
-                                                "retrying submit_plan() and let "
+                                                f"retrying {submit_tool_name}() and let "
                                                 "handoff validation fail closed."
                                             ),
                                         }
@@ -950,7 +959,7 @@ class BenchmarkPlannerNode(BaseNode):
                 await self._normalize_todo_markdown_artifact()
 
                 if not submitted:
-                    submit_tool = tool_fns.get("submit_plan")
+                    submit_tool = tool_fns.get(submit_tool_name)
                     if submit_tool is not None:
                         submission = await asyncio.to_thread(submit_tool)
                         if isinstance(submission, str):
@@ -972,7 +981,7 @@ class BenchmarkPlannerNode(BaseNode):
 
                 if not submitted:
                     submit_error_suffix = (
-                        f" Last submit_plan errors: {last_submit_error_text}"
+                        f" Last {submit_tool_name} errors: {last_submit_error_text}"
                         if last_submit_error_text
                         else ""
                     )
@@ -982,7 +991,7 @@ class BenchmarkPlannerNode(BaseNode):
                         return None, artifacts, journal_entry
                     raise ValueError(
                         "Native benchmark planner exhausted tool loop without "
-                        f"successful submit_plan().{submit_error_suffix}"
+                        f"successful {submit_tool_name}().{submit_error_suffix}"
                     )
 
                 results = await asyncio.gather(

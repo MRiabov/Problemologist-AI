@@ -1011,6 +1011,21 @@ class BaseNode:
         }
 
     @staticmethod
+    def _planner_submission_tool_names(node_type: AgentName) -> tuple[str, ...]:
+        if node_type == AgentName.BENCHMARK_PLANNER:
+            return ("submit_benchmark_plan", "submit_plan")
+        if node_type in {
+            AgentName.ENGINEER_PLANNER,
+            AgentName.ELECTRONICS_PLANNER,
+        }:
+            return ("submit_engineering_plan", "submit_plan")
+        return ("submit_plan",)
+
+    @classmethod
+    def _planner_submission_tool_name(cls, node_type: AgentName) -> str:
+        return cls._planner_submission_tool_names(node_type)[0]
+
+    @staticmethod
     def _requires_script_artifact(node_type: AgentName) -> bool:
         return node_type in {
             AgentName.BENCHMARK_CODER,
@@ -1077,6 +1092,12 @@ class BaseNode:
     ) -> dspy.Prediction:
         instructions = signature_cls.instructions or ""
         requires_submit_plan = self._requires_submit_plan(node_type)
+        submit_tool_names = (
+            self._planner_submission_tool_names(node_type)
+            if requires_submit_plan
+            else ()
+        )
+        submit_tool_name = submit_tool_names[0] if submit_tool_names else "submit_plan"
         completion_tool_name = self._completion_tool_name(node_type)
         runtime_instructions = self._get_runtime_prompt(
             self._runtime_prompt_key(node_type, "native_tool_loop_contract"),
@@ -1441,7 +1462,7 @@ class BaseNode:
                         content=self._serialize_tool_observation(observation),
                     )
                 )
-                if requires_submit_plan and tool_name == "submit_plan":
+                if requires_submit_plan and tool_name in submit_tool_names:
                     if self._submit_plan_succeeded(observation):
                         submit_plan_succeeded = True
                         messages.append(
@@ -1463,9 +1484,9 @@ class BaseNode:
                                     {
                                         "role": "system",
                                         "content": (
-                                            "submit_plan() rejected terminal "
+                                            f"{submit_tool_name}() rejected terminal "
                                             "contradictory benchmark motion: "
-                                            f"{error_text}. Stop retrying submit_plan() "
+                                            f"{error_text}. Stop retrying {submit_tool_name}() "
                                             "and let handoff validation fail closed."
                                         ),
                                     }
@@ -1515,7 +1536,10 @@ class BaseNode:
                     finish_fields=finish_fields,
                     node_type=node_type,
                 )
-            submit_tool = tool_fns.get("submit_plan")
+            submit_tool = next(
+                (tool_fns[name] for name in submit_tool_names if name in tool_fns),
+                None,
+            )
             if submit_tool is not None:
                 submission = submit_tool()
                 if self._submit_plan_succeeded(submission):
@@ -2095,7 +2119,7 @@ class BaseNode:
         self, expected_node_type: AgentName
     ) -> tuple[Any | None, str | None]:
         """
-        Read latest submit_plan result from persisted traces for this episode.
+        Read the latest role-scoped planner submission result from persisted traces.
 
         Returns (PlannerSubmissionResult | None, error_message | None).
         """
@@ -2107,6 +2131,8 @@ class BaseNode:
         if not episode_id:
             return None, "missing episode_id for submission trace lookup"
 
+        submission_tool_names = self._planner_submission_tool_names(expected_node_type)
+        submission_tool_name = submission_tool_names[0]
         recorder = self.ctx.get_database_recorder(episode_id)
         async with recorder.session_factory() as db:
             query = (
@@ -2114,7 +2140,7 @@ class BaseNode:
                 .where(
                     Trace.episode_id == recorder.episode_id,
                     Trace.trace_type == TraceType.TOOL_START,
-                    Trace.name == "submit_plan",
+                    Trace.name.in_(submission_tool_names),
                 )
                 .order_by(Trace.id.desc())
                 .limit(1)
@@ -2123,15 +2149,17 @@ class BaseNode:
             trace_row = result.scalars().first()
 
         if trace_row is None:
-            return None, "submit_plan() tool trace not found"
+            return None, f"{submission_tool_name}() tool trace not found"
 
         metadata_vars = trace_row.metadata_vars or {}
         observation_raw = metadata_vars.get("observation")
         if not observation_raw:
             error_raw = metadata_vars.get("error")
             if isinstance(error_raw, str) and error_raw.strip():
-                return None, f"submit_plan() execution failed: {error_raw.strip()}"
-            return None, "submit_plan() observation is missing"
+                return None, (
+                    f"{submission_tool_name}() execution failed: {error_raw.strip()}"
+                )
+            return None, f"{submission_tool_name}() observation is missing"
 
         payload: dict[str, Any] | None = None
         if isinstance(observation_raw, dict):
@@ -2149,18 +2177,23 @@ class BaseNode:
                         payload = parsed
 
         if payload is None:
-            return None, "submit_plan() observation is not a structured payload"
+            return None, (
+                f"{submission_tool_name}() observation is not a structured payload"
+            )
 
         with suppress(Exception):
             submission = PlannerSubmissionResult.model_validate(payload)
             if submission.node_type != expected_node_type:
                 return (
                     None,
-                    "submit_plan() node_type mismatch: "
+                    f"{submission_tool_name}() node_type mismatch: "
                     f"expected {expected_node_type.value}, got {submission.node_type.value}",
                 )
             return submission, None
-        return None, "submit_plan() observation does not match PlannerSubmissionResult"
+        return None, (
+            f"{submission_tool_name}() observation does not match "
+            "PlannerSubmissionResult"
+        )
 
     async def _get_latest_tool_trace_metadata(
         self, tool_name: str

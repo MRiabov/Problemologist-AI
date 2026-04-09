@@ -167,7 +167,9 @@ async def _refresh_current_role_manifest(
 async def _get_latest_planner_submission_result(
     session_id: uuid.UUID,
 ) -> tuple["PlannerSubmissionResult | None", str | None]:
-    """Read the latest submit_plan tool observation from persisted traces."""
+    """Read the latest benchmark planner submission from persisted traces."""
+    submission_tool_names = ("submit_benchmark_plan", "submit_plan")
+    submission_tool_name = submission_tool_names[0]
     session_factory = get_sessionmaker()
     async with session_factory() as db:
         query = (
@@ -175,7 +177,7 @@ async def _get_latest_planner_submission_result(
             .where(
                 Trace.episode_id == session_id,
                 Trace.trace_type == TraceType.TOOL_START,
-                Trace.name == "submit_plan",
+                Trace.name.in_(submission_tool_names),
             )
             .order_by(Trace.id.desc())
             .limit(1)
@@ -184,15 +186,17 @@ async def _get_latest_planner_submission_result(
         trace_row = result.scalars().first()
 
     if trace_row is None:
-        return None, "submit_plan() tool trace not found"
+        return None, f"{submission_tool_name}() tool trace not found"
 
     metadata_vars = trace_row.metadata_vars or {}
     observation_raw = metadata_vars.get("observation")
     if not observation_raw:
         error_raw = metadata_vars.get("error")
         if isinstance(error_raw, str) and error_raw.strip():
-            return None, f"submit_plan() execution failed: {error_raw.strip()}"
-        return None, "submit_plan() observation is missing"
+            return None, (
+                f"{submission_tool_name}() execution failed: {error_raw.strip()}"
+            )
+        return None, f"{submission_tool_name}() observation is missing"
 
     parsed_payload: dict[str, Any] | None = None
     if isinstance(observation_raw, dict):
@@ -210,11 +214,15 @@ async def _get_latest_planner_submission_result(
                     parsed_payload = loaded
 
     if parsed_payload is None:
-        return None, "submit_plan() observation is not a structured payload"
+        return None, (
+            f"{submission_tool_name}() observation is not a structured payload"
+        )
 
     with suppress(Exception):
         return PlannerSubmissionResult.model_validate(parsed_payload), None
-    return None, "submit_plan() observation does not match PlannerSubmissionResult"
+    return None, (
+        f"{submission_tool_name}() observation does not match PlannerSubmissionResult"
+    )
 
 
 async def _read_session_markdown(
@@ -445,7 +453,14 @@ def _classify_repeated_failure(
         )
     if any(
         token in lowered
-        for token in ("handoff", "manifest", "submit_plan", "submit_for_review")
+        for token in (
+            "handoff",
+            "manifest",
+            "submit_benchmark_plan",
+            "submit_engineering_plan",
+            "submit_plan",
+            "submit_for_review",
+        )
     ):
         return (
             TerminalReason.HANDOFF_INVARIANT_VIOLATION,
@@ -758,7 +773,7 @@ async def _validate_planner_handoff(
 
     Enforces:
     - Required planner files are present and structurally valid.
-    - Explicit planner submission (`submit_plan`) succeeded.
+    - Explicit planner submission (`submit_benchmark_plan`) succeeded.
     - Structured planner output (`plan`) is present and schema-valid.
     - User-provided objective overrides are reflected in objectives constraints.
     """

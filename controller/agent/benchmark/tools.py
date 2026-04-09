@@ -529,6 +529,10 @@ def get_benchmark_planner_tools(
         )
         return result.model_dump(mode="json")
 
+    async def submit_plan() -> dict:
+        """Compatibility alias for submit_benchmark_plan()."""
+        return await submit_benchmark_plan()
+
     return filter_tools_for_agent(
         fs,
         [
@@ -541,6 +545,7 @@ def get_benchmark_planner_tools(
             render_cad,
             render_technical_drawing,
             submit_benchmark_plan,
+            submit_plan,
         ],
     )
 

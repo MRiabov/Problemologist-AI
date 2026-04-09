@@ -11,8 +11,10 @@ import structlog
 
 from controller.clients.worker_ws import WorkerLightWebSocketClient
 from controller.config.settings import settings
+from shared.current_role import current_role_agent_name_from_text
 from shared.enums import AgentName, ResponseStatus
 from shared.observability.storage import S3Client, S3Config
+from shared.script_contracts import role_family_for_agent
 from shared.simulation.schemas import (
     SimulatorBackendType,
     get_default_simulator_backend,
@@ -1355,13 +1357,36 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
+    async def _role_family(self) -> str:
+        """Resolve the active role family from the current-role manifest."""
+        manifest_content = await self.read_file_optional(
+            ".manifests/current_role.json",
+            bypass_agent_permissions=True,
+        )
+        if manifest_content is None:
+            raise FileNotFoundError(
+                "Missing current-role manifest: .manifests/current_role.json"
+            )
+
+        try:
+            agent_name = current_role_agent_name_from_text(manifest_content)
+        except Exception as exc:
+            raise ValueError(
+                "Invalid current-role manifest: .manifests/current_role.json"
+            ) from exc
+
+        role_family = role_family_for_agent(agent_name)
+        if role_family is None:
+            raise ValueError(f"Unsupported current-role manifest: {agent_name.value}")
+        return role_family
+
     async def validate_benchmark(
         self,
         script_path: str = "script.py",
         script_content: str | None = None,
         bundle_base64: str | None = None,
     ) -> BenchmarkToolResponse:
-        if self._role_family() != "benchmark":
+        if await self._role_family() != "benchmark":
             raise ValueError("Current worker role is not benchmark-side")
         return await self.validate(
             script_path=script_path,
@@ -1375,7 +1400,7 @@ class WorkerClient:
         script_content: str | None = None,
         bundle_base64: str | None = None,
     ) -> BenchmarkToolResponse:
-        if self._role_family() != "engineering":
+        if await self._role_family() != "engineering":
             raise ValueError("Current worker role is not engineering-side")
         return await self.validate(
             script_path=script_path,
@@ -1392,7 +1417,7 @@ class WorkerClient:
         episode_id: str | None = None,
         stream_render_frames: bool = False,
     ) -> BenchmarkToolResponse:
-        if self._role_family() != "benchmark":
+        if await self._role_family() != "benchmark":
             raise ValueError("Current worker role is not benchmark-side")
         return await self.simulate(
             script_path=script_path,
@@ -1412,7 +1437,7 @@ class WorkerClient:
         episode_id: str | None = None,
         stream_render_frames: bool = False,
     ) -> BenchmarkToolResponse:
-        if self._role_family() != "engineering":
+        if await self._role_family() != "engineering":
             raise ValueError("Current worker role is not engineering-side")
         return await self.simulate(
             script_path=script_path,
@@ -1431,7 +1456,7 @@ class WorkerClient:
         reviewer_stage: ReviewerStage | None = None,
         episode_id: str | None = None,
     ) -> BenchmarkToolResponse:
-        if self._role_family() != "benchmark":
+        if await self._role_family() != "benchmark":
             raise ValueError("Current worker role is not benchmark-side")
         return await self.submit(
             script_path=script_path,
@@ -1441,7 +1466,7 @@ class WorkerClient:
             episode_id=episode_id,
         )
 
-    async def submit_engineering_for_review(
+    async def submit_solution_for_review(
         self,
         script_path: str = "script.py",
         script_content: str | None = None,
@@ -1449,7 +1474,7 @@ class WorkerClient:
         reviewer_stage: ReviewerStage | None = None,
         episode_id: str | None = None,
     ) -> BenchmarkToolResponse:
-        if self._role_family() != "engineering":
+        if await self._role_family() != "engineering":
             raise ValueError("Current worker role is not engineering-side")
         return await self.submit(
             script_path=script_path,

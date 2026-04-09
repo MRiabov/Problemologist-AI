@@ -136,21 +136,34 @@ async def _publish_drafting_preview_bundle(
         planner_role
     )
 
-    source_manifest_raw = await fs.client.read_file_optional(
-        str(source_manifest_path),
-        bypass_agent_permissions=True,
-    )
-    if source_manifest_raw is None:
-        raise FileNotFoundError(
-            f"{source_manifest_path} missing; call render_technical_drawing() before submit_engineering_plan()."
-        )
-
     technical_drawing_script_content = await fs.client.read_file_optional(
         str(technical_drawing_script_path),
         bypass_agent_permissions=True,
     )
     if technical_drawing_script_content is None:
         raise FileNotFoundError(f"{technical_drawing_script_path} missing.")
+
+    source_manifest_raw = await fs.client.read_file_optional(
+        str(source_manifest_path),
+        bypass_agent_permissions=True,
+    )
+    if source_manifest_raw is None:
+        destination_manifest_raw = await fs.client.read_file_optional(
+            str(destination_manifest_path),
+            bypass_agent_permissions=True,
+        )
+        if destination_manifest_raw is not None:
+            manifest_errors = validate_drafting_preview_manifest(
+                manifest_content=destination_manifest_raw,
+                technical_drawing_script_content=technical_drawing_script_content,
+                artifact_name=str(destination_manifest_path),
+            )
+            if manifest_errors:
+                raise ValueError("; ".join(manifest_errors))
+            return str(destination_manifest_path)
+        raise FileNotFoundError(
+            f"{source_manifest_path} missing; call render_technical_drawing() before submit_engineering_plan()."
+        )
 
     source_manifest = RenderManifest.model_validate_json(source_manifest_raw)
     manifest_errors = validate_drafting_preview_manifest(
@@ -995,6 +1008,10 @@ def get_engineer_planner_tools(
         )
         return result.model_dump(mode="json")
 
+    async def submit_plan() -> dict:
+        """Compatibility alias for submit_engineering_plan()."""
+        return await submit_engineering_plan()
+
     planner_common_tools = [
         tool
         for tool in common_tools
@@ -1008,5 +1025,6 @@ def get_engineer_planner_tools(
             invoke_cots_search_subagent,
             validate_costing_and_price,
             submit_engineering_plan,
+            submit_plan,
         ],
     )

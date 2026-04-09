@@ -217,28 +217,28 @@ def validate_benchmark_planner_handoff_payload(
                 f"planner_semantic: Failed to parse benchmark_definition.yaml ({exc})"
             )
 
-    if require_submission:
-        if submission is not None:
-            if not submission.ok or submission.status != "submitted":
-                errors.append(
-                    "planner_submission: submit_plan() did not return submitted"
-                )
-            if submission.node_type != AgentName.BENCHMARK_PLANNER:
-                errors.append(
-                    "planner_submission: submission node_type is not benchmark_planner"
-                )
-            if submission.errors:
-                errors.extend(
-                    [f"planner_submission: {msg}" for msg in submission.errors]
-                )
-        elif submission_error:
-            errors.append(f"planner_submission: {submission_error}")
+        if require_submission:
+            if submission is not None:
+                if not submission.ok or submission.status != "submitted":
+                    errors.append(
+                        "planner_submission: submit_benchmark_plan() did not return submitted"
+                    )
+                if submission.node_type != AgentName.BENCHMARK_PLANNER:
+                    errors.append(
+                        "planner_submission: submission node_type is not benchmark_planner"
+                    )
+                if submission.errors:
+                    errors.extend(
+                        [f"planner_submission: {msg}" for msg in submission.errors]
+                    )
+            elif submission_error:
+                errors.append(f"planner_submission: {submission_error}")
 
     if require_structured_plan:
         if plan_output is None:
             errors.append(
                 "planner_execution: missing structured planner output. "
-                "Retry planner and call submit_plan() before handoff."
+                "Retry planner and call submit_benchmark_plan() before handoff."
             )
         elif isinstance(plan_output, dict):
             is_plan_valid = False

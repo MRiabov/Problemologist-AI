@@ -150,6 +150,34 @@ def _read_workspace_files(workspace: Path, paths: tuple[str, ...]) -> dict[str, 
     return artifacts
 
 
+def _planner_role_error(
+    helper_name: str,
+    agent_name: AgentName | None,
+    allowed_roles: tuple[AgentName, ...],
+) -> PlannerSubmissionResult | None:
+    if agent_name is None:
+        return PlannerSubmissionResult(
+            ok=False,
+            status="rejected",
+            errors=["Unable to infer planner agent from .manifests/current_role.json"],
+            node_type=AgentName.ENGINEER_PLANNER,
+        )
+
+    if agent_name in allowed_roles:
+        return None
+
+    allowed_roles_text = ", ".join(role.value for role in allowed_roles)
+    return PlannerSubmissionResult(
+        ok=False,
+        status="rejected",
+        errors=[
+            f"{helper_name} requires current role one of {allowed_roles_text}; "
+            f"found {agent_name.value}",
+        ],
+        node_type=agent_name,
+    )
+
+
 def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
     workspace = Path.cwd() if workspace is None else Path(workspace)
     agent_name = _planner_agent(workspace)
@@ -273,10 +301,26 @@ def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
 
 
 def submit_benchmark_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
+    workspace = Path.cwd() if workspace is None else Path(workspace)
+    role_error = _planner_role_error(
+        "submit_benchmark_plan",
+        _planner_agent(workspace),
+        (AgentName.BENCHMARK_PLANNER,),
+    )
+    if role_error is not None:
+        return role_error
     return submit_plan(workspace)
 
 
 def submit_engineering_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
+    workspace = Path.cwd() if workspace is None else Path(workspace)
+    role_error = _planner_role_error(
+        "submit_engineering_plan",
+        _planner_agent(workspace),
+        (AgentName.ENGINEER_PLANNER, AgentName.ELECTRONICS_PLANNER),
+    )
+    if role_error is not None:
+        return role_error
     return submit_plan(workspace)
 
 

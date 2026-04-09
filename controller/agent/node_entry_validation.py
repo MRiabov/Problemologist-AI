@@ -1279,7 +1279,7 @@ async def validate_seeded_workspace_handoff_artifacts(
                 _seeded_schema_error(
                     message=(
                         "prompt.md must instruct the agent to call "
-                        "render_technical_drawing() before submit_plan() when drafting "
+                        "render_technical_drawing() before submit_engineering_plan() when drafting "
                         "mode is active"
                     ),
                     artifact_path="prompt.md",
@@ -1684,7 +1684,9 @@ async def _current_role_manifest_errors(
     state: BaseModel | Mapping[str, Any] | None = None,
 ) -> list[NodeEntryValidationError]:
     manifest_path = ".manifests/current_role.json"
-    worker_session_id = None if state is None else _get_state_value(state, "worker_session_id")
+    worker_session_id = (
+        None if state is None else _get_state_value(state, "worker_session_id")
+    )
     if worker_session_id is None and state is not None:
         worker_session_id = _get_state_value(state, "session_id")
 
