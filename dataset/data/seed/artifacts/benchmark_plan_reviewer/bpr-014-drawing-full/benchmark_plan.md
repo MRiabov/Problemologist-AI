@@ -20,7 +20,7 @@ Test whether an engineer can meter a falling ball through a timed rotating gate 
 
 ## 4. Objectives
 
-- `goal_zone`: min `[280, -45, 20]`, max `[380, 45, 110]`
+- `goal_zone`: min `[280, -45, 20]`, max `[380, 45, 110]`. The `exit_tray` geometry is designed to occupy this goal zone so the object must rest there to score.
 - `forbid_zones`:
   - `gate_swing_keepout`: min `[40, -70, 0]`, max `[160, 70, 150]`
 - `build_zone`: min `[-260, -140, 0]`, max `[420, 140, 260]`

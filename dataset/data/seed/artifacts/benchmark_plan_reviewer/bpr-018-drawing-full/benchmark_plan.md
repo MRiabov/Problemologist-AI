@@ -20,7 +20,7 @@ Test whether an engineer can widen capture upstream and then funnel a ball into 
 
 ## 4. Objectives
 
-- `goal_zone`: min `[500, -12, 10]`, max `[530, 12, 60]`
+- `goal_zone`: min `[500, -12, 10]`, max `[530, 12, 60]`. The `goal_sleeve` geometry is designed to occupy this goal zone so the object must rest there to score.
 - `build_zone`: min `[-140, -160, 0]`, max `[560, 160, 220]`
 
 ## 5. Simulation Bounds

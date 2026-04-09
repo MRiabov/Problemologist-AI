@@ -1,3 +1,9 @@
+"""Routed transfer solution plan evidence.
+
+The goal_tray is designed to capture the goal zone and receive the
+projectile ball after routing around the central blocker.
+"""
+
 from build123d import Align, Box, Compound, Location
 
 from utils.metadata import CompoundMetadata, PartMetadata

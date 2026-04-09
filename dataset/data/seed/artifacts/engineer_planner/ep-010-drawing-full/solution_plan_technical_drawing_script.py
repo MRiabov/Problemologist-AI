@@ -1,3 +1,9 @@
+"""Lower bin ramp technical drawing script.
+
+The goal_funnel is designed to capture the goal zone and hand the ball
+into the seeded lower bin goal area.
+"""
+
 from build123d import (
     Align,
     Box,

@@ -21,7 +21,7 @@ Test whether an engineer can route a ball around a central blocker rather than a
 
 ## 4. Objectives
 
-- `goal_zone`: min `[420, -60, 15]`, max `[520, 60, 110]`
+- `goal_zone`: min `[420, -60, 15]`, max `[520, 60, 110]`. The `goal_catch_tray` geometry is designed to occupy this goal zone so the object must rest there to score.
 - `forbid_zones`:
   - `central_blocker`: min `[120, -130, 0]`, max `[260, 130, 150]`
 - `build_zone`: min `[-240, -180, 0]`, max `[560, 180, 240]`

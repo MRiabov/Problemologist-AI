@@ -1,0 +1,12 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "benchmark_plan_reviewer",
+  "session_id": "seed-bpr-007-drawing-full",
+  "planner_node_type": "benchmark_planner",
+  "artifact_hashes": {
+    "benchmark_definition.yaml": "cfd2e0893a8b7dfd74a5c7471220ac0510de408f5309b5e45eb274e4e3b53552",
+    "benchmark_assembly_definition.yaml": "8ad5ecc7280185eca76925fe23bd9bd3bb8c1388f6a8171dd842f7068ec2ed4f",
+    "todo.md": "d8e400753352948b5bf9054fb6ff2198d7bad033b0d2c12434956de0e2e01990",
+    "benchmark_plan.md": "6800c97882aefb71f6721e20df0cd7cca972da7ec921bf52aded6748969e1972"
+  }
+}

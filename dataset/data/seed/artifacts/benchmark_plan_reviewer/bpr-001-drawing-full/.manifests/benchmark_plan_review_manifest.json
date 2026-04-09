@@ -6,7 +6,7 @@
   "artifact_hashes": {
     "benchmark_assembly_definition.yaml": "83ab0016662ad91606d9236f7c2ab3d906b2c338a4ca93bc2a0b6c044c412238",
     "benchmark_definition.yaml": "d379251006d8f594dd9fac41781cdbb4b7d8d2b51d508b6419ac1dd5c4c6eb2f",
-    "plan.md": "ac1c7a114259c147d5fbabcdc1bd6a6a53f9b5620ce889cc3a99c531b1903592",
-    "todo.md": "3a50508b154f0193f3d1ed8a311517c284c9110737b2b33eff4f51aa69de9b64"
+    "todo.md": "3a50508b154f0193f3d1ed8a311517c284c9110737b2b33eff4f51aa69de9b64",
+    "benchmark_plan.md": "14f43020b9ac1d8bd06a71d13376a0e2df01d70fa98cc7e74e0f0e490008d94a"
   }
 }

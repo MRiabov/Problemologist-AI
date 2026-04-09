@@ -20,7 +20,7 @@ Test whether an engineer can receive a ball near floor height and lift it onto a
 
 ## 4. Objectives
 
-- `goal_zone`: min `[320, -55, 220]`, max `[430, 55, 300]`
+- `goal_zone`: min `[320, -55, 220]`, max `[430, 55, 300]`. The `raised_goal_shelf` geometry is designed to occupy this goal zone so the object must rest there to score.
 - `forbid_zones`:
   - `shelf_support_clearance`: min `[180, -95, 0]`, max `[280, 95, 210]`
 - `build_zone`: min `[-260, -180, 0]`, max `[470, 180, 340]`

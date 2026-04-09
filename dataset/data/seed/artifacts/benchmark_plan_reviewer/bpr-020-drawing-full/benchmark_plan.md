@@ -20,7 +20,7 @@ Test whether an engineer can redirect a falling ball into a lower bin while avoi
 
 ## 4. Objectives
 
-- `goal_zone`: min `[220, -45, 10]`, max `[320, 45, 85]`
+- `goal_zone`: min `[220, -45, 10]`, max `[320, 45, 85]`. The `lower_bin` geometry is designed to occupy this goal zone so the object must rest there to score.
 - `forbid_zones`:
   - `direct_drop_dead_zone`: min `[-60, -45, 0]`, max `[60, 45, 130]`
 - `build_zone`: min `[-120, -160, 0]`, max `[360, 160, 280]`

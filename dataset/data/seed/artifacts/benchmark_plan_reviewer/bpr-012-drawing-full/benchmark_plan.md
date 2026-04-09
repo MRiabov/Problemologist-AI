@@ -19,7 +19,7 @@ Test whether an engineer can bridge or hand off a low-friction cube across a flo
 
 ## 4. Objectives
 
-- `goal_zone`: min `[210, -70, 25]`, max `[320, 70, 120]`
+- `goal_zone`: min `[210, -70, 25]`, max `[320, 70, 120]`. The `right_goal_deck` geometry is designed to occupy this goal zone so the object must rest there to score.
 - `forbid_zones`:
   - `floor_gap`: min `[-70, -150, -5]`, max `[90, 150, 45]`
 - `build_zone`: min `[-340, -180, 0]`, max `[360, 180, 260]`

@@ -4,6 +4,8 @@ from build123d import Align, Box, Compound, Location
 
 from shared.models.schemas import CompoundMetadata, PartMetadata
 
+# The `goal_catch_tray` geometry is designed to occupy the goal zone so the object must rest there to score.
+
 
 def _make_box(
     label: str,

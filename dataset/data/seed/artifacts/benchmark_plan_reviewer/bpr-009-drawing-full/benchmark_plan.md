@@ -20,7 +20,7 @@ Test whether an engineer can handle a fast lateral transfer benchmark that inclu
 
 ## 4. Objectives
 
-- `goal_zone`: min `[360, -55, 15]`, max `[470, 55, 100]`
+- `goal_zone`: min `[360, -55, 15]`, max `[470, 55, 100]`. The `goal_brake_tray` geometry is designed to occupy this goal zone so the object must rest there to score.
 - `forbid_zones`:
   - `center_speed_bump`: min `[60, -70, 0]`, max `[150, 70, 55]`
 - `build_zone`: min `[-460, -150, 0]`, max `[520, 150, 220]`

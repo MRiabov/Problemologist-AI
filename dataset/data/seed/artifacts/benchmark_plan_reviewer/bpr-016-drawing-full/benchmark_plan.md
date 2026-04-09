@@ -20,7 +20,7 @@ Test whether an engineer can guide a low-friction cube around a central blocker 
 
 ## 4. Objectives
 
-- `goal_zone`: min `[290, -35, 10]`, max `[360, 35, 70]`
+- `goal_zone`: min `[290, -35, 10]`, max `[360, 35, 70]`. The `goal_pocket` geometry is designed to occupy this goal zone so the object must rest there to score.
 - `forbid_zones`:
   - `center_collision_block`: min `[110, -90, 0]`, max `[220, 90, 120]`
 - `build_zone`: min `[-340, -140, 0]`, max `[400, 140, 180]`

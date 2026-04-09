@@ -1,5 +1,7 @@
 from build123d import Box
 
+# The `goal_catch_tray` geometry is designed to occupy the goal zone so the object must rest there to score.
+
 
 def build():
     part = Box(6, 6, 2)

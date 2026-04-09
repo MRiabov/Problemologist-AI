@@ -20,7 +20,7 @@ Test whether an engineer can receive a ball from a benchmark-owned moving lift p
 
 ## 4. Objectives
 
-- `goal_zone`: min `[180, -55, 215]`, max `[280, 55, 290]`
+- `goal_zone`: min `[180, -55, 215]`, max `[280, 55, 290]`. The `goal_shelf` geometry is designed to occupy this goal zone so the object must rest there to score.
 - `forbid_zones`:
   - `platform_travel_clearance`: min `[35, -90, 0]`, max `[95, 90, 210]`
 - `build_zone`: min `[-180, -160, 0]`, max `[320, 160, 340]`

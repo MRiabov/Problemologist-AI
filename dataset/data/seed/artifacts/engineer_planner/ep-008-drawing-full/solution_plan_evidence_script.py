@@ -1,3 +1,9 @@
+"""Narrow ramp solution plan evidence.
+
+The exit_funnel is designed to capture the goal zone and guide the ball
+into the seeded goal area.
+"""
+
 from build123d import (
     Align,
     Box,

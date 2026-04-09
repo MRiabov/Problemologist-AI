@@ -20,7 +20,7 @@ Test whether an engineer can solve a freestanding transfer benchmark where the e
 
 ## 4. Objectives
 
-- `goal_zone`: min `[210, -55, 20]`, max `[310, 55, 110]`
+- `goal_zone`: min `[210, -55, 20]`, max `[310, 55, 110]`. The `goal_cradle` geometry is designed to occupy this goal zone so the object must rest there to score.
 - `build_zone`: min `[-320, -180, 0]`, max `[340, 180, 220]`
 
 ## 5. Simulation Bounds

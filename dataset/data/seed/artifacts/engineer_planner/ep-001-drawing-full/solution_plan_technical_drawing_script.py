@@ -1,3 +1,9 @@
+"""Shelf lift technical drawing script.
+
+The upper_tray is designed to capture the goal zone and hand the ball
+into the seeded shelf opening.
+"""
+
 from build123d import (
     Align,
     Box,
