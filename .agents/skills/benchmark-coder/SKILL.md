@@ -20,7 +20,7 @@ This skill operationalizes the `benchmark_coder` prompt in `config/prompts.yaml`
 Use the runtime helpers explicitly in authored benchmark scripts:
 
 ```python
-from utils.submission import validate, simulate, submit_for_review
+from utils.submission import validate_benchmark, simulate_benchmark, submit_benchmark_for_review
 from utils.preview import (
     list_render_bundles,
     objectives_geometry,
@@ -32,8 +32,8 @@ from utils.preview import (
 )
 ```
 
-- `validate(result)` and `simulate(result)` are the required pre-handoff checks.
-- `submit_for_review(result)` is the final benchmark review handoff helper.
+- `validate_benchmark(result)` and `simulate_benchmark(result)` are the required pre-handoff checks.
+- `submit_benchmark_for_review(result)` is the final benchmark review handoff helper.
 - `render_cad(...)` is the live scene and objective-overlay path; use `payload_path=True` only when the current workflow needs the live payload-path overlay. `render_technical_drawing()` is the drafting-package path and keeps the payload overlay off.
 - `objectives_geometry()` reconstructs benchmark objective overlays when needed.
 - `list_render_bundles()` selects the exact current or historical render bundle before you inspect media or point-pick results.

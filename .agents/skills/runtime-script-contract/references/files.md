@@ -13,7 +13,7 @@ This reference explains the workspace files that the runtime script contract ski
 - `journal.md`: the run memory for blockers, failed probes, and debugging notes.
 - `benchmark_script.py`: benchmark-owned geometry source. Downstream stages treat it as read-only context.
 - `solution_script.py`: engineer-authored implementation source. It should expose the final assembly via `result = ...`.
-- `references/function_signatures.md`: current submission-helper signatures for `validate(...)`, `simulate(...)`, and `submit_for_review(...)`.
+- `references/function_signatures.md`: current submission-helper signatures for `validate_benchmark(...)`, `validate_engineering(...)`, `simulate_benchmark(...)`, `simulate_engineering(...)`, `submit_benchmark_for_review(...)`, and `submit_solution_for_review(...)`.
 
 ## Review And Evidence Artifacts
 

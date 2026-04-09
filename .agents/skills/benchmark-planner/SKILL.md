@@ -1,6 +1,6 @@
 ---
 name: benchmark-planner
-description: Benchmark planning and handoff authoring for Problemologist. Use when creating or revising benchmark planner artifacts (`benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`), checking benchmark solvability or randomization, defining benchmark-owned fixture motion, reviewing planner drafting output with `render_technical_drawing()`, enforcing exact-grounded inventory mentions, preparing the plan for `submit_plan()`, or inspecting simulation evidence through frame-indexed `objects.parquet` sidecars.
+description: Benchmark planning and handoff authoring for Problemologist. Use when creating or revising benchmark planner artifacts (`benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, `benchmark_plan_technical_drawing_script.py`), checking benchmark solvability or randomization, defining benchmark-owned fixture motion, reviewing planner drafting output with `render_technical_drawing()`, enforcing exact-grounded inventory mentions, preparing the plan for `submit_benchmark_plan()`, or inspecting simulation evidence through frame-indexed `objects.parquet` sidecars.
 ---
 
 # Benchmark Planner
@@ -73,7 +73,7 @@ Read these before drafting or revising the handoff:
 3. Draft the benchmark geometry and any benchmark-owned fixture motion with explicit limits and clear visibility in the handoff.
 4. Write `benchmark_plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `benchmark_plan_evidence_script.py`, and `benchmark_plan_technical_drawing_script.py`.
 5. Cross-check labels, AABBs, motion, and script geometry against the YAML before submission.
-6. Call `submit_plan()` only after the handoff is coherent and placeholder-free.
+6. Call `submit_benchmark_plan()` only after the handoff is coherent and placeholder-free.
 
 ## Handoff Rules
 
@@ -84,14 +84,14 @@ Read these before drafting or revising the handoff:
 - Keep every dimension formula-backed; if the handoff is missing a needed length, thickness, clearance, or placement datum, fix the source rather than guessing.
 - Use `render_cad(...)` for live scene previews and `render_technical_drawing()` for drafting packages; they are not interchangeable.
 - Use `payload_path=True` on `render_cad(...)` when the live payload-path overlay is part of the inspection.
-- When drawings are part of the handoff, inspect the drafted package with `render_technical_drawing()` before `submit_plan()`.
+- When drawings are part of the handoff, inspect the drafted package with `render_technical_drawing()` before `submit_benchmark_plan()`.
 - After any significant blocker or repeated failure on the same issue, inspect the current render or drawing evidence before the next plan revision. If the same issue has failed more than three times in a row, keep inspecting render evidence on every subsequent retry until the blocker changes; use `../render-evidence/SKILL.md` as the visual-inspection playbook.
 - If simulation evidence already exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
 - If the review depends on bundle identity or a click-to-world answer, select the exact bundle with `list_render_bundles()` and inspect or query that bundle-local snapshot instead of assuming the newest visible render is the right one.
 - Make the benchmark-owned motion contract explicit if any fixture moves. In this repo, keep each moving fixture to one explicit DOF axis and spell out the controller facts and limits.
 - Keep the moved object inside `build_zone` under static variation plus runtime jitter.
 - Keep goal and forbid zones non-overlapping with the moved object at spawn.
-- Treat `submit_plan()` as the final gate, not as a shortcut around an incomplete handoff.
+- Treat `submit_benchmark_plan()` as the final gate, not as a shortcut around an incomplete handoff.
 
 ## Common Failure Modes
 

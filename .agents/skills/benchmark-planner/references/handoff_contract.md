@@ -75,8 +75,8 @@ Before submission, verify all of the following:
 - Any benchmark-owned moving fixture declares its motion explicitly, with one axis and clear bounds or controller facts.
 - The assembly file stays schema-valid and does not rely on template placeholders.
 - The evidence and technical-drawing scripts match the same geometry and do not drift from the YAML.
-- When drawings are part of the handoff, inspect the drafted package with `render_technical_drawing()` before `submit_plan()`.
+- When drawings are part of the handoff, inspect the drafted package with `render_technical_drawing()` before `submit_benchmark_plan()`.
 
 ## Submission Gate
 
-Call `submit_plan()` only after the handoff is internally consistent, placeholder-free, and ready for downstream benchmark coding.
+Call `submit_benchmark_plan()` only after the handoff is internally consistent, placeholder-free, and ready for downstream benchmark coding.

@@ -5,9 +5,12 @@ Refresh it from the live helper module when signatures change; do not hand-edit 
 
 ## Submission Helpers
 
-- `validate(compound: Compound, **kwargs) -> tuple[bool, str | None]`
-- `simulate(compound: Compound, **kwargs) -> BenchmarkToolResponse`
-- `submit_for_review(compound: Compound) -> bool`
+- `validate_benchmark(compound: Compound, **kwargs) -> tuple[bool, str | None]`
+- `validate_engineering(compound: Compound, **kwargs) -> tuple[bool, str | None]`
+- `simulate_benchmark(compound: Compound, **kwargs) -> BenchmarkToolResponse`
+- `simulate_engineering(compound: Compound, **kwargs) -> BenchmarkToolResponse`
+- `submit_benchmark_for_review(compound: Compound) -> bool`
+- `submit_solution_for_review(compound: Compound) -> bool`
 
 ## Related Preview Signatures
 

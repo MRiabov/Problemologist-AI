@@ -1,6 +1,6 @@
 ---
 name: commit-split-workflow
-description: Manual trigger only. Use this skill only when the user explicitly asks for `$commit-split-workflow` (or clearly requests this exact workflow) to split changes into meaningful commits with the repository's commit-message conventions.
+description: Manual trigger only. Use this skill only when the user explicitly asks for `$commit-split-workflow` (or clearly requests this exact workflow) to split changes into meaningful commits with the repository's commit-message conventions. Never ask the user how to split files; read the repo instructions and infer commit boundaries from the diff.
 ---
 
 # Commit Split Workflow (Manual Only)
@@ -11,6 +11,7 @@ Do not auto-trigger for general git or commit tasks.
 ## Goal
 
 Split the current git changes into small, reviewable groups, then commit each group separately with a message that makes the intent obvious later.
+Derive the grouping from repository instructions and the diff itself. Do not ask the user which files belong together.
 
 The goal is not to "commit everything quickly".
 The goal is to produce a commit history that lets the reviewer answer:
@@ -41,7 +42,7 @@ Examples:
 
 ## Process
 
-1. Inspect `git status`, identify any nested repositories/submodules, and split changes by intent/meaning.
+1. Inspect `git status`, read `AGENTS.md` and any local commit-splitting instructions, identify nested repositories/submodules, and split changes by intent/meaning.
 2. Build a commit map before staging anything: group related hunks by behavior, feature, refactor, test, spec, or devops work.
 3. Run `pre-commit run --all-files` once before the split sequence so hook-generated fixes, lint failures, and codegen issues are surfaced in a single turn.
 4. If there is a nested repository or submodule, especially `skills/` as a separate git repository, commit that nested repository first. Do not start the root split while the nested repository is dirty, because root hooks such as `record-skills-revision` can fail on a dirty nested repository.
@@ -70,6 +71,8 @@ Commit message rules:
 
 ## Guardrails
 
+- Do not ask questions about how to split committed files.
+- If the split is ambiguous, read the instructions again, inspect the hunk-level diff, and choose the most defensible single-purpose grouping.
 - Do not stage throwaway scripts. Watch especially for names like:
   - `repro_*`
   - `debug_*`

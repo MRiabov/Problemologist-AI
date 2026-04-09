@@ -33,7 +33,7 @@ The agent should be able to do the following without overthinking the workflow:
 Use the runtime helpers explicitly in authored engineer scripts:
 
 ```python
-from utils.submission import validate, simulate
+from utils.submission import validate_engineering, simulate_engineering, submit_solution_for_review
 from utils.preview import (
     list_render_bundles,
     objectives_geometry,
@@ -45,8 +45,8 @@ from utils.preview import (
 )
 ```
 
-- `validate(result)` and `simulate(result)` are the required pre-handoff checks.
-- `submit_for_review(result)` is available for supporting scripts that own the final handoff step.
+- `validate_engineering(result)` and `simulate_engineering(result)` are the required pre-handoff checks.
+- `submit_solution_for_review(result)` is the canonical engineering review handoff helper for supporting scripts.
 - `render_cad(...)` is the live scene and objective-overlay path; use `payload_path=True` only when the current workflow needs the live payload-path overlay. `render_technical_drawing()` is the drafting-package path and keeps the payload overlay off.
 - `objectives_geometry()` reconstructs benchmark objective overlays when needed.
 - `list_render_bundles()` locates the exact current or historical render bundle instead of assuming the latest file on disk is the right snapshot.

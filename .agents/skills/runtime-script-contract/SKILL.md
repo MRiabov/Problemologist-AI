@@ -23,7 +23,14 @@ Use this skill when authoring build123d scripts that the runtime will execute or
 Use top-level `utils` imports in authored scripts:
 
 ```python
-from utils.submission import validate, simulate, submit_for_review
+from utils.submission import (
+    validate_benchmark,
+    simulate_benchmark,
+    submit_benchmark_for_review,
+    validate_engineering,
+    simulate_engineering,
+    submit_solution_for_review,
+)
 from utils.metadata import PartMetadata, CompoundMetadata
 from utils.preview import (
     list_render_bundles,
@@ -69,9 +76,8 @@ Use this sequence for benchmark-coder and engineer-coder evals:
 07. Run one cheap syntax check first, then one real probe against the authored file:
     - `py_compile` or equivalent
     - import `result` from the authored file
-    - `from utils.submission import validate, simulate`
-    - `validate(result)`
-    - `simulate(result)` if validation passes
+    - `from utils.submission import validate_benchmark, simulate_benchmark` for benchmark scripts or `validate_engineering, simulate_engineering` for engineering scripts
+    - `validate_benchmark(result)` / `simulate_benchmark(result)` or `validate_engineering(result)` / `simulate_engineering(result)` if validation passes
 08. If validation fails, fix the geometry or placement in the authored file, not the execution contract.
 09. If the same issue persists after one targeted fix, record the blocker in `journal.md` and stop diagnostics instead of widening into repo spelunking.
 10. For engineer-owned scripts, do not copy benchmark-only `fixed=True` examples into the implementation unless the current task explicitly says you are authoring benchmark fixtures.
@@ -100,13 +106,13 @@ Use when the workspace, validator, or seeded handoff expects the module to be im
 
 Use only when the task explicitly allows direct execution side effects from the authored script.
 
-- helper calls such as `validate(...)`, `simulate(...)`, and `submit_for_review(...)` may live in the module body only when that execution model is explicitly part of the task
+- helper calls such as `validate_benchmark(...)`, `simulate_benchmark(...)`, and `submit_benchmark_for_review(...)` or `validate_engineering(...)`, `simulate_engineering(...)`, and `submit_solution_for_review(...)` may live in the module body only when that execution model is explicitly part of the task
 - do not add wrapper files just to trigger those helpers
 
 ## Contract Boundary
 
 - Validation should operate on the real stage-owned authored file rather than alternate reconstructed geometry.
-- If dedicated runtime helper tools are exposed, prefer them; otherwise use one short workspace-root `execute_command(...)` probe that imports `result` from the authored file and calls `utils.submission.validate(...)` / `simulate(...)`.
+- If dedicated runtime helper tools are exposed, prefer them; otherwise use one short workspace-root `execute_command(...)` probe that imports `result` from the authored file and calls `utils.submission.validate_benchmark(...)` / `simulate_benchmark(...)` or `validate_engineering(...)` / `simulate_engineering(...)`.
 - `execute_command(...)` already runs from the seeded workspace root. Do not prepend `cd /workspace` or other host-specific workspace paths before those checks.
 
 ## Safety Rules
@@ -123,5 +129,5 @@ Use only when the task explicitly allows direct execution side effects from the 
 10. For simple freestanding/passive mechanical seeds, start with the fewest primitives and booleans that satisfy the planner handoff. Avoid decorative fillets, chamfers, and optional detailing unless functionally required.
 11. For simple passive seeds, the normal read set is the planner handoff plus any read-only benchmark geometry context that is present. Do not treat general CAD skills or large helper references as mandatory pre-reads before the first draft.
 12. If validation or simulation is explicitly required before handoff, a syntax-only `py_compile` check is not enough. Keep the authored file import-safe, then run one real probe against `result` and fix any runtime failure before stopping.
-13. If the task expects review handoff, the final workflow step is a Python helper call to `submit_for_review(result)` after validation and simulation succeed. This is not a shell helper and it is not a replacement for the validation/simulation checks.
+13. If the task expects review handoff, the final workflow step is a Python helper call to `submit_benchmark_for_review(result)` or `submit_solution_for_review(result)` after validation and simulation succeed. This is not a shell helper and it is not a replacement for the validation/simulation checks.
 14. Any extra command-like workflow that is not already exposed as a native helper belongs in a checked-in shell script, not a prompt-only pseudo-tool or ad hoc ReAct trick.
