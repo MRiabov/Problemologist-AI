@@ -32,8 +32,8 @@ from shared.models.schemas import (
     AssemblyDefinition,
     BenchmarkDefinition,
     CotsPartEstimate,
-    ManufacturedPartEstimate,
     DraftingSheet,
+    ManufacturedPartEstimate,
     MotionForecast,
     PartConfig,
     PayloadTrajectoryDefinition,
@@ -933,13 +933,19 @@ def validate_planner_drafting_geometry_contract(
 
     goal_zone = benchmark_definition.objectives.goal_zone
     goal_zone_body = _zone_body_from_bounds(goal_zone, inflation_mm=1e-6)
+    component_label = getattr(component, "label", None)
     for solid in solids:
         try:
             goal_intersection = solid.intersect(goal_zone_body)
         except Exception as exc:
             return [f"{artifact_name}: unable to evaluate goal-zone overlap: {exc}"]
         if _shape_volume(goal_intersection) > 0.0:
-            solid_label = getattr(solid, "label", None) or "<unlabeled>"
+            solid_label = (
+                getattr(solid, "label", None)
+                or component_label
+                or artifact_name.removesuffix(".py")
+                or "<unlabeled>"
+            )
             if _drafting_explicitly_allows_goal_zone_overlap(
                 drafting, "goal_zone", solid_label
             ):

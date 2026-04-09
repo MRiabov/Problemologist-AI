@@ -235,12 +235,11 @@ def _engineer_planner_goal_overlap_benchmark_definition_yaml() -> str:
         "min": [-2.0, -2.0, 0.0],
         "max": [2.0, 2.0, 4.0],
     }
+    data["payload"]["start_position"] = [8.0, 8.0, 8.0]
     return yaml.safe_dump(data, sort_keys=False)
 
 
-def _engineer_planner_assembly_definition_yaml(
-    *, allow_goal_zone_overlap: bool
-) -> str:
+def _engineer_planner_assembly_definition_yaml(*, allow_goal_zone_overlap: bool) -> str:
     data = yaml.safe_load(
         (ENGINEER_PLANNER_FIXTURE_DIR / "03__assembly_definition.yaml").read_text()
     )
@@ -248,6 +247,9 @@ def _engineer_planner_assembly_definition_yaml(
     if allow_goal_zone_overlap:
         drafting["goal_zone_overlap_intents"] = [
             {"zone_name": "goal_zone", "target": "solution_plan_evidence"}
+        ]
+        data["final_assembly"] = [
+            {"name": "solution_plan_evidence", "config": {"dofs": []}}
         ]
     else:
         drafting.pop("goal_zone_overlap_intents", None)
@@ -263,6 +265,9 @@ async def _write_engineer_planner_drafting_workspace(
     headers = {"X-Session-ID": session_id}
 
     workspace_files = {
+        ".manifests/current_role.json": current_role_manifest_json(
+            AgentName.ENGINEER_PLANNER
+        ),
         "plan.md": (ENGINEER_PLANNER_FIXTURE_DIR / "01__plan.md").read_text(),
         "todo.md": (ENGINEER_PLANNER_FIXTURE_DIR / "02__todo.md").read_text(),
         "assembly_definition.yaml": _engineer_planner_assembly_definition_yaml(
