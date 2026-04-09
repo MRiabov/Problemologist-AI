@@ -44,7 +44,6 @@ from shared.observability.events import emit_event
 from shared.observability.schemas import LintFailureDocsEvent, LogicFailureEvent
 from shared.script_contracts import (
     BENCHMARK_SCRIPT_PATH,
-    SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH,
     SOLUTION_SCRIPT_PATH,
     drafting_render_manifest_path_for_agent,
     plan_path_for_agent,
@@ -380,15 +379,15 @@ def validate_planner_evidence_script_layout_contract(
     artifact_name: str,
     content: str,
 ) -> list[str]:
-    """Reject exploded-view wording in the engineering planning evidence script."""
-    if artifact_name != SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH:
+    """Reject presentation-layout wording in the planner evidence scripts."""
+    if not artifact_name.endswith("_evidence_script.py"):
         return []
-    if not re.search(r"\bexploded\b", content, flags=re.IGNORECASE):
+    if not re.search(r"\b(exploded|staggered)\b", content, flags=re.IGNORECASE):
         return []
     return [
-        f"{artifact_name}: 'exploded' is forbidden in the planning evidence script; "
-        "keep exploded/layout presentation in "
-        "solution_plan_technical_drawing_script.py instead."
+        f"{artifact_name}: exploded/staggered presentation is forbidden in the "
+        "planner evidence script; keep display-only layout in the technical "
+        "drawing companion instead."
     ]
 
 
