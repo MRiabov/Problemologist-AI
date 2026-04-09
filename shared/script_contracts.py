@@ -20,6 +20,7 @@ SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH = (
     "solution_plan_technical_drawing_script.py"
 )
 LEGACY_SCRIPT_PATH = "script.py"
+CURRENT_ROLE_MANIFEST_PATH = Path(".manifests/current_role.json")
 
 
 def _normalize_agent_name(agent_name: AgentName | str | None) -> AgentName | None:

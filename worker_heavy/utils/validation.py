@@ -17,6 +17,7 @@ import yaml
 from build123d import Compound
 
 from shared.agents.config import DraftingMode, load_agents_config
+from shared.current_role import current_role_agent_name
 from shared.enums import (
     AgentName,
     BenchmarkRefusalReason,
@@ -106,26 +107,28 @@ def _find_workspace_assembly_definition(
     return None
 
 
-def _preview_agent_role() -> str | None:
-    return os.getenv("AGENT_NAME") or None
-
-
 def _drafting_preview_role(script_path: str | Path | None) -> AgentName | None:
-    agent_role = _preview_agent_role()
-    if agent_role:
-        try:
-            return AgentName(agent_role)
-        except Exception:
-            pass
-
-    if script_path is None:
+    del script_path
+    try:
+        agent_role = current_role_agent_name(Path.cwd())
+    except Exception:
         return None
-
-    script_name = Path(script_path).name
-    if script_name == BENCHMARK_SCRIPT_PATH:
-        return AgentName.BENCHMARK_CODER
-    if script_name == SOLUTION_SCRIPT_PATH:
-        return AgentName.ENGINEER_CODER
+    if agent_role in {
+        AgentName.BENCHMARK_CODER,
+        AgentName.BENCHMARK_REVIEWER,
+        AgentName.ENGINEER_CODER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.ELECTRONICS_REVIEWER,
+    }:
+        return agent_role
+    if agent_role in {
+        AgentName.BENCHMARK_PLANNER,
+        AgentName.ENGINEER_PLANNER,
+        AgentName.ELECTRONICS_PLANNER,
+        AgentName.BENCHMARK_PLAN_REVIEWER,
+        AgentName.ENGINEER_PLAN_REVIEWER,
+    }:
+        return None
     return None
 
 
@@ -1607,11 +1610,24 @@ def simulate(
         exists=working_dir.exists(),
         files=list(working_dir.iterdir()) if working_dir.exists() else [],
     )
+    current_role = current_role_agent_name(Path.cwd())
     renders_dir = (
         working_dir
         / "renders"
         / select_scratch_preview_render_subdir(
-            working_dir, agent_role=_preview_agent_role()
+            working_dir,
+            agent_role=(
+                current_role.value
+                if current_role
+                in {
+                    AgentName.BENCHMARK_CODER,
+                    AgentName.BENCHMARK_REVIEWER,
+                    AgentName.ENGINEER_CODER,
+                    AgentName.ENGINEER_EXECUTION_REVIEWER,
+                    AgentName.ELECTRONICS_REVIEWER,
+                }
+                else None
+            ),
         )
     )
     renders_dir.mkdir(parents=True, exist_ok=True)

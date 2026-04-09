@@ -1,6 +1,6 @@
 from evals.logic.models import AgentEvalSpec
 from shared.enums import AgentName, EvalMode
-from shared.eval_artifacts import plan_artifacts_for_agent
+from shared.eval_artifacts import plan_artifacts_for_agent, workspace_artifacts_for_agent
 
 # Base non-drafting planner artifact contract. Use
 # `required_plan_artifacts_for_agent()` when the mode-sensitive drafting files
@@ -29,7 +29,7 @@ PLANNER_REQUIRED_FILES: dict[AgentName, tuple[str, ...]] = {
 
 def required_plan_artifacts_for_agent(agent_name: AgentName) -> tuple[str, ...]:
     """Return the eval-side planner-artifact contract for the requested role."""
-    return plan_artifacts_for_agent(agent_name)
+    return workspace_artifacts_for_agent(agent_name)
 
 
 AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {

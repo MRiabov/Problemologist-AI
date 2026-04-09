@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 
+from shared.current_role import current_role_agent_name
 from shared.enums import AgentName
 from shared.git_utils import commit_submission_attempt
 from shared.models.schemas import ReviewComments, ReviewFrontmatter
@@ -34,19 +35,13 @@ def _print_json(payload: dict[str, Any]) -> None:
 
 
 def _reviewer_agent(workspace: Path) -> AgentName | None:
-    raw = os.getenv("AGENT_NAME", "").strip()
-    if raw:
-        try:
-            agent = AgentName(raw)
-        except ValueError:
-            agent = None
-        else:
-            if agent in _REVIEW_PREFIX_BY_AGENT:
-                return agent
+    try:
+        agent = current_role_agent_name(workspace)
+    except Exception:
+        return None
 
-    for agent, manifest_path in _MANIFEST_BY_AGENT.items():
-        if (workspace / manifest_path).exists():
-            return agent
+    if agent in _REVIEW_PREFIX_BY_AGENT:
+        return agent
     return None
 
 
@@ -159,8 +154,7 @@ def main() -> int:
             "status": "rejected",
             "stage": "load",
             "message": (
-                "Unable to infer reviewer agent from workspace or AGENT_NAME: "
-                "expected one of the reviewer stage manifests"
+                "Unable to infer reviewer agent from .manifests/current_role.json"
             ),
         }
     else:

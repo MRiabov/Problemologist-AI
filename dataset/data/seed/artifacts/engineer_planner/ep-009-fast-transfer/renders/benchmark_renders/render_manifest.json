@@ -4,7 +4,7 @@
   "created_at": "2026-04-08T06:37:42.710386+00:00",
   "episode_id": "00b844a1-1fc5-5dd6-a86a-19fba0f992d2",
   "worker_session_id": "seed-renders-ep-009-fast-transfer-2a6d881e",
-  "revision": "09d6acaf6a383308426f14f5dd6a86c5c342cf34",
+  "revision": "d5f39f6767a243044d59292108f59cffe3128c0b",
   "scene_hash": "6b0de12ddf02e2d7d3da060d8628e7706db7ae54040f0982e732168ed5049d34",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",

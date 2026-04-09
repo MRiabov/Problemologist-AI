@@ -522,6 +522,14 @@ class PlanReviewManifest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class CurrentRoleManifest(BaseModel):
+    """Backend-owned marker for the role actively running the workspace."""
+
+    agent_name: AgentName
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class COTSReproducibilityManifest(BaseModel):
     """System-owned catalog provenance snapshot for the current workspace session."""
 

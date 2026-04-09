@@ -40,6 +40,7 @@ from shared.agent_templates import (
 )
 from shared.agents.config import DraftingMode, load_agents_config
 from shared.enums import AgentName
+from shared.current_role import current_role_manifest_json, parse_current_role_manifest
 from shared.git_utils import init_workspace_repo
 from shared.models.schemas import (
     AssemblyConstraints,
@@ -110,6 +111,8 @@ _BENCHMARK_DRAFTING_TARGETS = {
     AgentName.BENCHMARK_CODER,
     AgentName.BENCHMARK_REVIEWER,
 }
+
+_CURRENT_ROLE_MANIFEST_PATH = Path(".manifests/current_role.json")
 
 
 class MaterializedWorkspace(BaseModel):
@@ -356,6 +359,16 @@ def _write_missing_template_files(
         dst_path.write_text(content, encoding="utf-8")
         copied.append(rel_path)
     return copied
+
+
+def _write_current_role_manifest(dst_root: Path, agent_name: AgentName) -> str:
+    manifest_path = dst_root / _CURRENT_ROLE_MANIFEST_PATH
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
+        current_role_manifest_json(agent_name),
+        encoding="utf-8",
+    )
+    return _CURRENT_ROLE_MANIFEST_PATH.as_posix()
 
 
 def _technical_drawing_mode_active(mode: DraftingMode) -> bool:
@@ -1059,6 +1072,7 @@ def materialize_seed_workspace(
         _write_template_files(workspace_dir, load_common_template_files())
     )
     copied_paths.extend(_copy_skills_tree(workspace_dir))
+    copied_paths.append(_write_current_role_manifest(workspace_dir, agent_name))
 
     if is_planner_agent(agent_name):
         copied_paths.extend(
@@ -1500,6 +1514,26 @@ def _parse_review_comments_yaml(
         return None, f"invalid review comments payload in {review_path}: {exc}"
 
 
+def _current_role_manifest_error(
+    *, workspace_dir: Path, agent_name: AgentName
+) -> str | None:
+    manifest_path = workspace_dir / _CURRENT_ROLE_MANIFEST_PATH
+    if not manifest_path.exists():
+        return f"{_CURRENT_ROLE_MANIFEST_PATH.as_posix()} missing"
+    try:
+        manifest = parse_current_role_manifest(
+            manifest_path.read_text(encoding="utf-8")
+        )
+    except Exception as exc:
+        return f"invalid {_CURRENT_ROLE_MANIFEST_PATH.as_posix()}: {exc}"
+    if manifest.agent_name != agent_name:
+        return (
+            f"{_CURRENT_ROLE_MANIFEST_PATH.as_posix()} expected {agent_name.value} "
+            f"but found {manifest.agent_name.value}"
+        )
+    return None
+
+
 async def verify_planner_workspace(
     *,
     workspace_dir: Path,
@@ -1507,6 +1541,17 @@ async def verify_planner_workspace(
     session_id: str,
 ) -> WorkspaceVerificationResult:
     """Validate a planner workspace and its submitted handoff manifest."""
+
+    current_role_error = _current_role_manifest_error(
+        workspace_dir=workspace_dir,
+        agent_name=agent_name,
+    )
+    if current_role_error is not None:
+        return WorkspaceVerificationResult(
+            success=False,
+            verification_name="planner_workspace_current_role",
+            errors=[current_role_error],
+        )
 
     artifacts = _workspace_files_to_validate(workspace_dir)
     manufacturing_config = _load_manufacturing_config(workspace_dir)
@@ -1558,6 +1603,17 @@ async def verify_coder_workspace(
     session_id: str,
 ) -> WorkspaceVerificationResult:
     """Validate a coder workspace and its execution-review handoff manifest."""
+
+    current_role_error = _current_role_manifest_error(
+        workspace_dir=workspace_dir,
+        agent_name=agent_name,
+    )
+    if current_role_error is not None:
+        return WorkspaceVerificationResult(
+            success=False,
+            verification_name="coder_workspace_current_role",
+            errors=[current_role_error],
+        )
 
     artifacts = _workspace_files_to_validate(workspace_dir)
     required_helper_files = [
@@ -1634,6 +1690,17 @@ async def verify_reviewer_workspace(
             success=False,
             verification_name="review_workspace_contract",
             errors=[f"Unsupported reviewer agent: {agent_name.value}"],
+        )
+
+    current_role_error = _current_role_manifest_error(
+        workspace_dir=workspace_dir,
+        agent_name=agent_name,
+    )
+    if current_role_error is not None:
+        return WorkspaceVerificationResult(
+            success=False,
+            verification_name="review_workspace_current_role",
+            errors=[current_role_error],
         )
 
     if is_plan_reviewer_agent(agent_name):

@@ -6,6 +6,7 @@ import uuid
 from pathlib import Path
 
 from controller.agent.benchmark.tools import _canonicalize_benchmark_constraints
+from shared.current_role import current_role_agent_name
 from shared.agents.config import DraftingMode, load_agents_config
 from shared.enums import AgentName
 from shared.git_utils import commit_submission_attempt, repo_revision
@@ -23,44 +24,18 @@ from worker_heavy.utils.file_validation import validate_node_output
 
 
 def _planner_agent(workspace: Path | None = None) -> AgentName | None:
-    raw = os.getenv("AGENT_NAME", "").strip()
-    if raw:
-        try:
-            return AgentName(raw)
-        except ValueError:
-            return None
-
     workspace = Path.cwd() if workspace is None else Path(workspace)
+    try:
+        agent_name = current_role_agent_name(workspace)
+    except Exception:
+        return None
 
-    prompt_path = workspace / "prompt.md"
-    if prompt_path.exists():
-        prompt_text = prompt_path.read_text(encoding="utf-8")
-        for candidate, marker in (
-            (AgentName.BENCHMARK_PLANNER, "Agent: benchmark_planner"),
-            (AgentName.ENGINEER_PLANNER, "Agent: engineer_planner"),
-            (AgentName.ELECTRONICS_PLANNER, "Agent: electronics_planner"),
-        ):
-            if marker in prompt_text:
-                return candidate
-
-    # The Codex launcher does not need a role-specific env var here.
-    # Fall back to the workspace file layout only if the prompt marker is absent.
-    benchmark_handoff = workspace / "benchmark_assembly_definition.yaml"
-    engineering_handoff = workspace / "assembly_definition.yaml"
-    benchmark_plan = workspace / "benchmark_plan.md"
-    engineering_plan = workspace / "engineering_plan.md"
-
-    has_benchmark_handoff = benchmark_handoff.exists()
-    has_engineering_handoff = engineering_handoff.exists()
-
-    if benchmark_plan.exists() and not engineering_plan.exists():
-        return AgentName.BENCHMARK_PLANNER
-    if engineering_plan.exists() and not benchmark_plan.exists():
-        return AgentName.ENGINEER_PLANNER
-    if has_benchmark_handoff and not has_engineering_handoff:
-        return AgentName.BENCHMARK_PLANNER
-    if has_engineering_handoff and not has_benchmark_handoff:
-        return AgentName.ENGINEER_PLANNER
+    if agent_name in {
+        AgentName.BENCHMARK_PLANNER,
+        AgentName.ENGINEER_PLANNER,
+        AgentName.ELECTRONICS_PLANNER,
+    }:
+        return agent_name
     return None
 
 
@@ -192,8 +167,7 @@ def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
             ok=False,
             status="rejected",
             errors=[
-                "Unable to infer planner agent from workspace: expected "
-                "prompt.md role marker or a single planner handoff file"
+                "Unable to infer planner agent from .manifests/current_role.json"
             ],
             node_type=AgentName.ENGINEER_PLANNER,
         )

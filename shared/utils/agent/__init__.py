@@ -17,6 +17,7 @@ from deprecated import deprecated
 from pydantic import BaseModel
 
 from shared.enums import AgentName
+from shared.current_role import current_role_agent_name
 from shared.rendering import (
     bundle_workspace_base64,
     export_preview_scene_bundle,
@@ -144,25 +145,7 @@ def _worker_light_base_url() -> str | None:
 
 
 def _script_agent_role() -> str:
-    raw = os.getenv(AGENT_NAME_ENV, "").strip()
-    if raw:
-        return raw
-
-    workspace = _workspace_root()
-    benchmark_handoff = workspace / "benchmark_assembly_definition.yaml"
-    engineer_handoff = workspace / "assembly_definition.yaml"
-    benchmark_plan = workspace / "benchmark_plan.md"
-    engineer_plan = workspace / "engineering_plan.md"
-
-    if benchmark_plan.exists() and not engineer_plan.exists():
-        return AgentName.BENCHMARK_PLANNER.value
-    if engineer_plan.exists() and not benchmark_plan.exists():
-        return AgentName.ENGINEER_PLANNER.value
-    if benchmark_handoff.exists() and not engineer_handoff.exists():
-        return AgentName.BENCHMARK_PLANNER.value
-    if engineer_handoff.exists() and not benchmark_handoff.exists():
-        return AgentName.ENGINEER_PLANNER.value
-    return AgentName.ENGINEER_CODER.value
+    return current_role_agent_name(_workspace_root()).value
 
 
 def _workspace_script_path() -> str:
@@ -232,14 +215,6 @@ def objectives_geometry() -> Any:
 
 
 def _default_reviewer_stage() -> str:
-    """Infer the correct reviewer stage for the current workspace.
-
-    The fallback no-render helper is used by both benchmark and engineer Codex
-    workspaces. Routing everything to the benchmark reviewer silently produces
-    the wrong manifest for engineer/electronics coder workspaces, so we infer
-    the stage from the current agent role and workspace handoff files first.
-    """
-
     role_value = _script_agent_role()
     role_to_stage: dict[str, str] = {
         AgentName.BENCHMARK_CODER.value: AgentName.BENCHMARK_REVIEWER.value,
@@ -248,16 +223,14 @@ def _default_reviewer_stage() -> str:
         AgentName.ENGINEER_EXECUTION_REVIEWER.value: AgentName.ENGINEER_EXECUTION_REVIEWER.value,
         AgentName.ELECTRONICS_ENGINEER.value: AgentName.ELECTRONICS_REVIEWER.value,
         AgentName.ELECTRONICS_REVIEWER.value: AgentName.ELECTRONICS_REVIEWER.value,
+        AgentName.BENCHMARK_PLANNER.value: AgentName.BENCHMARK_REVIEWER.value,
+        AgentName.ENGINEER_PLANNER.value: AgentName.ENGINEER_EXECUTION_REVIEWER.value,
+        AgentName.ENGINEER_PLAN_REVIEWER.value: AgentName.ENGINEER_EXECUTION_REVIEWER.value,
+        AgentName.BENCHMARK_PLAN_REVIEWER.value: AgentName.BENCHMARK_REVIEWER.value,
     }
-    if role_value in role_to_stage:
-        return role_to_stage[role_value]
-
-    workspace = Path.cwd()
-    if (workspace / "assembly_definition.yaml").exists():
-        return AgentName.ENGINEER_EXECUTION_REVIEWER.value
-    if (workspace / "benchmark_assembly_definition.yaml").exists():
-        return AgentName.BENCHMARK_REVIEWER.value
-    return AgentName.BENCHMARK_REVIEWER.value
+    if role_value not in role_to_stage:
+        raise ValueError(f"Unsupported current role for submit_for_review: {role_value}")
+    return role_to_stage[role_value]
 
 
 def _call_controller_script_tool(action: str, payload: dict[str, Any]) -> dict | None:

@@ -11,6 +11,7 @@ from typing import Any
 
 from build123d import Compound
 
+from shared.current_role import current_role_agent_name
 from shared.enums import AgentName
 from shared.git_utils import commit_submission_attempt
 from shared.script_contracts import authored_script_path_for_agent
@@ -19,18 +20,35 @@ from utils.submission import simulate, validate
 from worker_heavy.utils.handover import submit_for_review as _handover_submit_for_review
 
 
-def _coder_agent(workspace: Path) -> AgentName | None:
-    benchmark_handoff = workspace / "benchmark_assembly_definition.yaml"
-    engineering_handoff = workspace / "assembly_definition.yaml"
+def _submission_agent(workspace: Path) -> AgentName | None:
+    try:
+        agent = current_role_agent_name(workspace)
+    except Exception:
+        return None
 
-    has_benchmark_handoff = benchmark_handoff.exists()
-    has_engineering_handoff = engineering_handoff.exists()
-
-    if has_engineering_handoff:
-        return AgentName.ENGINEER_CODER
-    if has_benchmark_handoff and not has_engineering_handoff:
-        return AgentName.BENCHMARK_CODER
+    if agent in {
+        AgentName.BENCHMARK_CODER,
+        AgentName.BENCHMARK_REVIEWER,
+        AgentName.ENGINEER_CODER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.ELECTRONICS_REVIEWER,
+    }:
+        return agent
     return None
+
+
+def _reviewer_stage_for_agent(agent_name: AgentName) -> str:
+    stage_map = {
+        AgentName.BENCHMARK_CODER: "benchmark_reviewer",
+        AgentName.BENCHMARK_REVIEWER: "benchmark_reviewer",
+        AgentName.ENGINEER_CODER: "engineering_execution_reviewer",
+        AgentName.ENGINEER_EXECUTION_REVIEWER: "engineering_execution_reviewer",
+        AgentName.ELECTRONICS_REVIEWER: "electronics_reviewer",
+    }
+    try:
+        return stage_map[agent_name]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported submission agent: {agent_name}") from exc
 
 
 def _script_path_for_agent(agent_name: AgentName) -> Path:
@@ -94,7 +112,7 @@ def main() -> int:
         sys.path.insert(0, workspace_str)
     session_id = os.getenv("SESSION_ID")
     episode_id = os.getenv("EPISODE_ID") or None
-    agent_name = _coder_agent(workspace)
+    agent_name = _submission_agent(workspace)
     log_path = _submission_log_path(workspace)
     manifest_path = (
         workspace / ".manifests" / "engineering_execution_handoff_manifest.json"
@@ -105,15 +123,14 @@ def main() -> int:
 
     if agent_name is None:
         payload = {
-            "ok": False,
-            "status": "rejected",
-            "stage": "load",
-            "message": (
-                "Unable to infer coder agent from workspace: expected "
-                "benchmark_assembly_definition.yaml or assembly_definition.yaml"
-            ),
-            "log_path": str(log_path.relative_to(workspace)),
-        }
+                "ok": False,
+                "status": "rejected",
+                "stage": "load",
+                "message": (
+                    "Unable to infer submission agent from .manifests/current_role.json"
+                ),
+                "log_path": str(log_path.relative_to(workspace)),
+            }
     else:
         rejection: dict[str, Any] | None = None
         validation_ok = False
@@ -171,11 +188,7 @@ def main() -> int:
                             solution,
                             cwd=workspace,
                             session_id=session_id,
-                            reviewer_stage=(
-                                AgentName.ENGINEER_EXECUTION_REVIEWER
-                                if agent_name == AgentName.ENGINEER_CODER
-                                else AgentName.BENCHMARK_REVIEWER
-                            ),
+                            reviewer_stage=_reviewer_stage_for_agent(agent_name),
                             episode_id=episode_id,
                             script_path=script_path,
                         )
@@ -196,11 +209,7 @@ def main() -> int:
             payload = {
                 "ok": True,
                 "status": "submitted",
-                "stage": (
-                    "engineering_execution_reviewer"
-                    if agent_name == AgentName.ENGINEER_CODER
-                    else "benchmark_reviewer"
-                ),
+                "stage": _reviewer_stage_for_agent(agent_name),
                 "manifest_path": str(manifest_path.relative_to(workspace))
                 if manifest_path.exists()
                 else None,
