@@ -4,10 +4,10 @@ from collections.abc import Iterable
 
 from shared.agents.config import DraftingMode, load_agents_config
 from shared.enums import AgentName
-from shared.script_contracts import CURRENT_ROLE_MANIFEST_PATH
 from shared.script_contracts import (
     BENCHMARK_PLAN_EVIDENCE_SCRIPT_PATH,
     BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH,
+    CURRENT_ROLE_MANIFEST_PATH,
     SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH,
     SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH,
 )
@@ -112,7 +112,10 @@ def plan_artifacts_for_agent(agent_name: AgentName) -> tuple[str, ...]:
 
 def workspace_artifacts_for_agent(agent_name: AgentName) -> tuple[str, ...]:
     """Return the base workspace contract including backend-owned metadata."""
-    return (CURRENT_ROLE_MANIFEST_PATH.as_posix(), *plan_artifacts_for_agent(agent_name))
+    return (
+        CURRENT_ROLE_MANIFEST_PATH.as_posix(),
+        *plan_artifacts_for_agent(agent_name),
+    )
 
 
 __all__ = ["plan_artifacts_for_agent", "workspace_artifacts_for_agent"]

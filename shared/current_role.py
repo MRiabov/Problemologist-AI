@@ -30,6 +30,4 @@ def current_role_agent_name(workspace_root: Path) -> AgentName:
         raise FileNotFoundError(
             f"Missing current-role manifest: {manifest_path.as_posix()}"
         )
-    return current_role_agent_name_from_text(
-        manifest_path.read_text(encoding="utf-8")
-    )
+    return current_role_agent_name_from_text(manifest_path.read_text(encoding="utf-8"))

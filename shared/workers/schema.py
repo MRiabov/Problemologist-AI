@@ -337,7 +337,7 @@ class BenchmarkToolRequest(BaseModel):
     )
     reviewer_stage: ReviewerStage | None = Field(
         default=None,
-        description="Reviewer stage when calling /benchmark/submit.",
+        description="Reviewer stage when calling the benchmark or engineering submit route.",
     )
     episode_id: StrictStr | None = None
 

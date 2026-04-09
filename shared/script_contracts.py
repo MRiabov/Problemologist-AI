@@ -4,6 +4,21 @@ from pathlib import Path
 
 from shared.enums import AgentName
 
+_BENCHMARK_ROLE_NAMES = {
+    AgentName.BENCHMARK_PLANNER,
+    AgentName.BENCHMARK_PLAN_REVIEWER,
+    AgentName.BENCHMARK_CODER,
+    AgentName.BENCHMARK_REVIEWER,
+}
+_ENGINEERING_ROLE_NAMES = {
+    AgentName.ENGINEER_CODER,
+    AgentName.ENGINEER_EXECUTION_REVIEWER,
+    AgentName.ELECTRONICS_REVIEWER,
+    AgentName.ENGINEER_PLANNER,
+    AgentName.ENGINEER_PLAN_REVIEWER,
+    AgentName.ELECTRONICS_PLANNER,
+}
+
 BENCHMARK_SCRIPT_PATH = "benchmark_script.py"
 BENCHMARK_PLAN_PATH = "benchmark_plan.md"
 BENCHMARK_PLAN_EVIDENCE_SCRIPT_PATH = "benchmark_plan_evidence_script.py"
@@ -38,44 +53,29 @@ def _as_path(script_path: str) -> Path:
     return Path(script_path)
 
 
+def role_family_for_agent(agent_name: AgentName | str | None) -> str | None:
+    normalized = _normalize_agent_name(agent_name)
+    if normalized in _BENCHMARK_ROLE_NAMES:
+        return "benchmark"
+    if normalized in _ENGINEERING_ROLE_NAMES:
+        return "engineering"
+    return None
+
+
 def authored_script_path_for_agent(agent_name: AgentName | str | None) -> Path:
     normalized = _normalize_agent_name(agent_name)
-    if normalized in {
-        AgentName.BENCHMARK_PLANNER,
-        AgentName.BENCHMARK_PLAN_REVIEWER,
-        AgentName.BENCHMARK_CODER,
-        AgentName.BENCHMARK_REVIEWER,
-    }:
+    if normalized in _BENCHMARK_ROLE_NAMES:
         return _as_path(BENCHMARK_SCRIPT_PATH)
-    if normalized in {
-        AgentName.ENGINEER_CODER,
-        AgentName.ENGINEER_EXECUTION_REVIEWER,
-        AgentName.ELECTRONICS_REVIEWER,
-        AgentName.ENGINEER_PLANNER,
-        AgentName.ENGINEER_PLAN_REVIEWER,
-        AgentName.ELECTRONICS_PLANNER,
-    }:
+    if normalized in _ENGINEERING_ROLE_NAMES:
         return _as_path(SOLUTION_SCRIPT_PATH)
     return _as_path(LEGACY_SCRIPT_PATH)
 
 
 def plan_path_for_agent(agent_name: AgentName | str | None) -> Path:
     normalized = _normalize_agent_name(agent_name)
-    if normalized in {
-        AgentName.BENCHMARK_PLANNER,
-        AgentName.BENCHMARK_PLAN_REVIEWER,
-        AgentName.BENCHMARK_CODER,
-        AgentName.BENCHMARK_REVIEWER,
-    }:
+    if normalized in _BENCHMARK_ROLE_NAMES:
         return _as_path(BENCHMARK_PLAN_PATH)
-    if normalized in {
-        AgentName.ENGINEER_CODER,
-        AgentName.ENGINEER_EXECUTION_REVIEWER,
-        AgentName.ELECTRONICS_REVIEWER,
-        AgentName.ENGINEER_PLANNER,
-        AgentName.ENGINEER_PLAN_REVIEWER,
-        AgentName.ELECTRONICS_PLANNER,
-    }:
+    if normalized in _ENGINEERING_ROLE_NAMES:
         return _as_path(ENGINEERING_PLAN_PATH)
     return _as_path("plan.md")
 
@@ -100,21 +100,9 @@ def technical_drawing_script_path_for_agent(
     agent_name: AgentName | str | None,
 ) -> Path:
     normalized = _normalize_agent_name(agent_name)
-    if normalized in {
-        AgentName.BENCHMARK_PLANNER,
-        AgentName.BENCHMARK_PLAN_REVIEWER,
-        AgentName.BENCHMARK_CODER,
-        AgentName.BENCHMARK_REVIEWER,
-    }:
+    if normalized in _BENCHMARK_ROLE_NAMES:
         return _as_path(BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH)
-    if normalized in {
-        AgentName.ENGINEER_PLANNER,
-        AgentName.ENGINEER_PLAN_REVIEWER,
-        AgentName.ENGINEER_CODER,
-        AgentName.ENGINEER_EXECUTION_REVIEWER,
-        AgentName.ELECTRONICS_PLANNER,
-        AgentName.ELECTRONICS_REVIEWER,
-    }:
+    if normalized in _ENGINEERING_ROLE_NAMES:
         return _as_path(SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH)
     return authored_script_path_for_agent(agent_name)
 
@@ -123,24 +111,12 @@ def drafting_script_paths_for_agent(
     agent_name: AgentName | str | None,
 ) -> tuple[Path, Path]:
     normalized = _normalize_agent_name(agent_name)
-    if normalized in {
-        AgentName.BENCHMARK_PLANNER,
-        AgentName.BENCHMARK_PLAN_REVIEWER,
-        AgentName.BENCHMARK_CODER,
-        AgentName.BENCHMARK_REVIEWER,
-    }:
+    if normalized in _BENCHMARK_ROLE_NAMES:
         return (
             _as_path(BENCHMARK_PLAN_EVIDENCE_SCRIPT_PATH),
             _as_path(BENCHMARK_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH),
         )
-    if normalized in {
-        AgentName.ENGINEER_PLANNER,
-        AgentName.ENGINEER_PLAN_REVIEWER,
-        AgentName.ENGINEER_CODER,
-        AgentName.ENGINEER_EXECUTION_REVIEWER,
-        AgentName.ELECTRONICS_PLANNER,
-        AgentName.ELECTRONICS_REVIEWER,
-    }:
+    if normalized in _ENGINEERING_ROLE_NAMES:
         return (
             _as_path(SOLUTION_PLAN_EVIDENCE_SCRIPT_PATH),
             _as_path(SOLUTION_PLAN_TECHNICAL_DRAWING_SCRIPT_PATH),
@@ -172,21 +148,9 @@ def drafting_render_manifest_path_for_agent(
     agent_name: AgentName | str | None,
 ) -> Path:
     normalized = _normalize_agent_name(agent_name)
-    if normalized in {
-        AgentName.BENCHMARK_PLANNER,
-        AgentName.BENCHMARK_PLAN_REVIEWER,
-        AgentName.BENCHMARK_CODER,
-        AgentName.BENCHMARK_REVIEWER,
-    }:
+    if normalized in _BENCHMARK_ROLE_NAMES:
         return Path("renders/benchmark_renders/render_manifest.json")
-    if normalized in {
-        AgentName.ENGINEER_PLANNER,
-        AgentName.ENGINEER_PLAN_REVIEWER,
-        AgentName.ENGINEER_CODER,
-        AgentName.ENGINEER_EXECUTION_REVIEWER,
-        AgentName.ELECTRONICS_PLANNER,
-        AgentName.ELECTRONICS_REVIEWER,
-    }:
+    if normalized in _ENGINEERING_ROLE_NAMES:
         return Path("renders/engineer_plan_renders/render_manifest.json")
     return Path("renders/render_manifest.json")
 

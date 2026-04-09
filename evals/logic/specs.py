@@ -1,6 +1,8 @@
 from evals.logic.models import AgentEvalSpec
 from shared.enums import AgentName, EvalMode
-from shared.eval_artifacts import plan_artifacts_for_agent, workspace_artifacts_for_agent
+from shared.eval_artifacts import (
+    workspace_artifacts_for_agent,
+)
 
 # Base non-drafting planner artifact contract. Use
 # `required_plan_artifacts_for_agent()` when the mode-sensitive drafting files

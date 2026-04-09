@@ -16,8 +16,8 @@ from build123d import Compound, Part
 from deprecated import deprecated
 from pydantic import BaseModel
 
-from shared.enums import AgentName
 from shared.current_role import current_role_agent_name
+from shared.enums import AgentName
 from shared.rendering import (
     bundle_workspace_base64,
     export_preview_scene_bundle,
@@ -27,6 +27,7 @@ from shared.rendering import (
 )
 from shared.script_contracts import (
     authored_script_path_for_agent,
+    role_family_for_agent,
     technical_drawing_script_path_for_agent,
 )
 from shared.simulation.schemas import get_default_simulator_backend
@@ -76,7 +77,12 @@ def _call_heavy_worker(endpoint: str, payload: dict | BaseModel) -> dict:
                 session_id=session_id,
             )
 
-    url = f"{heavy_url.rstrip('/')}/{endpoint.lstrip('/')}"
+    normalized_endpoint = endpoint.lstrip("/")
+    if normalized_endpoint.startswith(("benchmark/", "engineering/")):
+        url = f"{heavy_url.rstrip('/')}/{normalized_endpoint}"
+    else:
+        role_family = role_family_for_agent(agent_role) or "benchmark"
+        url = f"{heavy_url.rstrip('/')}/{role_family}/{normalized_endpoint}"
     headers = {
         "X-Session-ID": session_id,
         "X-Agent-Role": agent_role,
@@ -148,18 +154,28 @@ def _script_agent_role() -> str:
     return current_role_agent_name(_workspace_root()).value
 
 
+def _script_agent_family() -> str:
+    family = role_family_for_agent(_script_agent_role())
+    if family is None:
+        raise ValueError(
+            f"Unsupported current role for submission helpers: {_script_agent_role()}"
+        )
+    return family
+
+
 def _workspace_script_path() -> str:
-    workspace = _workspace_root()
-    role_default = authored_script_path_for_agent(_script_agent_role())
-    for candidate in (
-        role_default,
-        "solution_script.py",
-        "benchmark_script.py",
-        "script.py",
-    ):
-        if (workspace / candidate).exists():
-            return candidate
-    return role_default
+    current_role = _script_agent_role()
+    script_path = authored_script_path_for_agent(current_role)
+    if script_path.as_posix() == "script.py":
+        raise ValueError(
+            "Unsupported current role for script-path resolution: "
+            f"{current_role}"
+    )
+    return script_path.as_posix()
+
+
+def _workspace_endpoint_prefix() -> str:
+    return _script_agent_family()
 
 
 def _workspace_bundle_base64() -> str:
@@ -229,7 +245,9 @@ def _default_reviewer_stage() -> str:
         AgentName.BENCHMARK_PLAN_REVIEWER.value: AgentName.BENCHMARK_REVIEWER.value,
     }
     if role_value not in role_to_stage:
-        raise ValueError(f"Unsupported current role for submit_for_review: {role_value}")
+        raise ValueError(
+            f"Unsupported current role for submit_for_review: {role_value}"
+        )
     return role_to_stage[role_value]
 
 
@@ -477,13 +495,27 @@ def _ensure_component_matches_workspace_script(
     return True, None
 
 
-def simulate(compound: Compound, **kwargs) -> BenchmarkToolResponse:
-    """Proxy for heavy simulation."""
+def _validate_submission_script_path(
+    compound: Compound, *, script_path: str | Path | None = None
+) -> tuple[bool, str | None, str]:
+    resolved_script_path = script_path or _workspace_script_path()
+    matches, mismatch_message = _ensure_component_matches_workspace_script(
+        compound, script_path=resolved_script_path
+    )
+    if not matches:
+        return False, mismatch_message, resolved_script_path
+    return True, None, resolved_script_path
+
+
+def _simulate_submission(
+    compound: Compound, *, family: str | None = None, **kwargs
+) -> BenchmarkToolResponse:
     if _is_script_import_mode():
         return BenchmarkToolResponse(
             success=True,
             message=SCRIPT_IMPORT_DEFERRED_MESSAGE,
         )
+    resolved_family = family or _script_agent_family()
     script_path = kwargs.get("script_path") or _workspace_script_path()
     matches, mismatch_message = _ensure_component_matches_workspace_script(
         compound, script_path=script_path
@@ -513,19 +545,17 @@ def simulate(compound: Compound, **kwargs) -> BenchmarkToolResponse:
     if controller_res is not None:
         return BenchmarkToolResponse.model_validate(controller_res)
 
-    # In non-controller contexts, fall back to the heavy worker for standalone
-    # local tooling and worker-level tests.
     payload = {**kwargs, "script_path": script_path, "bundle_base64": bundle_base64}
-    res = _call_heavy_worker("/benchmark/simulate", payload)
+    res = _call_heavy_worker(f"/{resolved_family}/simulate", payload)
     return BenchmarkToolResponse.model_validate(res)
 
 
-def validate(compound: Compound, **kwargs) -> tuple[bool, str | None]:
-    """Proxy for benchmark geometric validation."""
+def _validate_submission(
+    compound: Compound, *, script_path: str | Path | None = None, **kwargs
+) -> tuple[bool, str | None]:
     if _is_script_import_mode():
         return True, SCRIPT_IMPORT_DEFERRED_MESSAGE
-    script_path = kwargs.get("script_path") or _workspace_script_path()
-    matches, mismatch_message = _ensure_component_matches_workspace_script(
+    matches, mismatch_message, resolved_script_path = _validate_submission_script_path(
         compound, script_path=script_path
     )
     if not matches:
@@ -561,42 +591,19 @@ def validate(compound: Compound, **kwargs) -> tuple[bool, str | None]:
         if not benchmark_valid:
             return False, "; ".join(benchmark_result)
 
-    local_kwargs["script_path"] = script_path
+    local_kwargs["script_path"] = resolved_script_path
     success, message = real_validate(compound, **local_kwargs)
     if success and not message:
         message = "Validation successful"
     return success, message
 
 
-def validate_and_price(
-    part: Any, method: Any = None, config: Any = None
-) -> BenchmarkToolResponse:
-    """Proxy for DFM analysis."""
-    if os.getenv("IS_HEAVY_WORKER"):
-        from worker_heavy.utils.dfm import validate_and_price as real_val
-
-        return real_val(part, method, config)
-
-    from shared.workers.workbench_models import ManufacturingMethod
-
-    if isinstance(method, ManufacturingMethod):
-        method_str = method.value
-    else:
-        method_str = str(method)
-
-    payload = {
-        "script_path": "script.py",
-        "method": method_str,
-        "quantity": 1,  # Default
-    }
-    res = _call_heavy_worker("/benchmark/analyze", payload)
-    return BenchmarkToolResponse.model_validate(res)
-
-
-def submit_for_review(compound: Compound) -> bool:
-    """Proxy for benchmark submission to the benchmark reviewer stage."""
+def _submit_for_review_submission(
+    compound: Compound, *, family: str | None = None
+) -> bool:
     if _is_script_import_mode():
         return True
+    resolved_family = family or _script_agent_family()
     script_path = _workspace_script_path()
     matches, mismatch_message = _ensure_component_matches_workspace_script(
         compound, script_path=script_path
@@ -653,8 +660,99 @@ def submit_for_review(compound: Compound) -> bool:
         "episode_id": episode_id,
         "bundle_base64": bundle_base64,
     }
-    res = _call_heavy_worker("/benchmark/submit", payload)
+    res = _call_heavy_worker(f"/{resolved_family}/submit", payload)
     return BenchmarkToolResponse.model_validate(res).success
+
+
+def validate_benchmark(compound: Compound, **kwargs) -> tuple[bool, str | None]:
+    if _script_agent_family() != "benchmark":
+        return False, "Current role is not benchmark-side"
+    return _validate_submission(compound, **kwargs)
+
+
+def validate_engineering(compound: Compound, **kwargs) -> tuple[bool, str | None]:
+    if _script_agent_family() != "engineering":
+        return False, "Current role is not engineering-side"
+    return _validate_submission(compound, **kwargs)
+
+
+def simulate_benchmark(compound: Compound, **kwargs) -> BenchmarkToolResponse:
+    if _script_agent_family() != "benchmark":
+        return BenchmarkToolResponse(
+            success=False,
+            message="Current role is not benchmark-side",
+        )
+    return _simulate_submission(compound, family="benchmark", **kwargs)
+
+
+def simulate_engineering(compound: Compound, **kwargs) -> BenchmarkToolResponse:
+    if _script_agent_family() != "engineering":
+        return BenchmarkToolResponse(
+            success=False,
+            message="Current role is not engineering-side",
+        )
+    return _simulate_submission(compound, family="engineering", **kwargs)
+
+
+def submit_benchmark_for_review(compound: Compound) -> bool:
+    if _script_agent_family() != "benchmark":
+        return False
+    return _submit_for_review_submission(compound, family="benchmark")
+
+
+def submit_engineering_for_review(compound: Compound) -> bool:
+    if _script_agent_family() != "engineering":
+        return False
+    return _submit_for_review_submission(compound, family="engineering")
+
+
+def validate(compound: Compound, **kwargs) -> tuple[bool, str | None]:
+    if _script_agent_family() == "benchmark":
+        return validate_benchmark(compound, **kwargs)
+    if _script_agent_family() == "engineering":
+        return validate_engineering(compound, **kwargs)
+    return _validate_submission(compound, **kwargs)
+
+
+def simulate(compound: Compound, **kwargs) -> BenchmarkToolResponse:
+    if _script_agent_family() == "benchmark":
+        return simulate_benchmark(compound, **kwargs)
+    if _script_agent_family() == "engineering":
+        return simulate_engineering(compound, **kwargs)
+    return _simulate_submission(compound, **kwargs)
+
+
+def validate_and_price(
+    part: Any, method: Any = None, config: Any = None
+) -> BenchmarkToolResponse:
+    """Proxy for DFM analysis."""
+    if os.getenv("IS_HEAVY_WORKER"):
+        from worker_heavy.utils.dfm import validate_and_price as real_val
+
+        return real_val(part, method, config)
+
+    from shared.workers.workbench_models import ManufacturingMethod
+
+    if isinstance(method, ManufacturingMethod):
+        method_str = method.value
+    else:
+        method_str = str(method)
+
+    payload = {
+        "script_path": "script.py",
+        "method": method_str,
+        "quantity": 1,  # Default
+    }
+    res = _call_heavy_worker("/benchmark/analyze", payload)
+    return BenchmarkToolResponse.model_validate(res)
+
+
+def submit_for_review(compound: Compound) -> bool:
+    if _script_agent_family() == "benchmark":
+        return submit_benchmark_for_review(compound)
+    if _script_agent_family() == "engineering":
+        return submit_engineering_for_review(compound)
+    return _submit_for_review_submission(compound)
 
 
 class _PreviewResponseProxy:
