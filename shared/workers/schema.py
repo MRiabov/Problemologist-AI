@@ -481,7 +481,8 @@ class ReviewManifest(BaseModel):
     simulation_success: bool
     simulation_summary: StrictStr
     simulation_timestamp: float
-    goal_reached: bool
+    motion_evidence_verified: bool | None = None
+    goal_reached: bool | None = None
     renders: list[StrictStr] = Field(default_factory=list)
     benchmark_attachment_policy_summary: list["BenchmarkAttachmentPolicySummary"] = (
         Field(default_factory=list)

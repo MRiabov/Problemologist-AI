@@ -764,7 +764,9 @@ def submit_for_review(
         raise ValueError(
             "Prior simulation failed. Submission requires a successful simulation."
         )
-    if not _goal_reached(simulation_result.summary):
+    if normalized_stage != "benchmark_reviewer" and not _goal_reached(
+        simulation_result.summary
+    ):
         logger.warning(
             "goal_not_reached_in_simulation",
             summary=simulation_result.summary,
@@ -899,7 +901,16 @@ def submit_for_review(
         simulation_success=simulation_result.success,
         simulation_summary=simulation_result.summary,
         simulation_timestamp=simulation_results_path.stat().st_mtime,
-        goal_reached=_goal_reached(simulation_result.summary),
+        motion_evidence_verified=(
+            simulation_result.success
+            if normalized_stage == "benchmark_reviewer"
+            else None
+        ),
+        goal_reached=(
+            None
+            if normalized_stage == "benchmark_reviewer"
+            else _goal_reached(simulation_result.summary)
+        ),
         renders=render_paths,
         benchmark_attachment_policy_summary=_benchmark_attachment_policy_summary(
             benchmark_definition

@@ -6404,8 +6404,26 @@
             "type": "number",
             "title": "Simulation Timestamp"
           },
+          "motion_evidence_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motion Evidence Verified"
+          },
           "goal_reached": {
-            "type": "boolean",
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Goal Reached"
           },
           "renders": {
@@ -6479,8 +6497,7 @@
           "validation_timestamp",
           "simulation_success",
           "simulation_summary",
-          "simulation_timestamp",
-          "goal_reached"
+          "simulation_timestamp"
         ],
         "title": "ReviewManifest",
         "description": "Persisted handoff manifest used to gate reviewer entry."

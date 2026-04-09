@@ -27,7 +27,8 @@ export type ReviewManifest = {
     simulation_success: boolean;
     simulation_summary: string;
     simulation_timestamp: number;
-    goal_reached: boolean;
+    motion_evidence_verified?: (boolean | null);
+    goal_reached?: (boolean | null);
     renders?: Array<string>;
     benchmark_attachment_policy_summary?: Array<BenchmarkAttachmentPolicySummary>;
     mjcf_path?: (string | null);

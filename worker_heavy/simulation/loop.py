@@ -65,6 +65,7 @@ class SimulationLoop:
         session_id: str | None = None,
         particle_budget: int | None = None,
         manufactured_part_labels: set[str] | None = None,
+        require_goal_completion: bool = True,
     ):
         from worker_heavy.config import settings
 
@@ -90,6 +91,7 @@ class SimulationLoop:
         self.smoke_test_mode = smoke_test_mode
         self.backend_type = resolved_backend_type
         self.session_id = session_id
+        self.require_goal_completion = require_goal_completion
         # Propagate smoke test mode to backend for optimization (in case of cache hit)
         if hasattr(self.backend, "smoke_test_mode"):
             self.backend.smoke_test_mode = smoke_test_mode
@@ -886,6 +888,9 @@ class SimulationLoop:
             is_success = False
         elif self.smoke_test_mode:
             # Smoke mode is an approximation run: treat stable execution as success.
+            is_success = True
+        elif not self.require_goal_completion:
+            # Benchmark mode is a stability/evidence pass, not a solve gate.
             is_success = True
         elif self.goal_sites:
             is_success = self.success

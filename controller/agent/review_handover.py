@@ -592,15 +592,11 @@ async def validate_reviewer_handover(
 
     if not sim_result.success or not review_manifest.simulation_success:
         return "simulation gate failed for latest revision."
-    if not _goal_reached(sim_result.summary):
-        return "simulation did not reach objective (green/goal zone)."
-    if not review_manifest.goal_reached:
-        return "review manifest indicates goal not reached."
-
-    if not _goal_reached(review_manifest.simulation_summary):
-        return "review manifest simulation summary does not confirm goal completion."
-
     if expected_stage == "benchmark_reviewer":
+        if review_manifest.motion_evidence_verified is not True:
+            return (
+                "review manifest indicates benchmark motion evidence was not verified."
+            )
         benchmark_cross_contract_error = (
             await validate_planner_artifacts_cross_contract(
                 worker_client,
@@ -609,6 +605,16 @@ async def validate_reviewer_handover(
         )
         if benchmark_cross_contract_error is not None:
             return benchmark_cross_contract_error
+    else:
+        if not _goal_reached(sim_result.summary):
+            return "simulation did not reach objective (green/goal zone)."
+        if not review_manifest.goal_reached:
+            return "review manifest indicates goal not reached."
+
+        if not _goal_reached(review_manifest.simulation_summary):
+            return (
+                "review manifest simulation summary does not confirm goal completion."
+            )
 
     return None
 

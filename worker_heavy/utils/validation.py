@@ -56,6 +56,7 @@ from shared.script_contracts import (
     drafting_render_manifest_path_for_agent,
     plan_path_for_agent,
     planner_role_for_drafting_script_path,
+    role_family_for_agent,
     technical_drawing_script_path_for_agent,
 )
 from shared.simulation.schemas import (
@@ -1609,6 +1610,7 @@ def simulate(
         files=list(working_dir.iterdir()) if working_dir.exists() else [],
     )
     current_role = current_role_agent_name(working_dir)
+    benchmark_mode = role_family_for_agent(current_role) == "benchmark"
     renders_dir = (
         working_dir
         / "renders"
@@ -1836,6 +1838,7 @@ def simulate(
         objectives=objectives,
         payload_trajectory_definition=payload_trajectory_definition,
         smoke_test_mode=smoke_test_mode,
+        require_goal_completion=not benchmark_mode,
         session_id=session_id,
         particle_budget=particle_budget,
         manufactured_part_labels=manufactured_part_labels,
@@ -1972,7 +1975,11 @@ def simulate(
         gc.collect()
 
         status_msg = metrics.fail_reason or (
-            "Goal achieved." if metrics.success else "Simulation stable."
+            "Benchmark simulation stable."
+            if benchmark_mode
+            else "Goal achieved."
+            if metrics.success
+            else "Simulation stable."
         )
         runtime_revision = (
             os.environ.get("REPO_REVISION")

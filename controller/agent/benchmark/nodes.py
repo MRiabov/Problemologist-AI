@@ -96,11 +96,6 @@ def _script_contract_violations(script: str) -> list[str]:
     return list(dict.fromkeys(violations))
 
 
-def _goal_reached(summary: str) -> bool:
-    text = (summary or "").lower()
-    return "goal achieved" in text or "green zone" in text or "goal zone" in text
-
-
 class BenchmarkPlannerSignature(dspy.Signature):
     """DSPy signature for the benchmark planner."""
 
@@ -1546,7 +1541,7 @@ class BenchmarkCoderNode(BaseNode):
             logger.warning("persisted_simulation_result_invalid", error=str(exc))
             return None
 
-        if not result.success or not _goal_reached(result.summary):
+        if not result.success:
             return None
         return result
 
