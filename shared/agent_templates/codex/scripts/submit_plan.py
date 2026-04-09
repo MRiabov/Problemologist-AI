@@ -178,7 +178,7 @@ def _planner_role_error(
     )
 
 
-def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
+def _submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
     workspace = Path.cwd() if workspace is None else Path(workspace)
     agent_name = _planner_agent(workspace)
     session_id = _session_id()
@@ -309,7 +309,7 @@ def submit_benchmark_plan(workspace: Path | None = None) -> PlannerSubmissionRes
     )
     if role_error is not None:
         return role_error
-    return submit_plan(workspace)
+    return _submit_plan(workspace)
 
 
 def submit_engineering_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
@@ -321,26 +321,42 @@ def submit_engineering_plan(workspace: Path | None = None) -> PlannerSubmissionR
     )
     if role_error is not None:
         return role_error
-    return submit_plan(workspace)
+    return _submit_plan(workspace)
 
 
 def main() -> int:
     workspace = Path.cwd()
-    commit_message = "submit_plan: unknown rejected"
+    helper_name = "submit_plan"
     try:
-        result = submit_plan()
+        agent_name = _planner_agent(workspace)
+        if agent_name == AgentName.BENCHMARK_PLANNER:
+            helper_name = "submit_benchmark_plan"
+            result = submit_benchmark_plan(workspace)
+        elif agent_name in {AgentName.ENGINEER_PLANNER, AgentName.ELECTRONICS_PLANNER}:
+            helper_name = "submit_engineering_plan"
+            result = submit_engineering_plan(workspace)
+        else:
+            helper_name = "submit_plan"
+            result = PlannerSubmissionResult(
+                ok=False,
+                status="rejected",
+                errors=[
+                    "Unable to infer planner agent from .manifests/current_role.json"
+                ],
+                node_type=AgentName.ENGINEER_PLANNER,
+            )
     except Exception as exc:
         result = PlannerSubmissionResult(
             ok=False,
             status="rejected",
-            errors=[f"submit_plan execution failed: {exc}"],
+            errors=[f"{helper_name} execution failed: {exc}"],
             node_type=_planner_agent() or AgentName.ENGINEER_PLANNER,
         )
-        commit_message = f"submit_plan: {result.node_type.value} rejected"
+        commit_message = f"{helper_name}: {result.node_type.value} rejected"
         commit_submission_attempt(workspace, commit_message)
         print(result.model_dump_json(indent=2))
         return 1
-    commit_message = f"submit_plan: {result.node_type.value} {result.status}"
+    commit_message = f"{helper_name}: {result.node_type.value} {result.status}"
     commit_submission_attempt(workspace, commit_message)
     print(result.model_dump_json(indent=2))
     return 0
