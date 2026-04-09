@@ -13,7 +13,11 @@ def _make_box(label: str, size: tuple[float, float, float], center: tuple[float,
 
 
 def build():
-    TechnicalDrawing(title="Seeded drafting")
+    TechnicalDrawing(
+        title="Seeded drafting demo",
+        sub_title="Orthographic trio and display-only layout hints",
+        drawing_number="TD-001",
+    )
     solution = Compound(
         children=[
             _make_box("bridge_deck", (64.0, 8.0, 4.0), (0.0, 0.0, 18.0)),
