@@ -1,9 +1,10 @@
 """Materialize a seeded eval row into a local temp workspace.
 
 This is an inspection helper, not the eval runner. It copies the seeded
-artifacts for a single dataset row into a persistent temp directory and writes
-the provider prompt to `prompt.md` so you can inspect the exact workspace
-contents an agent would start from.
+artifacts for a single dataset row into a persistent temp directory under
+`/tmp/problemologist-evals/<agent>/` and writes the provider prompt to
+`prompt.md` so you can inspect the exact workspace contents an agent would
+start from.
 """
 
 from __future__ import annotations
@@ -15,7 +16,6 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -28,6 +28,7 @@ from evals.logic.codex_workspace import (  # noqa: E402
 )
 from evals.logic.specs import AGENT_SPECS  # noqa: E402
 from evals.logic.stack_profiles import apply_stack_profile_env  # noqa: E402
+from evals.logic.temp_paths import mkdtemp_in_eval_temp_root  # noqa: E402
 from evals.logic.workspace import (  # noqa: E402
     preflight_seeded_entry_contract,
 )
@@ -108,7 +109,7 @@ def _parse_args() -> argparse.Namespace:
         default=None,
         help=(
             "Optional destination directory. If omitted, a persistent tempdir "
-            "is created with tempfile.mkdtemp()."
+            "is created under /tmp/problemologist-evals/<agent>/."
         ),
     )
     parser.add_argument(
@@ -265,7 +266,7 @@ def _ensure_destination(
         return destination
 
     prefix = f"problemologist-{agent.value}-{task_id}-"
-    return Path(tempfile.mkdtemp(prefix=prefix))
+    return mkdtemp_in_eval_temp_root(family_name=agent.value, prefix=prefix)
 
 
 def _env_up() -> None:

@@ -10,8 +10,15 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import TextIO
 
-DEFAULT_EVAL_RUN_LOCK_PATH = Path("/tmp/problemologist-eval.lock")
-DEFAULT_EVAL_RUN_STATE_PATH = Path("/tmp/problemologist-eval.run.json")
+from evals.logic.temp_paths import eval_temp_root
+
+DEFAULT_EVAL_RUN_FAMILY_NAME = "eval"
+DEFAULT_EVAL_RUN_LOCK_PATH = (
+    eval_temp_root(DEFAULT_EVAL_RUN_FAMILY_NAME) / "problemologist-eval.lock"
+)
+DEFAULT_EVAL_RUN_STATE_PATH = (
+    eval_temp_root(DEFAULT_EVAL_RUN_FAMILY_NAME) / "problemologist-eval.run.json"
+)
 
 
 @dataclass(frozen=True, slots=True)

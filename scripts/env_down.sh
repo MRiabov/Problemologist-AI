@@ -30,7 +30,10 @@ while [ "$#" -gt 0 ]; do
 done
 export PROBLEMOLOGIST_STACK_PROFILE="$STACK_PROFILE"
 
-EVAL_RUN_LOCK_PATH="${EVAL_RUN_LOCK_PATH:-/tmp/problemologist-eval.lock}"
+EVAL_RUN_FAMILY="${PROBLEMOLOGIST_EVAL_FAMILY:-eval}"
+EVAL_RUN_ROOT="${EVAL_RUN_ROOT:-/tmp/problemologist-evals/$EVAL_RUN_FAMILY}"
+EVAL_RUN_LOCK_PATH="${EVAL_RUN_LOCK_PATH:-$EVAL_RUN_ROOT/problemologist-eval.lock}"
+mkdir -p "$EVAL_RUN_ROOT"
 if [ "$STACK_PROFILE" = "eval" ] && [ "${PROBLEMOLOGIST_EVAL_LOCK_HELD:-0}" != "1" ]; then
   exec 9>"$EVAL_RUN_LOCK_PATH"
   if ! flock -n 9; then

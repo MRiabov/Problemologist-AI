@@ -106,7 +106,7 @@ The integration runner owns the following persistent surfaces:
 
 ## Eval orchestration
 
-The eval tooling mirrors the integration tooling, but it owns a separate lock, a separate log tree, and a separate workspace-inspection path.
+The eval tooling mirrors the integration tooling, but it owns a separate lock, a separate log tree, and family-scoped temp roots under `/tmp/problemologist-evals/<family>/` for ad hoc workspaces and run state.
 
 ### `dataset/evals/run_evals.py`
 
@@ -124,7 +124,7 @@ The eval tooling mirrors the integration tooling, but it owns a separate lock, a
 - It uses the eval run lock to protect the stack while bootstrapping and then runs as a shared consumer of the eval lock during execution.
 - Controller-backed runs bootstrap exclusively only while `scripts/env_up.sh` is running, then downgrade to the shared lock for the actual eval loop.
 - CLI-provider-backed runs and `--skip-env-up` runs join the shared eval lock directly.
-- It records the active bootstrap owner in `/tmp/problemologist-eval.run.json` and updates that state only while the lease is writable.
+- It records the active bootstrap owner in `/tmp/problemologist-evals/eval/problemologist-eval.run.json` and updates that state only while the lease is writable.
 - It writes logs under `logs/evals/runs/run_*` and maintains `logs/evals/current/` plus `logs/evals/latest.log`.
 - It can run against the controller-backed path or the local CLI-provider path.
 - Devtools that can target more than one CLI backend must expose the choice explicitly, for example `--provider qwen` or an equivalent provider selector, rather than inferring the backend from the binary name. This is orthogonal to `--runner-backend`, which remains the controller-vs-local execution-mode switch.
@@ -135,7 +135,7 @@ The eval tooling mirrors the integration tooling, but it owns a separate lock, a
 ### `dataset/evals/materialize_seed_workspace.py`
 
 - `dataset/evals/materialize_seed_workspace.py` is an inspection helper for a single seeded eval row.
-- It materializes the row into a temp workspace, writes the provider prompt to `prompt.md`, and prints the copied file list for inspection.
+- It materializes the row into a temp workspace under `/tmp/problemologist-evals/<agent>/`, writes the provider prompt to `prompt.md`, and prints the copied file list for inspection.
 - It is not the eval runner and should not be treated as the owner of the eval loop.
 - It can optionally bootstrap the `eval` profile, launch the configured CLI provider, or open the interactive UI through that provider backend. The current supported concrete providers are Codex and `QwenCliProvider`.
 - When `--provider` is omitted, the helper defaults to `qwen`; pass `--provider codex` to use the Codex backend explicitly.
@@ -143,6 +143,12 @@ The eval tooling mirrors the integration tooling, but it owns a separate lock, a
 - It uses the exclusive eval lock while bootstrapping and then downgrades to the shared validation lock so multiple validation-only consumers can coexist while the stack remains protected.
 - After bootstrap it stops mutating the lock state and keeps only the shared lock file handle open.
 - It exposes explicit sandbox selection through `--yolo` and `--no-yolo`; the script should never invent a hidden bypass mode.
+
+### `dataset/evals/run_e2e_seed.py`
+
+- `dataset/evals/run_e2e_seed.py` runs the benchmark-to-engineer smoke chain from a seeded prompt.
+- When `--workspace-root` is omitted, it creates its workspace tree and resume checkpoint under `/tmp/problemologist-evals/e2e_seed/` so repeated runs stay grouped instead of scattering `mkdtemp()` outputs across `/tmp`.
+- Resume checkpoints remain local to that workspace root, and explicit `--workspace-root` / `--resume-from-dir` arguments still take precedence when provided.
 
 ### `dataset/evals/eval_seed_update_autopilot.py`
 
@@ -153,7 +159,7 @@ The eval tooling mirrors the integration tooling, but it owns a separate lock, a
 
 ### Eval coordination helpers
 
-- `scripts/internal/eval_run_lock.py` is the shared lock/state helper for eval runs.
+- `scripts/internal/eval_run_lock.py` is the shared lock/state helper for eval runs, and its default files live under `/tmp/problemologist-evals/eval/`.
 - `scripts/internal/eval_seed_renders.py` supports deterministic regeneration of seed render bundles.
 - These modules are implementation details and should stay under `scripts/internal/`.
 
@@ -161,12 +167,14 @@ The eval tooling mirrors the integration tooling, but it owns a separate lock, a
 
 The eval runner owns the following persistent surfaces:
 
-- `/tmp/problemologist-eval.lock`
-- `/tmp/problemologist-eval.run.json`
+- `/tmp/problemologist-evals/eval/problemologist-eval.lock`
+- `/tmp/problemologist-evals/eval/problemologist-eval.run.json`
 - `logs/evals/current/`
 - `logs/evals/runs/run_*`
 - `logs/evals/latest.log`
 - `logs/evals/current/sessions/`
+
+The seeded-workspace helpers use the same `/tmp/problemologist-evals/` base but keep their workspace trees separated by family name so the top-level `/tmp` namespace stays uncluttered.
 
 ## Seed and fixture validation
 
