@@ -3,7 +3,7 @@
   "reviewer_stage": "electronics_reviewer",
   "timestamp": "2026-03-10T09:00:00Z",
   "session_id": "seed-bpr-012-gap-bridge-hidden-dof",
-  "revision": "1f84ddad3ff5f981bf4ef3361aaaa23c3a63d7fb",
+  "revision": "f974231be6d03bad03fb4fab3a4c9df54dc18fd3",
   "script_path": "script.py",
   "script_sha256": "128e7970b620ff03656a737424eefc9c03ab1966e964415c92b61389221a9d53",
   "validation_success": true,

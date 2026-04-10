@@ -4,7 +4,7 @@
   "created_at": "2026-04-08T07:06:19.484145+00:00",
   "episode_id": "1c4a2d4b-6fed-577b-9e35-1225f28e854f",
   "worker_session_id": "seed-renders-erv-002-diverter-gate-review-43bae4f1",
-  "revision": "1f84ddad3ff5f981bf4ef3361aaaa23c3a63d7fb",
+  "revision": "f974231be6d03bad03fb4fab3a4c9df54dc18fd3",
   "scene_hash": "589ef4dcb97e15f6d2cf4cf5858f04394858c2032a58bf42d633df6213d57807",
   "bundle_path": "renders/benchmark_renders",
   "environment_version": "1.0",
