@@ -30,7 +30,7 @@ x25194372@student.ncirl.ie}
 \maketitle
 
 \begin{abstract}
-Current large language models excel at software engineering, textual and visual reasoning but have not yet successfully solved mechanical engineering problems; this is in part due to a lack of training data and an inability to validate problems. We present \textbf{Problemologist}, an agentic framework designed to bridge this gap. The system employs a dual-agent architecture: a \textbf{Benchmark Generator} that autonomously synthesizes a dataset of solutions for the engineering system to be trained on conditions, and an \textbf{Engineer Agent} that discovers manufacturable, cost-constrained solutions through iterative CAD drafting, simulation, and design-for-manufacturability verification. By integrating a high-fidelity simulation engine (Genesis/MuJoCo) with real-world manufacturing processes (CNC, injection molding, 3D printing) and cost and weight constraints, Problemologist-AI provides a rigorous platform for training and evaluating the next generation of vision-language models in mechanical design. We open-source our framework at \url{https://github.com/MRiabov/Problemologist-AI}.
+Current large language models excel at software engineering, textual and visual reasoning but have not yet successfully solved mechanical engineering problems; this is in part due to a lack of training data and an inability to validate problems. We present \textbf{Problemologist}, an agentic framework designed to bridge this gap. The system employs a dual-agent architecture: a \textbf{Benchmark Generator} that autonomously synthesizes a dataset of solutions for the engineering system to be trained and evaluated on, and an \textbf{Engineer Agent} that discovers manufacturable, cost-constrained solutions through iterative CAD drafting, simulation, and design-for-manufacturability verification. By integrating a high-fidelity simulation engine (Genesis/MuJoCo) with real-world manufacturing processes (CNC, injection molding, 3D printing) and cost and weight constraints, Problemologist-AI provides a rigorous platform for training and evaluating the next generation of vision-language models in mechanical design. We open-source our framework at \url{https://github.com/MRiabov/Problemologist-AI}.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -84,7 +84,7 @@ However, it is unlikely that CAD generation models, inherently 3D models, will s
 \subsection{A synthetic dataset generation system}
 Similarly to present systems evaluating coding capabilities in greenfield repositories, we need to define a set of problems to be solved by the engineering system.
 
-\subsubsection{Types of problems to solve by an model solving dynamics}
+\subsubsection{Types of problems to solve for a model solving dynamics}
 As this class of problems is readily solvable by major simulation pipelines such as MuJoCo, we first aim to solve multibody dynamics problems. The objective is to: given a predefined starting position of an object, create such a system that would:
 
 \begin{itemize}
@@ -195,7 +195,7 @@ The main advantage is that skills allow for offloading knowledge from the main p
 
 We update skills during rollouts, self-reflectively. We use an agent going through a \texttt{journal.md} file, a compressed history of all reasoning actions of agents with agents.
 
-\subsection{Experiments and optimization beyond optimizing propmts}
+\subsection{Experiments and optimization beyond optimizing prompts}
 
 Over the last week, we found that prompt tuning alone did not make the agents reliable enough.
 
@@ -420,16 +420,12 @@ Feedback / Formula
 
 \clearpage
 \section{Representative Render Collage}
-This appendix figure combines three rendered images taken from an environment successfully solved by benchmar-planner; the images show RGB (isometric view), depth (isometric view) and segmentation (sideways isometric view) views. All pictures show different views of the same environment. In particular, we can observe that:
-- RGB:
-  - Guard rails on the side will prevent a ball from falling outside to the forbidden bounds,
-  - A platform below the objective that, once the ball will be spawned, will as a ramp, push a ball to the objective.
-  - A cover on top to prevent the ball from accidentally moving out of the simulation
-
-- Segmentation and depth:
-  - Segmentation and depth maps show some objects translucently allowing to preview the render.
-A red line (shown to the agent) showing the planned path of the object from the start of the environment to the end of it.
-2. A green objective the object must
+This appendix figure combines three rendered images from the same benchmark environment: an RGB/isometric render, a depth render, and a segmentation render. The composite is useful because each view highlights a different part of the design:
+\begin{itemize}
+    \item The RGB view shows the overall enclosure, including the side guard rails, the ramp-like platform beneath the target, and the top cover that keeps the payload inside the corridor.
+    \item The segmentation and depth views make the geometry easier to inspect by separating the major surfaces and showing the object volumes more clearly.
+    \item The red line marks the planned path of the object from the start of the environment to the target region, and the green region marks the intended objective.
+\end{itemize}
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.98\linewidth]{appendix_render_collage.png}

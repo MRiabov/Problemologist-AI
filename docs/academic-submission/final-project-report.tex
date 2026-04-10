@@ -84,7 +84,7 @@ However, it is unlikely that CAD generation models, inherently 3D models, will s
 \subsection{A synthetic dataset generation system}
 Similarly to present systems evaluating coding capabilities in greenfield repositories, we need to define a set of problems to be solved by the engineering system.
 
-\subsubsection{Types of problems to solve by an model solving dynamics}
+\subsubsection{Types of problems to solve for a model solving dynamics}
 As this class of problems is readily solvable by major simulation pipelines such as MuJoCo, we first aim to solve multibody dynamics problems. The objective is to: given a predefined starting position of an object, create such a system that would:
 
 \begin{itemize}
@@ -195,7 +195,7 @@ The main advantage is that skills allow for offloading knowledge from the main p
 
 We update skills during rollouts, self-reflectively. We use an agent going through a \texttt{journal.md} file, a compressed history of all reasoning actions of agents with agents.
 
-\subsection{Experiments and optimization beyond optimizing propmts}
+\subsection{Experiments and optimization beyond optimizing prompts}
 
 Over the last week, we found that prompt tuning alone did not make the agents reliable enough.
 
