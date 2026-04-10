@@ -122,7 +122,7 @@ We also note that all aforementioned methods can be readily adapted to be evalua
 Two important findings allow us to use LLMs for engineering: first, code-CAD has emerged for more robust than before CAD engines and become readily accessible via tools like \texttt{build123d} \cite{ref4}. An important finding over the last three years is that LLMs are significantly superior in using code actions as a way to interact with the environment \cite{ref23}, more so than ReAct \cite{ref16}. As such, we choose to generate geometric code and other artifacts, for example plans, using agentic coding environments, similar to the OpenHands framework \cite{ref9}.
 
 \paragraph{Separating agents for different tasks}
-To separate agent concerns and prevent agents from overflowing in a context window, and make evaluation of individual agents both by humans and other agents easier, in line with previous work on multi-agent systems such as AutoGen \cite{ref24} and CAMEL \cite{ref25}, we separate agents. While a single ``general'' agent is common in some coding environments, we decompose work into smaller unit problems to keep each stage reviewable and within context limits.
+To separate agent concerns and prevent agents from overflowing in a context window, and make evaluation of individual agents both by humans and other agents easier, in line with previous work on multi-agent systems such as AutoGen \cite{ref24} and CAMEL \cite{ref25}, we separate agents. While a single ``general'' agent is common in some coding environments, we decompose work into smaller unit problems to keep each stage reviewable and within context limits. The resulting workflow with reviewer loops is summarized in Appendix~\ref{fig:agent-workflow}.
 
 We separate agents into:
 \begin{itemize}
@@ -158,7 +158,7 @@ The critical component for our environment and evaluation system is a simulation
 
 Recent advancements in computing allowed for cheaper and faster simulation for small scale. While we acknowledge science-grade simulators like FEniCS \cite{ref7} and Project Chrono \cite{ref8}, it becomes infeasible compiling low-level code on every rerun of a simulation by an agent. In addition, the frameworks are mostly unknown and complex to deal with for machine learning practitioners, in part because they use C++ as their main codebases. We choose two simulators that fit the purpose of validation fast and efficiently: MuJoCo, a simulator commonly used in robotics simulation, and Genesis simulator. MuJoCo features basic multiphysics simulation, allowing for strong rigid-body problem validation and a familiar interface, while Genesis is a more modern option featuring, among others, deformable material simulation. MuJoCo is in particular attractive due to near-zero compilation times, allowing for cheap evaluation, while Genesis stands out for being feature-rich.
 
-During simulation, we assert that an object has moved into a position as said by the environment, and avoided the forbidden zones as described before. If motors are present, we assert that the motors have not been overloaded. If fluid and electronics are present, and if fluid happens to touch a sensitive piece of electronics, the simulation finishes. Many other features are omitted. In short, we define a feature-rich simulation that ensures that the simulation will work in the real world.
+During simulation, we assert that an object has moved into a position as said by the environment, and avoided the forbidden zones as described before. If motors are present, we assert that the motors have not been overloaded. If fluid and electronics are present, and if fluid happens to touch a sensitive piece of electronics, the simulation finishes. Many other features are omitted. In short, we define a feature-rich simulation that ensures that the simulation will work in the real world. The benchmark-versus-solution render comparison used to inspect these states is shown in Appendix~\ref{fig:appendix-render-collage}.
 
 \paragraph{Computer assisted design}
 We define the \texttt{build123d} framework as a framework for enabling 3D CAD construction. While other CodeCAD solutions exist, for example OpenSCAD \cite{ref5} or CadQuery \cite{ref6}, \texttt{build123d} importantly allows interoperability with real-world manufacturing solutions, such as STEP file export; while being modern in syntax, having a robust geometry engine under it, and having significant adoption. Critically, the framework is open-source unlike other closed-source solutions, such as SolidWorks.
@@ -452,8 +452,8 @@ This appendix figure combines six rendered images from two versions of the same 
 This appendix figure summarizes the linear agent flow used by the system. The benchmark path runs from \texttt{benchmark\_planner} to \texttt{benchmark\_reviewer}, and the engineering path continues from \texttt{engineer\_planner} to \texttt{engineer\_execution\_reviewer}. Reviewers can loop back to the previous node when a revision is required.
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.98\linewidth]{agent_workflow.png}
-\caption{Agent workflow graph with linear progression and reviewer loops back to the previous node.}
+\includegraphics[width=0.98\linewidth]{agent_workflow_two_line.png}
+\caption{Agent workflow graph with benchmark on the first line and engineering on the second, while reviewer loops still point back to the previous node.}
 \label{fig:agent-workflow}
 \end{figure}
 
