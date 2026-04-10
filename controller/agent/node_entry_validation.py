@@ -74,7 +74,6 @@ from shared.workers.markdown_validator import validate_todo_md
 from shared.workers.schema import (
     PlanReviewManifest,
     RenderManifest,
-    ReviewerStage,
     ReviewManifest,
     ValidationResultRecord,
 )
@@ -547,7 +546,7 @@ async def reviewer_handover_custom_check_from_session_id(
     session_id: str | None,
     reviewer_label: str,
     manifest_path: str,
-    expected_stage: ReviewerStage,
+    expected_stage: AgentName,
     agent_role: AgentName | None = None,
     worker_client: Any | None = None,
 ) -> list[NodeEntryValidationError]:
@@ -967,10 +966,10 @@ async def plan_reviewer_handover_custom_check_from_session_id(
 async def _materialize_reviewer_handover(
     client: WorkerClient,
     *,
-    reviewer_stage: ReviewerStage = "engineering_execution_reviewer",
+    reviewer_stage: AgentName = AgentName.ENGINEER_EXECUTION_REVIEWER,
     episode_id: str | None = None,
 ) -> str | None:
-    if reviewer_stage == "engineering_execution_reviewer":
+    if reviewer_stage == AgentName.ENGINEER_EXECUTION_REVIEWER:
         try:
             existing_handover_error = await validate_reviewer_handover(
                 client,

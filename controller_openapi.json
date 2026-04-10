@@ -2762,7 +2762,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/SteerabilityResponse"
+                }
               }
             }
           },
@@ -3653,14 +3655,7 @@
             "title": "Message"
           },
           "confidence": {
-            "type": "string",
-            "enum": [
-              "low",
-              "medium",
-              "high",
-              "approximate"
-            ],
-            "title": "Confidence",
+            "$ref": "#/components/schemas/SimulationConfidence",
             "default": "high"
           },
           "artifacts": {
@@ -5080,8 +5075,7 @@
       "FluidMetricResult": {
         "properties": {
           "metric_type": {
-            "type": "string",
-            "title": "Metric Type"
+            "$ref": "#/components/schemas/FluidObjectiveType"
           },
           "fluid_id": {
             "type": "string",
@@ -5109,6 +5103,15 @@
           "passed"
         ],
         "title": "FluidMetricResult"
+      },
+      "FluidObjectiveType": {
+        "type": "string",
+        "enum": [
+          "fluid_containment",
+          "flow_rate"
+        ],
+        "title": "FluidObjectiveType",
+        "description": "Types of fluid-related objectives."
       },
       "GenerationKind": {
         "type": "string",
@@ -6258,13 +6261,7 @@
             "title": "Status"
           },
           "reviewer_stage": {
-            "type": "string",
-            "enum": [
-              "benchmark_reviewer",
-              "engineering_execution_reviewer",
-              "electronics_reviewer"
-            ],
-            "title": "Reviewer Stage"
+            "$ref": "#/components/schemas/AgentName"
           },
           "timestamp": {
             "anyOf": [
@@ -6659,18 +6656,12 @@
           "reviewer_stage": {
             "anyOf": [
               {
-                "type": "string",
-                "enum": [
-                  "benchmark_reviewer",
-                  "engineering_execution_reviewer",
-                  "electronics_reviewer"
-                ]
+                "$ref": "#/components/schemas/AgentName"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Reviewer Stage"
+            ]
           },
           "jitter_range": {
             "anyOf": [
@@ -6930,6 +6921,17 @@
         "title": "SimulationArtifacts",
         "description": "Structured artifacts from a simulation run."
       },
+      "SimulationConfidence": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high",
+          "approximate"
+        ],
+        "title": "SimulationConfidence",
+        "description": "Confidence levels surfaced by simulation and benchmark responses."
+      },
       "SimulationFailure": {
         "properties": {
           "reason": {
@@ -7062,14 +7064,7 @@
             "title": "Events"
           },
           "confidence": {
-            "type": "string",
-            "enum": [
-              "low",
-              "medium",
-              "high",
-              "approximate"
-            ],
-            "title": "Confidence",
+            "$ref": "#/components/schemas/SimulationConfidence",
             "default": "high"
           }
         },
@@ -7304,14 +7299,7 @@
             "default": 0.0
           },
           "confidence": {
-            "type": "string",
-            "enum": [
-              "low",
-              "medium",
-              "high",
-              "approximate"
-            ],
-            "title": "Confidence",
+            "$ref": "#/components/schemas/SimulationConfidence",
             "default": "high"
           }
         },
@@ -7347,6 +7335,30 @@
           "description"
         ],
         "title": "Skill"
+      },
+      "SteerabilityResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "started"
+            ],
+            "title": "Status"
+          },
+          "queue_position": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Queue Position"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "queue_position"
+        ],
+        "title": "SteerabilityResponse",
+        "description": "Response from enqueuing or starting a steerability prompt."
       },
       "SteerablePrompt-Input": {
         "properties": {

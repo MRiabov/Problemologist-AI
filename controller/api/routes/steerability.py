@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from controller.api.manager import task_tracker
+from controller.api.schemas import SteerabilityResponse
 from controller.api.tasks import continue_agent_task
 from controller.persistence.db import get_db
 from controller.persistence.models import Episode
@@ -52,7 +53,9 @@ async def get_episode_from_session_id(
         return None
 
 
-@router.post("/steer", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/steer", status_code=status.HTTP_202_ACCEPTED, response_model=SteerabilityResponse
+)
 async def steer_agent(
     session_id: str = Path(..., description="The agent session ID"),
     prompt: SteerablePrompt = ...,
@@ -73,7 +76,7 @@ async def steer_agent(
             queue_position = await steerability_service.enqueue_prompt(
                 session_id, prompt
             )
-            return {"status": "queued", "queue_position": queue_position}
+            return SteerabilityResponse(status="queued", queue_position=queue_position)
         # Agent is idle, wake up
         logger.info("agent_idle_waking_up", episode_id=str(episode.id))
 
@@ -87,11 +90,11 @@ async def steer_agent(
         )
         task_tracker.register_task(episode.id, new_task)
 
-        return {"status": "started", "queue_position": 0}
+        return SteerabilityResponse(status="started", queue_position=0)
     logger.warning("episode_not_found_for_steer", session_id=session_id)
     # Fallback to just enqueueing if we can't find the episode object but session exists?
     queue_position = await steerability_service.enqueue_prompt(session_id, prompt)
-    return {"status": "queued", "queue_position": queue_position}
+    return SteerabilityResponse(status="queued", queue_position=queue_position)
 
 
 @router.get("/queue", response_model=list[SteerablePrompt])

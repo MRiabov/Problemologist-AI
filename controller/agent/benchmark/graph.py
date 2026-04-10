@@ -556,7 +556,7 @@ async def _custom_benchmark_reviewer_handover_check(
         session_id=_effective_benchmark_worker_session_id(state),
         reviewer_label="Benchmark",
         manifest_path=BENCHMARK_REVIEW_MANIFEST,
-        expected_stage="benchmark_reviewer",
+        expected_stage=AgentName.BENCHMARK_REVIEWER,
         agent_role=AgentName.BENCHMARK_REVIEWER,
     )
 

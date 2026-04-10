@@ -296,8 +296,25 @@ class FluidShapeType(UppercaseStrEnum):
 class FluidObjectiveType(UppercaseStrEnum):
     """Types of fluid-related objectives."""
 
-    FLUID_CONTAINMENT = "FLUID_CONTAINMENT"
-    FLOW_RATE = "FLOW_RATE"
+    FLUID_CONTAINMENT = "fluid_containment"
+    FLOW_RATE = "flow_rate"
+
+
+class SimulationConfidence(StrEnum):
+    """Confidence levels surfaced by simulation and benchmark responses."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    APPROXIMATE = "approximate"
+
+
+class ZoneType(StrEnum):
+    """Logical zone types used across preview and simulation builders."""
+
+    GOAL = "goal"
+    BUILD = "build"
+    FORBID = "forbid"
 
 
 class FluidEvalAt(UppercaseStrEnum):

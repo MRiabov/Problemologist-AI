@@ -12,6 +12,7 @@ import structlog
 import trimesh
 from build123d import Align, Box, Compound, Cylinder, Solid, Sphere, export_stl
 
+from shared.enums import ZoneType
 from worker_heavy.simulation.motor_contracts import (
     resolve_solution_motor_contract,
     resolve_solution_motor_joint_contract,
@@ -48,7 +49,7 @@ class AssemblyPartData(BaseModel):
     cots_id: str | None = None
     is_electronics: bool = False
     is_zone: bool = False
-    zone_type: str | None = None
+    zone_type: ZoneType | None = None
     zone_size: list[float] | None = None
     constraint: str | None = None
     weld_target: str | None = None
@@ -275,16 +276,16 @@ class CommonAssemblyTraverser:
     @staticmethod
     def _detect_zone(child: Any, label: str) -> dict[str, Any]:
         is_zone = False
-        zone_type = None
+        zone_type: ZoneType | None = None
         zone_size = None
         if label.startswith("zone_"):
             is_zone = True
             if "goal" in label:
-                zone_type = "goal"
+                zone_type = ZoneType.GOAL
             elif "build" in label:
-                zone_type = "build"
+                zone_type = ZoneType.BUILD
             else:
-                zone_type = "forbid"
+                zone_type = ZoneType.FORBID
             bb = child.bounding_box()
             zone_size = [bb.size.X / 2, bb.size.Y / 2, bb.size.Z / 2]
         return {"is_zone": is_zone, "type": zone_type, "size": zone_size}
@@ -651,7 +652,7 @@ class SceneCompiler:
         pos: list[float] | None = None,
         euler: list[float] | None = None,
         is_zone: bool = False,
-        zone_type: str | None = None,
+        zone_type: ZoneType | None = None,
         zone_size: list[float] | None = None,
         is_fixed: bool = False,
         joint_type: str | None = None,
@@ -666,8 +667,8 @@ class SceneCompiler:
             mesh_names: List of mesh asset names for this body
             pos: Position [x, y, z], defaults to [0, 0, 0]
             euler: Euler angles [rx, ry, rz], defaults to [0, 0, 0]
-            is_zone: Whether this is a logical zone (goal/forbid)
-            zone_type: "goal" or "forbid" for zones
+            is_zone: Whether this is a logical zone (goal/build/forbid)
+            zone_type: Logical zone type.
             zone_size: Half-extents for zone box
             is_fixed: If True, part is fixed (no free joint added)
             joint_type: Optional joint type (e.g., "hinge", "slide").
@@ -699,9 +700,9 @@ class SceneCompiler:
 
         if is_zone:
             # Zone Logic (T005): goal = green, forbid = red
-            if zone_type == "goal":
+            if zone_type == ZoneType.GOAL:
                 rgba = "0 1 0 0.3"
-            elif zone_type == "build":
+            elif zone_type == ZoneType.BUILD:
                 rgba = "0.55 0.55 0.55 0.2"
             else:
                 rgba = "1 0 0 0.3"
@@ -873,7 +874,7 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
             self.compiler.add_body(
                 name="zone_goal",
                 is_zone=True,
-                zone_type="goal",
+                zone_type=ZoneType.GOAL,
                 zone_size=gz_size,
                 pos=gz_pos,
             )
@@ -893,7 +894,7 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                 self.compiler.add_body(
                     name=f"zone_forbid_{i}_{fz.name}",
                     is_zone=True,
-                    zone_type="forbid",
+                    zone_type=ZoneType.FORBID,
                     zone_size=fz_size,
                     pos=fz_pos,
                 )
@@ -912,7 +913,7 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
             self.compiler.add_body(
                 name="zone_build",
                 is_zone=True,
-                zone_type="build",
+                zone_type=ZoneType.BUILD,
                 zone_size=bz_size,
                 pos=bz_pos,
             )
@@ -1198,7 +1199,7 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
                     "pos": gz_pos,
                     "size": gz_size,
                     "is_zone": True,
-                    "zone_type": "goal",
+                    "zone_type": ZoneType.GOAL,
                 }
             )
 
@@ -1213,7 +1214,7 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
                         "pos": fz_pos,
                         "size": fz_size,
                         "is_zone": True,
-                        "zone_type": "forbid",
+                        "zone_type": ZoneType.FORBID,
                     }
                 )
 
@@ -1227,7 +1228,7 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
                     "pos": bz_pos,
                     "size": bz_size,
                     "is_zone": True,
-                    "zone_type": "build",
+                    "zone_type": ZoneType.BUILD,
                 }
             )
 

@@ -70,7 +70,6 @@ from shared.workers.schema import (
     PreviewWorkflowParams,
     RenderArtifactMetadata,
     RenderManifest,
-    ReviewerStage,
     ScriptExecutionRequest,
 )
 from worker_heavy.config import settings as worker_settings
@@ -1196,19 +1195,19 @@ class RemoteFilesystemMiddleware:
     async def submit(
         self,
         script_path: str | Path,
-        reviewer_stage: ReviewerStage | None = None,
+        reviewer_stage: AgentName | None = None,
         bundle_base64: str | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger handover to review via worker client."""
         p_str = str(script_path)
         effective_stage = reviewer_stage
         if effective_stage is None:
-            role_to_stage: dict[AgentName, ReviewerStage] = {
-                AgentName.BENCHMARK_CODER: "benchmark_reviewer",
-                AgentName.BENCHMARK_REVIEWER: "benchmark_reviewer",
-                AgentName.ELECTRONICS_REVIEWER: "electronics_reviewer",
-                AgentName.ENGINEER_CODER: "engineering_execution_reviewer",
-                AgentName.ENGINEER_EXECUTION_REVIEWER: "engineering_execution_reviewer",
+            role_to_stage: dict[AgentName, AgentName] = {
+                AgentName.BENCHMARK_CODER: AgentName.BENCHMARK_REVIEWER,
+                AgentName.BENCHMARK_REVIEWER: AgentName.BENCHMARK_REVIEWER,
+                AgentName.ELECTRONICS_REVIEWER: AgentName.ELECTRONICS_REVIEWER,
+                AgentName.ENGINEER_CODER: AgentName.ENGINEER_EXECUTION_REVIEWER,
+                AgentName.ENGINEER_EXECUTION_REVIEWER: AgentName.ENGINEER_EXECUTION_REVIEWER,
             }
             effective_stage = role_to_stage.get(self.agent_role)
 
@@ -1226,7 +1225,7 @@ class RemoteFilesystemMiddleware:
             HeavySubmitParams(
                 bundle_base64=base64.b64encode(bundle).decode("utf-8"),
                 script_path=p_str,
-                reviewer_stage=effective_stage or "engineering_execution_reviewer",
+                reviewer_stage=effective_stage or AgentName.ENGINEER_EXECUTION_REVIEWER,
                 session_id=self.client.session_id,
                 episode_id=self.episode_id,
             ),

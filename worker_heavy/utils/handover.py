@@ -20,9 +20,9 @@ from shared.script_contracts import (
 )
 from shared.workers.loader import load_component_from_script
 from shared.workers.schema import (
+    LEGACY_REVIEWER_STAGE_ALIASES,
     BenchmarkAttachmentPolicySummary,
     RenderManifest,
-    ReviewerStage,
     ReviewManifest,
     ValidationResultRecord,
 )
@@ -49,6 +49,18 @@ from worker_heavy.utils.validation import (
 from worker_heavy.workbenches.config import load_required_merged_config
 
 logger = structlog.get_logger(__name__)
+
+
+def _normalize_reviewer_stage(reviewer_stage: AgentName | str) -> AgentName:
+    reviewer_stage_value = (
+        reviewer_stage.value
+        if isinstance(reviewer_stage, AgentName)
+        else str(reviewer_stage).strip()
+    )
+    legacy_stage = LEGACY_REVIEWER_STAGE_ALIASES.get(reviewer_stage_value)
+    if legacy_stage is not None:
+        return legacy_stage
+    return AgentName(reviewer_stage_value)
 
 
 def _sha256_file(path: Path) -> str:
@@ -106,9 +118,9 @@ def _compose_final_submission_component(
     cwd: Path,
     component: Compound,
     *,
-    normalized_stage: ReviewerStage,
+    normalized_stage: AgentName,
 ) -> Compound:
-    if normalized_stage == "benchmark_reviewer":
+    if normalized_stage == AgentName.BENCHMARK_REVIEWER:
         return component
 
     benchmark_script_path = cwd / BENCHMARK_SCRIPT_PATH
@@ -284,41 +296,41 @@ def _latest_git_revision(cwd: Path) -> str | None:
 
 
 def _resolve_submission_assembly_definition(
-    cwd: Path, reviewer_stage: ReviewerStage
+    cwd: Path, reviewer_stage: AgentName
 ) -> tuple[Path, str]:
     """Pick the stage-correct assembly definition artifact for review handover."""
-    if reviewer_stage == "benchmark_reviewer":
+    if reviewer_stage == AgentName.BENCHMARK_REVIEWER:
         rel_path = "benchmark_assembly_definition.yaml"
     else:
         rel_path = "assembly_definition.yaml"
     return cwd / rel_path, rel_path
 
 
-def _planner_role_for_reviewer_stage(reviewer_stage: ReviewerStage) -> AgentName:
-    if reviewer_stage == "benchmark_reviewer":
+def _planner_role_for_reviewer_stage(reviewer_stage: AgentName) -> AgentName:
+    if reviewer_stage == AgentName.BENCHMARK_REVIEWER:
         return AgentName.BENCHMARK_PLANNER
     return AgentName.ENGINEER_PLANNER
 
 
 def _expected_submission_stage_for_current_role(
     current_role: AgentName,
-) -> ReviewerStage | None:
+) -> AgentName | None:
     if current_role in {
         AgentName.BENCHMARK_CODER,
         AgentName.BENCHMARK_REVIEWER,
     }:
-        return "benchmark_reviewer"
+        return AgentName.BENCHMARK_REVIEWER
     if current_role in {
         AgentName.ENGINEER_CODER,
         AgentName.ENGINEER_EXECUTION_REVIEWER,
     }:
-        return "engineering_execution_reviewer"
+        return AgentName.ENGINEER_EXECUTION_REVIEWER
     if current_role == AgentName.ELECTRONICS_REVIEWER:
-        return "electronics_reviewer"
+        return AgentName.ELECTRONICS_REVIEWER
     return None
 
 
-def _drafting_mode_for_reviewer_stage(reviewer_stage: ReviewerStage) -> DraftingMode:
+def _drafting_mode_for_reviewer_stage(reviewer_stage: AgentName) -> DraftingMode:
     planner_role = _planner_role_for_reviewer_stage(reviewer_stage)
     try:
         return load_agents_config().get_technical_drawing_mode(planner_role)
@@ -330,7 +342,7 @@ def submit_for_review(
     component: Compound,
     cwd: Path = Path(),
     session_id: str | None = None,
-    reviewer_stage: ReviewerStage = "engineering_execution_reviewer",
+    reviewer_stage: AgentName = AgentName.ENGINEER_EXECUTION_REVIEWER,
     episode_id: str | None = None,
     script_path: str | Path = "script.py",
 ):
@@ -343,11 +355,11 @@ def submit_for_review(
     logger.info(
         "handover_started", cwd=str(cwd), files=os.listdir(cwd), session_id=session_id
     )
-    normalized_stage = reviewer_stage
+    normalized_stage = _normalize_reviewer_stage(reviewer_stage)
     allowed_stages = {
-        "benchmark_reviewer",
-        "engineering_execution_reviewer",
-        "electronics_reviewer",
+        AgentName.BENCHMARK_REVIEWER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.ELECTRONICS_REVIEWER,
     }
     if normalized_stage not in allowed_stages:
         raise ValueError(f"Unsupported reviewer_stage: {reviewer_stage}")
@@ -384,7 +396,9 @@ def submit_for_review(
 
         plan_content = plan_path.read_text(encoding="utf-8")
         plan_type = (
-            "benchmark" if normalized_stage == "benchmark_reviewer" else "engineering"
+            "benchmark"
+            if normalized_stage == AgentName.BENCHMARK_REVIEWER
+            else "engineering"
         )
         is_valid, errors = validate_plan_md_structure(
             plan_content, plan_type=plan_type, session_id=session_id
@@ -573,7 +587,7 @@ def submit_for_review(
             benchmark_definition=objectives_model,
             assembly_definition=estimation,
         )
-        if normalized_stage == "benchmark_reviewer"
+        if normalized_stage == AgentName.BENCHMARK_REVIEWER
         else _assembly_script_expected_tokens(estimation)
     )
     component_inventory_pairs = (
@@ -581,7 +595,7 @@ def submit_for_review(
             benchmark_definition=objectives_model,
             assembly_definition=estimation,
         )
-        if normalized_stage == "benchmark_reviewer"
+        if normalized_stage == AgentName.BENCHMARK_REVIEWER
         else _assembly_script_expected_identity_pairs(estimation)
     )
     inventory_errors = validate_component_inventory_exactness(
@@ -604,7 +618,7 @@ def submit_for_review(
     constraints = objectives_model.constraints
 
     manufactured_labels = {part.part_name for part in estimation.manufactured_parts}
-    if normalized_stage != "benchmark_reviewer":
+    if normalized_stage != AgentName.BENCHMARK_REVIEWER:
         from shared.workers.workbench_models import ManufacturingMethod
 
         method = (
@@ -667,9 +681,9 @@ def submit_for_review(
 
     planner_node_type = (
         AgentName.BENCHMARK_PLANNER
-        if normalized_stage == "benchmark_reviewer"
+        if normalized_stage == AgentName.BENCHMARK_REVIEWER
         else AgentName.ENGINEER_PLANNER
-        if normalized_stage == "engineering_execution_reviewer"
+        if normalized_stage == AgentName.ENGINEER_EXECUTION_REVIEWER
         else AgentName.ELECTRONICS_PLANNER
     )
 
@@ -724,7 +738,7 @@ def submit_for_review(
                     "benchmark_plan_evidence_script.py",
                     "benchmark_plan_technical_drawing_script.py",
                 )
-                if normalized_stage == "benchmark_reviewer"
+                if normalized_stage == AgentName.BENCHMARK_REVIEWER
                 else (
                     "solution_plan_evidence_script.py",
                     "solution_plan_technical_drawing_script.py",
@@ -764,7 +778,7 @@ def submit_for_review(
         raise ValueError(
             "Prior simulation failed. Submission requires a successful simulation."
         )
-    if normalized_stage != "benchmark_reviewer" and not _goal_reached(
+    if normalized_stage != AgentName.BENCHMARK_REVIEWER and not _goal_reached(
         simulation_result.summary
     ):
         logger.warning(
@@ -822,7 +836,7 @@ def submit_for_review(
 
     persistent_bundle_subdir = (
         "benchmark_renders"
-        if normalized_stage == "benchmark_reviewer"
+        if normalized_stage == AgentName.BENCHMARK_REVIEWER
         else "final_solution_submission_renders"
     )
     persistent_bundle_dir = renders_dir / persistent_bundle_subdir
@@ -846,8 +860,8 @@ def submit_for_review(
     cad_path = persistent_bundle_dir / "model.step"
     export_step(render_component, str(cad_path))
     if normalized_stage in {
-        "benchmark_reviewer",
-        "engineering_execution_reviewer",
+        AgentName.BENCHMARK_REVIEWER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
     }:
         cad_path_value = None
     else:
@@ -868,9 +882,9 @@ def submit_for_review(
 
     # 5. Create reviewer-stage manifest
     stage_to_manifest = {
-        "benchmark_reviewer": "benchmark_review_manifest.json",
-        "engineering_execution_reviewer": "engineering_execution_handoff_manifest.json",
-        "electronics_reviewer": "electronics_review_manifest.json",
+        AgentName.BENCHMARK_REVIEWER: "benchmark_review_manifest.json",
+        AgentName.ENGINEER_EXECUTION_REVIEWER: "engineering_execution_handoff_manifest.json",
+        AgentName.ELECTRONICS_REVIEWER: "electronics_review_manifest.json",
     }
     manifest_name = stage_to_manifest[normalized_stage]
     manifest_path = manifests_dir / manifest_name
@@ -883,13 +897,17 @@ def submit_for_review(
         episode_id=resolved_episode_id,
         worker_session_id=resolved_session_id,
         benchmark_episode_id=(
-            resolved_episode_id if normalized_stage == "benchmark_reviewer" else None
+            resolved_episode_id
+            if normalized_stage == AgentName.BENCHMARK_REVIEWER
+            else None
         ),
         benchmark_worker_session_id=(
-            resolved_session_id if normalized_stage == "benchmark_reviewer" else None
+            resolved_session_id
+            if normalized_stage == AgentName.BENCHMARK_REVIEWER
+            else None
         ),
         benchmark_revision=(
-            revision if normalized_stage == "benchmark_reviewer" else None
+            revision if normalized_stage == AgentName.BENCHMARK_REVIEWER else None
         ),
         solution_revision=revision,
         environment_version=estimation.version,
@@ -903,12 +921,12 @@ def submit_for_review(
         simulation_timestamp=simulation_results_path.stat().st_mtime,
         motion_evidence_verified=(
             simulation_result.success
-            if normalized_stage == "benchmark_reviewer"
+            if normalized_stage == AgentName.BENCHMARK_REVIEWER
             else None
         ),
         goal_reached=(
             None
-            if normalized_stage == "benchmark_reviewer"
+            if normalized_stage == AgentName.BENCHMARK_REVIEWER
             else _goal_reached(simulation_result.summary)
         ),
         renders=render_paths,
@@ -918,7 +936,10 @@ def submit_for_review(
         mjcf_path=(
             None
             if normalized_stage
-            in {"benchmark_reviewer", "engineering_execution_reviewer"}
+            in {
+                AgentName.BENCHMARK_REVIEWER,
+                AgentName.ENGINEER_EXECUTION_REVIEWER,
+            }
             else (
                 str(renders_dir / "scene.xml")
                 if (renders_dir / "scene.xml").exists()
@@ -929,13 +950,19 @@ def submit_for_review(
         objectives_path=(
             None
             if normalized_stage
-            in {"benchmark_reviewer", "engineering_execution_reviewer"}
+            in {
+                AgentName.BENCHMARK_REVIEWER,
+                AgentName.ENGINEER_EXECUTION_REVIEWER,
+            }
             else str(renders_dir / "benchmark_definition.yaml")
         ),
         assembly_definition_path=(
             None
             if normalized_stage
-            in {"benchmark_reviewer", "engineering_execution_reviewer"}
+            in {
+                AgentName.BENCHMARK_REVIEWER,
+                AgentName.ENGINEER_EXECUTION_REVIEWER,
+            }
             else str(rendered_assembly_definition_path)
         ),
     )

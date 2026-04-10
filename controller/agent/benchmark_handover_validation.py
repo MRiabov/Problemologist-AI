@@ -95,7 +95,7 @@ def _validate_benchmark_motion_visibility(
         except Exception:
             pass
 
-    plan_text = artifacts.get("benchmark_plan.md") or artifacts.get("plan.md")
+    plan_text = artifacts.get("benchmark_plan.md")
     todo_text = artifacts.get("todo.md")
     benchmark_definition_text = artifacts.get("benchmark_definition.yaml")
     benchmark_assembly_definition_text = artifacts.get(

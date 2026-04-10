@@ -17,7 +17,6 @@ ENGINEER_BENCHMARK_SOURCE_ARTIFACTS: tuple[str, ...] = (SOLUTION_SCRIPT_PATH,)
 
 BENCHMARK_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     BENCHMARK_PLAN_PATH,
-    "plan.md",
     "todo.md",
     "benchmark_definition.yaml",
     "benchmark_assembly_definition.yaml",
@@ -73,7 +72,6 @@ ENGINEER_PLANNER_EVIDENCE_LAYOUT_CHECK = "engineer_planner_evidence_layout_check
 SCHEMA_BACKED_HANDOFF_PATHS: tuple[str, ...] = (
     BENCHMARK_PLAN_PATH,
     ENGINEERING_PLAN_PATH,
-    "plan.md",
     "todo.md",
     "plan_refusal.md",
     "benchmark_definition.yaml",

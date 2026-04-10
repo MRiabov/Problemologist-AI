@@ -13,7 +13,13 @@ from pydantic import (
     model_validator,
 )
 
-from shared.enums import AgentName, AssetType, EpisodeStatus, ResponseStatus
+from shared.enums import (
+    AgentName,
+    AssetType,
+    EpisodeStatus,
+    ResponseStatus,
+    SimulationConfidence,
+)
 from shared.models.schemas import BenchmarkPartAttachmentPolicy, ElectronicsSection
 from shared.models.simulation import (
     FluidMetricResult,
@@ -29,12 +35,6 @@ from shared.simulation.schemas import (
 )
 from shared.simulation.smoke_mode import ensure_smoke_test_mode_allowed
 from shared.workers.workbench_models import ManufacturingMethod
-
-ReviewerStage: TypeAlias = Literal[
-    "benchmark_reviewer",
-    "engineering_execution_reviewer",
-    "electronics_reviewer",
-]
 
 
 def _validate_preview_camera_value(
@@ -90,7 +90,7 @@ class PreviewViewSpec(BaseModel):
 
 
 LEGACY_REVIEWER_STAGE_ALIASES = {
-    "engineer_execution_reviewer": "engineering_execution_reviewer",
+    "engineer_execution_reviewer": AgentName.ENGINEER_EXECUTION_REVIEWER,
 }
 
 
@@ -335,7 +335,7 @@ class BenchmarkToolRequest(BaseModel):
         default=None,
         description="Optional particle budget override.",
     )
-    reviewer_stage: ReviewerStage | None = Field(
+    reviewer_stage: AgentName | None = Field(
         default=None,
         description="Reviewer stage when calling the benchmark or engineering submit route.",
     )
@@ -351,10 +351,9 @@ class BenchmarkToolRequest(BaseModel):
     @field_validator("reviewer_stage", mode="before")
     @classmethod
     def normalize_reviewer_stage(cls, value: object) -> object:
-        if isinstance(value, AgentName):
-            value = value.value
         if isinstance(value, str):
-            return LEGACY_REVIEWER_STAGE_ALIASES.get(value, value)
+            stage = LEGACY_REVIEWER_STAGE_ALIASES.get(value, value)
+            return AgentName(stage)
         return value
 
 
@@ -440,7 +439,7 @@ class BenchmarkToolResponse(BaseModel):
 
     success: bool
     message: str
-    confidence: Literal["low", "medium", "high", "approximate"] = "high"
+    confidence: SimulationConfidence = SimulationConfidence.HIGH
     artifacts: SimulationArtifacts | None = None
     events: list[BaseEvent] = Field(default_factory=list)
 
@@ -462,7 +461,7 @@ class ReviewManifest(BaseModel):
     """Persisted handoff manifest used to gate reviewer entry."""
 
     status: Literal["ready_for_review"]
-    reviewer_stage: ReviewerStage
+    reviewer_stage: AgentName
     timestamp: str | None = None
     session_id: StrictStr
     revision: StrictStr | None = None
@@ -493,6 +492,14 @@ class ReviewManifest(BaseModel):
     assembly_definition_path: StrictStr | None = None
 
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator("reviewer_stage", mode="before")
+    @classmethod
+    def normalize_reviewer_stage(cls, value: object) -> object:
+        if isinstance(value, str):
+            stage = LEGACY_REVIEWER_STAGE_ALIASES.get(value, value)
+            return AgentName(stage)
+        return value
 
 
 class BenchmarkAttachmentPolicySummary(BaseModel):
@@ -888,7 +895,7 @@ class HeavySubmitParams(BaseModel):
 
     bundle_base64: StrictStr
     script_path: str
-    reviewer_stage: ReviewerStage
+    reviewer_stage: AgentName
     session_id: str
     episode_id: str | None = None
 

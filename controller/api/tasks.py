@@ -16,6 +16,7 @@ from controller.agent.initialization import (
     seed_manufacturing_config,
 )
 from controller.agent.review_handover import validate_approved_benchmark_bundle
+from controller.agent.state import AgentStatus
 from controller.api.manager import task_tracker
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.clients.worker import WorkerClient
@@ -32,13 +33,18 @@ from controller.persistence.models import Episode, Trace
 from shared.enums import (
     AgentName,
     AssetType,
+    EntryFailureDisposition,
     EpisodeStatus,
     FailureClass,
     TerminalReason,
     TraceType,
 )
 from shared.logging import get_logger
-from shared.models.schemas import EpisodeMetadata
+from shared.models.schemas import (
+    EntryValidationContext,
+    EntryValidationError,
+    EpisodeMetadata,
+)
 from shared.script_contracts import authored_script_path_for_agent
 from shared.workers.schema import ReviewManifest
 
@@ -91,7 +97,11 @@ def _result_feedback(result: Any) -> str:
 
 def _is_failed_result(result: Any) -> bool:
     status = _result_status_lower(result)
-    if status in {"failed", "plan_rejected", "code_rejected"}:
+    if status in {
+        AgentStatus.FAILED.value,
+        AgentStatus.PLAN_REJECTED.value,
+        AgentStatus.CODE_REJECTED.value,
+    }:
         return True
     return bool(_extract_result_field(result, "entry_validation_terminal"))
 
@@ -365,17 +375,33 @@ async def _fail_episode_before_graph_start(
     )
 
 
-def _extract_entry_validation_context(result: Any) -> dict[str, Any]:
-    from shared.models.schemas import EntryValidationContext
-
+def _extract_entry_validation_context(result: Any) -> EntryValidationContext:
     raw_errors = _extract_result_field(result, "entry_validation_errors")
-    errors: list[dict[str, Any]] = []
+    errors: list[EntryValidationError] = []
     if isinstance(raw_errors, list):
         for item in raw_errors:
             if isinstance(item, dict):
-                errors.append(dict(item))
+                errors.append(
+                    EntryValidationError.model_construct(
+                        code=str(item.get("code") or "state_invalid"),
+                        message=str(item.get("message") or ""),
+                        source=str(item.get("source") or "policy"),
+                        artifact_path=(
+                            str(item["artifact_path"])
+                            if item.get("artifact_path") is not None
+                            else None
+                        ),
+                    )
+                )
             else:
-                errors.append({"message": str(item)})
+                errors.append(
+                    EntryValidationError.model_construct(
+                        code="state_invalid",
+                        message=str(item),
+                        source="policy",
+                        artifact_path=None,
+                    )
+                )
 
     node = _extract_result_field(result, "entry_validation_target_node")
     disposition = _extract_result_field(result, "entry_validation_disposition")
@@ -404,12 +430,12 @@ def _extract_entry_validation_context(result: Any) -> dict[str, Any]:
                 detail = (match.group("detail") or "").strip()
                 if detail:
                     errors.append(
-                        {
-                            "code": reason_code or "state_invalid",
-                            "message": detail,
-                            "source": "policy",
-                            "artifact_path": None,
-                        }
+                        EntryValidationError.model_construct(
+                            code=str(reason_code or "state_invalid"),
+                            message=detail,
+                            source="policy",
+                            artifact_path=None,
+                        )
                     )
 
         if disposition is None:
@@ -421,24 +447,29 @@ def _extract_entry_validation_context(result: Any) -> dict[str, Any]:
             if journal_match:
                 disposition = journal_match.group("disposition")
 
-    raw_context = {
-        "node": node,
-        "disposition": disposition,
-        "reason_code": reason_code,
-        "reroute_target": reroute_target,
-        "errors": errors,
-    }
     try:
-        return EntryValidationContext.model_validate(raw_context).model_dump(
-            mode="json"
+        return EntryValidationContext.model_validate(
+            {
+                "node": node,
+                "disposition": disposition,
+                "reason_code": reason_code,
+                "reroute_target": reroute_target,
+                "errors": errors,
+            }
         )
     except Exception:
-        return raw_context
+        return EntryValidationContext.model_construct(
+            node=node,
+            disposition=disposition,
+            reason_code=reason_code,
+            reroute_target=reroute_target,
+            errors=errors,
+        )
 
 
 def _update_episode_entry_validation_metadata(
     *, episode: Episode, result: Any, result_feedback: str
-) -> dict[str, Any] | None:
+) -> EntryValidationContext | None:
     if not result_feedback.startswith("ENTRY_VALIDATION_FAILED["):
         return None
 
@@ -448,10 +479,11 @@ def _update_episode_entry_validation_metadata(
 
     entry_context = _extract_entry_validation_context(result)
     additional = dict(metadata.additional_info or {})
-    additional["entry_validation"] = entry_context
+    additional["entry_validation"] = entry_context.model_dump(mode="json")
     additional["entry_validation_terminal"] = (
         bool(_extract_result_field(result, "entry_validation_terminal"))
-        or entry_context.get("disposition") == "fail_fast"
+        or entry_context.disposition == EntryFailureDisposition.FAIL_FAST
+        or str(entry_context.disposition) == EntryFailureDisposition.FAIL_FAST.value
     )
     metadata.additional_info = additional
     episode.metadata_vars = metadata.model_dump()

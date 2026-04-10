@@ -152,7 +152,7 @@ class ExecutionReviewerNode(BaseNode):
                         ],
                         checklist={"dof_deviation_justified": "fail"},
                     ),
-                    reviewer_stage="engineering_execution_reviewer",
+                    reviewer_stage=AgentName.ENGINEER_EXECUTION_REVIEWER,
                     checklist_value="fail",
                     overwrite=True,
                 )
@@ -206,7 +206,8 @@ class ExecutionReviewerNode(BaseNode):
                 )
             for finding in findings:
                 payload = build_excessive_dof_event_payload(
-                    finding, reviewer_stage="engineering_execution_reviewer"
+                    finding,
+                    reviewer_stage=AgentName.ENGINEER_EXECUTION_REVIEWER,
                 )
                 await record_worker_events(
                     episode_id=state.episode_id,
@@ -241,7 +242,7 @@ class ExecutionReviewerNode(BaseNode):
                         ],
                         checklist={"dof_deviation_justified": "fail"},
                     ),
-                    reviewer_stage="engineering_execution_reviewer",
+                    reviewer_stage=AgentName.ENGINEER_EXECUTION_REVIEWER,
                     checklist_value="fail",
                     overwrite=True,
                 )
@@ -397,7 +398,7 @@ class ExecutionReviewerNode(BaseNode):
             review = ReviewResult.model_validate(prediction.review)
             await self._ensure_current_revision_render_inspection()
             review = apply_canonical_dof_checklist(
-                review, reviewer_stage="engineering_execution_reviewer"
+                review, reviewer_stage=AgentName.ENGINEER_EXECUTION_REVIEWER
             )
             review = await self._enforce_render_inspection_gate(review)
             try:
@@ -567,7 +568,7 @@ class ExecutionReviewerNode(BaseNode):
         handoff_err = await validate_reviewer_handover(
             self.ctx.worker_client,
             manifest_path=".manifests/engineering_execution_handoff_manifest.json",
-            expected_stage="engineering_execution_reviewer",
+            expected_stage=AgentName.ENGINEER_EXECUTION_REVIEWER,
         )
         if not handoff_err:
             return None
@@ -621,7 +622,7 @@ class ExecutionReviewerNode(BaseNode):
             episode_id = self.ctx.episode_id
             submit_result = await self.ctx.worker_client.submit(
                 SOLUTION_SCRIPT_PATH,
-                reviewer_stage="engineering_execution_reviewer",
+                reviewer_stage=AgentName.ENGINEER_EXECUTION_REVIEWER,
                 episode_id=episode_id,
             )
         except Exception as exc:
@@ -635,7 +636,7 @@ class ExecutionReviewerNode(BaseNode):
         post_submit_err = await validate_reviewer_handover(
             self.ctx.worker_client,
             manifest_path=".manifests/engineering_execution_handoff_manifest.json",
-            expected_stage="engineering_execution_reviewer",
+            expected_stage=AgentName.ENGINEER_EXECUTION_REVIEWER,
         )
         if post_submit_err:
             return f"Execution review blocked: {post_submit_err}"

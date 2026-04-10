@@ -5,6 +5,7 @@
 import type { FailureReason } from './FailureReason';
 import type { FluidMetricResult } from './FluidMetricResult';
 import type { PayloadTrajectoryMonitorState } from './PayloadTrajectoryMonitorState';
+import type { SimulationConfidence } from './SimulationConfidence';
 import type { SimulationFailure } from './SimulationFailure';
 import type { SimulationRenderProvenance } from './SimulationRenderProvenance';
 import type { StressFieldData } from './StressFieldData';
@@ -25,14 +26,6 @@ export type SimulationResult = {
     fluid_metrics?: Array<FluidMetricResult>;
     total_cost?: number;
     total_weight_g?: number;
-    confidence?: SimulationResult.confidence;
+    confidence?: SimulationConfidence;
 };
-export namespace SimulationResult {
-    export enum confidence {
-        LOW = 'low',
-        MEDIUM = 'medium',
-        HIGH = 'high',
-        APPROXIMATE = 'approximate',
-    }
-}
 

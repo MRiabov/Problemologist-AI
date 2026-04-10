@@ -30,7 +30,6 @@ from shared.script_contracts import (
 from shared.workers.schema import (
     PlanReviewManifest,
     RenderManifest,
-    ReviewerStage,
     ReviewManifest,
     ValidationResultRecord,
 )
@@ -163,13 +162,17 @@ async def _validate_render_manifest_bundle(
         except Exception as exc:
             return f"{manifest_path} invalid: {exc}"
 
-        if not render_manifest.revision:
+        is_current_episode_bundle = (
+            candidate_root.as_posix() == "renders/current-episode"
+        )
+        if render_manifest.revision:
+            if render_manifest.revision.strip().lower() != current_revision:
+                return (
+                    f"{manifest_path} revision does not match the latest repository "
+                    "git revision."
+                )
+        elif not is_current_episode_bundle:
             return f"{manifest_path} revision is missing."
-        if render_manifest.revision.strip().lower() != current_revision:
-            return (
-                f"{manifest_path} revision does not match the latest repository "
-                "git revision."
-            )
 
         actual_render_paths = {
             _normalize_render_path(path)
@@ -213,13 +216,13 @@ def _current_git_revision() -> str | None:
     return repo_revision(Path(__file__).resolve().parents[2])
 
 
-def _planner_role_for_reviewer_stage(reviewer_stage: ReviewerStage) -> AgentName:
-    if reviewer_stage == "benchmark_reviewer":
+def _planner_role_for_reviewer_stage(reviewer_stage: AgentName) -> AgentName:
+    if reviewer_stage == AgentName.BENCHMARK_REVIEWER:
         return AgentName.BENCHMARK_PLANNER
     return AgentName.ENGINEER_PLANNER
 
 
-def _drafting_mode_for_reviewer_stage(reviewer_stage: ReviewerStage) -> DraftingMode:
+def _drafting_mode_for_reviewer_stage(reviewer_stage: AgentName) -> DraftingMode:
     planner_role = _planner_role_for_reviewer_stage(reviewer_stage)
     try:
         return load_agents_config().get_technical_drawing_mode(planner_role)
@@ -233,8 +236,8 @@ def _planner_submission_helper_name_for_stage(stage: PlanReviewerStage) -> str:
     return "submit_engineering_plan"
 
 
-def _review_submission_helper_name_for_stage(reviewer_stage: ReviewerStage) -> str:
-    if reviewer_stage == "benchmark_reviewer":
+def _review_submission_helper_name_for_stage(reviewer_stage: AgentName) -> str:
+    if reviewer_stage == AgentName.BENCHMARK_REVIEWER:
         return "submit_benchmark_for_review"
     return "submit_solution_for_review"
 
@@ -310,7 +313,7 @@ async def collect_plan_reviewer_handover_evidence(
     worker_client: WorkerClient,
     *,
     manifest_path: str,
-    expected_stage: ReviewerStage,
+    expected_stage: PlanReviewerStage,
     episode_id: str | uuid.UUID | None = None,
     require_git_revision: bool = True,
 ) -> tuple[BenchmarkPlanReviewerEvidence | None, str | None]:
@@ -387,7 +390,15 @@ async def collect_plan_reviewer_handover_evidence(
     while True:
         episode_render_paths = set(await _list_episode_render_asset_paths(episode_id))
         workspace_render_paths = set(await _list_render_media_paths(worker_client))
-        render_paths = sorted(episode_render_paths | workspace_render_paths)
+        current_episode_render_paths = {
+            path
+            for path in episode_render_paths | workspace_render_paths
+            if Path(path).as_posix().startswith("renders/current-episode/")
+        }
+        render_paths = sorted(
+            current_episode_render_paths
+            or (episode_render_paths | workspace_render_paths)
+        )
         if render_paths:
             break
         if asyncio.get_running_loop().time() >= render_deadline:
@@ -399,7 +410,10 @@ async def collect_plan_reviewer_handover_evidence(
             worker_client,
             render_paths=render_paths,
         )
-        if render_manifest_error is not None:
+        if (
+            render_manifest_error is not None
+            and expected_stage != AgentName.BENCHMARK_PLAN_REVIEWER
+        ):
             return None, render_manifest_error
 
     evidence = build_benchmark_plan_reviewer_evidence(
@@ -421,7 +435,7 @@ async def validate_reviewer_handover(
     worker_client: WorkerClient,
     *,
     manifest_path: str,
-    expected_stage: ReviewerStage,
+    expected_stage: AgentName,
     require_git_revision: bool = True,
     require_verification_result: bool | None = None,
 ) -> str | None:
@@ -524,7 +538,9 @@ async def validate_reviewer_handover(
             )
 
     if require_verification_result is None:
-        require_verification_result = expected_stage == "engineering_execution_reviewer"
+        require_verification_result = (
+            expected_stage == AgentName.ENGINEER_EXECUTION_REVIEWER
+        )
 
     if require_verification_result:
         verification_result = val_record.verification_result
@@ -592,7 +608,7 @@ async def validate_reviewer_handover(
 
     if not sim_result.success or not review_manifest.simulation_success:
         return "simulation gate failed for latest revision."
-    if expected_stage == "benchmark_reviewer":
+    if expected_stage == AgentName.BENCHMARK_REVIEWER:
         if review_manifest.motion_evidence_verified is not True:
             return (
                 "review manifest indicates benchmark motion evidence was not verified."
@@ -676,7 +692,7 @@ async def validate_approved_benchmark_bundle(
     if manifest_error is not None:
         return None, f"approved benchmark bundle invalid: {manifest_error}"
     assert manifest is not None
-    if manifest.reviewer_stage != "benchmark_reviewer":
+    if manifest.reviewer_stage != AgentName.BENCHMARK_REVIEWER:
         return (
             None,
             "approved benchmark bundle invalid: benchmark review manifest stage "
@@ -832,11 +848,6 @@ async def validate_planner_artifacts_cross_contract(
         plan_artifact_name,
         bypass_agent_permissions=True,
     )
-    if plan_text is None:
-        plan_text = await worker_client.read_file_optional(
-            "plan.md",
-            bypass_agent_permissions=True,
-        )
     drafting_artifacts: dict[str, str] = {}
     script_names = (
         (
@@ -873,8 +884,6 @@ async def validate_planner_artifacts_cross_contract(
         todo_text = None
         plan_refusal_text = await worker_client.read_file_optional("plan_refusal.md")
         plan_text = await worker_client.read_file_optional(plan_artifact_name)
-        if plan_text is None:
-            plan_text = await worker_client.read_file_optional("plan.md")
         todo_text = await worker_client.read_file_optional("todo.md")
         motion_errors = validate_benchmark_assembly_motion_contract(
             benchmark_definition=benchmark_definition,

@@ -272,19 +272,19 @@ def objectives_geometry() -> Compound:
     return overlay
 
 
-def _default_reviewer_stage() -> str:
+def _default_reviewer_stage() -> AgentName:
     role_value = _script_agent_role()
-    role_to_stage: dict[str, str] = {
-        AgentName.BENCHMARK_CODER.value: AgentName.BENCHMARK_REVIEWER.value,
-        AgentName.BENCHMARK_REVIEWER.value: AgentName.BENCHMARK_REVIEWER.value,
-        AgentName.ENGINEER_CODER.value: AgentName.ENGINEER_EXECUTION_REVIEWER.value,
-        AgentName.ENGINEER_EXECUTION_REVIEWER.value: AgentName.ENGINEER_EXECUTION_REVIEWER.value,
-        AgentName.ELECTRONICS_ENGINEER.value: AgentName.ELECTRONICS_REVIEWER.value,
-        AgentName.ELECTRONICS_REVIEWER.value: AgentName.ELECTRONICS_REVIEWER.value,
-        AgentName.BENCHMARK_PLANNER.value: AgentName.BENCHMARK_REVIEWER.value,
-        AgentName.ENGINEER_PLANNER.value: AgentName.ENGINEER_EXECUTION_REVIEWER.value,
-        AgentName.ENGINEER_PLAN_REVIEWER.value: AgentName.ENGINEER_EXECUTION_REVIEWER.value,
-        AgentName.BENCHMARK_PLAN_REVIEWER.value: AgentName.BENCHMARK_REVIEWER.value,
+    role_to_stage: dict[str, AgentName] = {
+        AgentName.BENCHMARK_CODER.value: AgentName.BENCHMARK_REVIEWER,
+        AgentName.BENCHMARK_REVIEWER.value: AgentName.BENCHMARK_REVIEWER,
+        AgentName.ENGINEER_CODER.value: AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER.value: AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.ELECTRONICS_ENGINEER.value: AgentName.ELECTRONICS_REVIEWER,
+        AgentName.ELECTRONICS_REVIEWER.value: AgentName.ELECTRONICS_REVIEWER,
+        AgentName.BENCHMARK_PLANNER.value: AgentName.BENCHMARK_REVIEWER,
+        AgentName.ENGINEER_PLANNER.value: AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.ENGINEER_PLAN_REVIEWER.value: AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.BENCHMARK_PLAN_REVIEWER.value: AgentName.BENCHMARK_REVIEWER,
     }
     if role_value not in role_to_stage:
         raise ValueError(

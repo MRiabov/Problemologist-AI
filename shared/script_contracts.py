@@ -53,6 +53,22 @@ def _as_path(script_path: str) -> Path:
     return Path(script_path)
 
 
+def _normalize_reviewer_stage(
+    reviewer_stage: AgentName | str | None,
+) -> AgentName | None:
+    if reviewer_stage is None:
+        return None
+    if isinstance(reviewer_stage, AgentName):
+        return reviewer_stage
+    stage = str(reviewer_stage).strip()
+    if stage == "engineer_execution_reviewer":
+        return AgentName.ENGINEER_EXECUTION_REVIEWER
+    try:
+        return AgentName(stage)
+    except ValueError:
+        return None
+
+
 def role_family_for_agent(agent_name: AgentName | str | None) -> str | None:
     normalized = _normalize_agent_name(agent_name)
     if normalized in _BENCHMARK_ROLE_NAMES:
@@ -155,23 +171,27 @@ def drafting_render_manifest_path_for_agent(
     return Path("renders/render_manifest.json")
 
 
-def authored_script_path_for_reviewer_stage(reviewer_stage: str | None) -> Path:
-    stage = (reviewer_stage or "").strip()
-    if stage == "benchmark_reviewer":
+def authored_script_path_for_reviewer_stage(
+    reviewer_stage: AgentName | str | None,
+) -> Path:
+    stage = _normalize_reviewer_stage(reviewer_stage)
+    if stage == AgentName.BENCHMARK_REVIEWER:
         return _as_path(BENCHMARK_SCRIPT_PATH)
-    if stage in {"engineering_execution_reviewer", "electronics_reviewer"}:
+    if stage in {
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.ELECTRONICS_REVIEWER,
+    }:
         return _as_path(SOLUTION_SCRIPT_PATH)
     return _as_path(LEGACY_SCRIPT_PATH)
 
 
-def plan_path_for_reviewer_stage(reviewer_stage: str | None) -> Path:
-    stage = (reviewer_stage or "").strip()
-    if stage == "benchmark_reviewer":
+def plan_path_for_reviewer_stage(reviewer_stage: AgentName | str | None) -> Path:
+    stage = _normalize_reviewer_stage(reviewer_stage)
+    if stage == AgentName.BENCHMARK_REVIEWER:
         return _as_path(BENCHMARK_PLAN_PATH)
     if stage in {
-        "engineering_plan_reviewer",
-        "engineering_execution_reviewer",
-        "electronics_reviewer",
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.ELECTRONICS_REVIEWER,
     }:
         return _as_path(ENGINEERING_PLAN_PATH)
     return _as_path("plan.md")

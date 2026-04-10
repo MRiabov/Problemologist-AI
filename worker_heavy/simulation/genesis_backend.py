@@ -8,6 +8,7 @@ import numpy as np
 import structlog
 
 from shared.agents import get_video_render_resolution
+from shared.enums import FailureReason, ZoneType
 from shared.runtime.headless import configure_headless_rendering
 
 if TYPE_CHECKING:
@@ -24,7 +25,6 @@ except Exception:
     # Catch other import-time errors like display issues if environment vars didn't help
     gs = None
 
-from shared.enums import FailureReason
 from shared.models.simulation import (
     FluidMetricResult,
     RendererCapabilities,
@@ -178,10 +178,12 @@ class GenesisBackend(PhysicsRendererBackend):
             )
 
     @staticmethod
-    def _zone_visual_rgba(zone_type: str | None) -> tuple[float, float, float, float]:
-        if zone_type == "goal":
+    def _zone_visual_rgba(
+        zone_type: ZoneType | str | None,
+    ) -> tuple[float, float, float, float]:
+        if zone_type == ZoneType.GOAL:
             return (0.0, 1.0, 0.0, 0.3)
-        if zone_type == "build":
+        if zone_type == ZoneType.BUILD:
             return (0.55, 0.55, 0.55, 0.2)
         return (1.0, 0.0, 0.0, 0.3)
 

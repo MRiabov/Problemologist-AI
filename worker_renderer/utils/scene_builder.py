@@ -11,6 +11,8 @@ import trimesh
 from build123d import Compound, Solid, export_stl
 from pydantic import BaseModel, ConfigDict
 
+from shared.enums import ZoneType
+
 logger = structlog.get_logger(__name__)
 
 
@@ -39,7 +41,7 @@ class AssemblyPartData(BaseModel):
     cots_id: str | None = None
     is_electronics: bool = False
     is_zone: bool = False
-    zone_type: str | None = None
+    zone_type: ZoneType | None = None
     zone_size: list[float] | None = None
     constraint: str | None = None
     weld_target: str | None = None
@@ -241,16 +243,16 @@ class CommonAssemblyTraverser:
     @staticmethod
     def _detect_zone(child: Any, label: str) -> dict[str, Any]:
         is_zone = False
-        zone_type = None
+        zone_type: ZoneType | None = None
         zone_size = None
         if label.startswith("zone_"):
             is_zone = True
             if "goal" in label:
-                zone_type = "goal"
+                zone_type = ZoneType.GOAL
             elif "build" in label:
-                zone_type = "build"
+                zone_type = ZoneType.BUILD
             else:
-                zone_type = "forbid"
+                zone_type = ZoneType.FORBID
             bb = child.bounding_box()
             zone_size = [bb.size.X / 2, bb.size.Y / 2, bb.size.Z / 2]
         return {"is_zone": is_zone, "type": zone_type, "size": zone_size}

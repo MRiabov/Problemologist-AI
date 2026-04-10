@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 import yaml
 
-from shared.enums import ReviewDecision
+from shared.enums import AgentName, ReviewDecision
 from shared.models.schemas import (
     AssemblyDefinition,
     PartConfig,
@@ -135,9 +135,9 @@ def apply_canonical_dof_checklist(
     key = canonical_dof_checklist_key(reviewer_stage)
     if review.decision == ReviewDecision.APPROVED:
         checklist[key] = "pass"
-        if reviewer_stage == "engineering_execution_reviewer":
+        if reviewer_stage == AgentName.ENGINEER_EXECUTION_REVIEWER:
             checklist.setdefault("dof_minimality", "pass")
-        elif reviewer_stage == "engineering_plan_reviewer":
+        elif reviewer_stage == AgentName.ENGINEER_PLAN_REVIEWER:
             checklist.setdefault("dof_deviation_justified", "pass")
     elif overwrite or key not in checklist:
         if checklist_value is None:

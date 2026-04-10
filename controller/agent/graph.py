@@ -124,7 +124,7 @@ async def _engineer_execution_reviewer_handover_with_layout(*, contract, state):
         ),
         reviewer_label="Execution",
         manifest_path=ENGINEERING_EXECUTION_HANDOFF_MANIFEST,
-        expected_stage="engineering_execution_reviewer",
+        expected_stage=AgentName.ENGINEER_EXECUTION_REVIEWER,
         agent_role=AgentName.ENGINEER_EXECUTION_REVIEWER,
     )
     if handover_errors:
@@ -320,7 +320,7 @@ async def _evaluate_engineer_node_entry(target_node: AgentName, state: AgentStat
                 session_id=getattr(state, "session_id", None),
                 reviewer_label="Electronics",
                 manifest_path=ELECTRONICS_REVIEW_MANIFEST,
-                expected_stage="electronics_reviewer",
+                expected_stage=AgentName.ELECTRONICS_REVIEWER,
                 agent_role=AgentName.ELECTRONICS_REVIEWER,
             )
         ),
@@ -614,7 +614,7 @@ async def route_after_engineer_coder(
     try:
         handover_error = await _materialize_reviewer_handover(
             worker_client,
-            reviewer_stage="engineering_execution_reviewer",
+            reviewer_stage=AgentName.ENGINEER_EXECUTION_REVIEWER,
         )
         if handover_error:
             logger.warning(
@@ -648,7 +648,7 @@ async def route_after_electronics_reviewer(
     try:
         handover_error = await _materialize_reviewer_handover(
             worker_client,
-            reviewer_stage="engineering_execution_reviewer",
+            reviewer_stage=AgentName.ENGINEER_EXECUTION_REVIEWER,
         )
         if handover_error:
             logger.warning(

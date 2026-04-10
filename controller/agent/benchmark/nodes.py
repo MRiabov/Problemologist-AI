@@ -200,18 +200,28 @@ class BenchmarkPlannerNode(BaseNode):
         }
 
         if settings.is_integration_test:
+            validate_files = [
+                PLAN_FILE,
+                "todo.md",
+                "benchmark_definition.yaml",
+                "benchmark_assembly_definition.yaml",
+                *(
+                    str(path)
+                    for path in drafting_script_paths_for_agent(
+                        AgentName.BENCHMARK_PLANNER
+                    )
+                ),
+                str(
+                    drafting_render_manifest_path_for_agent(AgentName.BENCHMARK_PLANNER)
+                ),
+            ]
             prediction, _, journal_entry = await self._run_program(
                 dspy.ReAct,
                 BenchmarkPlannerSignature,
                 state,
                 inputs,
                 get_benchmark_planner_tools,
-                [
-                    PLAN_FILE,
-                    "todo.md",
-                    "benchmark_definition.yaml",
-                    "benchmark_assembly_definition.yaml",
-                ],
+                validate_files,
                 AgentName.BENCHMARK_PLANNER,
             )
         else:
@@ -1789,7 +1799,7 @@ class BenchmarkCoderNode(BaseNode):
                         handoff_err = await validate_reviewer_handover(
                             self.ctx.worker_client,
                             manifest_path=".manifests/benchmark_review_manifest.json",
-                            expected_stage="benchmark_reviewer",
+                            expected_stage=AgentName.BENCHMARK_REVIEWER,
                             require_git_revision=True,
                         )
                         if handoff_err is None:
@@ -2138,7 +2148,7 @@ class BenchmarkReviewerNode(BaseNode):
         handoff_err = await validate_reviewer_handover(
             self.ctx.worker_client,
             manifest_path=".manifests/benchmark_review_manifest.json",
-            expected_stage="benchmark_reviewer",
+            expected_stage=AgentName.BENCHMARK_REVIEWER,
             require_git_revision=True,
         )
         if handoff_err:

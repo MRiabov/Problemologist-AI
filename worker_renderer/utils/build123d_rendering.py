@@ -19,6 +19,7 @@ from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field
 
 from shared.agents import get_image_render_resolution
+from shared.enums import ZoneType
 from shared.models.schemas import (
     AssemblyDefinition,
     BenchmarkDefinition,
@@ -80,7 +81,7 @@ class PreviewEntity(BaseModel):
     material_id: str | None = None
     body_name: str | None = None
     geom_name: str | None = None
-    zone_type: str | None = None
+    zone_type: ZoneType | None = None
     color_rgba: tuple[float, float, float, float] | None = None
     segmentation_color_rgb: tuple[int, int, int] | None = None
     include_in_segmentation: bool = True
@@ -250,10 +251,10 @@ def _material_color_rgba(
     return _rgba_from_hex(material.color, 1.0)
 
 
-def _zone_color(zone_type: str) -> tuple[float, float, float, float]:
-    if zone_type == "goal":
+def _zone_color(zone_type: ZoneType) -> tuple[float, float, float, float]:
+    if zone_type == ZoneType.GOAL:
         return (0.20, 0.72, 0.34, 0.22)
-    if zone_type == "build":
+    if zone_type == ZoneType.BUILD:
         return (0.55, 0.55, 0.55, 0.14)
     return (0.83, 0.20, 0.20, 0.20)
 
@@ -650,7 +651,7 @@ def collect_preview_scene(
             if part_data.is_zone:
                 if part_data.label in objective_labels:
                     continue
-                zone_type = part_data.zone_type or "forbid"
+                zone_type = part_data.zone_type or ZoneType.FORBID
                 zone_color = _zone_color(zone_type)
                 render_entities.append(
                     PreviewEntity(
@@ -715,14 +716,14 @@ def collect_preview_scene(
             objective_entities = [
                 (
                     "zone_goal",
-                    "goal",
+                    ZoneType.GOAL,
                     objectives.objectives.goal_zone.min,
                     objectives.objectives.goal_zone.max,
                 ),
                 *(
                     (
                         f"zone_forbid_{index}_{zone.name}",
-                        "forbid",
+                        ZoneType.FORBID,
                         zone.min,
                         zone.max,
                     )
@@ -730,7 +731,7 @@ def collect_preview_scene(
                 ),
                 (
                     "zone_build",
-                    "build",
+                    ZoneType.BUILD,
                     objectives.objectives.build_zone.min,
                     objectives.objectives.build_zone.max,
                 ),

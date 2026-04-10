@@ -17,7 +17,7 @@ ensure_headless_physics()
 import numpy as np
 import structlog
 
-from shared.enums import FailureReason
+from shared.enums import FailureReason, SimulationConfidence
 from shared.models.simulation import (
     MultiRunResult,
     SimulationFailure,
@@ -84,7 +84,7 @@ def _build_metrics(outcome: _SceneOutcome) -> SimulationMetrics:
         fail_reason=str(failure) if failure else None,
         fail_mode=failure.reason if failure else None,
         failure=failure,
-        confidence="high",
+        confidence=SimulationConfidence.HIGH,
     )
 
 

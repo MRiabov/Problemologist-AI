@@ -6,7 +6,7 @@ from build123d import Compound, Part
 
 from shared.agents import get_video_render_resolution
 from shared.config.simulation import simulation_settings
-from shared.enums import FailureReason
+from shared.enums import FailureReason, SimulationConfidence
 from shared.models.schemas import (
     BenchmarkDefinition,
     ElectronicsSection,
@@ -689,7 +689,7 @@ class SimulationLoop:
                 fail_reason=str(self.fail_reason),
                 fail_mode=self.fail_reason.reason,
                 failure=self.fail_reason,
-                confidence="high",
+                confidence=SimulationConfidence.HIGH,
             )
 
         if self.payload_trajectory_monitor_init_error:
@@ -710,7 +710,7 @@ class SimulationLoop:
                     if self.payload_trajectory_monitor is not None
                     else None
                 ),
-                confidence="high",
+                confidence=SimulationConfidence.HIGH,
             )
 
         if self.wire_clearance_error:
@@ -726,7 +726,7 @@ class SimulationLoop:
                 fail_reason=str(self.fail_reason),
                 fail_mode=self.fail_reason.reason,
                 failure=self.fail_reason,
-                confidence="high",
+                confidence=SimulationConfidence.HIGH,
             )
         return None
 
@@ -984,7 +984,11 @@ class SimulationLoop:
             stress_fields=self._get_stress_fields(),
             fluid_metrics=self.fluid_metrics,
             events=metrics.events,
-            confidence="approximate" if self.smoke_test_mode else "high",
+            confidence=(
+                SimulationConfidence.APPROXIMATE
+                if self.smoke_test_mode
+                else SimulationConfidence.HIGH
+            ),
         )
 
     def _handle_wire_failure(self) -> bool:

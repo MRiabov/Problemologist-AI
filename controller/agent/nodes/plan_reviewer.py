@@ -83,11 +83,11 @@ class PlanReviewerNode(BaseNode):
                     {
                         "event_type": "plan_review_validation_run",
                         "data": {
-                            "reviewer_stage": "engineering_plan_reviewer",
+                            "reviewer_stage": AgentName.ENGINEER_PLAN_REVIEWER,
                             "validator_status": "invalid_assembly_definition",
                             "validator_error": str(exc),
                         },
-                        "reviewer_stage": "engineering_plan_reviewer",
+                        "reviewer_stage": AgentName.ENGINEER_PLAN_REVIEWER,
                         "validator_status": "invalid_assembly_definition",
                         "validator_error": str(exc),
                     }
@@ -103,7 +103,7 @@ class PlanReviewerNode(BaseNode):
             )
         for finding in findings:
             payload = build_excessive_dof_event_payload(
-                finding, reviewer_stage="engineering_plan_reviewer"
+                finding, reviewer_stage=AgentName.ENGINEER_PLAN_REVIEWER
             )
             await record_worker_events(
                 episode_id=state.episode_id,
@@ -152,7 +152,7 @@ class PlanReviewerNode(BaseNode):
                     ],
                     checklist={"dof_minimality": "fail"},
                 ),
-                reviewer_stage="engineering_plan_reviewer",
+                reviewer_stage=AgentName.ENGINEER_PLAN_REVIEWER,
                 checklist_value="fail",
                 overwrite=True,
             )
@@ -246,7 +246,7 @@ class PlanReviewerNode(BaseNode):
 
         review = ReviewResult.model_validate(prediction.review)
         review = apply_canonical_dof_checklist(
-            review, reviewer_stage="engineering_plan_reviewer"
+            review, reviewer_stage=AgentName.ENGINEER_PLAN_REVIEWER
         )
         try:
             (

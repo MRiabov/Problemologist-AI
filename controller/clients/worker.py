@@ -28,14 +28,17 @@ from shared.workers.schema import (
     BenchmarkToolResponse,
     EditOp,
     ExecuteResponse,
+    ExistsResponse,
     GitCommitResponse,
     GitStatusResponse,
     GrepMatch,
     InspectTopologyResponse,
+    HealthResponse,
     PreviewDesignResponse,
     PreviewRenderingType,
+    ReadFileResponse,
     ReadFilesResponse,
-    ReviewerStage,
+    StatusResponse,
     UploadFilesFromObjectStoreRequest,
     WorkerLightRpcAction,
     WorkerLightRpcRequest,
@@ -133,7 +136,7 @@ class WorkerClient:
         *,
         bypass_agent_permissions: bool = False,
         stage: str | None = None,
-        reviewer_stage: ReviewerStage | None = None,
+        reviewer_stage: AgentName | None = None,
     ) -> dict[str, str]:
         headers = dict(self.headers)
         if stage:
@@ -181,16 +184,16 @@ class WorkerClient:
         pass
 
     @staticmethod
-    def _default_reviewer_stage(agent_role: AgentName | str) -> ReviewerStage | None:
+    def _default_reviewer_stage(agent_role: AgentName | str) -> AgentName | None:
         role_value = (
             agent_role.value if isinstance(agent_role, AgentName) else str(agent_role)
         )
-        role_to_stage: dict[str, ReviewerStage] = {
-            AgentName.BENCHMARK_CODER.value: "benchmark_reviewer",
-            AgentName.BENCHMARK_REVIEWER.value: "benchmark_reviewer",
-            AgentName.ELECTRONICS_REVIEWER.value: "electronics_reviewer",
-            AgentName.ENGINEER_CODER.value: "engineering_execution_reviewer",
-            AgentName.ENGINEER_EXECUTION_REVIEWER.value: "engineering_execution_reviewer",
+        role_to_stage: dict[str, AgentName] = {
+            AgentName.BENCHMARK_CODER.value: AgentName.BENCHMARK_REVIEWER,
+            AgentName.BENCHMARK_REVIEWER.value: AgentName.BENCHMARK_REVIEWER,
+            AgentName.ELECTRONICS_REVIEWER.value: AgentName.ELECTRONICS_REVIEWER,
+            AgentName.ENGINEER_CODER.value: AgentName.ENGINEER_EXECUTION_REVIEWER,
+            AgentName.ENGINEER_EXECUTION_REVIEWER.value: AgentName.ENGINEER_EXECUTION_REVIEWER,
         }
         return role_to_stage.get(role_value)
 
@@ -375,7 +378,7 @@ class WorkerClient:
                         "bypass_agent_permissions": bypass_agent_permissions,
                     },
                 )
-                return str((result or {}).get("content", ""))
+                return ReadFileResponse.model_validate(result or {}).content
             except httpx.HTTPStatusError as exc:
                 if exc.response.status_code == 404:
                     return f"Error: File '{path}' not found."
@@ -396,7 +399,7 @@ class WorkerClient:
             if response.status_code == 404:
                 return f"Error: File '{path}' not found."
             response.raise_for_status()
-            return response.json()["content"]
+            return ReadFileResponse.model_validate(response.json()).content
         finally:
             await self._close_client(client)
 
@@ -413,7 +416,7 @@ class WorkerClient:
                         "bypass_agent_permissions": bypass_agent_permissions,
                     },
                 )
-                return str((result or {}).get("content", ""))
+                return ReadFileResponse.model_validate(result or {}).content
             except httpx.HTTPStatusError as exc:
                 if exc.response.status_code == 404:
                     return None
@@ -434,7 +437,7 @@ class WorkerClient:
             if response.status_code == 404:
                 return None
             response.raise_for_status()
-            return response.json()["content"]
+            return ReadFileResponse.model_validate(response.json()).content
         finally:
             await self._close_client(client)
 
@@ -451,7 +454,7 @@ class WorkerClient:
                         "bypass_agent_permissions": bypass_agent_permissions,
                     },
                 )
-                return bool((result or {}).get("exists", False))
+                return ExistsResponse.model_validate(result or {}).exists
             except httpx.HTTPStatusError:
                 return False
         client = await self._get_client()
@@ -470,7 +473,7 @@ class WorkerClient:
             if response.status_code == 404:
                 return False
             response.raise_for_status()
-            return response.json()["exists"]
+            return ExistsResponse.model_validate(response.json()).exists
         except Exception:
             return False
         finally:
@@ -495,7 +498,10 @@ class WorkerClient:
                     "bypass_agent_permissions": bypass_agent_permissions,
                 },
             )
-            return bool((result or {}).get("status") == ResponseStatus.SUCCESS)
+            return (
+                StatusResponse.model_validate(result or {}).status
+                == ResponseStatus.SUCCESS
+            )
         client = await self._get_client()
         try:
             response = await client.post(
@@ -512,7 +518,10 @@ class WorkerClient:
                 timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == ResponseStatus.SUCCESS
+            return (
+                StatusResponse.model_validate(response.json()).status
+                == ResponseStatus.SUCCESS
+            )
         finally:
             await self._close_client(client)
 
@@ -706,7 +715,10 @@ class WorkerClient:
             result = await self._light_ws_request(
                 "fs_upload_files_object_store", payload
             )
-            return bool((result or {}).get("status") == ResponseStatus.SUCCESS)
+            return (
+                StatusResponse.model_validate(result or {}).status
+                == ResponseStatus.SUCCESS
+            )
 
         client = await self._get_client()
         try:
@@ -719,7 +731,10 @@ class WorkerClient:
                 timeout=60.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == ResponseStatus.SUCCESS
+            return (
+                StatusResponse.model_validate(response.json()).status
+                == ResponseStatus.SUCCESS
+            )
         finally:
             await self._close_client(client)
 
@@ -753,7 +768,10 @@ class WorkerClient:
                 timeout=30.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == ResponseStatus.SUCCESS
+            return (
+                StatusResponse.model_validate(response.json()).status
+                == ResponseStatus.SUCCESS
+            )
         finally:
             await self._close_client(client)
 
@@ -790,7 +808,10 @@ class WorkerClient:
                 timeout=60.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == ResponseStatus.SUCCESS
+            return (
+                StatusResponse.model_validate(response.json()).status
+                == ResponseStatus.SUCCESS
+            )
         finally:
             await self._close_client(client)
 
@@ -1001,7 +1022,10 @@ class WorkerClient:
                     "bypass_agent_permissions": bypass_agent_permissions,
                 },
             )
-            return bool((result or {}).get("status") == ResponseStatus.SUCCESS)
+            return (
+                StatusResponse.model_validate(result or {}).status
+                == ResponseStatus.SUCCESS
+            )
         client = await self._get_client()
         try:
             json_edits = [op.model_dump() for op in edits]
@@ -1018,7 +1042,10 @@ class WorkerClient:
                 timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == ResponseStatus.SUCCESS
+            return (
+                StatusResponse.model_validate(response.json()).status
+                == ResponseStatus.SUCCESS
+            )
         finally:
             await self._close_client(client)
 
@@ -1301,7 +1328,7 @@ class WorkerClient:
         script_path: str = "script.py",
         script_content: str | None = None,
         bundle_base64: str | None = None,
-        reviewer_stage: ReviewerStage | None = None,
+        reviewer_stage: AgentName | None = None,
         episode_id: str | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger handover to review via worker."""
@@ -1453,7 +1480,7 @@ class WorkerClient:
         script_path: str = "script.py",
         script_content: str | None = None,
         bundle_base64: str | None = None,
-        reviewer_stage: ReviewerStage | None = None,
+        reviewer_stage: AgentName | None = None,
         episode_id: str | None = None,
     ) -> BenchmarkToolResponse:
         if await self._role_family() != "benchmark":
@@ -1471,7 +1498,7 @@ class WorkerClient:
         script_path: str = "script.py",
         script_content: str | None = None,
         bundle_base64: str | None = None,
-        reviewer_stage: ReviewerStage | None = None,
+        reviewer_stage: AgentName | None = None,
         episode_id: str | None = None,
     ) -> BenchmarkToolResponse:
         if await self._role_family() != "engineering":
@@ -1484,13 +1511,13 @@ class WorkerClient:
             episode_id=episode_id,
         )
 
-    async def get_health(self) -> dict[str, str]:
+    async def get_health(self) -> HealthResponse:
         """Check the health of the worker service."""
         client = await self._get_client()
         try:
             response = await client.get(f"{self.base_url}/health", timeout=5.0)
             response.raise_for_status()
-            return response.json()
+            return HealthResponse.model_validate(response.json())
         finally:
             await self._close_client(client)
 
@@ -1498,7 +1525,10 @@ class WorkerClient:
         """Initialize a git repository in the workspace."""
         if self._should_use_light_websocket():
             result = await self._light_ws_request("git_init", {})
-            return bool((result or {}).get("status") == ResponseStatus.SUCCESS)
+            return (
+                StatusResponse.model_validate(result or {}).status
+                == ResponseStatus.SUCCESS
+            )
         client = await self._get_client()
         try:
             response = await client.post(
@@ -1507,7 +1537,10 @@ class WorkerClient:
                 timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == ResponseStatus.SUCCESS
+            return (
+                StatusResponse.model_validate(response.json()).status
+                == ResponseStatus.SUCCESS
+            )
         finally:
             await self._close_client(client)
 
@@ -1555,7 +1588,10 @@ class WorkerClient:
                 "git_resolve",
                 {"file_path": file_path, "strategy": strategy},
             )
-            return bool((result or {}).get("status") == ResponseStatus.SUCCESS)
+            return (
+                StatusResponse.model_validate(result or {}).status
+                == ResponseStatus.SUCCESS
+            )
         client = await self._get_client()
         try:
             response = await client.post(
@@ -1565,7 +1601,10 @@ class WorkerClient:
                 timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == ResponseStatus.SUCCESS
+            return (
+                StatusResponse.model_validate(response.json()).status
+                == ResponseStatus.SUCCESS
+            )
         finally:
             await self._close_client(client)
 
@@ -1573,7 +1612,10 @@ class WorkerClient:
         """Abort a merge."""
         if self._should_use_light_websocket():
             result = await self._light_ws_request("git_merge_abort", {})
-            return bool((result or {}).get("status") == ResponseStatus.SUCCESS)
+            return (
+                StatusResponse.model_validate(result or {}).status
+                == ResponseStatus.SUCCESS
+            )
         client = await self._get_client()
         try:
             response = await client.post(
@@ -1582,7 +1624,10 @@ class WorkerClient:
                 timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == ResponseStatus.SUCCESS
+            return (
+                StatusResponse.model_validate(response.json()).status
+                == ResponseStatus.SUCCESS
+            )
         finally:
             await self._close_client(client)
 

@@ -4,7 +4,7 @@ from pathlib import Path
 import structlog
 from fastapi import HTTPException
 
-from shared.enums import FailureReason
+from shared.enums import FailureReason, SimulationConfidence
 from shared.models.simulation import SimulationFailure
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.loader import load_component_from_script
@@ -146,7 +146,11 @@ async def run_verification_job(
                 f"Verification complete. Success rate: {result.success_rate:.2f} "
                 f"({result.success_count}/{result.num_scenes})"
             ),
-            confidence="high" if result.num_scenes >= 5 else "medium",
+            confidence=(
+                SimulationConfidence.HIGH
+                if result.num_scenes >= 5
+                else SimulationConfidence.MEDIUM
+            ),
             artifacts=artifacts,
             events=events,
         )

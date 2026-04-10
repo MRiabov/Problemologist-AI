@@ -7,6 +7,7 @@ from pathlib import Path
 import yaml
 
 from controller.middleware.remote_fs import EditOp, RemoteFilesystemMiddleware
+from controller.observability.middleware_helper import broadcast_file_update
 from controller.observability.tracing import record_worker_events
 from shared.agents.config import DraftingMode, load_agents_config
 from shared.cots.agent import (
@@ -994,12 +995,19 @@ def get_engineer_planner_tools(
                 ),
                 artifact_hashes=artifact_hashes,
             )
-            await fs.client.write_file(
+            manifest_json = json.dumps(manifest.model_dump(mode="json"), indent=2)
+            success = await fs.client.write_file(
                 ".manifests/engineering_plan_review_manifest.json",
-                json.dumps(manifest.model_dump(mode="json"), indent=2),
+                manifest_json,
                 overwrite=True,
                 bypass_agent_permissions=True,
             )
+            if success:
+                await broadcast_file_update(
+                    fs.episode_id,
+                    ".manifests/engineering_plan_review_manifest.json",
+                    manifest_json,
+                )
         result = PlannerSubmissionResult(
             ok=is_valid,
             status="submitted" if is_valid else "rejected",

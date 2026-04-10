@@ -2404,6 +2404,29 @@
   },
   "components": {
     "schemas": {
+      "AgentName": {
+        "type": "string",
+        "enum": [
+          "benchmark_planner",
+          "benchmark_plan_reviewer",
+          "benchmark_coder",
+          "benchmark_reviewer",
+          "engineer_planner",
+          "engineer_coder",
+          "engineer_plan_reviewer",
+          "electronics_planner",
+          "electronics_engineer",
+          "electronics_reviewer",
+          "engineer_execution_reviewer",
+          "skill_agent",
+          "git_agent",
+          "cots_search",
+          "journalling_agent",
+          "steer"
+        ],
+        "title": "AgentName",
+        "description": "Canonical agent identifiers used across API, evals, and orchestration."
+      },
       "BaseEvent": {
         "properties": {
           "event_type": {
@@ -2525,18 +2548,12 @@
           "reviewer_stage": {
             "anyOf": [
               {
-                "type": "string",
-                "enum": [
-                  "benchmark_reviewer",
-                  "engineering_execution_reviewer",
-                  "electronics_reviewer"
-                ]
+                "$ref": "#/components/schemas/AgentName"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Reviewer Stage",
             "description": "Reviewer stage when calling the benchmark or engineering submit route."
           },
           "episode_id": {
@@ -2566,14 +2583,7 @@
             "title": "Message"
           },
           "confidence": {
-            "type": "string",
-            "enum": [
-              "low",
-              "medium",
-              "high",
-              "approximate"
-            ],
-            "title": "Confidence",
+            "$ref": "#/components/schemas/SimulationConfidence",
             "default": "high"
           },
           "artifacts": {
@@ -2837,8 +2847,7 @@
       "FluidMetricResult": {
         "properties": {
           "metric_type": {
-            "type": "string",
-            "title": "Metric Type"
+            "$ref": "#/components/schemas/FluidObjectiveType"
           },
           "fluid_id": {
             "type": "string",
@@ -2866,6 +2875,15 @@
           "passed"
         ],
         "title": "FluidMetricResult"
+      },
+      "FluidObjectiveType": {
+        "type": "string",
+        "enum": [
+          "fluid_containment",
+          "flow_rate"
+        ],
+        "title": "FluidObjectiveType",
+        "description": "Types of fluid-related objectives."
       },
       "FsFileEntry": {
         "properties": {
@@ -4991,6 +5009,17 @@
         "title": "SimulationArtifacts",
         "description": "Structured artifacts from a simulation run."
       },
+      "SimulationConfidence": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high",
+          "approximate"
+        ],
+        "title": "SimulationConfidence",
+        "description": "Confidence levels surfaced by simulation and benchmark responses."
+      },
       "SimulationFailure": {
         "properties": {
           "reason": {
@@ -5123,14 +5152,7 @@
             "title": "Events"
           },
           "confidence": {
-            "type": "string",
-            "enum": [
-              "low",
-              "medium",
-              "high",
-              "approximate"
-            ],
-            "title": "Confidence",
+            "$ref": "#/components/schemas/SimulationConfidence",
             "default": "high"
           }
         },
@@ -5443,18 +5465,12 @@
           "reviewer_stage": {
             "anyOf": [
               {
-                "type": "string",
-                "enum": [
-                  "benchmark_reviewer",
-                  "engineering_execution_reviewer",
-                  "electronics_reviewer"
-                ]
+                "$ref": "#/components/schemas/AgentName"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Reviewer Stage",
             "description": "Reviewer stage when calling the benchmark or engineering submit route."
           },
           "episode_id": {
@@ -5791,18 +5807,12 @@
           "reviewer_stage": {
             "anyOf": [
               {
-                "type": "string",
-                "enum": [
-                  "benchmark_reviewer",
-                  "engineering_execution_reviewer",
-                  "electronics_reviewer"
-                ]
+                "$ref": "#/components/schemas/AgentName"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Reviewer Stage",
             "description": "Reviewer stage when calling the benchmark or engineering submit route."
           },
           "episode_id": {

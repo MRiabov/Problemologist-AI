@@ -4,22 +4,15 @@
 /* eslint-disable */
 import type { BaseEvent } from './BaseEvent';
 import type { SimulationArtifacts } from './SimulationArtifacts';
+import type { SimulationConfidence } from './SimulationConfidence';
 /**
  * Response from a benchmark tool.
  */
 export type BenchmarkToolResponse = {
     success: boolean;
     message: string;
-    confidence?: BenchmarkToolResponse.confidence;
+    confidence?: SimulationConfidence;
     artifacts?: (SimulationArtifacts | null);
     events?: Array<BaseEvent>;
 };
-export namespace BenchmarkToolResponse {
-    export enum confidence {
-        LOW = 'low',
-        MEDIUM = 'medium',
-        HIGH = 'high',
-        APPROXIMATE = 'approximate',
-    }
-}
 

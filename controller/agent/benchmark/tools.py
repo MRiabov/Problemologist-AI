@@ -5,6 +5,7 @@ import uuid
 from collections.abc import Callable
 from pathlib import Path
 
+import structlog
 import yaml
 from sqlalchemy import select
 
@@ -17,6 +18,7 @@ from controller.agent.tools import (
     run_validate_and_price_script,
 )
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from controller.observability.middleware_helper import broadcast_file_update
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset
 from controller.utils import resolve_episode_id
@@ -30,6 +32,8 @@ from shared.script_contracts import (
     plan_path_for_agent,
 )
 from shared.workers.schema import PlanReviewManifest, PreviewRenderingType
+
+logger = structlog.get_logger(__name__)
 
 BENCHMARK_ESTIMATE_HEADROOM_MULTIPLIER = 1.5
 
@@ -527,18 +531,31 @@ def get_benchmark_planner_tools(
                 ),
                 artifact_hashes=artifact_hashes,
             )
-            await fs.client.write_file(
+            success = await fs.client.write_file(
                 ".manifests/benchmark_plan_review_manifest.json",
                 json.dumps(manifest.model_dump(mode="json"), indent=2),
                 overwrite=True,
                 bypass_agent_permissions=True,
             )
-            await fs.client.write_file(
+            if success:
+                await broadcast_file_update(
+                    fs.episode_id,
+                    ".manifests/benchmark_plan_review_manifest.json",
+                    json.dumps(manifest.model_dump(mode="json"), indent=2),
+                )
+
+            success = await fs.client.write_file(
                 "benchmark_plan_review_manifest.json",
                 json.dumps(manifest.model_dump(mode="json"), indent=2),
                 overwrite=True,
                 bypass_agent_permissions=True,
             )
+            if success:
+                await broadcast_file_update(
+                    fs.episode_id,
+                    "benchmark_plan_review_manifest.json",
+                    json.dumps(manifest.model_dump(mode="json"), indent=2),
+                )
         result = PlannerSubmissionResult(
             ok=is_valid,
             status="submitted" if is_valid else "rejected",

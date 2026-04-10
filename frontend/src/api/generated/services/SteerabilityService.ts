@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { SteerabilityResponse } from '../models/SteerabilityResponse';
 import type { SteerablePrompt_Input } from '../models/SteerablePrompt_Input';
 import type { SteerablePrompt_Output } from '../models/SteerablePrompt_Output';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -14,13 +15,13 @@ export class SteerabilityService {
      * If the agent is idle, it will be picked up immediately (implemented in WP04).
      * @param sessionId The agent session ID
      * @param requestBody
-     * @returns any Successful Response
+     * @returns SteerabilityResponse Successful Response
      * @throws ApiError
      */
     public static steerAgentApiV1SessionsSessionIdSteerPost(
         sessionId: string,
         requestBody: SteerablePrompt_Input,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<SteerabilityResponse> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/sessions/{session_id}/steer',

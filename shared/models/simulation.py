@@ -1,9 +1,9 @@
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, Field
 
-from shared.enums import FailureReason
+from shared.enums import FailureReason, FluidObjectiveType, SimulationConfidence
 from shared.simulation.schemas import SimulatorBackendType
 
 
@@ -92,7 +92,7 @@ class StressSummary(BaseModel):
 
 
 class FluidMetricResult(BaseModel):
-    metric_type: str  # "fluid_containment" | "flow_rate"
+    metric_type: FluidObjectiveType
     fluid_id: str
     measured_value: float
     target_value: float
@@ -122,7 +122,7 @@ class SimulationMetrics(BaseModel):
     )  # part_label -> StressFieldData
     fluid_metrics: list[FluidMetricResult] = Field(default_factory=list)
     events: list[dict] = Field(default_factory=list)
-    confidence: Literal["low", "medium", "high", "approximate"] = "high"
+    confidence: SimulationConfidence = SimulationConfidence.HIGH
 
 
 class SimulationResult(BaseModel):
@@ -141,7 +141,7 @@ class SimulationResult(BaseModel):
     fluid_metrics: list[FluidMetricResult] = Field(default_factory=list)
     total_cost: float = 0.0
     total_weight_g: float = 0.0
-    confidence: Literal["low", "medium", "high", "approximate"] = "high"
+    confidence: SimulationConfidence = SimulationConfidence.HIGH
 
 
 class MultiRunResult(BaseModel):

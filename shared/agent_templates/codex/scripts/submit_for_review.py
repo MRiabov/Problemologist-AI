@@ -45,13 +45,13 @@ def _submission_agent(workspace: Path) -> AgentName | None:
     return None
 
 
-def _reviewer_stage_for_agent(agent_name: AgentName) -> str:
+def _reviewer_stage_for_agent(agent_name: AgentName) -> AgentName:
     stage_map = {
-        AgentName.BENCHMARK_CODER: "benchmark_reviewer",
-        AgentName.BENCHMARK_REVIEWER: "benchmark_reviewer",
-        AgentName.ENGINEER_CODER: "engineering_execution_reviewer",
-        AgentName.ENGINEER_EXECUTION_REVIEWER: "engineering_execution_reviewer",
-        AgentName.ELECTRONICS_REVIEWER: "electronics_reviewer",
+        AgentName.BENCHMARK_CODER: AgentName.BENCHMARK_REVIEWER,
+        AgentName.BENCHMARK_REVIEWER: AgentName.BENCHMARK_REVIEWER,
+        AgentName.ENGINEER_CODER: AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER: AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.ELECTRONICS_REVIEWER: AgentName.ELECTRONICS_REVIEWER,
     }
     try:
         return stage_map[agent_name]

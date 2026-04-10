@@ -2,13 +2,14 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { AgentName } from './AgentName';
 import type { BenchmarkAttachmentPolicySummary } from './BenchmarkAttachmentPolicySummary';
 /**
  * Persisted handoff manifest used to gate reviewer entry.
  */
 export type ReviewManifest = {
     status: string;
-    reviewer_stage: ReviewManifest.reviewer_stage;
+    reviewer_stage: AgentName;
     timestamp?: (string | null);
     session_id: string;
     revision?: (string | null);
@@ -36,11 +37,4 @@ export type ReviewManifest = {
     objectives_path?: (string | null);
     assembly_definition_path?: (string | null);
 };
-export namespace ReviewManifest {
-    export enum reviewer_stage {
-        BENCHMARK_REVIEWER = 'benchmark_reviewer',
-        ENGINEERING_EXECUTION_REVIEWER = 'engineering_execution_reviewer',
-        ELECTRONICS_REVIEWER = 'electronics_reviewer',
-    }
-}
 

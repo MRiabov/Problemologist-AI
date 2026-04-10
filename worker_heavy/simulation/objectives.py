@@ -198,7 +198,7 @@ class ObjectiveEvaluator:
         ratio = np.sum(inside) / len(particles) if len(particles) > 0 else 0.0
         passed = ratio >= fo.threshold
         result = FluidMetricResult(
-            metric_type="fluid_containment",
+            metric_type=FluidObjectiveType.FLUID_CONTAINMENT,
             fluid_id=fo.fluid_id,
             measured_value=float(ratio),
             target_value=fo.threshold,
@@ -226,7 +226,7 @@ class ObjectiveEvaluator:
         measured_rate = measured_volume_l / current_time if current_time > 0 else 0.0
         passed = measured_rate >= fo.target_rate_l_per_s * (1.0 - fo.tolerance)
         result = FluidMetricResult(
-            metric_type="flow_rate",
+            metric_type=FluidObjectiveType.FLOW_RATE,
             fluid_id=fo.fluid_id,
             measured_value=float(measured_rate),
             target_value=fo.target_rate_l_per_s,

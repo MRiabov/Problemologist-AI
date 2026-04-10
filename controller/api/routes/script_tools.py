@@ -11,7 +11,7 @@ from controller.clients.worker import WorkerClient
 from controller.config.settings import settings
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.utils import EpisodeIdentity
-from shared.enums import AgentName
+from shared.enums import AgentName, SimulationConfidence
 from shared.logging import bind_log_context
 from shared.script_contracts import (
     authored_script_path_for_agent,
@@ -29,7 +29,6 @@ from shared.workers.schema import (
     BenchmarkToolResponse,
     PreviewDesignResponse,
     PreviewRenderingType,
-    ReviewerStage,
     SimulationArtifacts,
 )
 
@@ -56,7 +55,7 @@ class ScriptToolRequest(BaseModel):
     payload_path: bool = False
     drafting: bool = False
     rendering_type: PreviewRenderingType | None = None
-    reviewer_stage: ReviewerStage | None = None
+    reviewer_stage: AgentName | None = None
     jitter_range: tuple[float, float, float] | None = None
     num_scenes: int | None = None
     duration: float | None = None
@@ -112,7 +111,7 @@ def _script_log_context(payload: ScriptToolRequest, session_id: str):
     identity = EpisodeIdentity.from_context(
         session_id=session_id, episode_id=payload.episode_id
     )
-    stage = payload.reviewer_stage or payload.agent_role.value
+    stage = (payload.reviewer_stage or payload.agent_role).value
     with bind_log_context(
         session_id=identity.session_id,
         episode_id=str(identity.episode_id),
@@ -228,7 +227,7 @@ async def simulate_script(
             response = BenchmarkToolResponse(
                 success=result.success,
                 message=result.summary,
-                confidence=getattr(result, "confidence", "high"),
+                confidence=getattr(result, "confidence", SimulationConfidence.HIGH),
                 artifacts=SimulationArtifacts(
                     render_paths=list(getattr(result, "render_paths", [])),
                     simulation_result_json=result.model_dump_json(),
@@ -288,7 +287,7 @@ async def verify_script(
             response = BenchmarkToolResponse(
                 success=result.success,
                 message=result.message,
-                confidence=getattr(result, "confidence", "high"),
+                confidence=getattr(result, "confidence", SimulationConfidence.HIGH),
                 artifacts=getattr(result, "artifacts", None),
             )
             await middleware.client._sync_handover_artifacts_to_light(response)

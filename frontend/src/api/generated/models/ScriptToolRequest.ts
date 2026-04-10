@@ -19,7 +19,7 @@ export type ScriptToolRequest = {
     payload_path?: boolean;
     drafting?: boolean;
     rendering_type?: (PreviewRenderingType | null);
-    reviewer_stage?: ('benchmark_reviewer' | 'engineering_execution_reviewer' | 'electronics_reviewer' | null);
+    reviewer_stage?: (AgentName | null);
     jitter_range?: (any[] | null);
     num_scenes?: (number | null);
     duration?: (number | null);
