@@ -48,6 +48,7 @@ Signals:
 - `engineering_plan.md` is missing the tightened proof sections for a binding engineering claim, such as the Assumption Register, Detailed Calculations, or Critical Constraints / Operating Envelope
 - A numeric claim in `engineering_plan.md` has no `CALC-*` anchor or relies on prose-only assumptions
 - Planner-authored evidence or technical-drawing scripts change labels, quantities, or COTS identities
+- Intentional goal-zone or target-zone overlap is present in the drafted geometry, but `assembly_definition.yaml.drafting.goal_zone_overlap_intents` is missing or mismatched
 
 Likely causes:
 
@@ -57,12 +58,14 @@ Likely causes:
 - The planner handoff was not exact-grounded
 - The planner handoff did not supply the proof structure needed to justify a binding numeric claim
 - The planner scripts drifted from the approved inventory
+- The overlap allowance was left in prose instead of the YAML drafting contract
 
 First fix:
 
 - Restore the file contract and ownership boundaries before changing the design.
 - Stop and surface the handoff defect; do not compensate in `solution_script.py`.
 - Treat missing proof sections or calculation anchors as a handoff defect, not a modeling gap.
+- Restore the exact `goal_zone_overlap_intents` entry in `assembly_definition.yaml.drafting`; markdown text does not authorize intentional overlap.
 
 ## Manufacturability and cost
 

@@ -1,6 +1,6 @@
 ---
 name: engineer-planner
-description: Engineering planning role for turning benchmark handoff context into implementation-ready plan artifacts. Use when drafting or revising `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, or `solution_plan_technical_drawing_script.py`; when interpreting `benchmark_assembly_definition.yaml` and `benchmark_script.py` as read-only context; when validating cost, weight, motion contracts, detailed payload trajectory calculations, build-zone feasibility, or exact-grounded inventory mentions; when using `render_technical_drawing()` or media inspection to check planner drafts; when inspecting simulation evidence through frame-indexed `objects.parquet` sidecars; or when deciding whether a proposed engineering approach is infeasible and needs replanning.
+description: Engineering planning role for turning benchmark handoff context into implementation-ready plan artifacts. Use when drafting or revising `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_plan_evidence_script.py`, or `solution_plan_technical_drawing_script.py`; when authoring or revising `assembly_definition.yaml.drafting.goal_zone_overlap_intents`; when interpreting `benchmark_assembly_definition.yaml` and `benchmark_script.py` as read-only context; when validating cost, weight, motion contracts, detailed payload trajectory calculations, build-zone feasibility, or exact-grounded inventory mentions; when using `render_technical_drawing()` or media inspection to check planner drafts; when inspecting simulation evidence through frame-indexed `objects.parquet` sidecars; or when deciding whether a proposed engineering approach is infeasible and needs replanning.
 ---
 
 # Engineer Planner
@@ -34,6 +34,7 @@ Use the shared preview helpers whenever the plan needs visual evidence:
 - When a fixture moves, derive its pose from the declared axis or joint chain instead of a hand-placed coordinate.
 - Prefer selector-driven placement over free-form XYZ positioning. Use face/axis selectors, explicit mates, and joint chains to constrain parts to each other and to the environment; treat any absolute 3-coordinate anchor as an exception that needs clear justification.
 - Treat the planner handoff as YAML-backed: `assembly_definition.yaml` is the machine-readable contract, `solution_plan_evidence_script.py` is the authoritative, validated source of the planned 3D solution geometry, and `solution_plan_technical_drawing_script.py` is the orthographic presentation companion for that same contract.
+- When drafting mode is active, `assembly_definition.yaml.drafting.goal_zone_overlap_intents` is the machine-readable authorization for intentional goal-zone or target-zone overlap; do not encode that allowance in markdown prose.
 
 ## What This Skill Owns
 
@@ -96,12 +97,13 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 04. Draft `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml` so they agree on labels, coordinates, limits, and ownership.
 05. When drafting mode is enabled, keep `engineering_plan.md` narrative-first and write the machine-readable drafting contract in `assembly_definition.yaml.drafting`.
 06. Bind views, datums, dimensions, callouts, and notes to the reviewed mechanism only; do not invent new parts, joints, motions, or geometry beyond the existing handoff.
-07. Keep planner drafting scripts aligned with the same preserved geometry, repeated quantities, and COTS identities when drafting mode is enabled.
-08. Use `validate_costing_and_price()` before submission and fix the source of any pricing or weight mismatch.
-09. Inspect relevant renders or draft drawings with `render_technical_drawing()` and media inspection when visual evidence exists. Use `list_render_bundles()` and `query_render_bundle()` first when the question depends on a specific revision, and use `pick_preview_pixel()` / `pick_preview_pixels()` when the question depends on a screen-space point. If simulation evidence already exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
-10. Call `submit_engineering_plan()` only when the handoff is coherent, physically plausible, and ready for implementation.
-11. When motion proof is required, make `assembly_definition.yaml.motion_forecast` the coarse contract and `payload_trajectory_definition.yaml` the denser refinement; load `references/motion-trajectory-contract.md` for the calculation checklist; keep the same moving parts, preserve the same build-safe first anchor and terminal goal proof, and keep any math in `engineering_plan.md` synchronized with the actual waypoint sequence rather than with prose estimates.
-12. Static payload proof does not guarantee runtime compliance. Keep the coarse forecast and the dense trajectory aligned, but assume the simulation monitor can still fail closed on anchor drift, impossible first-contact ordering, or unreachable terminal goal proof.
+07. If a drafted fixture intentionally occupies or captures a goal zone or target zone, add the matching `goal_zone_overlap_intents` record in `assembly_definition.yaml.drafting` and keep the zone and target labels exact across the YAML and the drafting scripts.
+08. Keep planner drafting scripts aligned with the same preserved geometry, repeated quantities, and COTS identities when drafting mode is enabled.
+09. Use `validate_costing_and_price()` before submission and fix the source of any pricing or weight mismatch.
+10. Inspect relevant renders or draft drawings with `render_technical_drawing()` and media inspection when visual evidence exists. Use `list_render_bundles()` and `query_render_bundle()` first when the question depends on a specific revision, and use `pick_preview_pixel()` / `pick_preview_pixels()` when the question depends on a screen-space point. If simulation evidence already exists, inspect the MP4 and the sampled frame-indexed `objects.parquet` pose-history sidecar together; `frames.jsonl` is sparse timing metadata, not pose history.
+11. Call `submit_engineering_plan()` only when the handoff is coherent, physically plausible, and ready for implementation.
+12. When motion proof is required, make `assembly_definition.yaml.motion_forecast` the coarse contract and `payload_trajectory_definition.yaml` the denser refinement; load `references/motion-trajectory-contract.md` for the calculation checklist; keep the same moving parts, preserve the same build-safe first anchor and terminal goal proof, and keep any math in `engineering_plan.md` synchronized with the actual waypoint sequence rather than with prose estimates.
+13. Static payload proof does not guarantee runtime compliance. Keep the coarse forecast and the dense trajectory aligned, but assume the simulation monitor can still fail closed on anchor drift, impossible first-contact ordering, or unreachable terminal goal proof.
 
 ## Plan Rules
 

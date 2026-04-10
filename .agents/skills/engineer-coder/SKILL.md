@@ -1,6 +1,6 @@
 ---
 name: engineer-coder
-description: Problemologist engineering implementation role. Use when turning approved engineering handoffs into solution_script.py, solving engineering evals with bounded retries, selecting mechanism patterns, validating and simulating revisions, inspecting render evidence, querying render-bundle history or point-pick results, preserving planner inventory exactness, grounding work in proof-backed engineering_plan.md contracts, inspecting simulation evidence through frame-indexed `objects.parquet` sidecars, or refusing an infeasible plan with plan_refusal.md.
+description: Problemologist engineering implementation role. Use when turning approved engineering handoffs into solution_script.py, solving engineering evals with bounded retries, selecting mechanism patterns, validating and simulating revisions, inspecting render evidence, querying render-bundle history or point-pick results, preserving planner inventory exactness, respecting YAML-authored overlap allowances in `assembly_definition.yaml.drafting.goal_zone_overlap_intents`, grounding work in proof-backed engineering_plan.md contracts, inspecting simulation evidence through frame-indexed `objects.parquet` sidecars, or refusing an infeasible plan with plan_refusal.md.
 ---
 
 # Engineer Coder
@@ -86,6 +86,7 @@ When the approved handoff already pins down labels, repeated quantities, COTS id
 Treat the planner YAML handoff as the machine-readable source of truth and the two planner scripts as the inspectable source of the approved solution geometry.
 Because the approved planner handoff has already passed collision and geometry review, treat its layout as collision-validated and preserve the exact dimensions, placements, offsets, and clearances whenever the requested solution remains physically and economically feasible.
 That collision review does not mean the plan was already manufacturability-validated or simulated; those checks still happen downstream on the implemented revision.
+If the handoff includes `assembly_definition.yaml.drafting.goal_zone_overlap_intents`, treat that YAML list as the only authorization for intentional goal-zone or target-zone overlap; markdown prose does not override it.
 Prefer selector-driven placement over free-form XYZ positioning. Use face/axis selectors, explicit mates, and fastener-based constraints to place parts relative to each other and the environment; treat any absolute coordinate anchor as an exception that should be minimal and traceable.
 
 For engineering handoffs, treat `engineering_plan.md` as the source of truth for mechanism narrative, exact inventory mentions, assumptions, calculations, and operating limits. The tightened template includes an Assumption Register, Detailed Calculations, and Critical Constraints / Operating Envelope sections; if the handoff expects those proof sections and they are missing or ungrounded, surface the defect rather than inferring missing numbers.
@@ -138,16 +139,17 @@ Do not invent fallback behavior to bridge contradictions. If the handoff is inco
 04. Keep the motion contract explicit if the design uses motors, sliders, latches, or other actuated elements.
 05. Keep benchmark-owned fixtures read-only and never reassign their ownership or pricing.
 06. Keep planner-authored evidence and technical-drawing scripts grounded in the approved inventory. The labels, repeated quantities, and COTS identities in `engineering_plan.md`, `assembly_definition.yaml`, and any drafting scripts must match exactly; missing, extra, or relabeled items are plan defects, not implementation freedom.
-07. Keep top-level authored labels unique and avoid reserved names such as `environment` and `zone_...`.
-08. Place parts with `Location(...)` or equivalent explicit placement.
-09. Keep COTS components intact when provenance or exact part identity matters.
-10. Keep electronics separate from mechanical guessing; only load electronics logic when the handoff explicitly demands it.
-11. Treat cost, weight, and manufacturability as design constraints, not afterthoughts.
-12. When multiple viable implementations satisfy the handoff, prefer the more stable, cheaper, simpler, and more manufacturable one.
-13. When the approved handoff uses the engineering planner template, keep every declared inventory label and selected COTS `part_id` grounded by an exact identifier mention in `engineering_plan.md`, and preserve planner-authored assumptions, calculations, operating-envelope limits, and collision-validated layout geometry without renaming, resizing, or re-spacing them.
-14. If the motion math and the precise path disagree, repair the source handoff first; do not "prove" a different path by changing only the implementation.
-15. Never use exploded views or the word `exploded` in `solution_plan_evidence_script.py`; keep any exploded or layout presentation in `solution_plan_technical_drawing_script.py` instead.
-16. Static payload proof does not imply runtime success. Treat the simulation monitor as an independent fail-closed gate that can still reject anchor drift, impossible first-contact ordering, or unreachable terminal goal proof even when the file-level trajectory contract parses cleanly.
+07. If drafted geometry intentionally overlaps a goal zone or target zone, preserve the matching `goal_zone_overlap_intents` entry from `assembly_definition.yaml.drafting` instead of inventing a prose exception.
+08. Keep top-level authored labels unique and avoid reserved names such as `environment` and `zone_...`.
+09. Place parts with `Location(...)` or equivalent explicit placement.
+10. Keep COTS components intact when provenance or exact part identity matters.
+11. Keep electronics separate from mechanical guessing; only load electronics logic when the handoff explicitly demands it.
+12. Treat cost, weight, and manufacturability as design constraints, not afterthoughts.
+13. When multiple viable implementations satisfy the handoff, prefer the more stable, cheaper, simpler, and more manufacturable one.
+14. When the approved handoff uses the engineering planner template, keep every declared inventory label and selected COTS `part_id` grounded by an exact identifier mention in `engineering_plan.md`, and preserve planner-authored assumptions, calculations, operating-envelope limits, and collision-validated layout geometry without renaming, resizing, or re-spacing them.
+15. If the motion math and the precise path disagree, repair the source handoff first; do not "prove" a different path by changing only the implementation.
+16. Never use exploded views or the word `exploded` in `solution_plan_evidence_script.py`; keep any exploded or layout presentation in `solution_plan_technical_drawing_script.py` instead.
+17. Static payload proof does not imply runtime success. Treat the simulation monitor as an independent fail-closed gate that can still reject anchor drift, impossible first-contact ordering, or unreachable terminal goal proof even when the file-level trajectory contract parses cleanly.
 
 ## Retry Discipline
 

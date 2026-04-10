@@ -27,6 +27,7 @@
 - Reject when the plan exceeds benchmark caps, depends on invented materials, or leaves the operating envelope implicit.
 - Reject when the technical-drawing script lacks a real `TechnicalDrawing` construction path.
 - Reject excessive or unjustified engineering DOFs.
+- Reject when drafted geometry intentionally overlaps a goal zone or target zone but `assembly_definition.yaml.drafting.goal_zone_overlap_intents` lacks an exact matching `{zone_name, target}` entry; markdown prose is not authorization.
 - Reject prose-only motion or payload trajectory claims.
 - Reject motion forecasts that are not backed by formulas, anchor order, contact order, or tolerance derivations.
 - Inspect renders if available before approval.
@@ -44,6 +45,7 @@
   - `validation_results.json`
   - `simulation_result.json`
 - Reject when the implemented inventory or motion contract drifts from the approved plan.
+- Reject when the latest revision still relies on intentional goal-zone or target-zone overlap but the matching `assembly_definition.yaml.drafting.goal_zone_overlap_intents` entry is missing or changed.
 - Reject when validation or simulation is absent, stale, or failed.
 - Reject when runtime jitter is not exercised or the solution is flaky across seeds.
 - Reject when render images or simulation video exist and were not inspected before approval.

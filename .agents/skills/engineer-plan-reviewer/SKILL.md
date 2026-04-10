@@ -1,6 +1,6 @@
 ---
 name: engineer-plan-reviewer
-description: Engineer-side review workflow for validating plan and execution handoffs, review manifests, render and simulation evidence, exact inventory grounding, formula-backed motion and payload trajectory derivations, motion-contract plausibility, plan refusals, and stage-scoped review YAML outputs. Use when reviewing engineering `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_script.py`, validation or simulation artifacts, review manifests, or refusal evidence for the Engineering Plan Reviewer or Engineering Execution Reviewer roles; when inspecting simulation evidence through frame-indexed `objects.parquet` sidecars; or when applying the engineer review checklist for plan, execution, and refusal gates.
+description: Engineer-side review workflow for validating plan and execution handoffs, review manifests, render and simulation evidence, exact inventory grounding, formula-backed motion and payload trajectory derivations, motion-contract plausibility, plan refusals, stage-scoped review YAML outputs, and `assembly_definition.yaml.drafting.goal_zone_overlap_intents` checks for intentional goal/target-zone overlap. Use when reviewing engineering `engineering_plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `solution_script.py`, validation or simulation artifacts, review manifests, or refusal evidence for the Engineering Plan Reviewer or Engineering Execution Reviewer roles; when inspecting simulation evidence through frame-indexed `objects.parquet` sidecars; or when applying the engineer review checklist for plan, execution, and refusal gates.
 ---
 
 # Engineer Plan Reviewer
@@ -46,6 +46,7 @@ When plan or execution evidence needs visual checking, use the shared preview he
 - [ ] Verify exact inventory grounding, exact identifier mentions, budget realism, and operating-envelope clarity.
 - [ ] Reject invented materials, unsupported mechanisms, hidden DOFs, or a technical-drawing script without a real `TechnicalDrawing` construction path.
 - [ ] Reject plans that exceed benchmark caps or leave the solution mechanically ambiguous.
+- [ ] If drafted geometry intentionally overlaps a goal zone or target zone, verify the matching `assembly_definition.yaml.drafting.goal_zone_overlap_intents` entry exists; markdown prose is not authorization.
 - [ ] For moving engineer-owned parts, do not treat static payload-trajectory proof as runtime evidence; the plan must stay compatible with the fail-closed simulation monitor and its anchor, contact-order, and terminal-goal expectations.
 
 ### Execution Review Checklist
@@ -53,6 +54,7 @@ When plan or execution evidence needs visual checking, use the shared preview he
 - [ ] Read `solution_script.py`, helper modules, `validation_results.json`, `simulation_result.json`, and the active plan context.
 - [ ] Require validation and simulation success for the latest revision.
 - [ ] Verify plan fidelity, robustness, manufacturability, and cost/weight compliance against the approved plan.
+- [ ] If the latest revision still relies on intentional goal-zone or target-zone overlap, verify the matching `assembly_definition.yaml.drafting.goal_zone_overlap_intents` entry survived unchanged; markdown prose is not authorization.
 - [ ] Reject flaky runtime-jitter behavior, excessive or unjustified DOFs, or any render/video evidence that was not inspected.
 
 ### Refusal Review Checklist
