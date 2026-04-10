@@ -2,10 +2,7 @@ objectives:
   goal_zone:
     min: [320.0, -55.0, 220.0]
     max: [430.0, 55.0, 300.0]
-  forbid_zones:
-    - name: shelf_support_clearance
-      min: [180.0, -95.0, 0.0]
-      max: [280.0, 95.0, 210.0]
+  forbid_zones: []
   build_zone:
     min: [-260.0, -180.0, 0.0]
     max: [470.0, 180.0, 340.0]
@@ -70,9 +67,9 @@ electronics_requirements:
   wiring_constraints:
     max_total_wire_length_mm: 850.0
     restricted_zones:
-      - name: shelf_support_clearance
-        min: [180.0, -95.0, 0.0]
-        max: [280.0, 95.0, 210.0]
+      - name: support_tower_volume
+        min: [190.0, -60.0, 0.0]
+        max: [270.0, 60.0, 210.0]
   circuit_validation_required: true
 assembly_totals:
   estimated_unit_cost_usd: 73.0

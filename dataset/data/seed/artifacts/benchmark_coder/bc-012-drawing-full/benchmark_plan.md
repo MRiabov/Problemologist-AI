@@ -18,9 +18,9 @@ The fixed simulation context that anchors all benchmark fixtures. Provides the r
 
 ### `support_tower` (fixed, aluminum_6061)
 
-- Center: `(230, 0, 105)`
-- Size: `80 × 120 × 210`
-- Vertical structural column between floor and shelf. Defines the shelf-support clearance keep-out zone.
+- Base: `(230, 0, 20)`, size: `80 × 120 × 210` (Align.MIN, sits on floor plate)
+- Top: Z = 230 mm
+- Vertical structural column between floor and shelf.
 
 ### `raised_goal_shelf` (fixed, aluminum_6061)
 
@@ -36,7 +36,7 @@ The fixed simulation context that anchors all benchmark fixtures. Provides the r
 
 ### `drive_motor` (fixed, COTS `ServoMotor_DS3218`)
 
-- Mounting center: `(-130, 0, 10)`
+- Mounting center: `(-130, -70, 20)` (beside carriage path, on floor plate)
 - Catalog dimensions from `ServoMotor_DS3218`: `40 × 20 × 40.5` mm
 - Benchmark-owned fixture. Imported through `ServoMotor.from_catalog_id("ServoMotor_DS3218")`.
 - Control mode: `ON_OFF`, speed `1.0` (units/s for slide_z actuation).
@@ -59,11 +59,9 @@ The fixed simulation context that anchors all benchmark fixtures. Provides the r
 - Success when the projectile ball center enters this volume.
 - The `raised_goal_shelf` fixture is designed to occupy this goal zone as the target landing platform.
 
-### Forbid zone: `shelf_support_clearance`
+### Forbid zones
 
-- AABB min: `(180, -95, 0)`
-- AABB max: `(280, 95, 210)`
-- Any contact with this zone by any simulation object = failure.
+None. The physical geometry of the support tower naturally prevents occupation of its volume.
 
 ### Build zone
 
@@ -92,7 +90,7 @@ The `drive_motor` (`ServoMotor_DS3218`) actuates the lift carriage. The motor is
 - One benchmark-owned servo: `ServoMotor_DS3218` (pololu, $18.00).
 - Power supply: 24 V DC mains-rectified, max 10 A.
 - Max total wire length: 850 mm.
-- Wire restricted zones mirror the `shelf_support_clearance` forbid zone.
+- Wire restricted zones cover the support tower volume `(190, -60, 0)` to `(270, 60, 210)` to keep routing clear of the moving carriage path.
 - Circuit validation is required.
 - The motor and wiring are benchmark fixture context, not engineer-owned electrical design.
 

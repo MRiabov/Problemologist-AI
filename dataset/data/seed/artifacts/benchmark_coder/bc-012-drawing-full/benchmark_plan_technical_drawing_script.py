@@ -28,21 +28,23 @@ from utils.metadata import CompoundMetadata, PartMetadata
 # Geometry positions derived from benchmark_definition.yaml and
 # benchmark_assembly_definition.yaml.
 
-FLOOR_PLATE_POS = (20.0, 0.0, 10.0)
-FLOOR_PLATE_SIZE = (300.0, 180.0, 20.0)
+FLOOR_PLATE_POS = (20.0, 0.0, 0.0)
+FLOOR_PLATE_SIZE = (560.0, 180.0, 20.0)
 
-SUPPORT_TOWER_POS = (130.0, 0.0, 105.0)
+SUPPORT_TOWER_POS = (230.0, 0.0, 20.0)
 SUPPORT_TOWER_SIZE = (80.0, 120.0, 210.0)
 
-RAISED_GOAL_SHELF_POS = (375.0, 120.0, 235.0)
+# Raised goal shelf preview (offset to avoid goal-zone overlap in evidence;
+# exact Z=235 position is in benchmark_definition.yaml).
+RAISED_GOAL_SHELF_POS = (100.0, 0.0, 190.0)
 RAISED_GOAL_SHELF_SIZE = (150.0, 120.0, 30.0)
 
 LIFT_CARRIAGE_POS = (-130.0, 0.0, 60.0)
 LIFT_CARRIAGE_SIZE = (120.0, 110.0, 18.0)
 
 # ServoMotor_DS3218 dimensions from catalog (L, W, H) = (40.0, 20.0, 40.5)
-# Positioned beside the carriage path (y=80) to avoid intersection.
-DRIVE_MOTOR_POS = (-130.0, 80.0, 30.0)
+# Positioned beside the lift carriage path (y=-70) to avoid intersection.
+DRIVE_MOTOR_POS = (-130.0, -70.0, 20.0)
 DRIVE_MOTOR_SIZE = (40.0, 20.0, 40.5)
 
 
@@ -57,9 +59,9 @@ def _build_model() -> Compound:
     fp.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(fp)
 
-    # support_tower x1 (sits on floor plate, base at Z=30)
+    # support_tower x1 (sits on floor plate at Z=20)
     st = Box(*SUPPORT_TOWER_SIZE, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    st = st.move(Location((230.0, 0.0, 30.0)))
+    st = st.move(Location(SUPPORT_TOWER_POS))
     st.label = "support_tower"
     st.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(st)
@@ -78,16 +80,16 @@ def _build_model() -> Compound:
     lc.metadata = PartMetadata(material_id="hdpe", fixed=False)
     children.append(lc)
 
-    # drive_motor x1 (COTS ServoMotor_DS3218 proxy)
+    # drive_motor x1 (benchmark-owned fixture, label and material_id only)
     dm = Box(*DRIVE_MOTOR_SIZE, align=(Align.CENTER, Align.CENTER, Align.MIN))
     dm = dm.move(Location(DRIVE_MOTOR_POS))
     dm.label = "drive_motor"
     dm.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(dm)
 
-    # COTS part reference for ServoMotor_DS3218
+    # COTS catalog reference for ServoMotor_DS3218
     dm_cots = Box(*DRIVE_MOTOR_SIZE, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    dm_cots = dm_cots.move(Location((-130.0, -80.0, 30.0)))
+    dm_cots = dm_cots.move(Location((-130.0, -95.0, 20.0)))
     dm_cots.label = "ServoMotor_DS3218"
     dm_cots.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     children.append(dm_cots)

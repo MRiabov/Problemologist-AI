@@ -31,8 +31,8 @@ def _build_floor_plate() -> Box:
 
 def _build_support_tower() -> Box:
     """Build the fixed vertical support tower."""
-    part = Box(80.0, 120.0, 210.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-    part = part.move(Location((230.0, 0.0, 105.0)))
+    part = Box(80.0, 120.0, 210.0, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    part = part.move(Location((230.0, 0.0, 20.0)))
     part.label = "support_tower"
     part.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     return part
@@ -59,8 +59,8 @@ def _build_lift_carriage() -> Box:
 def _build_drive_motor() -> ServoMotor:
     """Instantiate the benchmark-owned servo motor via COTS catalog lookup."""
     motor = ServoMotor.from_catalog_id("ServoMotor_DS3218")
-    # Position the motor beneath the lift carriage.
-    motor = motor.move(Location((-130.0, 0.0, 10.0)))
+    # Position the motor beside the lift carriage path (y=-70).
+    motor = motor.move(Location((-130.0, -70.0, 20.0)))
     # Ensure the COTS label is stable and reviewer-visible.
     if not motor.label:
         motor.label = "drive_motor"
