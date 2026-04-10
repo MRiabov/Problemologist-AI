@@ -1,0 +1,2 @@
+- [x] Provide a local integration fixture bundle.
+- [x] Avoid eval-seed dependencies in integration coverage.

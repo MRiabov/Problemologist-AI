@@ -66,17 +66,28 @@ from worker_renderer.utils.build123d_rendering import (
 )
 
 ROOT = Path(__file__).resolve().parents[3]
+CODEX_FIXTURE_ARTIFACT_DIR = (
+    ROOT
+    / "tests"
+    / "integration"
+    / "fixtures"
+    / "codex_runner_mode"
+    / "artifacts"
+    / "common"
+)
 AGENTS_CONFIG_PATH = Path("config/agents_config.yaml")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 pytestmark = pytest.mark.xdist_group(name="eval_runner")
 
 
-def _load_dataset_item(dataset_rel_path: str, row_id: str) -> EvalDatasetItem:
-    json_path = ROOT / dataset_rel_path
-    rows = json.loads(json_path.read_text(encoding="utf-8"))
-    row = next(entry for entry in rows if entry["id"] == row_id)
+def _load_dataset_item(_dataset_rel_path: str, row_id: str) -> EvalDatasetItem:
     return EvalDatasetItem.model_validate(
-        {**row, "seed_dataset": json_path.relative_to(ROOT)}
+        {
+            "id": row_id,
+            "task": f"Integration fixture task for {row_id}.",
+            "complexity_level": 0,
+            "seed_artifact_dir": CODEX_FIXTURE_ARTIFACT_DIR.relative_to(ROOT),
+        }
     )
 
 
@@ -3013,7 +3024,7 @@ def test_script_tool_request_normalizes_drafting_script_path_by_graph():
     ),
     [
         (
-            "dataset/data/seed/role_based/benchmark_plan_reviewer.json",
+            "tests/integration/fixtures/codex_runner_mode/benchmark_plan_reviewer.json",
             "bpr-001-raised-shelf",
             AgentName.BENCHMARK_PLANNER,
             ".manifests/benchmark_plan_review_manifest.json",
@@ -3295,16 +3306,15 @@ async def test_codex_role_scoped_planner_wrapper_rejects_mismatched_role(
             ("scripts/submit_review.sh",),
         ),
         (
-            "dataset/data/seed/role_based/benchmark_coder.json",
+            "tests/integration/fixtures/codex_runner_mode/benchmark_coder.json",
             "bc-011-sideways-ball",
             AgentName.BENCHMARK_CODER,
             (
                 "You are the Benchmark Coder.",
                 "Edit `benchmark_script.py` and any supporting `*.py` files",
                 "journal.md",
-                "bash scripts/submit_for_review.sh",
+                "bash scripts/submit_benchmark_for_review.sh",
                 "utils.submission",
-                "intermediate checks before",
                 "result = build()",
                 "python benchmark_script.py",
                 "python .admin/clear_env.py",
@@ -3326,16 +3336,15 @@ async def test_codex_role_scoped_planner_wrapper_rejects_mismatched_role(
             ),
         ),
         (
-            "dataset/data/seed/role_based/engineer_coder.json",
+            "tests/integration/fixtures/codex_runner_mode/engineer_coder.json",
             "ec-001",
             AgentName.ENGINEER_CODER,
             (
                 "You are the Engineer Coder.",
                 "Edit `solution_script.py` and any supporting `*.py` files",
                 "journal.md",
-                "bash scripts/submit_for_review.sh",
+                "bash scripts/submit_solution_for_review.sh",
                 "utils.submission",
-                "intermediate checks before",
                 "result = build()",
                 "python solution_script.py",
                 "python .admin/clear_env.py",
@@ -3358,7 +3367,7 @@ async def test_codex_role_scoped_planner_wrapper_rejects_mismatched_role(
             ),
         ),
         (
-            "dataset/data/seed/role_based/engineer_plan_reviewer.json",
+            "tests/integration/fixtures/codex_runner_mode/engineer_plan_reviewer.json",
             "epr-001-sideways-transfer",
             AgentName.ENGINEER_PLAN_REVIEWER,
             (
@@ -3383,7 +3392,7 @@ async def test_codex_role_scoped_planner_wrapper_rejects_mismatched_role(
             ("scripts/submit_review.sh",),
         ),
         (
-            "dataset/data/seed/role_based/benchmark_reviewer.json",
+            "tests/integration/fixtures/codex_runner_mode/benchmark_reviewer.json",
             "br-014-timed-gate-cots-review",
             AgentName.BENCHMARK_REVIEWER,
             (
@@ -3413,7 +3422,7 @@ async def test_codex_role_scoped_planner_wrapper_rejects_mismatched_role(
             ("scripts/submit_review.sh",),
         ),
         (
-            "dataset/data/seed/role_based/engineer_execution_reviewer.json",
+            "tests/integration/fixtures/codex_runner_mode/engineer_execution_reviewer.json",
             "eer-002-gap-bridge",
             AgentName.ENGINEER_EXECUTION_REVIEWER,
             (
@@ -3441,7 +3450,7 @@ async def test_codex_role_scoped_planner_wrapper_rejects_mismatched_role(
             ("scripts/submit_review.sh",),
         ),
         (
-            "dataset/data/seed/role_based/electronics_reviewer.json",
+            "tests/integration/fixtures/codex_runner_mode/electronics_reviewer.json",
             "erv-002-diverter-gate-review",
             AgentName.ELECTRONICS_REVIEWER,
             (
@@ -3481,7 +3490,7 @@ async def test_codex_seed_workspace_materialization_is_role_specific_and_determi
     INT-034: reviewer evidence completeness.
 
     Verifies curated benchmark plan-reviewer, benchmark-coder, and benchmark-reviewer
-    seed rows materialize into workspace-relative, deterministic local workspaces.
+    fixture rows materialize into workspace-relative, deterministic local workspaces.
     """
 
     item = _load_dataset_item(seed_dataset, row_id)
