@@ -1,0 +1,19 @@
+flowchart LR
+    classDef benchmark fill:#e8f1ff,stroke:#2563eb,stroke-width:2px,color:#102a43;
+    classDef engineer fill:#eaf8ef,stroke:#16a34a,stroke-width:2px,color:#102a43;
+    classDef review fill:#fff3d6,stroke:#d97706,stroke-width:2px,color:#102a43;
+
+    BP["Benchmark Planner<br/><code>benchmark_planner</code>"]:::benchmark
+    BPR["Benchmark Plan Reviewer<br/><code>benchmark_plan_reviewer</code>"]:::review
+    BC["Benchmark Coder<br/><code>benchmark_coder</code>"]:::benchmark
+    BR["Benchmark Reviewer<br/><code>benchmark_reviewer</code>"]:::review
+    EP["Engineering Planner<br/><code>engineer_planner</code>"]:::engineer
+    EPR["Engineering Plan Reviewer<br/><code>engineer_plan_reviewer</code>"]:::review
+    EC["Engineering Coder<br/><code>engineer_coder</code>"]:::engineer
+    EER["Engineering Execution Reviewer<br/><code>engineer_execution_reviewer</code>"]:::review
+
+    BP --> BPR --> BC --> BR --> EP --> EPR --> EC --> EER
+    BPR -. rework .-> BP
+    BR -. rework .-> BC
+    EPR -. rework .-> EP
+    EER -. rework .-> EC

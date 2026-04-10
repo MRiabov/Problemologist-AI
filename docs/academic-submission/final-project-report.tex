@@ -447,4 +447,14 @@ This appendix figure combines six rendered images from two versions of the same 
 \label{fig:appendix-render-collage}
 \end{figure}
 
+\clearpage
+\section{Agent Workflow Graph}
+This appendix figure summarizes the linear agent flow used by the system. The benchmark path runs from \texttt{benchmark\_planner} to \texttt{benchmark\_reviewer}, and the engineering path continues from \texttt{engineer\_planner} to \texttt{engineer\_execution\_reviewer}. Reviewers can loop back to the previous node when a revision is required.
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.98\linewidth]{agent_workflow.png}
+\caption{Agent workflow graph with linear progression and reviewer loops back to the previous node.}
+\label{fig:agent-workflow}
+\end{figure}
+
 \end{document}
