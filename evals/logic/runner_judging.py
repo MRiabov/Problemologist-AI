@@ -34,7 +34,13 @@ from evals.logic.specs import (
     JUDGE_REVIEWER_CHAIN,
 )
 from shared.agents.config import load_agents_config
-from shared.enums import AgentName, EpisodeStatus, EvalMode, ReviewDecision
+from shared.enums import (
+    AgentName,
+    EpisodeStatus,
+    EvalMode,
+    ResponseStatus,
+    ReviewDecision,
+)
 from shared.logging import get_logger
 from shared.models.schemas import EpisodeMetadata
 
@@ -144,10 +150,10 @@ async def _wait_for_worker_ready(
         attempt += 1
         try:
             health = await temp_client.get_health()
-            if health.get("status") == "healthy":
+            if health.status == ResponseStatus.HEALTHY:
                 logger.info("worker_health_check_ok", attempts=attempt)
                 return
-            last_error = f"status={health.get('status')}"
+            last_error = f"status={health.status}"
         except Exception as exc:
             last_error = str(exc)
 

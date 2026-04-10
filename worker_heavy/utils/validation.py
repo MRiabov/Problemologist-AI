@@ -24,6 +24,7 @@ from shared.enums import (
     ElectronicComponentType,
     FailureReason,
     MotorControlMode,
+    SimulationConfidence,
 )
 from shared.git_utils import repo_revision
 from shared.models.schemas import (
@@ -1635,7 +1636,7 @@ def simulate(
                 reason=FailureReason.VALIDATION_FAILED,
                 detail=label_contract_error,
             ),
-            confidence="high",
+            confidence=SimulationConfidence.HIGH,
         )
 
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
@@ -1679,7 +1680,7 @@ def simulate(
                             reason=FailureReason.VALIDATION_FAILED,
                             detail=fixed_contract_error,
                         ),
-                        confidence="high",
+                        confidence=SimulationConfidence.HIGH,
                     )
                 location_contract_error = _validate_top_level_location_contract(
                     component
@@ -1692,7 +1693,7 @@ def simulate(
                             reason=FailureReason.VALIDATION_FAILED,
                             detail=location_contract_error,
                         ),
-                        confidence="high",
+                        confidence=SimulationConfidence.HIGH,
                     )
                 logger.info(
                     "DEBUG_objectives_loaded",
@@ -1716,7 +1717,7 @@ def simulate(
                             reason=FailureReason.VALIDATION_FAILED,
                             detail=fem_message or "Material validation failed",
                         ),
-                        confidence="high",
+                        confidence=SimulationConfidence.HIGH,
                     )
             except Exception as e:
                 import traceback
@@ -1733,7 +1734,7 @@ def simulate(
                         reason=FailureReason.VALIDATION_FAILED,
                         detail=str(e),
                     ),
-                    confidence="high",
+                    confidence=SimulationConfidence.HIGH,
                 )
 
     try:
@@ -1751,7 +1752,7 @@ def simulate(
                 reason=FailureReason.VALIDATION_FAILED,
                 detail=str(exc),
             ),
-            confidence="high",
+            confidence=SimulationConfidence.HIGH,
         )
 
     cost_est_path = _find_workspace_assembly_definition(
@@ -1806,7 +1807,7 @@ def simulate(
                         reason=FailureReason.VALIDATION_FAILED,
                         detail=error_msg,
                     ),
-                    confidence="high",
+                    confidence=SimulationConfidence.HIGH,
                 )
         except Exception as e:
             logger.error(
@@ -1857,7 +1858,7 @@ def simulate(
                                 reason=FailureReason.ELECTRONICS_FLUID_DAMAGE,
                                 detail=part_ref,
                             ),
-                            confidence="high",
+                            confidence=SimulationConfidence.HIGH,
                         )
         except Exception as e:
             logger.error(
@@ -2070,7 +2071,7 @@ def simulate(
                     reason=FailureReason.VALIDATION_FAILED,
                     detail=str(exc),
                 ),
-                confidence="high",
+                confidence=SimulationConfidence.HIGH,
             )
         if final_video_path and final_video_path.exists():
             render_paths.append(str(final_video_path))
@@ -2151,7 +2152,7 @@ def simulate(
                 failure=SimulationFailure(
                     reason=FailureReason.VALIDATION_FAILED, detail=str(exc)
                 ),
-                confidence="high",
+                confidence=SimulationConfidence.HIGH,
             )
 
         result = SimulationResult(

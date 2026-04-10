@@ -14,6 +14,8 @@ from pathlib import Path
 
 import yaml
 
+from shared.enums import ResponseStatus
+
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -121,11 +123,11 @@ async def _wait_for_worker_ready(
         attempt += 1
         try:
             health = await temp_client.get_health()
-            if health.get("status") == "healthy":
+            if health.status == ResponseStatus.HEALTHY:
                 if not errors_only:
                     logger.info("worker_health_check_ok", attempts=attempt)
                 return
-            last_error = f"status={health.get('status')}"
+            last_error = f"status={health.status}"
         except Exception as exc:
             last_error = str(exc)
 
