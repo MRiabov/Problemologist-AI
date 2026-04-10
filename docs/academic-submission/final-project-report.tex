@@ -426,7 +426,7 @@ Feedback / Formula
 
 \clearpage
 \section{Representative Render Collage}
-This appendix figure combines six rendered images from two versions of the same environment: the engineer-planned render set in the top row and the benchmark-only render set in the bottom row. The source PNGs are archived under \texttt{render\_sources/} for reproducibility. The images show RGB (isometric view), depth (isometric view) and segmentation (sideways isometric view) views. All pictures show different views of the same environments. In particular, we can observe that:
+This appendix figure combines six rendered images from two versions of the same environment: the benchmark render set in the top row and the solution render set in the bottom row. The source PNGs are archived under \texttt{render\_sources/} for reproducibility. The images show RGB (isometric view), depth (isometric view) and segmentation (sideways isometric view) views. All pictures show different views of the same environments. In particular, we can observe that:
 \begin{itemize}
     \item RGB:
     \begin{itemize}
@@ -437,17 +437,13 @@ This appendix figure combines six rendered images from two versions of the same 
     \end{itemize}
     \item Segmentation and depth:
     \begin{itemize}
-        \item Segmentation and depth maps show some objects translucently allowing to preview the render.
+        \item Segmentation and depth maps show some objects translucently, allowing the render to be previewed.
     \end{itemize}
 \end{itemize}
-\begin{enumerate}
-    \item A red line (shown to the agent) showing the planned path of the object from the start of the environment to the end of it.
-    \item A green objective the object must reach.
-\end{enumerate}
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.98\linewidth]{appendix_render_collage.png}
-\caption{Composite appendix render comparing engineer-planned and benchmark-only renders in RGB, depth, and segmentation order.}
+\caption{Composite appendix render comparing benchmark and solution renders in RGB, depth, and segmentation order.}
 \label{fig:appendix-render-collage}
 \end{figure}
 
