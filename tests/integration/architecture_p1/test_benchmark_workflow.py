@@ -66,7 +66,7 @@ async def test_benchmark_planner_cad_reviewer_path():
     Verifies:
     1. Benchmark generation trigger
     2. Successful completion of the workflow
-    3. Existence of required artifacts (plan.md, benchmark_definition.yaml, Reviews)
+    3. Existence of required artifacts (benchmark_plan.md, benchmark_definition.yaml, Reviews)
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Trigger Benchmark Generation
@@ -147,8 +147,8 @@ async def test_benchmark_planner_cad_reviewer_path():
             if t.trace_type.value == "TOOL_START" and t.name == "inspect_media"
         ]
 
-        assert Path("plan.md") in artifact_paths, (
-            f"plan.md missing. Artifacts: {artifact_paths}"
+        assert Path("benchmark_plan.md") in artifact_paths, (
+            f"benchmark_plan.md missing. Artifacts: {artifact_paths}"
         )
         assert Path("benchmark_definition.yaml") in artifact_paths, (
             f"benchmark_definition.yaml missing. Artifacts: {artifact_paths}"
@@ -205,7 +205,7 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert benchmark_definition.randomization.runtime_jitter_enabled is True
         assert "randomization:" in benchmark_definition_resp.text
         assert "runtime_jitter:" in benchmark_definition_resp.text
-        plan_paths = [p for p in artifact_paths if p == Path("plan.md")]
+        plan_paths = [p for p in artifact_paths if p == Path("benchmark_plan.md")]
         plan_resp = await client.get(f"/episodes/{session_id}/assets/{plan_paths[0]}")
         assert plan_resp.status_code == 200, plan_resp.text
         assert Path("benchmark_assembly_definition.yaml") in artifact_paths, (
@@ -448,7 +448,7 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
         assert manifest.planner_node_type == AgentName.BENCHMARK_PLANNER
         assert manifest.artifact_hashes, manifest
         assert {
-            "plan.md",
+            "benchmark_plan.md",
             "todo.md",
             "benchmark_definition.yaml",
             "benchmark_assembly_definition.yaml",

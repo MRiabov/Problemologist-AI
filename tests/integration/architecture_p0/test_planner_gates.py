@@ -706,8 +706,8 @@ async def test_int_114_benchmark_planner_flow_emits_submit_benchmark_plan_trace(
         episode_data = EpisodeResponse.model_validate(episode_resp.json())
         artifact_paths = [_asset_path(a.s3_path) for a in (episode_data.assets or [])]
 
-        plan_paths = [p for p in artifact_paths if p == Path("plan.md")]
-        assert plan_paths, f"plan.md missing. Artifacts: {artifact_paths}"
+        plan_paths = [p for p in artifact_paths if p == Path("benchmark_plan.md")]
+        assert plan_paths, f"benchmark_plan.md missing. Artifacts: {artifact_paths}"
         plan_resp = await client.get(
             f"{CONTROLLER_URL}/episodes/{episode_id}/assets/{plan_paths[0]}"
         )
