@@ -4,7 +4,7 @@ transcript:
   - thought: Seed an over-actuated plan with unjustified DOFs.
     tool_name: write_file
     tool_args:
-      path: plan.md
+      path: engineering_plan.md
       overwrite: true
       content_file: INT-074/engineer_planner/entry_01/01__plan.md
     expected_observation: success

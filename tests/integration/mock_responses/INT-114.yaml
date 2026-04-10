@@ -4,7 +4,7 @@ transcript:
   - thought: Designing a simple rigid-body, gravity-only benchmark for INT-114.
     tool_name: write_file
     tool_args:
-      path: plan.md
+      path: benchmark_plan.md
       overwrite: true
       content_file: INT-114/benchmark_planner/entry_01/01__plan.md
     expected_observation: success
@@ -72,15 +72,15 @@ transcript:
   - thought: Inspect the latest revision render bundle before approval.
     tool_name: list_files
     tool_args:
-      path: renders/benchmark_renders
+      path: renders/current-episode
     expected_observation: success
   - tool_name: inspect_media
     tool_args:
-      path: renders/benchmark_renders/00_front.png
+      path: renders/current-episode/00_front.png
     expected_observation: attached_to_model
   - tool_name: inspect_media
     tool_args:
-      path: renders/benchmark_renders/01_top.png
+      path: renders/current-episode/01_top.png
     expected_observation: attached_to_model
   - finished: true
     review:

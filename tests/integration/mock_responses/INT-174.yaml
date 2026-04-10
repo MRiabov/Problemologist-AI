@@ -4,7 +4,7 @@ transcript:
   - thought: Planning for INT-174.
     tool_name: write_file
     tool_args:
-      path: plan.md
+      path: benchmark_plan.md
       overwrite: true
       content_file: INT-174/benchmark_planner/entry_01/01__plan.md
     expected_observation: success
@@ -72,7 +72,7 @@ transcript:
   - thought: Planning follow-up CAD inspection support for INT-174.
     tool_name: write_file
     tool_args:
-      path: plan.md
+      path: engineering_plan.md
       overwrite: true
       content_file: INT-174/engineer_planner/entry_01/01__plan.md
     expected_observation: success

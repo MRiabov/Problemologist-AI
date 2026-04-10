@@ -32,7 +32,7 @@ Create a passive-looking bridge transfer benchmark that uses an explicit
   out directly in the handoff.
 - Controller facts: `ON_OFF` control at speed `0.15`.
 - The benchmark should not hide motion; any movement must be explicit in both
-  `plan.md` and `todo.md`.
+  `benchmark_plan.md` and `todo.md`.
 
 ## 6. Randomization
 

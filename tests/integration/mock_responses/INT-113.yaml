@@ -4,7 +4,7 @@ transcript:
   - thought: Creating a simple benchmark setup for the integration test.
     tool_name: write_file
     tool_args:
-      path: plan.md
+      path: benchmark_plan.md
       overwrite: true
       content_file: INT-113/benchmark_planner/entry_01/01__plan.md
     expected_observation: success
@@ -78,7 +78,7 @@ transcript:
   - thought: Create baseline engineer planner artifacts for INT-113.
     tool_name: write_file
     tool_args:
-      path: plan.md
+      path: engineering_plan.md
       overwrite: true
       content_file: INT-113/engineer_planner/entry_01/01__plan.md
     expected_observation: success
@@ -109,7 +109,7 @@ transcript:
   - thought: Create electronics planner artifacts for INT-113 and explicitly submit.
     tool_name: write_file
     tool_args:
-      path: plan.md
+      path: engineering_plan.md
       overwrite: true
       content_file: INT-113/electronics_planner/entry_01/01__plan.md
     expected_observation: success

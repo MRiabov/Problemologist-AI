@@ -53,7 +53,7 @@ The plan needs a traceable calculation instead of a freeform claim.
 
 #### Cross-References
 
-- `plan.md#3-assembly-strategy`
+- `engineering_plan.md#3-assembly-strategy`
 
 ## 6. Critical Constraints / Operating Envelope
 

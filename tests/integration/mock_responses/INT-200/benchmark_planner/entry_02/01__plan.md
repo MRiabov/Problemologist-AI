@@ -33,7 +33,7 @@ trim axis and keeps the motion visible in the planner handoff.
 - The trim travels only within a narrow 15 mm correction window.
 - Controller facts: `ON_OFF` control at speed `0.15`.
 - The benchmark should not hide motion; any movement must be explicit in both
-  `plan.md` and `todo.md`.
+  `benchmark_plan.md` and `todo.md`.
 
 ## 6. Randomization
 

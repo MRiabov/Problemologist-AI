@@ -1,5 +1,5 @@
 - [x] Confirm the benchmark stays in the simple rigid-body, gravity-only family.
-- [x] Define the passive static geometry and the sphere input object in `plan.md`.
+- [x] Define the passive static geometry and the sphere input object in `benchmark_plan.md`.
 - [x] Write objective zones and the build zone so the gravity path is clear.
 - [x] Record the cost and weight envelope for the passive fixture.
 - [x] Write `benchmark_definition.yaml` with rigid-body-only scope and explicit bounds.

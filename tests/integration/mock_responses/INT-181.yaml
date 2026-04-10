@@ -14,7 +14,7 @@ transcript:
     expected_observation: success
   - tool_name: write_file
     tool_args:
-      path: plan.md
+      path: engineering_plan.md
       overwrite: true
       content_file: INT-181/engineer_planner/entry_01/03__plan.md
     expected_observation: success

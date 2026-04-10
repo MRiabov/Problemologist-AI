@@ -4,7 +4,7 @@ transcript:
   - thought: Preparing a task that requires electronics implementation.
     tool_name: write_file
     tool_args:
-      path: plan.md
+      path: benchmark_plan.md
       overwrite: true
       content_file: INT-142/benchmark_planner/entry_01/01__plan.md
     expected_observation: success

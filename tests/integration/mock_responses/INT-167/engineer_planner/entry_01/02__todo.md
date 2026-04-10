@@ -3,7 +3,7 @@
 ## Phase 1: Setup
 
 - [ ] Read benchmark_definition.yaml and preserve benchmark-owned fixtures
-- [ ] Read plan.md and confirm the proxy-CAD evidence flow
+- [ ] Read engineering_plan.md and confirm the proxy-CAD evidence flow
 
 ## Phase 2: Build
 

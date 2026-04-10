@@ -4,7 +4,7 @@ transcript:
   - thought: Creating a simple benchmark setup for the integration test.
     tool_name: write_file
     tool_args:
-      path: plan.md
+      path: benchmark_plan.md
       overwrite: true
       content_file: INT-005/benchmark_planner/entry_01/01__plan.md
     expected_observation: success
@@ -91,7 +91,7 @@ transcript:
   - thought: Create planner artifacts before exercising the pricing-source gate.
     tool_name: write_file
     tool_args:
-      path: plan.md
+      path: engineering_plan.md
       overwrite: true
       content_file: INT-005/engineer_planner/entry_01/01__plan.md
     expected_observation: success
