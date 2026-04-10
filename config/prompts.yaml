@@ -194,7 +194,8 @@ appendices:
       Benchmark coders submit with `bash scripts/submit_benchmark_for_review.sh`.
       Solution coders submit with `bash scripts/submit_solution_for_review.sh`.
       Reviewer roles submit with `bash scripts/submit_review.sh`.
-      Use `python .admin/clear_env.py` for a clean retry.
+      Use `python .admin/clear_env.py` only when you intentionally want a full workspace reset and are willing to discard current edits.
+      For ordinary reruns after code changes, rerun `validate_benchmark()` / `simulate_benchmark()` or `validate_engineering()` / `simulate_engineering()` instead of wiping the workspace.
       Prompt transport and resume syntax are provider-owned.
       Coder roles may also use a supporting Python file that calls `validate_benchmark()` and `simulate_benchmark()` before `submit_benchmark_for_review()`, or `validate_engineering()` and `simulate_engineering()` before `submit_solution_for_review()`, from `utils.submission`. Only the role-scoped review helper performs the handoff.
     api_based: |
