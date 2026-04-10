@@ -426,11 +426,28 @@ Feedback / Formula
 
 \clearpage
 \section{Representative Render Collage}
-This appendix figure combines the three provided renders into a single collage so the report remains self-contained in Overleaf.
+This appendix figure combines three rendered images taken from an environment successfully solved by benchmar-planner; the images show RGB (isometric view), depth (isometric view) and segmentation (sideways isometric view) views. All pictures show different views of the same environment. In particular, we can observe that:
+\begin{itemize}
+    \item RGB:
+    \begin{itemize}
+        \item Guard rails on the side will prevent a ball from falling outside to the forbidden bounds,
+        \item A platform below the objective that, once the ball will be spawned, will as a ramp, push a ball to the objective.
+        \item A cover on top to prevent the ball from accidentally moving out of the simulation
+    \end{itemize}
+    \item Segmentation and depth:
+    \begin{itemize}
+        \item Segmentation and depth maps show some objects translucently allowing to preview the render.
+    \end{itemize}
+\end{itemize}
+A red line (shown to the agent) showing the planned path of the object from the start of the environment to the end of it.
+\begin{enumerate}
+    \setcounter{enumi}{1}
+    \item A green objective the object must
+\end{enumerate}
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.98\linewidth]{appendix_render_collage.png}
-\caption{Composite appendix render of the freestanding transfer mechanism, showing segmentation, a nominal perspective render, and depth information.}
+\caption{Composite appendix render of the freestanding transfer mechanism, showing RGB, depth, and segmentation information in that order.}
 \label{fig:appendix-render-collage}
 \end{figure}
 
