@@ -44,7 +44,9 @@ def center_text(draw: ImageDraw.ImageDraw, box, text, font, fill):
 
 
 def wrap_label(text: str, width: int) -> str:
-    return textwrap.fill(text, width=width, break_long_words=False, break_on_hyphens=False)
+    return textwrap.fill(
+        text, width=width, break_long_words=False, break_on_hyphens=False
+    )
 
 
 def rounded_box(draw, box, outline, fill, width=4, radius=18):
@@ -72,18 +74,8 @@ def bezier_points(p0, p1, p2, p3, steps=40):
     for i in range(steps + 1):
         t = i / steps
         mt = 1 - t
-        x = (
-            mt**3 * p0[0]
-            + 3 * mt**2 * t * p1[0]
-            + 3 * mt * t**2 * p2[0]
-            + t**3 * p3[0]
-        )
-        y = (
-            mt**3 * p0[1]
-            + 3 * mt**2 * t * p1[1]
-            + 3 * mt * t**2 * p2[1]
-            + t**3 * p3[1]
-        )
+        x = mt**3 * p0[0] + 3 * mt**2 * t * p1[0] + 3 * mt * t**2 * p2[0] + t**3 * p3[0]
+        y = mt**3 * p0[1] + 3 * mt**2 * t * p1[1] + 3 * mt * t**2 * p2[1] + t**3 * p3[1]
         points.append((x, y))
     return points
 
@@ -116,7 +108,13 @@ def render(output: Path):
     node_enum_font = load_font(MONO, 18)
     small_font = load_font(FONT, 18)
 
-    draw.text((WIDTH / 2, 54), "Agent Workflow Graph", font=title_font, fill=TITLE, anchor="ma")
+    draw.text(
+        (WIDTH / 2, 54),
+        "Agent Workflow Graph",
+        font=title_font,
+        fill=TITLE,
+        anchor="ma",
+    )
     draw.text(
         (WIDTH / 2, 106),
         "Benchmark on the first line, engineering on the second, with reviewer loops back to the previous node",
@@ -143,7 +141,12 @@ def render(output: Path):
         ("Engineering Planner", "engineer_planner", ENGINEER, FILL_ENG),
         ("Engineering Plan Reviewer", "engineer_plan_reviewer", REVIEW, FILL_REVIEW),
         ("Engineering Coder", "engineer_coder", ENGINEER, FILL_ENG),
-        ("Engineering Execution Reviewer", "engineer_execution_reviewer", REVIEW, FILL_REVIEW),
+        (
+            "Engineering Execution Reviewer",
+            "engineer_execution_reviewer",
+            REVIEW,
+            FILL_REVIEW,
+        ),
     ]
 
     def draw_node(cx, cy, title, enum_name, outline, fill):
@@ -151,14 +154,34 @@ def render(output: Path):
         rounded_box(draw, box, outline, fill, width=4, radius=18)
         title_text = wrap_label(title, 19)
         enum_text = wrap_label(enum_name, 24)
-        title_bbox = draw.multiline_textbbox((0, 0), title_text, font=node_title_font, spacing=4, align="center")
-        enum_bbox = draw.multiline_textbbox((0, 0), enum_text, font=node_enum_font, spacing=3, align="center")
+        title_bbox = draw.multiline_textbbox(
+            (0, 0), title_text, font=node_title_font, spacing=4, align="center"
+        )
+        enum_bbox = draw.multiline_textbbox(
+            (0, 0), enum_text, font=node_enum_font, spacing=3, align="center"
+        )
         title_h = title_bbox[3] - title_bbox[1]
         enum_h = enum_bbox[3] - enum_bbox[1]
         total_h = title_h + 8 + enum_h
         top = cy - total_h / 2
-        draw.multiline_text((cx, top), title_text, font=node_title_font, fill=BODY, anchor="ma", spacing=4, align="center")
-        draw.multiline_text((cx, top + title_h + 8), enum_text, font=node_enum_font, fill=SUBTITLE, anchor="ma", spacing=3, align="center")
+        draw.multiline_text(
+            (cx, top),
+            title_text,
+            font=node_title_font,
+            fill=BODY,
+            anchor="ma",
+            spacing=4,
+            align="center",
+        )
+        draw.multiline_text(
+            (cx, top + title_h + 8),
+            enum_text,
+            font=node_enum_font,
+            fill=SUBTITLE,
+            anchor="ma",
+            spacing=3,
+            align="center",
+        )
         return box
 
     benchmark_boxes = [
@@ -173,7 +196,14 @@ def render(output: Path):
         right = benchmark_boxes[i][2]
         left = benchmark_boxes[i + 1][0]
         y = top_y
-        arrow_line(draw, (right + 8, y), (left - 8, y), fill=(70, 78, 92, 255), width=5, arrow_size=16)
+        arrow_line(
+            draw,
+            (right + 8, y),
+            (left - 8, y),
+            fill=(70, 78, 92, 255),
+            width=5,
+            arrow_size=16,
+        )
 
     # Transition from benchmark to engineering.
     start = (benchmark_boxes[-1][2], top_y + box_h / 2)
@@ -188,14 +218,27 @@ def render(output: Path):
         width=5,
         arrow_size=16,
     )
-    draw.text(((start[0] + end[0]) / 2 + 130, (start[1] + end[1]) / 2 + 48), "handoff", font=small_font, fill=SUBTITLE, anchor="mm")
+    draw.text(
+        ((start[0] + end[0]) / 2 + 130, (start[1] + end[1]) / 2 + 48),
+        "handoff",
+        font=small_font,
+        fill=SUBTITLE,
+        anchor="mm",
+    )
 
     # Bottom row connections.
     for i in range(3):
         right = engineer_boxes[i][2]
         left = engineer_boxes[i + 1][0]
         y = bottom_y
-        arrow_line(draw, (right + 8, y), (left - 8, y), fill=(70, 78, 92, 255), width=5, arrow_size=16)
+        arrow_line(
+            draw,
+            (right + 8, y),
+            (left - 8, y),
+            fill=(70, 78, 92, 255),
+            width=5,
+            arrow_size=16,
+        )
 
     # Loop arrows above the reviewer nodes.
     loop_arrow(
