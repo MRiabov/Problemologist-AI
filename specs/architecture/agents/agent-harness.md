@@ -69,7 +69,7 @@ The workspace contract is:
 08. Benchmark planner workspaces do not receive `benchmark_script.py`. Benchmark coder and benchmark reviewer workspaces copy `benchmark_script.py` as read-only geometry context after plan approval, and engineer workspaces copy `solution_script.py` as the authored implementation source. Runtime-owned wrappers remain separate from both.
 09. Seed-row artifacts are copied into the workspace before prompt generation.
 10. The backend writes `.manifests/current_role.json` with the active role before the prompt is rendered and refreshes it whenever the workspace enters a new node.
-11. Shared starter templates also include `.admin/clear_env.py`, a local helper that wipes and re-materializes the same seeded row in place so the conversation can continue after a retry.
+11. Shared starter templates also include `.admin/clear_env.py`, a local helper that performs a destructive full workspace reset and re-materializes the same seeded row in place; use it only when you intentionally want to discard the current workspace and restart from the seed.
 12. The materialized workspace remains local to the run and is not promoted into a canonical shared root.
 
 The workspace materializer in `dataset/evals/materialize_seed_workspace.py` is the inspection helper for this same workspace contract.
@@ -88,7 +88,7 @@ The canonical prompt rules are:
 04. Planner prompts instruct the role-scoped submission command (`bash scripts/submit_benchmark_plan.sh` or `bash scripts/submit_engineering_plan.sh`) as appropriate for the active planner role.
 05. Benchmark planner prompts do not include `benchmark_script.py`; that file is introduced only after benchmark plan approval. Coder prompts instruct editing the role-owned authored source file (`solution_script.py` for engineering roles, `benchmark_script.py` for benchmark coder roles) and supporting `*.py` files, then either running `bash scripts/submit_benchmark_for_review.sh` / `bash scripts/submit_solution_for_review.sh` or using the matching Python submission utility from `utils.submission` in a supporting script. In that route, `validate_benchmark()` / `simulate_benchmark()` or `validate_engineering()` / `simulate_engineering()` are intermediate checks before `submit_benchmark_for_review()` / `submit_solution_for_review()`, and benchmark simulation is a stability/evidence pass rather than a goal-reaching pass.
 06. Reviewer prompts instruct writing stage-specific review artifacts under `reviews/`, then running `bash scripts/submit_review.sh`.
-07. The prompt also advertises `python .admin/clear_env.py` as the in-workspace reset helper for clean retries.
+07. The prompt may advertise `python .admin/clear_env.py` as an explicit full-reset helper, but normal validation/simulation reruns should overwrite their own outputs and do not require clearing the workspace.
 08. The prompt includes the task text, agent name, task ID, and seed dataset name when available.
 09. The prompt does not need to describe repository-level import paths or module layout.
 10. When bug-report mode is enabled, the prompt tells the role to write `bug_report.md` only for infrastructure, harness, workspace materialization, prompt transport, filesystem policy, render plumbing, eval orchestration, or other runtime blockers, and to keep working by default after the report is filed.
