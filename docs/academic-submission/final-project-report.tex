@@ -64,6 +64,8 @@ The closest prior work to Problemologist-AI falls into two overlapping groups: C
 
 \textit{CAD reconstruction}: CAD Automation LLMs \cite{ref31}, STEP-LLM \cite{ref32}, and \texttt{cadrille} \cite{ref39} produce FreeCAD scripts or reconstruct STEP/B-Rep geometry, but their evaluation is largely limited to syntax, geometric fidelity, or representation rather than manufacturability, cost compliance, and functional behavior in simulation.
 
+VideoCAD \cite{ref41} is notable because it targets a neighboring problem: learning long-horizon 3D CAD UI interactions from video. That makes it complementary to our work, which focuses on generating and validating physically manufacturable mechanisms rather than imitating CAD interface behavior.
+
 \textit{Physics-tuned LLMs}: There are LLM models in particular tuned for physics problems, e.g. Cosmos-Reason \cite{ref33}, which could be an easy model to fine-tune; however, recent work such as \texttt{cadrille} does not use these methods.
 
 \textit{Automated evaluation environment generation}: EnvScaler \cite{ref29} and EnvGen \cite{ref30} show that LLMs can generate scenarios or tasks in software and game-like environments, but they do not focus on hardware design or physics-based validation of a resulting mechanism. EmboCoach-Bench \cite{ref28} and similar works synthesize tasks for robots to solve, but they do not make robot geometries.
@@ -359,6 +361,9 @@ M. Kolodiazhnyi et al., ``cadrille: Multi-modal CAD Reconstruction with Reinforc
 \bibitem{ref40}
 L. Zhang, B. Le, N. Akhtar, S.-K. Lam, and D. Ngo, ``Large language models for computer-aided design: A survey,'' \emph{ACM Comput. Surv.}, vol. 58, no. 9, 2026, doi:10.1145/3787499.
 
+\bibitem{ref41}
+K. Y. B. Man, G. Nehme, M. F. Alam, and F. Ahmed, ``VideoCAD: A Dataset and Model for Learning Long-Horizon 3D CAD UI Interactions from Video,'' NeurIPS Poster, 2025. [Online]. Available: \url{https://neurips.cc/virtual/2025/loc/san-diego/poster/121820}
+
 \end{thebibliography}
 
 \clearpage
@@ -418,5 +423,15 @@ Feedback / Formula
 \texttt{judge\_evaluation} & \texttt{bad\_feedback\_resistance\_score} & 0.02 & partial score & Score for following valid reviewer feedback while resisting incorrect or non-applicable requests in mixed-quality review seeds. & Partial score. \\
 \end{longtable}
 \endgroup
+
+\clearpage
+\section{Representative Render Collage}
+This appendix figure combines the three provided renders into a single collage so the report remains self-contained in Overleaf.
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.98\linewidth]{appendix_render_collage.png}
+\caption{Composite appendix render of the freestanding transfer mechanism, showing segmentation, a nominal perspective render, and depth information.}
+\label{fig:appendix-render-collage}
+\end{figure}
 
 \end{document}
