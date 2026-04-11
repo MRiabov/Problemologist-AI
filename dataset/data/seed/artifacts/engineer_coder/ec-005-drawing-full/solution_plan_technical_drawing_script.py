@@ -51,7 +51,7 @@ def build():
             height=40.0,
             x=-200.0,
             y=0.0,
-            z=20.0,
+            z=0.0,
             material_id="hdpe",
         ),
         _build_part(
