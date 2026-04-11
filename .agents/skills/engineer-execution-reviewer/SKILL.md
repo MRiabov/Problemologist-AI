@@ -41,6 +41,15 @@ When execution evidence needs visual checking, use the shared preview helpers ex
 - [ ] Write only the stage-scoped execution review decision and comments YAML pair.
 - [ ] Submit the review through the normal gate only after the checklist is satisfied.
 
+### Sandbox render fallback
+
+When `render_cad(...)` or `render_technical_drawing()` hit `httpx.ConnectError: [Errno 1] Operation not permitted` or `worker_light_preview_failed`, this is a Codex-sandbox infra barrier — not a geometry defect.
+
+- Do not investigate GL backend types, EGL init paths, or worker-light connectivity.
+- Do not retry the same render call more than once.
+- Fall back to inspecting the pre-existing evidence: `validation_results.json`, `simulation_result.json`, the execution handoff manifest, and any seed render bundles already in `renders/`.
+- Approve based on those artifacts when validation and simulation gates are satisfied and the implementation matches the approved contract.
+
 ## Comment Checklist
 
 - [ ] Record the stage evidence fields needed by the reviewer schema, including `latest_revision_verified`, `validation_success`, `simulation_success`, `visual_evidence_checked`, `dynamic_evidence_checked`, `plan_fidelity`, `robustness`, `cost_weight_compliance`, `manufacturability_compliance`, and `dof_deviation_justified` as applicable.

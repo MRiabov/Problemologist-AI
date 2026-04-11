@@ -78,6 +78,7 @@ Use this sequence for benchmark-coder and engineer-coder evals:
     - import `result` from the authored file
     - `from utils.submission import validate_benchmark, simulate_benchmark` for benchmark scripts or `validate_engineering, simulate_engineering` for engineering scripts
     - `validate_benchmark(result)` / `simulate_benchmark(result)` or `validate_engineering(result)` / `simulate_engineering(result)` if validation passes
+    - If local `simulate_engineering` fails with sandbox/infra errors (`Operation not permitted` from EGL/GPU, `httpx.ConnectError` to workers) while validation passes, proceed to `submit_solution_for_review(result)` anyway. The eval runner executes simulation through the real heavy-worker path. Record the sandbox limitation in `journal.md` and do not loop on geometry for infra barriers.
 08. If validation fails, fix the geometry or placement in the authored file, not the execution contract.
 09. If the same issue persists after one targeted fix, record the blocker in `journal.md` and stop diagnostics instead of widening into repo spelunking.
 10. For engineer-owned scripts, do not copy benchmark-only `fixed=True` examples into the implementation unless the current task explicitly says you are authoring benchmark fixtures.

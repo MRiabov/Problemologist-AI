@@ -89,6 +89,9 @@ That collision review does not mean the plan was already manufacturability-valid
 If the handoff includes `assembly_definition.yaml.drafting.goal_zone_overlap_intents`, treat that YAML list as the only authorization for intentional goal-zone or target-zone overlap; markdown prose does not override it.
 Prefer selector-driven placement over free-form XYZ positioning. Use face/axis selectors, explicit mates, and fastener-based constraints to place parts relative to each other and the environment; treat any absolute coordinate anchor as an exception that should be minimal and traceable.
 
+**Critical: copy geometry values exactly from the evidence scripts.** When `solution_plan_evidence_script.py` or `solution_plan_technical_drawing_script.py` define part dimensions, positions, and rotations, use those exact numeric values in your `solution_script.py`. Do not recalculate thicknesses from volumes, do not derive new Z positions from slope formulas, and do not introduce rotation angles that are not present in the planner scripts. The planner's geometry has already passed collision review — your job is to reproduce it faithfully, not to improve or reinterpret it. If the evidence script places `capture_funnel` at `z=20` with `height=40`, use exactly those values; do not compute a "volume-consistent" alternative that shifts the position.
+However, be mindful that the plans did not pass evaluation yet, so you may experiment with minor design changes.
+
 For engineering handoffs, treat `engineering_plan.md` as the source of truth for mechanism narrative, exact inventory mentions, assumptions, calculations, and operating limits. The tightened template includes an Assumption Register, Detailed Calculations, and Critical Constraints / Operating Envelope sections; if the handoff expects those proof sections and they are missing or ungrounded, surface the defect rather than inferring missing numbers.
 When the planner template is in use, read `engineering_plan.md` as a sectioned contract with named parts: `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Assumption Register`, `## 5. Detailed Calculations`, `## 6. Critical Constraints / Operating Envelope`, `## 7. Cost & Weight Budget`, and `## 8. Risk Assessment`. The `Detailed Calculations` section is where the binding math lives, and `Risk Assessment` is where known failure modes and mitigations should be documented.
 If the geometry or physics derivation is hand-wavy instead of formula-backed, stop and treat that as a plan defect. In practice, handoffs that cannot derive the payload trajectory, contact timing, or clearance math rigorously are not reliable enough to implement.
@@ -182,6 +185,30 @@ This role should behave like a high-confidence solver, not a wandering explorer.
 - If the solution has moving behavior and simulation video exists, inspect the dynamic evidence before approval.
 - Treat `validation_results.json`, `simulation_result.json`, and render manifests as evidence inputs, not as substitutes for reasoning.
 - When review feedback arrives, fix only valid checklist items and keep passing items stable.
+
+### Sandbox simulation failure handling
+
+When probing `simulate_engineering(result)` from the Codex sandbox, the local simulation call may fail with infrastructure errors that are **not** geometry bugs. Recognize these patterns:
+
+- `Operation not permitted` from MuJoCo/EGL or GPU render paths
+- `httpx.ConnectError` to worker-light/worker-heavy endpoints
+- Sandbox-sealed `Simulation error` that traces back to display/GPU/ EGL init failures
+- Repeated identical infra failures after one targeted retry with no geometry change
+
+When you observe one of these patterns:
+
+1. **Do not** treat this as a geometry or mechanism problem. The failure is a sandbox runtime limitation, not a design flaw.
+2. **Do not** investigate GL backend types, EGL init paths, or worker-light connectivity — these are infra configuration issues you cannot fix from the sandbox.
+3. If `validate_engineering(result)` passes, **proceed to call `submit_solution_for_review(result)` immediately**. The eval runner will execute simulation through the real heavy-worker path outside the sandbox.
+4. Record the sandbox infra failure in `journal.md` with the exact error message and classify it as a sandbox limitation.
+5. Do not loop on further simulation retries — the infra barrier will not be resolved by geometry edits or backend investigations.
+6. If validation also fails, fix the validated geometry first, then call `submit_solution_for_review(result)` even if local simulation still hits the same sandbox wall.
+
+**After successful submission, STOP WORKING.** Do not continue to iterate on geometry, read additional files, or make further edits. The submission is complete and the eval runner will handle the rest. Continuing to work wastes tokens and may cause the run to exceed time-limits.
+
+When local simulation completes successfully, inspect the result and proceed normally through the evidence and review workflow.
+
+<!--FIXME: well, this is a bug though.-->
 
 ## Debugging Rules
 
