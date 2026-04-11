@@ -8,6 +8,7 @@ import tempfile
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import trimesh
@@ -23,6 +24,7 @@ import colorsys
 
 from shared.agents import get_image_render_resolution
 from shared.agents.config import DraftingMode
+from shared.current_role import current_role_manifest_json
 from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition, CompoundMetadata, PartMetadata
@@ -37,6 +39,7 @@ from shared.rendering.renderer_client import (
 )
 from shared.script_contracts import (
     BENCHMARK_SCRIPT_PATH,
+    CURRENT_ROLE_MANIFEST_PATH,
     SOLUTION_SCRIPT_PATH,
     authored_script_path_for_agent,
     technical_drawing_script_path_for_agent,
@@ -331,26 +334,34 @@ def _rewrite_render_bundle_prefix(
 def _remap_render_bundle_artifacts(
     artifacts, *, source_bundle: str, target_bundle: str
 ):
-    remapped = artifacts.model_copy(deep=True)
-    remapped.render_paths = [
+    render_paths = [
         _rewrite_render_bundle_prefix(
             rel_path, source_bundle=source_bundle, target_bundle=target_bundle
         )
-        for rel_path in remapped.render_paths
+        for rel_path in (getattr(artifacts, "render_paths", None) or [])
     ]
-    remapped.render_blobs_base64 = {
+    render_blobs_base64 = {
         _rewrite_render_bundle_prefix(
             rel_path, source_bundle=source_bundle, target_bundle=target_bundle
         ): blob
-        for rel_path, blob in remapped.render_blobs_base64.items()
+        for rel_path, blob in (
+            getattr(artifacts, "render_blobs_base64", None) or {}
+        ).items()
     }
-    remapped.object_store_keys = {
+    object_store_keys = {
         _rewrite_render_bundle_prefix(
             rel_path, source_bundle=source_bundle, target_bundle=target_bundle
         ): object_key
-        for rel_path, object_key in remapped.object_store_keys.items()
+        for rel_path, object_key in (
+            getattr(artifacts, "object_store_keys", None) or {}
+        ).items()
     }
-    return remapped
+
+    return SimpleNamespace(
+        render_paths=render_paths,
+        render_blobs_base64=render_blobs_base64,
+        object_store_keys=object_store_keys,
+    )
 
 
 def _refresh_benchmark_bundle(
@@ -360,86 +371,29 @@ def _refresh_benchmark_bundle(
     session_id: str,
     technical_drawing_mode: DraftingMode,
 ) -> list[str]:
-    benchmark_drafting_script = artifact_dir / technical_drawing_script_path_for_agent(
-        AgentName.BENCHMARK_PLANNER
+    role_manifest_path = staging_root / CURRENT_ROLE_MANIFEST_PATH
+    original_role_manifest = (
+        role_manifest_path.read_text(encoding="utf-8")
+        if role_manifest_path.exists()
+        else None
     )
-    bundle_base64 = bundle_workspace_base64(staging_root)
-    if _technical_drawing_mode_active(technical_drawing_mode) and (
-        benchmark_drafting_script.exists()
-    ):
-        source_script_sha256 = hashlib.sha256(
-            benchmark_drafting_script.read_bytes()
-        ).hexdigest()
-        response = render_technical_drawing(
-            bundle_base64=bundle_base64,
-            script_path=benchmark_drafting_script.name,
-            orbit_pitch=45.0,
-            orbit_yaw=45.0,
-            session_id=session_id,
-            agent_role="benchmark_planner",
-        )
-        if not response.success:
-            raise RuntimeError(
-                response.message or response.status_text or "render regeneration failed"
-            )
-        renders_root = artifact_dir / "renders"
-        renders_root.mkdir(parents=True, exist_ok=True)
-        bundle_dir = renders_root / "benchmark_renders"
-
-        # Remap object_store_keys: keep S3 key as-is, but change local path
-        # from current-episode to benchmark_renders
-        remapped_keys = {
-            k.replace("renders/current-episode/", "renders/benchmark_renders/"): v
-            for k, v in response.object_store_keys.items()
-        }
-        remapped_blobs = {
-            k.replace("renders/current-episode/", "renders/benchmark_renders/"): v
-            for k, v in response.render_blobs_base64.items()
-        }
-
-        # Create a simple object with the remapped attributes
-        class _RemappedArtifacts:
-            render_blobs_base64 = remapped_blobs
-            object_store_keys = remapped_keys
-            render_paths = []
-
-        with tempfile.TemporaryDirectory(
-            prefix="benchmark_renders_", dir=str(renders_root)
-        ) as tmpdir:
-            tmp_root = Path(tmpdir)
-            saved_paths = materialize_render_artifacts(_RemappedArtifacts(), tmp_root)
-            if not saved_paths:
-                raise RuntimeError(
-                    "render regeneration produced no materialized drafting artifacts"
-                )
-            manifest = normalize_render_manifest(
-                render_paths=saved_paths,
-                workspace_root=tmp_root,
-                episode_id=artifact_dir.name,
-                worker_session_id=artifact_dir.name,
-                bundle_path="renders/benchmark_renders",
-                drafting=True,
-                source_script_sha256=source_script_sha256,
-            )
-            manifest_path = (
-                tmp_root / "renders" / "benchmark_renders" / "render_manifest.json"
-            )
-            manifest_path.write_text(
-                manifest.model_dump_json(indent=2), encoding="utf-8"
-            )
-            source_bundle_dir = tmp_root / "renders" / "benchmark_renders"
-            if bundle_dir.exists():
-                shutil.rmtree(bundle_dir)
-            if source_bundle_dir.exists():
-                shutil.copytree(source_bundle_dir, bundle_dir)
-        return saved_paths
-    else:
+    role_manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    role_manifest_path.write_text(
+        current_role_manifest_json(AgentName.BENCHMARK_REVIEWER), encoding="utf-8"
+    )
+    try:
+        bundle_base64 = bundle_workspace_base64(staging_root)
         response = render_static_preview(
             bundle_base64=bundle_base64,
             script_path=Path(BENCHMARK_SCRIPT_PATH).name,
             session_id=session_id,
             agent_role="benchmark_reviewer",
         )
+    finally:
+        if original_role_manifest is None:
+            role_manifest_path.unlink(missing_ok=True)
+        else:
+            role_manifest_path.write_text(original_role_manifest, encoding="utf-8")
     if not response.success:
         raise RuntimeError(
             response.message or response.status_text or "render regeneration failed"
@@ -493,19 +447,41 @@ def _refresh_engineer_plan_bundle(
         renders_root = artifact_dir / "renders"
         renders_root.mkdir(parents=True, exist_ok=True)
         bundle_dir = renders_root / "engineer_plan_renders"
+        remapped_artifacts = _remap_render_bundle_artifacts(
+            response,
+            source_bundle="current-episode",
+            target_bundle="engineer_plan_renders",
+        )
         with tempfile.TemporaryDirectory(
             prefix="engineer_plan_renders_", dir=str(renders_root)
         ) as tmpdir:
             tmp_root = Path(tmpdir)
-            saved_paths = materialize_render_artifacts(response.artifacts, tmp_root)
+            saved_paths = materialize_render_artifacts(remapped_artifacts, tmp_root)
             if not saved_paths:
                 raise RuntimeError(
                     "render regeneration produced no materialized drafting artifacts"
                 )
+            manifest = normalize_render_manifest(
+                render_paths=saved_paths,
+                workspace_root=tmp_root,
+                episode_id=artifact_dir.name,
+                worker_session_id=artifact_dir.name,
+                bundle_path="renders/engineer_plan_renders",
+                drafting=True,
+                source_script_sha256=source_script_sha256,
+            )
+            manifest_path = (
+                tmp_root / "renders" / "engineer_plan_renders" / "render_manifest.json"
+            )
+            manifest_path.write_text(
+                manifest.model_dump_json(indent=2), encoding="utf-8"
+            )
             source_bundle_dir = tmp_root / "renders" / "engineer_plan_renders"
             if bundle_dir.exists():
                 shutil.rmtree(bundle_dir)
             shutil.copytree(source_bundle_dir, bundle_dir)
+        if "renders/engineer_plan_renders/render_manifest.json" not in saved_paths:
+            saved_paths.append("renders/engineer_plan_renders/render_manifest.json")
         return saved_paths
 
     response = render_static_preview(

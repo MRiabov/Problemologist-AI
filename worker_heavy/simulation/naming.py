@@ -1,16 +1,13 @@
-"""Shared naming helpers for simulation scene identifiers."""
+from __future__ import annotations
 
-MOVED_OBJECT_SCENE_PREFIX = "benchmark_moved_object__"
+from shared.simulation.scene_builder import (
+    MOVED_OBJECT_SCENE_PREFIX,
+    is_moved_object_scene_name,
+    moved_object_scene_name,
+)
 
-
-def moved_object_scene_name(label: str) -> str:
-    """Return a namespaced scene identifier for the benchmark payload."""
-    clean_label = str(label).strip()
-    if not clean_label:
-        raise ValueError("payload label must be non-empty")
-    return f"{MOVED_OBJECT_SCENE_PREFIX}{clean_label}"
-
-
-def is_moved_object_scene_name(name: str) -> bool:
-    """Return True when a scene name belongs to the benchmark payload."""
-    return str(name).startswith(MOVED_OBJECT_SCENE_PREFIX)
+__all__ = [
+    "MOVED_OBJECT_SCENE_PREFIX",
+    "is_moved_object_scene_name",
+    "moved_object_scene_name",
+]

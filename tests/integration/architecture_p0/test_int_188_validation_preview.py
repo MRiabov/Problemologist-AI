@@ -46,6 +46,7 @@ from shared.script_contracts import (
     drafting_render_manifest_path_for_agent,
     drafting_script_paths_for_agent,
 )
+from shared.simulation.scene_builder import PreviewScene, moved_object_scene_name
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
     BenchmarkToolRequest,
@@ -366,7 +367,7 @@ def build():
                 label="target_box",
                 shape="sphere",
                 material_id="aluminum_6061",
-                start_position=(0.0, 0.0, 10.0),
+                start_position=(0.0, 0.0, 20.0),
                 runtime_jitter=(0.0, 0.0, 0.0),
             ),
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
@@ -443,6 +444,29 @@ def build():
         assert preview_data.success, preview_data.message
         assert preview_data.image_path is not None
         assert preview_data.render_manifest_json is not None
+        preview_scene_path = str(
+            Path(preview_data.manifest_path).with_name("preview_scene.json")
+        )
+        preview_scene_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/read_blob",
+            json=ReadFileRequest(path=preview_scene_path).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert preview_scene_resp.status_code == 200, preview_scene_resp.text
+        preview_scene = PreviewScene.model_validate_json(preview_scene_resp.text)
+        assert preview_scene.component_label == "target_box"
+        payload_entity = next(
+            entity
+            for entity in preview_scene.entities
+            if entity.body_name == moved_object_scene_name(objectives.payload.label)
+        )
+        assert payload_entity.pos == tuple(
+            float(v) for v in objectives.payload.start_position
+        )
+        assert payload_entity.body_name == moved_object_scene_name(
+            objectives.payload.label
+        )
+        assert payload_entity.geom_name is not None
 
         fail_session_id = f"INT-188-{uuid.uuid4().hex[:8]}"
         fail_headers = {"X-Session-ID": fail_session_id}

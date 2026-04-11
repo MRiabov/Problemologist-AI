@@ -10,14 +10,17 @@ from xml.dom import minidom
 
 import structlog
 import trimesh
-from build123d import Align, Box, Compound, Cylinder, Solid, Sphere, export_stl
+from build123d import Compound, Solid, export_stl
 
 from shared.enums import ZoneType
+from shared.simulation.scene_builder import (
+    CommonAssemblyTraverser,
+    materialize_moved_object,
+)
 from worker_heavy.simulation.motor_contracts import (
     resolve_solution_motor_contract,
     resolve_solution_motor_joint_contract,
 )
-from worker_heavy.simulation.naming import moved_object_scene_name
 
 # YACV removed in favor of custom trimesh-based export capable of preserving topology
 # try:
@@ -30,273 +33,6 @@ if TYPE_CHECKING:
         BenchmarkDefinition,
         MovingPart,
     )
-
-from pydantic import BaseModel, ConfigDict
-
-
-class AssemblyPartData(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    label: str
-    part: Solid | Compound | Any
-    pos: list[float]
-    euler: list[float]
-    is_fixed: bool = False
-    joint_type: str | None = None
-    joint_axis: list[float] | None = None
-    joint_range: list[float] | None = None
-    material_id: str | None = None
-    cots_id: str | None = None
-    is_electronics: bool = False
-    is_zone: bool = False
-    zone_type: ZoneType | None = None
-    zone_size: list[float] | None = None
-    constraint: str | None = None
-    weld_target: str | None = None
-
-
-def _build_moved_object_geometry(moved: Any):
-    """Build the authored payload geometry from its declared shape."""
-    shape = str(getattr(moved, "shape", "sphere")).strip().lower()
-    radius_range = getattr(getattr(moved, "static_randomization", None), "radius", None)
-    radius = float(max(radius_range)) if radius_range else None
-
-    if shape == "sphere":
-        sphere_radius = radius if radius is not None else 0.01
-        return Sphere(
-            sphere_radius,
-            align=(Align.CENTER, Align.CENTER, Align.CENTER),
-        )
-    if shape in {"cube", "box"}:
-        edge = (radius * 2.0) if radius is not None else 1.0
-        return Box(
-            edge,
-            edge,
-            edge,
-            align=(Align.CENTER, Align.CENTER, Align.CENTER),
-        )
-    if shape == "cylinder":
-        cylinder_radius = radius if radius is not None else 0.5
-        return Cylinder(
-            radius=cylinder_radius,
-            height=(cylinder_radius * 2.0),
-            align=(Align.CENTER, Align.CENTER, Align.CENTER),
-        )
-
-    raise ValueError(
-        f"Unsupported payload.shape '{shape}'. Expected sphere, cube, box, or cylinder."
-    )
-
-
-class CommonAssemblyTraverser:
-    """Unifies assembly traversal and metadata resolution."""
-
-    @staticmethod
-    def _resolve_material_id(metadata: Any) -> str | None:
-        material_id = getattr(metadata, "material_id", None)
-        if material_id:
-            return material_id
-        if getattr(metadata, "cots_id", None):
-            return "cots-generic"
-        return None
-
-    @staticmethod
-    def _is_structural_compound(node: Any) -> bool:
-        from shared.models.schemas import CompoundMetadata, PartMetadata
-
-        if not isinstance(node, Compound):
-            return False
-
-        children = list(getattr(node, "children", []) or [])
-        if not children:
-            return False
-
-        metadata = getattr(node, "metadata", None)
-        if isinstance(metadata, PartMetadata):
-            return False
-        if isinstance(metadata, CompoundMetadata):
-            return True
-        if isinstance(metadata, dict):
-            try:
-                PartMetadata(**metadata)
-            except Exception:
-                try:
-                    return isinstance(CompoundMetadata(**metadata), CompoundMetadata)
-                except Exception:
-                    return True
-            return False
-        return True
-
-    @staticmethod
-    def traverse(
-        assembly: Compound, electronics: Any | None = None
-    ) -> list[AssemblyPartData]:
-        parts_data = []
-
-        def _visit(
-            node: Any, node_index: int, parent_location: Any | None = None
-        ) -> None:
-            if CommonAssemblyTraverser._is_structural_compound(node):
-                composed_location = CommonAssemblyTraverser._compose_location(
-                    node, parent_location
-                )
-                for child_index, child in enumerate(
-                    list(getattr(node, "children", []) or [])
-                ):
-                    _visit(child, child_index, composed_location)
-                return
-
-            raw_label = getattr(node, "label", None)
-            label = str(raw_label).strip() if raw_label is not None else ""
-            if not label:
-                logger.error(
-                    "top_level_build123d_label_missing",
-                    part_index=node_index,
-                    raw_label=raw_label,
-                    part_type=type(node).__name__,
-                )
-                raise ValueError(
-                    "Top-level build123d objects must have non-empty labels. "
-                    f"Offending part index: {node_index}."
-                )
-
-            pos, euler = CommonAssemblyTraverser._resolve_location(
-                node, parent_location
-            )
-            meta = CommonAssemblyTraverser._resolve_part_metadata(node)
-            zone_info = CommonAssemblyTraverser._detect_zone(node, label)
-            is_electronics = CommonAssemblyTraverser._map_electronics(
-                label, electronics
-            )
-
-            constraint = getattr(node, "constraint", None)
-            weld_target = None
-            if constraint and constraint.startswith("weld:"):
-                weld_target = constraint.split(":")[1]
-
-            parts_data.append(
-                AssemblyPartData(
-                    label=label,
-                    part=node,
-                    pos=pos,
-                    euler=euler,
-                    is_fixed=meta["is_fixed"],
-                    material_id=meta["material_id"],
-                    cots_id=meta["cots_id"],
-                    joint_type=meta["joint_type"],
-                    joint_axis=meta["joint_axis"],
-                    joint_range=meta["joint_range"],
-                    is_electronics=is_electronics,
-                    is_zone=zone_info["is_zone"],
-                    zone_type=zone_info["type"],
-                    zone_size=zone_info["size"],
-                    constraint=constraint,
-                    weld_target=weld_target,
-                )
-            )
-
-        _visit(assembly, 0)
-        return parts_data
-
-    @staticmethod
-    def _compose_location(child: Any, parent_location: Any | None = None) -> Any:
-        location = child.location
-        if parent_location is not None:
-            location = parent_location * location
-        return location
-
-    @staticmethod
-    def _resolve_location(
-        child: Any, parent_location: Any | None = None
-    ) -> tuple[list[float], list[float]]:
-        location = CommonAssemblyTraverser._compose_location(child, parent_location)
-        pos = [
-            location.position.X,
-            location.position.Y,
-            location.position.Z,
-        ]
-        euler = [
-            location.orientation.X,
-            location.orientation.Y,
-            location.orientation.Z,
-        ]
-        return pos, euler
-
-    @staticmethod
-    def _resolve_part_metadata(child: Any) -> dict[str, Any]:
-        from shared.models.schemas import CompoundMetadata, PartMetadata
-
-        metadata = getattr(child, "metadata", None)
-        if metadata is None:
-            # Check for legacy zone prefix - zones are handled separately
-            label = getattr(child, "label", "")
-            if label.startswith("zone_"):
-                return {
-                    "is_fixed": True,
-                    "material_id": None,
-                    "cots_id": None,
-                    "joint_type": None,
-                    "joint_axis": None,
-                    "joint_range": None,
-                }
-
-            raise ValueError(
-                f"Part '{label or 'unknown'}' is missing required metadata. "
-                "Every part must have a .metadata attribute "
-                "(PartMetadata or CompoundMetadata)."
-            )
-
-        if isinstance(metadata, dict):
-            try:
-                metadata = PartMetadata(**metadata)
-            except Exception:
-                try:
-                    metadata = CompoundMetadata(**metadata)
-                except Exception as e:
-                    label_str = getattr(child, "label", "unknown")
-                    raise ValueError(
-                        f"Invalid metadata for part '{label_str}': {e}"
-                    ) from e
-
-        joint_type, joint_axis, joint_range = None, None, None
-        if metadata.joint:
-            joint_type = metadata.joint.type
-            joint_axis = list(metadata.joint.axis)
-            joint_range = list(metadata.joint.range) if metadata.joint.range else None
-
-        return {
-            "is_fixed": metadata.is_fixed,
-            "material_id": CommonAssemblyTraverser._resolve_material_id(metadata),
-            "cots_id": getattr(metadata, "cots_id", None),
-            "joint_type": joint_type,
-            "joint_axis": joint_axis,
-            "joint_range": joint_range,
-        }
-
-    @staticmethod
-    def _detect_zone(child: Any, label: str) -> dict[str, Any]:
-        is_zone = False
-        zone_type: ZoneType | None = None
-        zone_size = None
-        if label.startswith("zone_"):
-            is_zone = True
-            if "goal" in label:
-                zone_type = ZoneType.GOAL
-            elif "build" in label:
-                zone_type = ZoneType.BUILD
-            else:
-                zone_type = ZoneType.FORBID
-            bb = child.bounding_box()
-            zone_size = [bb.size.X / 2, bb.size.Y / 2, bb.size.Z / 2]
-        return {"is_zone": is_zone, "type": zone_type, "size": zone_size}
-
-    @staticmethod
-    def _map_electronics(label: str, electronics: Any | None) -> bool:
-        if electronics and hasattr(electronics, "components"):
-            for comp in electronics.components:
-                if getattr(comp, "assembly_part_ref", None) == label:
-                    return True
-        return False
 
 
 def _normalize_joint_axis(axis: list[float] | None) -> list[float] | None:
@@ -994,10 +730,9 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
         # 3. Add the benchmark-mandated payload as a dynamic body.
         if objectives and getattr(objectives, "payload", None):
             moved = objectives.payload
-            moved_part = _build_moved_object_geometry(moved)
-            moved_label = str(moved.label).strip()
-            moved_body_name = moved_object_scene_name(moved_label)
-            moved_part.label = moved_label
+            moved_object = materialize_moved_object(moved)
+            moved_part = moved_object.geometry
+            moved_body_name = moved_object.scene_name
 
             mesh_path_base = self.assets_dir / moved_body_name
             tolerance = 1.0 if smoke_test_mode else 0.1
@@ -1020,13 +755,13 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
             self.compiler.add_body(
                 name=moved_body_name,
                 mesh_names=mesh_names,
-                pos=[float(v) for v in moved.start_position],
+                pos=[float(v) for v in moved_object.start_position],
                 euler=[0.0, 0.0, 0.0],
                 is_fixed=False,
-                geom_rgba=self._resolve_geom_rgba(moved.material_id, mfg_config),
+                geom_rgba=self._resolve_geom_rgba(moved_object.material_id, mfg_config),
             )
             body_locations[moved_body_name] = (
-                list(moved.start_position),
+                list(moved_object.start_position),
                 [0.0, 0.0, 0.0],
             )
 

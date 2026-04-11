@@ -17,7 +17,6 @@ import shutil
 import subprocess
 import tempfile
 import tokenize
-import uuid
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -416,17 +415,17 @@ def _validate_drafting_artifact_inventory_exactness(
     expected_tokens: Counter[str],
     expected_identity_pairs: Counter[tuple[str | None, str | None]] | None = None,
 ) -> list[str]:
+    import tempfile
+
     from shared.workers.loader import load_component_from_script
 
-    repo_root = Path(__file__).resolve().parents[2]
-    tmp_root = repo_root / ".tmp_planner_drafting" / uuid.uuid4().hex
+    tmp_root = Path(tempfile.mkdtemp(prefix="problemologist_planner_drafting_"))
     try:
-        tmp_root.mkdir(parents=True, exist_ok=False)
         script_path = tmp_root / artifact_name
         script_path.write_text(content, encoding="utf-8")
         component = load_component_from_script(
             script_path=script_path,
-            session_root=repo_root,
+            session_root=tmp_root,
         )
     except Exception as exc:
         return [

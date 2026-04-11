@@ -12,6 +12,7 @@ from shared.models.schemas import (
     ObjectivesSection,
     PhysicsConfig,
 )
+from shared.simulation.scene_builder import moved_object_scene_name
 from worker_heavy.simulation.builder import GenesisSimulationBuilder
 
 
@@ -70,6 +71,13 @@ def test_genesis_builder_generates_msh_when_fem_enabled(
 
     # Assert
     assert scene_path.exists()
+    payload = json.loads(scene_path.read_text())
+    payload_entity = next(
+        entity
+        for entity in payload["entities"]
+        if entity["name"] == moved_object_scene_name("test_part")
+    )
+    assert payload_entity["pos"] == [0.0, 0.0, 0.0]
 
     # Check if repair was called
     assert mock_repair.called

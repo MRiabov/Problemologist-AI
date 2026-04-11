@@ -185,7 +185,7 @@ The rule is:
 
 08. The `worker_light.utils.render_query` helper family resolves against that bundle-local snapshot when the model needs a point coordinate from a render.
 
-09. The render bundle path itself identifies whether the evidence belongs to benchmark input, engineer planning, or final solution submission. Final solution submission bundles must be composed from the benchmark-owned scene plus the approved engineer solution so benchmark fixtures and objective overlays are present by default.
+09. The render bundle path itself identifies whether the evidence belongs to benchmark input, engineer planning, or final solution submission. Final solution submission bundles must be composed from the benchmark-owned scene, including any declared benchmark payload, plus the approved engineer solution so benchmark fixtures and objective overlays are present by default. The simulation scene and preview scene snapshots are reconstructed through the shared typed scene-builder module, so authored traversal, payload insertion, and payload naming stay aligned across physics and rendering.
 
 10. If a backend cannot satisfy the selected render path, the failure should surface as a validation/runtime contract error rather than being hidden behind an unrelated global fallback.
 

@@ -344,6 +344,13 @@ def _call_controller_preview_tool(
             )
             resp.raise_for_status()
             return PreviewDesignResponse.model_validate(resp.json())
+    except httpx.RequestError as exc:
+        logger.warning(
+            "controller_preview_tool_unavailable",
+            error=str(exc),
+            session_id=session_id,
+        )
+        return None
     except Exception as exc:
         logger.error(
             "controller_preview_tool_failed",
@@ -374,6 +381,13 @@ def _call_worker_light_preview(
             )
             resp.raise_for_status()
             return PreviewDesignResponse.model_validate(resp.json())
+    except httpx.RequestError as exc:
+        logger.warning(
+            "worker_light_preview_unavailable",
+            error=str(exc),
+            session_id=session_id,
+        )
+        return None
     except Exception as exc:
         logger.error(
             "worker_light_preview_failed",

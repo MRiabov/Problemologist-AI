@@ -189,11 +189,12 @@ The runner behavior for CLI-provider mode is:
 1. Materialize the workspace for the selected eval row.
 2. Launch the configured CLI provider in that workspace with the prompt text.
 3. Verify the workspace locally after the provider exits.
-4. Optionally run local judge/reviewer passes against the same workspace artifacts when the run requests judge/reviewer mode and the local stage contracts are satisfied.
-5. Persist session metadata including workspace path, launch return code, verification result, judge/reviewer outcomes when run, and failure reason, then promote queryable observability events into the controller DB when an episode-backed path is available.
-6. Fail closed if the local CLI provider is missing or the workspace verification fails.
-7. Controller-backed eval runs apply the `eval` stack profile so the eval bootstrap does not tear down or probe the integration stack, the profile skips the frontend dev server because evals do not need it, and the render path still uses the containerized `worker-renderer` service rather than a host-launched Xvfb fallback.
-8. Long-running controller-backed eval runs emit the audible reminder `eval setup running` every five minutes until the run exits.
+4. Optionally run local judge/reviewer passes against the same workspace artifacts when the run requests judge/reviewer mode and the local stage contracts are satisfied. Judge/reviewer sessions are fresh sessions for the reviewer role; they do not inherit the originating coder session.
+5. If a failed eval is routed back to the originating agent for another attempt, the runner resumes the prior CLI-provider session and workspace context instead of launching a fresh one. If imported trace capture is unavailable, the runner falls back to the primary session id for that attempt rather than dropping the retained context. Explicit reset helpers are the only path that discard that retained context.
+6. Persist session metadata including workspace path, launch return code, verification result, judge/reviewer outcomes when run, and failure reason, then promote queryable observability events into the controller DB when an episode-backed path is available.
+7. Fail closed if the local CLI provider is missing or the workspace verification fails.
+8. Controller-backed eval runs apply the `eval` stack profile so the eval bootstrap does not tear down or probe the integration stack, the profile skips the frontend dev server because evals do not need it, and the render path still uses the containerized `worker-renderer` service rather than a host-launched Xvfb fallback.
+9. Long-running controller-backed eval runs emit the audible reminder `eval setup running` every five minutes until the run exits.
 
 The runner does not require controller/worker orchestration for the agent loop in CLI-provider mode.
 The controller-backed preflight and health checks remain part of the paid-provider/controller path only.

@@ -19,6 +19,7 @@ ReasoningEffort = Literal["low", "medium", "high", "xhigh"]
 ReasoningEffortArg = ReasoningEffort | None | object
 REASONING_EFFORT_UNSET: object = object()
 PromptTransport = Literal["none", "stdin", "prompt_flag", "positional"]
+ALLOW_HOST_LOOPBACK_ENV = "PROBLEMOLOGIST_CLI_ALLOW_HOST_LOOPBACK"
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,18 +105,27 @@ def _copy_auth_bundle(source_auth_path: Path, codex_home_dir: Path) -> None:
 
 
 def _execution_flags(*, yolo: bool) -> list[str]:
-    if yolo:
+    if _allow_host_loopback() or yolo:
         return ["--dangerously-bypass-approvals-and-sandbox"]
     return ["--full-auto"]
 
 
 def _qwen_execution_flags(*, yolo: bool) -> list[str]:
     flags = ["--chat-recording"]
-    if yolo:
+    if _allow_host_loopback() or yolo:
         flags.append("--yolo")
     else:
         flags.append("--sandbox")
     return flags
+
+
+def _allow_host_loopback() -> bool:
+    return os.getenv(ALLOW_HOST_LOOPBACK_ENV, "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
 
 @dataclass(frozen=True, slots=True)
@@ -565,7 +575,7 @@ def available_cli_providers() -> list[str]:
 
 
 def _resolve_provider_name(provider_name: str | None) -> str:
-    resolved = (provider_name or "codex").strip().lower()
+    resolved = (provider_name or "qwen").strip().lower()
     if resolved not in _CLI_PROVIDER_REGISTRY:
         raise SystemExit(
             "Unknown CLI provider '{provider}'. Available: {available}".format(

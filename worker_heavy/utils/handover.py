@@ -795,11 +795,6 @@ def submit_for_review(
             "Prior simulation is stale for current script revision. Re-run simulate."
         )
 
-    revision = _latest_git_revision(cwd)
-    if not revision:
-        raise ValueError(
-            "Unable to determine current repository git revision for review manifest."
-        )
     resolved_session_id = session_id or os.getenv("SESSION_ID", "default")
     resolved_episode_id = (
         episode_id
@@ -845,6 +840,18 @@ def submit_for_review(
         component,
         normalized_stage=normalized_stage,
     )
+    # Commit the substantive submission snapshot before generating the final
+    # persisted bundle so the render manifest and review manifest can share the
+    # same latest revision.
+    from shared.git_utils import commit_submission_attempt as _commit_submission
+
+    _commit_submission(cwd, "handover: persist submission artifacts")
+
+    revision = _latest_git_revision(cwd)
+    if not revision:
+        raise ValueError(
+            "Unable to determine current repository git revision for review manifest."
+        )
     persistent_bundle_render_paths = prerender_24_views(
         render_component,
         output_dir=str(persistent_bundle_dir),

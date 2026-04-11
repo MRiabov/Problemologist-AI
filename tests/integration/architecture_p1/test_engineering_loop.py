@@ -1,5 +1,4 @@
 import hashlib
-import json
 import uuid
 from pathlib import Path
 
@@ -21,7 +20,9 @@ from shared.enums import (
     TerminalReason,
     TraceType,
 )
+from shared.models.schemas import BenchmarkDefinition
 from shared.models.simulation import SimulationResult
+from shared.simulation.scene_builder import PreviewScene, moved_object_scene_name
 from shared.workers.schema import (
     PlanReviewManifest,
     RenderManifest,
@@ -555,25 +556,39 @@ async def test_engineering_full_loop():
             if path
             == Path("renders/final_solution_submission_renders/preview_scene.json")
         )
-        final_preview_scene = json.loads(
+        benchmark_definition = BenchmarkDefinition.model_validate(
+            yaml.safe_load(
+                await _read_episode_asset_text(
+                    client, engineer_episode_id, "benchmark_definition.yaml"
+                )
+            )
+        )
+        final_preview_scene = PreviewScene.model_validate_json(
             await _read_episode_asset_text(
                 client, engineer_episode_id, final_preview_scene_path
             )
         )
-        assert final_preview_scene["component_label"] == "benchmark_environment"
-        final_preview_labels = {
-            entity["label"] for entity in final_preview_scene["entities"]
-        }
-        assert len(final_preview_scene["entities"]) == len(final_preview_labels), (
-            final_preview_scene["entities"]
+        assert final_preview_scene.component_label == "benchmark_environment"
+        final_preview_labels = {entity.label for entity in final_preview_scene.entities}
+        assert len(final_preview_scene.entities) == len(final_preview_labels), (
+            final_preview_scene.entities
         )
         assert {
             "left_start_deck",
             "right_goal_deck",
             "bridge_reference_table",
             "gap_floor_guard",
-            "projectile_ball",
+            benchmark_definition.payload.label,
         } <= final_preview_labels
+        payload_entity = next(
+            entity
+            for entity in final_preview_scene.entities
+            if entity.label == benchmark_definition.payload.label
+        )
+        assert payload_entity.body_name == moved_object_scene_name(payload_entity.label)
+        assert payload_entity.pos == tuple(
+            float(value) for value in benchmark_definition.payload.start_position
+        )
 
         execution_comments = yaml.safe_load(
             await _read_episode_asset_text(

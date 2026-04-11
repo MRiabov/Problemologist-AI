@@ -352,6 +352,9 @@ def main() -> None:
     if args.new_terminal and not args.open_cli_ui:
         raise SystemExit("--new-terminal requires --open-cli-ui.")
 
+    if args.launch_cli_exec or args.open_cli_ui:
+        os.environ["PROBLEMOLOGIST_CLI_ALLOW_HOST_LOOPBACK"] = "1"
+
     lock_lease = None
     if args.env_up:
         lock_lease = acquire_eval_run_lock(

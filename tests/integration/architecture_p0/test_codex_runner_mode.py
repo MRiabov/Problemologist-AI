@@ -1850,6 +1850,110 @@ async def test_run_evals_codex_skill_loop_resumes_same_session_twice(
 
 
 @pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_run_evals_codex_skill_loop_falls_back_to_primary_session_when_trace_missing(
+    tmp_path, monkeypatch
+):
+    item = EvalDatasetItem(
+        id="codex-skill-loop-fallback-001",
+        task="codex skill loop fallback regression",
+        complexity_level=0,
+        expected_decision=ReviewDecision.APPROVED,
+    )
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+    (workspace_dir / "prompt.md").write_text(
+        "Workspace: current directory\n",
+        encoding="utf-8",
+    )
+    (workspace_dir / "journal.md").write_text(
+        "# Journal\n\n- Initial note before the skill loop.\n",
+        encoding="utf-8",
+    )
+    (workspace_dir / "simulation_result.json").write_text(
+        json.dumps({"success": False, "summary": "simulation did not report success"}),
+        encoding="utf-8",
+    )
+
+    primary_session_id = "019d0000-0000-7000-9000-000000000456"
+    baseline_snapshot = runner._snapshot_workspace_state(workspace_dir=workspace_dir)
+    resume_calls: list[tuple[str, str, float | None, str]] = []
+
+    def fake_resume_cli_exec(
+        workspace_dir: Path,
+        prompt_text: str,
+        *,
+        task_id: str,
+        codex_session_id: str,
+        agent_name: AgentName | None = None,
+        session_id: str | None = None,
+        runtime_root: Path | None = None,
+        yolo: bool = True,
+        timeout_seconds: float | None = None,
+        output_last_message_path: Path | None = None,
+        reasoning_effort: str = "high",
+    ) -> CodexExecRunResult:
+        resume_calls.append(
+            (codex_session_id, prompt_text, timeout_seconds, reasoning_effort)
+        )
+        if output_last_message_path is not None:
+            output_last_message_path.parent.mkdir(parents=True, exist_ok=True)
+            output_last_message_path.write_text("last message", encoding="utf-8")
+        return CodexExecRunResult(
+            command=[
+                "codex",
+                "exec",
+                "resume",
+                codex_session_id,
+                "-",
+            ],
+            return_code=0,
+            timed_out=False,
+            timeout_seconds=timeout_seconds,
+            session_id=session_id,
+            output_last_message_path=output_last_message_path,
+        )
+
+    monkeypatch.setattr(runner, "_resume_cli_exec", fake_resume_cli_exec)
+    monkeypatch.setattr(
+        runner,
+        "_capture_latest_codex_session_artifacts",
+        lambda **_: None,
+    )
+    monkeypatch.setattr(runner, "SESSION_LOG_ROOT", tmp_path / "session-root")
+
+    summary, updated_trace = await runner._run_skill_loop(
+        item=item,
+        agent_name=AgentName.ENGINEER_CODER,
+        workspace_dir=workspace_dir,
+        cli_runtime_root=tmp_path / "codex-runtime",
+        eval_log_key="ec-001",
+        baseline_snapshot=baseline_snapshot,
+        codex_trace_artifacts=None,
+        primary_session_id=primary_session_id,
+        launch_return_code=1,
+        verification_result=SimpleNamespace(
+            success=False,
+            verification_name="coder_workspace_contract",
+            errors=["missing simulation_result.json"],
+            details={},
+        ),
+        log=runner.logger,
+    )
+
+    assert summary.triggered is True
+    assert summary.primary_turn is not None
+    assert summary.primary_turn.session_id == primary_session_id
+    assert summary.self_analysis_turn is not None
+    assert summary.skill_update_turn is not None
+    assert summary.failure_reason is None
+    assert len(resume_calls) == 2
+    assert resume_calls[0][0] == primary_session_id
+    assert resume_calls[1][0] == primary_session_id
+    assert updated_trace is None
+
+
+@pytest.mark.integration_p0
 def test_run_evals_codex_readable_logs_mirror_imported_transcript(
     tmp_path, monkeypatch
 ):
@@ -2667,6 +2771,53 @@ def test_launch_codex_exec_uses_expected_sandbox_policy(
     logged_args = (tmp_path / "codex-args.log").read_text(encoding="utf-8")
     assert expected_fragment in logged_args
     assert unexpected_fragment not in logged_args
+
+
+@pytest.mark.integration_p0
+def test_launch_codex_exec_allows_host_loopback_when_requested(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    fake_home = tmp_path / "home"
+    auth_path = fake_home / ".codex" / "auth.json"
+    auth_path.parent.mkdir(parents=True, exist_ok=True)
+    auth_path.write_text(
+        json.dumps(
+            {
+                "OPENAI_API_KEY": None,
+                "tokens": {"account_id": "acct-1", "access_token": "token-1"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+
+    provider = RecordingCliProvider(tmp_path / "codex-args.log")
+    monkeypatch.setattr(
+        "evals.logic.codex_workspace.get_cli_provider",
+        lambda: provider,
+    )
+    monkeypatch.setenv("HOME", str(fake_home))
+    monkeypatch.setenv("PROBLEMOLOGIST_CLI_ALLOW_HOST_LOOPBACK", "1")
+
+    result = launch_cli_exec(
+        workspace_dir,
+        "run the seeded workspace",
+        task_id="ec-001-drawing-full",
+        agent_name=AgentName.ENGINEER_CODER,
+        session_id="home-session-1",
+        runtime_root=tmp_path / "codex-runtime",
+        yolo=False,
+    )
+
+    assert result == 0
+    logged_args = (tmp_path / "codex-args.log").read_text(encoding="utf-8")
+    assert "--dangerously-bypass-approvals-and-sandbox" in logged_args
+    assert "--full-auto" not in logged_args
     assert workspace_dir.exists()
 
 

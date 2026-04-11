@@ -529,7 +529,12 @@ async def _run_skill_loop(
     if not should_run:
         return summary, codex_trace_artifacts
 
-    if codex_trace_artifacts is None or not codex_trace_artifacts.session_id:
+    codex_session_id = (
+        codex_trace_artifacts.session_id
+        if codex_trace_artifacts is not None and codex_trace_artifacts.session_id
+        else primary_session_id
+    )
+    if not codex_session_id:
         summary.failure_reason = "missing CLI-provider session trace"
         append_readable_log_line(
             "CLI_PROVIDER_SKILL_LOOP_FAILED "
@@ -544,8 +549,12 @@ async def _run_skill_loop(
             trigger_reason=trigger_reason,
         )
         return summary, codex_trace_artifacts
-
-    codex_session_id = codex_trace_artifacts.session_id
+    if codex_trace_artifacts is None or not codex_trace_artifacts.session_id:
+        log.warning(
+            "codex_skill_loop_resuming_primary_session_fallback",
+            session_id=codex_session_id,
+            trigger_reason=trigger_reason,
+        )
     loop_timeout_seconds = _skill_loop_timeout_seconds(agent_name)
     loop_root = workspace_dir / "logs" / "skill_loop"
     loop_root.mkdir(parents=True, exist_ok=True)

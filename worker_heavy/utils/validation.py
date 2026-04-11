@@ -61,6 +61,10 @@ from shared.script_contracts import (
     role_family_for_agent,
     technical_drawing_script_path_for_agent,
 )
+from shared.simulation.scene_builder import (
+    MOVED_OBJECT_SCENE_PREFIX,
+    build_moved_object_start_geometry,
+)
 from shared.simulation.schemas import (
     SimulatorBackendType,
     get_default_simulator_backend,
@@ -72,7 +76,6 @@ from worker_heavy.simulation.factory import (
     close_all_session_backends,
     get_simulation_builder,
 )
-from worker_heavy.simulation.naming import MOVED_OBJECT_SCENE_PREFIX
 from worker_heavy.simulation.object_pose import (
     summarize_payload_position_history,
 )
@@ -773,17 +776,6 @@ def _validate_top_level_location_contract(component: Compound) -> str | None:
     )
 
 
-def _build_moved_object_start_geometry(payload: Any) -> Any:
-    """Materialize the benchmark payload at its declared startup pose."""
-    from build123d import Location
-
-    from worker_heavy.simulation.builder import _build_moved_object_geometry
-
-    geometry = _build_moved_object_geometry(payload)
-    start_position = tuple(float(value) for value in payload.start_position)
-    return geometry.move(Location(start_position))
-
-
 def _validate_moved_object_start_clearance(
     component: Compound, objectives: BenchmarkDefinition | None
 ) -> str | None:
@@ -792,7 +784,7 @@ def _validate_moved_object_start_clearance(
         return None
 
     try:
-        moved_object_geometry = _build_moved_object_start_geometry(objectives.payload)
+        moved_object_geometry = build_moved_object_start_geometry(objectives.payload)
     except Exception as exc:
         return f"Unable to materialize payload startup geometry: {exc}"
 
@@ -2261,11 +2253,13 @@ def validate(
     if len(solids) > 1:
         for i in range(len(solids)):
             for j in range(i + 1, len(solids)):
+                label_i = getattr(solids[i], "label", None) or f"unlabeled_solid_{i}"
+                label_j = (
+                    getattr(solids[j], "label", None) or f"unlabeled_solid_{j}"
+                )  # human note: I've changed it to `unlabeled_solid_{i} so that there is no confusion from agent that they forgot to label it. Anyway, if it fails anywhere, just update it.
                 intersection = solids[i].intersect(solids[j])
                 intersection_volume = _shape_volume(intersection)
                 if intersection_volume > 0.1:
-                    label_i = getattr(solids[i], "label", None) or f"solid_{i}"
-                    label_j = getattr(solids[j], "label", None) or f"solid_{j}"
                     msg = (
                         f"Geometric intersection detected between {label_i} and "
                         f"{label_j} (volume: {intersection_volume:.2f})"

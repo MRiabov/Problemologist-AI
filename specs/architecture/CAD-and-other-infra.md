@@ -120,7 +120,7 @@ Persistent render outputs are published as immutable bundle directories under `r
 
 Bundle-local sidecars are allowed when they help agent tooling resolve the exact render state:
 
-1. `preview_scene.json` stores the exact scene snapshot used for preview rendering.
+1. `preview_scene.json` stores the exact scene snapshot used for preview rendering, including any runtime benchmark payload entity when the benchmark declares one.
 2. `frames.jsonl` stores sparse frame metadata for video evidence.
 3. `objects.parquet` stores dense, frame-indexed object pose tables for query helpers. The active `PhysicsBackend` export path samples poses at the video-capture cadence and produces this file without per-step logging overhead, so both MuJoCo and Genesis can emit it.
 

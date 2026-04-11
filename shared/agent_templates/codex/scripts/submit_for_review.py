@@ -13,7 +13,6 @@ from build123d import Compound
 
 from shared.current_role import current_role_agent_name
 from shared.enums import AgentName
-from shared.git_utils import commit_submission_attempt
 from shared.script_contracts import (
     authored_script_path_for_agent,
     role_family_for_agent,
@@ -145,7 +144,6 @@ def main() -> int:
     episode_id = os.getenv("EPISODE_ID") or None
     agent_name = _submission_agent(workspace)
     log_path = _submission_log_path(workspace)
-    commit_message = "submit_for_review: unknown rejected"
     payload: dict[str, Any]
     exit_code = 1
 
@@ -220,7 +218,8 @@ def main() -> int:
                             session_id=session_id,
                         )
                     simulation_success = simulation_result.success
-                    if not simulation_result.success:
+
+                    if not simulation_success:
                         rejection = {
                             "ok": False,
                             "status": "rejected",
@@ -248,7 +247,6 @@ def main() -> int:
         if rejection is not None:
             rejection["log_path"] = log_path_rel
             payload = rejection
-            commit_message = f"submit_for_review: {agent_name.value} rejected"
         else:
             payload = {
                 "ok": True,
@@ -261,10 +259,8 @@ def main() -> int:
                 "simulation_success": simulation_success,
                 "log_path": log_path_rel,
             }
-            commit_message = f"submit_for_review: {agent_name.value} submitted"
             exit_code = 0
 
-    commit_submission_attempt(workspace, commit_message)
     _print_json(payload)
     return exit_code
 

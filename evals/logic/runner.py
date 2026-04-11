@@ -611,10 +611,10 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--provider",
         type=str,
-        default="codex",
+        default="qwen",
         choices=available_cli_providers(),
         help=(
-            "CLI provider to use for local backend runs (default: codex). "
+            "CLI provider to use for local backend runs (default: qwen). "
             "The provider choice is orthogonal to --runner-backend."
         ),
     )
@@ -698,6 +698,7 @@ async def main():
     global WORKER_LIGHT_URL
     CONTROLLER_URL = os.environ["CONTROLLER_URL"]
     WORKER_LIGHT_URL = os.environ["WORKER_LIGHT_URL"]
+    os.environ["PROBLEMOLOGIST_CLI_ALLOW_HOST_LOOPBACK"] = "1"
 
     eval_reminder = None
     if runner_backend == EvalRunnerBackend.CONTROLLER:

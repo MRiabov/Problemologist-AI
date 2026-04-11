@@ -16,7 +16,6 @@ import structlog
 import yaml
 from build123d import Compound
 from PIL import Image
-from pydantic import BaseModel, ConfigDict, Field
 
 from shared.agents import get_image_render_resolution
 from shared.enums import ZoneType
@@ -32,13 +31,17 @@ from shared.rendering import (
     materialize_preview_response,
 )
 from shared.simulation.backends import RendererBackend
-from shared.workers.bundling import bundle_directory_base64
-from shared.workers.schema import SegmentationLegendEntry
-from worker_renderer.utils.scene_builder import (
+from shared.simulation.scene_builder import (
     CommonAssemblyTraverser,
+    MaterializedMovedObject,
     MeshProcessor,
+    PreviewEntity,
+    PreviewScene,
+    materialize_moved_object,
     normalize_preview_label,
 )
+from shared.workers.bundling import bundle_directory_base64
+from shared.workers.schema import SegmentationLegendEntry
 from worker_renderer.utils.workbench_config import load_config, load_merged_config
 
 configure_headless_rendering()
@@ -61,43 +64,6 @@ logger = structlog.get_logger(__name__)
 PREVIEW_BACKEND_NAME = "build123d_vtk"
 _PARALLEL_MODALITIES_ENV = "PROBLEMOLOGIST_RENDER_PARALLEL_MODALITIES"
 _FALSE_STRINGS = {"0", "false", "no", "off"}
-
-
-class PreviewEntity(BaseModel):
-    """Renderable body or zone used by the build123d preview renderer."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    label: str
-    semantic_label: str
-    instance_id: str
-    instance_name: str
-    object_type: str
-    object_id: int
-    pos: tuple[float, float, float]
-    euler: tuple[float, float, float]
-    mesh_paths: list[str] = Field(default_factory=list)
-    box_size: tuple[float, float, float] | None = None
-    material_id: str | None = None
-    body_name: str | None = None
-    geom_name: str | None = None
-    zone_type: ZoneType | None = None
-    color_rgba: tuple[float, float, float, float] | None = None
-    segmentation_color_rgb: tuple[int, int, int] | None = None
-    include_in_segmentation: bool = True
-
-
-class PreviewScene(BaseModel):
-    """Strict render-scene bundle used for RGB/depth/segmentation preview."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    component_label: str | None = None
-    entities: list[PreviewEntity] = Field(default_factory=list)
-    bounds_min: tuple[float, float, float]
-    bounds_max: tuple[float, float, float]
-    center: tuple[float, float, float]
-    diagonal: float
 
 
 @dataclass
@@ -455,11 +421,26 @@ def _build_feature_edges_mapper(
 
 
 def _combined_bounds(
-    component: Compound, objectives: BenchmarkDefinition | None
+    component: Compound,
+    objectives: BenchmarkDefinition | None,
+    payload: MaterializedMovedObject | None = None,
 ) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
     bbox = component.bounding_box()
     min_x, min_y, min_z = bbox.min.X, bbox.min.Y, bbox.min.Z
     max_x, max_y, max_z = bbox.max.X, bbox.max.Y, bbox.max.Z
+
+    if payload is not None:
+        try:
+            payload_bbox = payload.start_geometry().bounding_box()
+        except Exception:
+            payload_bbox = None
+        if payload_bbox is not None:
+            min_x = min(min_x, payload_bbox.min.X)
+            min_y = min(min_y, payload_bbox.min.Y)
+            min_z = min(min_z, payload_bbox.min.Z)
+            max_x = max(max_x, payload_bbox.max.X)
+            max_y = max(max_y, payload_bbox.max.Y)
+            max_z = max(max_z, payload_bbox.max.Z)
 
     if objectives is not None:
         for box in [
@@ -636,6 +617,11 @@ def collect_preview_scene(
     )
     objective_labels = _objective_zone_labels(objectives)
     render_entities: list[PreviewEntity] = []
+    payload = (
+        materialize_moved_object(objectives.payload)
+        if objectives is not None and getattr(objectives, "payload", None) is not None
+        else None
+    )
 
     temp_dir = None
     if mesh_root is None:
@@ -712,6 +698,42 @@ def collect_preview_scene(
                 )
             )
 
+        if payload is not None:
+            mesh_base = temp_root / payload.scene_name
+            tolerance = 1.0 if smoke_test_mode else 0.1
+            saved_paths = mesh_processor.process_geometry(
+                payload.geometry,
+                mesh_base,
+                decompose=False,
+                tolerance=tolerance,
+                angular_tolerance=tolerance,
+            )
+            obj_paths = sorted(
+                str(path) for path in saved_paths if path.suffix == ".obj"
+            )
+            payload_object_id = len(render_entities)
+            render_entities.append(
+                PreviewEntity(
+                    label=payload.label,
+                    semantic_label=payload.label,
+                    instance_id=payload.label,
+                    instance_name=payload.label,
+                    object_type="part",
+                    object_id=payload_object_id,
+                    pos=payload.start_position,
+                    euler=(0.0, 0.0, 0.0),
+                    mesh_paths=obj_paths,
+                    material_id=payload.material_id,
+                    body_name=payload.scene_name,
+                    geom_name=Path(obj_paths[0]).stem if obj_paths else None,
+                    color_rgba=_material_color_rgba(
+                        payload.material_id,
+                        manufacturing_config,
+                    ),
+                    segmentation_color_rgb=_unique_color(payload_object_id),
+                )
+            )
+
         if objectives is not None:
             objective_entities = [
                 (
@@ -772,7 +794,7 @@ def collect_preview_scene(
                     )
                 )
 
-        bounds_min, bounds_max = _combined_bounds(component, objectives)
+        bounds_min, bounds_max = _combined_bounds(component, objectives, payload)
         center = tuple((bounds_min[i] + bounds_max[i]) / 2.0 for i in range(3))
         diagonal = math.sqrt(
             sum((bounds_max[i] - bounds_min[i]) ** 2 for i in range(3))
