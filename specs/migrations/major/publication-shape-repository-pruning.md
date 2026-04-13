@@ -47,6 +47,14 @@ implements it, documents it, or tests it. That includes the technical-drawing
 contract, the electromechanical stack, fluids/FEM/stress branches, steerability,
 and advanced UI visualization.
 
+The only retained drawing behavior is the ordinary full geometric-plan path
+already needed to reproduce Epic 7. Off/minimal drafting variants and
+preview-only companions are not publication surfaces.
+
+This migration trims feature-specific branches and devops shells. It does not
+trim useful rendering, CLI-provider, physics-backend, or handoff/validation
+abstractions.
+
 ## Publication Boundary
 
 The paper claims a dual-agent system with the following core surfaces:
@@ -77,10 +85,13 @@ final paper explicitly uses them as evaluated claims:
 04. Experimental performance probes and syntax-check harnesses.
 05. Legacy compatibility mirrors and generic wrapper scripts.
 06. Skill-training autopilots, journalling compressors, and promotion loops.
-07. Steerability, drafting, and other internal tuning services.
+07. Steerability, drafting, local SDK recreation, and other internal tuning
+    services.
 08. Long-tail observability events that only exist for debugging or training.
 09. Generated dataset corpora and non-paper seed families.
-10. Broad frontend, eval, and integration coverage that is not paper-critical.
+10. Broad frontend, eval, and integration coverage that is not paper-critical,
+    including Temporal/devops coverage and the majority of unsupported
+    INT-001 through INT-180 cases.
 11. Later-epic physics and product branches, including electronics,
     fluids/FEM, technical drawing, and advanced visualization.
 12. Internal documentation that explains the development tree rather than the
@@ -89,6 +100,8 @@ final paper explicitly uses them as evaluated claims:
     companion scripts.
 14. Any agent, helper, or test family whose only real claim is Epic 8 or later
     in `_bmad-output/planning-artifacts/epics.md`.
+15. Non-local devops stacks, Temporal orchestration helpers, and old-style
+    ReAct-only tool wrappers that merely duplicate script-backed commands.
 
 ## Feature Removal Matrix
 
@@ -220,12 +233,90 @@ of the stage-specific launchers:
 
 The stage-specific helpers stay canonical; the generic wrappers are the bulk.
 
+### Local devops and orchestration shells
+
+The publication bundle does not need the non-local orchestration stack or the
+Temporal-backed devops shell around it. Preserve the local CLI-provider
+workflow and the paper-critical handoff logic, but remove the services and
+helper branches that only exist to stand up remote workflow orchestration.
+
+Remove or collapse the following surfaces:
+
+- `controller/temporal_worker.py`
+- `worker_heavy/temporal_worker.py`
+- `controller/workflows/execution.py`
+- `controller/workflows/heavy.py`
+- `controller/workflows/simulation.py`
+- `controller/workflows/preview.py`
+- `controller/activities/execution.py`
+- `controller/activities/simulation.py`
+- `controller/activities/preview.py`
+- `controller/api/ops.py`
+- `controller/api/main.py`
+  - the `temporal_client` startup/connect/retry path if it exists only for the
+    removed orchestration stack
+- `controller/middleware/remote_fs.py`
+  - `_require_temporal_for_heavy_operation()`
+  - `_execute_or_use_existing_workflow()`
+  - `_bundle_workflow_id()`
+  - `_preview_workflow_id()`
+  - the workflow-backed `validate`, `simulate`, `preview`, `verify`, and
+    `submit` branches
+- `controller/config/settings.py`
+  - `temporal_url`
+  - any Temporal-only startup wiring
+- `worker_light/app.py`
+  - the `heavy_temporal_worker_main()` unified-mode bootstrap if it only
+    exists for devops convenience
+- `evals/logic/stack_profiles.py`
+  - the Temporal host/port profile fields and env injection
+- `specs/architecture/distributed-execution.md`
+- `specs/integration-test-list.md`
+- `specs/integration-test-rules.md`
+
+If any of these files still need to exist for a retained local path, only keep
+the local-only path. The Temporal-specific retry, workflow-registration, and
+backup orchestration code is publication bulk.
+
+### Agent SDK and tool-surface simplification
+
+The publication bundle should not carry a bespoke local agent SDK recreation
+or a direct-ReAct tool mirror when checked-in scripts and the existing
+CLI-provider harness already define the command surface. Keep the runtime
+harness and the script-backed submission helpers; trim the old-style tool
+wrappers and provider-specific adapter clones.
+
+Remove or collapse:
+
+- `controller/agent/mock_llm.py`
+- `controller/agent/mock_scenarios.py`
+- `controller/agent/provider_tool_call_adapters/minimax_adapter.py`
+- `controller/agent/tools.py`
+  - any direct ReAct-only tool that merely forwards to an existing shell
+    script or local helper
+  - any `filter_tools_for_agent` branch that exists only to emulate older SDK
+    behavior
+- `controller/agent/prompt_manager.py`
+  - prompt text that teaches removed ReAct tool or old SDK flows
+- `config/prompts.yaml`
+  - prompt text that teaches removed ReAct-only tools or old SDK flows
+- `config/agents_config.yaml`
+  - role wiring that only exists to expose removed tools
+- `.agents/skills/**`
+  - skill prose that teaches the removed tool surface instead of the
+    script-backed workflow
+
 ### Technical-drawing contract plumbing
 
 The technical-drawing contract is not publication-worthy for this submission
 and should be removed end-to-end rather than left dormant behind `off` mode.
-The trim needs to hit the runtime helpers, the config gates, the prompt text,
-the seed materializers, and the preview renderer together.
+The publication bundle keeps the ordinary full geometric-plan path already
+used by Epic 7 as the default geometry contract; it does not keep the
+off/minimal drafting matrix or the preview-only companion scripts. The trim
+needs to hit the runtime helpers, the config gates, the prompt text, the seed
+materializers, and the preview renderer together.
+In this bundle, "drawing" means the planner must produce a valid geometric
+plan that will work; it is not a separate drafting product.
 
 Remove the drafting-mode surface and its helper functions:
 
@@ -241,6 +332,9 @@ Remove the drafting-mode surface and its helper functions:
   - `drafting_script_paths_for_agent()`
   - `drafting_render_manifest_path_for_agent()`
   - `planner_role_for_drafting_script_path()`
+- `shared/assets/template_repos/benchmark_generator/benchmark_plan_technical_drawing_script.py`
+- `shared/assets/template_repos/benchmark_generator/drafting/**`
+- `shared/assets/template_repos/engineer/drafting/**`
 - `shared/utils/agent/__init__.py`
   - `render_technical_drawing()`
   - `preview_drawing()`
@@ -554,6 +648,16 @@ visualization for later epics:
 The following documentation is development support, not conference artifact
 material:
 
+- `specs/architecture/distributed-execution.md`
+- `specs/architecture/agents/agent-harness.md`
+- `specs/architecture/agents/tools.md`
+- `specs/architecture/agents/prompt-management.md`
+- `specs/architecture/agents/engineering-planner-technical-drawings.md`
+- `specs/architecture/electronics-and-electromechanics.md`
+- `specs/architecture/fluids-and-deformables.md`
+- `specs/integration-test-list.md`
+- `specs/integration-test-rules.md`
+- `specs/devtools.md`
 - `docs/project-overview.md`
 - `docs/source-tree-analysis.md`
 - `docs/backend-reference.md`
@@ -580,6 +684,20 @@ kept for the publication bundle:
 | `controller/agent/mock_llm.py` | `MockDSPyLM`, `_cached_integration_mock_scenarios` |
 | `controller/agent/mock_scenarios.py` | `TranscriptStepSpec`, `TranscriptNodeSpec`, `TranscriptScenarioSpec`, `_expand_content_file_refs`, `_validate_scenarios`, `_load_from_directory`, `load_integration_mock_scenarios` |
 | `controller/agent/provider_tool_call_adapters/minimax_adapter.py` | `_coerce_minimax_parameter_value`, `MiniMaxToolCallAdapter` |
+| `controller/temporal_worker.py` | `main()`, Temporal worker registration, connect/retry loop |
+| `worker_heavy/temporal_worker.py` | `main()`, heavy-task queue worker registration, connect/retry loop |
+| `controller/workflows/execution.py` | `ScriptExecutionWorkflow` and any Temporal-only retry policy wrapper |
+| `controller/workflows/heavy.py` | heavy orchestration workflows and any Temporal-only workflow wrapper |
+| `controller/workflows/simulation.py` | simulation workflow entrypoints and retry wrappers |
+| `controller/workflows/preview.py` | preview workflow entrypoints and retry wrappers |
+| `controller/activities/execution.py` | Temporal activity entrypoints for execution-only orchestration |
+| `controller/activities/simulation.py` | Temporal activity entrypoints for simulation-only orchestration |
+| `controller/activities/preview.py` | Temporal activity entrypoints for preview-only orchestration |
+| `controller/api/ops.py` | backup-workflow endpoint and its Temporal client dependency |
+| `controller/middleware/remote_fs.py` | `_require_temporal_for_heavy_operation()`, `_execute_or_use_existing_workflow()`, Temporal workflow-id helpers, and the Temporal-backed `validate`/`simulate`/`preview`/`verify`/`submit` branches |
+| `controller/config/settings.py` | `temporal_url` and any Temporal-only client configuration |
+| `worker_light/app.py` | the `heavy_temporal_worker_main()` unified-mode bootstrap |
+| `evals/logic/stack_profiles.py` | Temporal host/port fields, env injection, and devops stack profiles |
 | `shared/agents/config.py` | `DraftingMode`, `technical_drawing_mode`, `get_technical_drawing_mode()`, `get_drafting_mode()` |
 | `shared/script_contracts.py` | drafting-path constants and helper functions for benchmark and solution drafting scripts |
 | `shared/utils/agent/__init__.py` | `render_technical_drawing()`, `preview_drawing()` |
@@ -600,19 +718,19 @@ kept for the publication bundle:
 | `controller/services/steerability/**` | the whole service surface |
 | `controller/persistence/steering_memory.py` | the whole steerability-memory surface |
 | `controller/agent/render_validation.py` | `_normalize_render_root` and any render-path compatibility aliasing that is only there for older bundle layouts |
-| `controller/agent/tools.py` | `_rewrite_render_bundle_path`, `_rewrite_render_siblings`, and any `filter_tools_for_agent` branch that exposes removed compatibility or debug-only tools |
+| `controller/agent/tools.py` | `_rewrite_render_bundle_path`, `_rewrite_render_siblings`, direct ReAct-only wrappers that duplicate script-backed commands, and any `filter_tools_for_agent` branch that exposes removed compatibility or debug-only tools |
 | `controller/api/routes/episodes.py` | replay-only helpers such as `_normalize_plan_markdown`, `_select_latest_replay_assets`, `_asset_looks_like_review_manifest`, `_artifact_kind_from_path`, `_artifact_path_matches`, `_review_decision_events_from_episode`, `_manifest_expected_revision`, `_validate_manifest_session`, plus `get_episode_schematic()` if electromechanics is not part of the published artifact |
 | `controller/api/routes/datasets.py` | archive-only helpers such as `_select_latest_assets`, `_archive_members`, and any dataset-export helper that exists only for maintainer workflows |
 | `controller/api/routes/script_tools.py` | `_script_log_context` and any script-proxy route that only exists to support ad hoc debugging |
-| `controller/api/main.py` | router includes for steerability, electronics, or drafting-only routes that are not part of the Epic 7 bundle |
+| `controller/api/main.py` | router includes for steerability, electronics, drafting-only routes, or Temporal client startup that are not part of the Epic 7 bundle |
 | `controller/agent/graph.py` | `route_after_electronics_planner()`, `route_after_electronics_reviewer()`, `electronics_planner_graph`, `electronics_reviewer_graph`, and any steering edge still wired into the core graph |
 | `worker_heavy/simulation/loop.py` | electronics manager, power-gating, `is_powered_map`, `stress_summaries`, `fluid_metrics`, and any drafting gate branches |
 | `worker_heavy/simulation/genesis_backend.py` | electronics setup, electronics-fluid-damage checks, stress-field helpers, and fluid particle branches |
 | `worker_heavy/simulation/objectives.py` | the fluid-objective and stress-objective evaluation branches |
-| `controller/agent/prompt_manager.py` | electronics role prompt entries, drafting appendices, and any prompt-selection branch that references late-epic surfaces |
+| `controller/agent/prompt_manager.py` | electronics role prompt entries, drafting appendices, old SDK/tool-flow prose, and any prompt-selection branch that references late-epic surfaces |
 | `controller/agent/handover_constants.py` | `ELECTRONICS_REVIEWER_HANDOVER_CHECK` and any other late-epic handover discriminator |
-| `config/agents_config.yaml` | `technical_drawing_mode` branches, role-specific drafting tool exposure, and any electronics-only role wiring |
-| `config/prompts.yaml` | drafting appendices, `render_technical_drawing()` instructions, and electronics-only prompt branches |
+| `config/agents_config.yaml` | `technical_drawing_mode` branches, role-specific drafting tool exposure, old SDK tool exposure, and any electronics-only role wiring |
+| `config/prompts.yaml` | drafting appendices, `render_technical_drawing()` instructions, old ReAct-only tool prose, and electronics-only prompt branches |
 | `shared/agent_templates/__init__.py` | role template entries that point at drafting scripts or electronics-only starter files |
 | `shared/agent_templates/codex/scripts/submit_plan.py` | drafting-mode role detection and submission gating |
 | `shared/agent_templates/codex/scripts/submit_for_review.py` | drafting-mode reviewer gating and electronics-review manifest selection |
@@ -637,10 +755,35 @@ kept for the publication bundle:
 5. Skill training, journalling compression, steerability experiments, mock
    providers, and legacy compatibility wrappers are not part of the conference
    artifact.
-6. Technical drawing, electromechanical, fluids/FEM, and steerability branches
-   are removed completely because they only become justified after Epic 7.
-7. The release manifest is fail-closed: anything not explicitly included is
+6. The only retained drawing behavior is the default full geometric-plan path;
+   the off/minimal drafting matrix and technical-drawing companion are gone.
+7. Technical drawing, electromechanical, fluids/FEM, steerability, and
+   non-local devops branches are removed completely because they only become
+   justified after Epic 7.
+8. The release manifest is fail-closed: anything not explicitly included is
    excluded, and no dormant late-epic compatibility paths remain.
+
+## Retained Roots
+
+The publication bundle keeps the minimal runnable and deployment roots:
+
+- `pyproject.toml`
+- `uv.lock`
+- `Makefile`
+- `main.py`
+- `docker-compose*.yml`
+- `Podmanfile.sandbox`
+- `config/manufacturing_config.yaml`
+- `config/prompts.yaml`
+- `config/agents_config.yaml`
+- `config/skills_config.yaml`
+- `shared/assets/template_repos/**`
+- `shared/skills/**`
+- `.agents/skills/**`
+
+The Python venv and minimal deployment path stay in place; this migration only
+prunes publication bulk that is not needed to bootstrap or run the release
+shape.
 
 ## Required Work
 
@@ -652,14 +795,24 @@ kept for the publication bundle:
 - Use the final camera-ready text, not draft notes, to decide whether a branch
   stays.
 
-### 2. Collapse the academic-submission tree
+### 2. Prune the docs and spec tree
+
+- Remove or archive architecture and integration docs whose only purpose is to
+  explain removed Temporal, drafting, electronics, fluids, steerability, or
+  local-SDK surfaces.
+- Update prompt and role docs so they no longer teach removed tool surfaces or
+  removed mode matrices.
+- Treat the docs that describe removed capability families as publication bulk,
+  not as part of the conference artifact.
+
+### 3. Collapse the academic-submission tree
 
 - Keep one canonical LaTeX source for the paper.
 - Keep only the reproducibility inputs that the paper actually cites.
 - Remove duplicate drafts, exported PDFs, log files, and alternate formats.
 - Convert anything not cited by the paper into archive-only material.
 
-### 3. Remove presentation, website, and probe surfaces
+### 4. Remove presentation, website, and probe surfaces
 
 - Remove `frontend/` from the publication bundle.
 - Remove `website/` from the publication bundle.
@@ -667,7 +820,7 @@ kept for the publication bundle:
 - Remove any generated render, log, or benchmark result file that is not cited
   as a reproducibility input.
 
-### 4. Remove compatibility and training-only machinery
+### 5. Remove compatibility, training-only, and orchestration machinery
 
 - Remove legacy mirror trees such as `worker_light/agent_files/`.
 - Remove generic wrapper scripts that only exist for older launch paths.
@@ -675,8 +828,11 @@ kept for the publication bundle:
   and other maintenance-only control paths.
 - Remove the standalone training/autopilot CLIs that are not required to
   reproduce the final paper's claims.
+- Remove the Temporal orchestration shell, the devops-only worker/backup
+  workflows, and any local agent-SDK clone layer that only recreates older
+  provider behavior.
 
-### 5. Prune observability to the paper-critical subset
+### 6. Prune observability to the paper-critical subset
 
 - Keep the events needed to explain the published workflows.
 - Remove generic file/tool telemetry, technical-drawing preview telemetry,
@@ -686,7 +842,7 @@ kept for the publication bundle:
   the drafting-preview events, electronics events, fluid/stress events, and
   steerability events.
 
-### 6. Curate the data and tests
+### 7. Curate the data and tests
 
 - Keep only the seed rows and generated artifacts that reproduce the published
   benchmark families.
@@ -696,7 +852,7 @@ kept for the publication bundle:
   electronics, steerability, or late-epic multiphysics fixtures.
 - Reduce integration coverage to the paper-critical slice and drop the rest.
 
-### 7. Collapse late-epic branches
+### 8. Collapse late-epic branches
 
 - Remove the technical-drawing contract, drafting mode, and preview plumbing.
 - Remove the electronics/electromechanical branch end-to-end.
@@ -705,11 +861,13 @@ kept for the publication bundle:
 - Do not leave behind a partial branch, compatibility alias, or dormant config
   switch for any Epic 8+ surface.
 
-### 8. Publish a fail-closed manifest
+### 9. Publish a fail-closed package boundary
 
-- Add a publication manifest or equivalent release profile.
-- Make packaging consume the manifest rather than the whole repository tree.
-- Require an explicit include list. Anything omitted stays out.
+- Define the publication bundle as an explicit include list in this migration
+  spec.
+- Make packaging consume that include list rather than the whole repository
+  tree.
+- Anything omitted stays out.
 
 ## Non-Goals
 
@@ -719,21 +877,30 @@ kept for the publication bundle:
 - No attempt to erase development history from git; only the publication bundle
   is being pruned.
 - No frontend redesign and no website redesign.
+- No removal of the render/evidence pipeline, the CLI-provider backend, or the
+  physics-backend abstraction beyond the feature-specific branches named in
+  this migration.
+- No removal of the strong handoff and validation scaffolding that supports the
+  published workflows; only the unnecessary feature families and compatibility
+  shells are trimmed.
+- No replacement of the checked-in shell-script command surface with a bespoke
+  local agent SDK clone or a new direct ReAct tool mirror.
 
 ## Sequencing
 
 The safe order is:
 
 1. Freeze the claim matrix from the final paper.
-2. Add the publication manifest and define the fail-closed package boundary.
-3. Collapse the academic-submission tree to one canonical paper source and one
+2. Prune the docs and spec tree that describes removed surfaces.
+3. Define the fail-closed package boundary.
+4. Collapse the academic-submission tree to one canonical paper source and one
    reproducibility path.
-4. Remove the presentation, website, experimental, legacy-compatibility, and
-   late-epic feature surfaces.
-5. Prune the training-only, observability-long-tail, dataset, and test bulk.
-6. Collapse late-epic branches to nothing rather than leaving dormant
+5. Remove the presentation, website, experimental, legacy-compatibility,
+   orchestration, and late-epic feature surfaces.
+6. Prune the training-only, observability-long-tail, dataset, and test bulk.
+7. Collapse late-epic branches to nothing rather than leaving dormant
    compatibility paths.
-7. Record the final bundle contents and the rationale for every exclusion.
+8. Record the final bundle contents and the rationale for every exclusion.
 
 ## Acceptance Criteria
 
@@ -750,8 +917,11 @@ The safe order is:
    claims.
 6. The publication bundle still satisfies the core architecture contracts for
    the published workflows, and nothing else.
-7. The bundle contains no technical-drawing, electronics, fluids/FEM, or
-   steerability runtime branch in code, config, prompts, seed data, or tests.
+7. The bundle contains no technical-drawing, electronics, fluids/FEM,
+   steerability, or non-local devops runtime branch in code, config, prompts,
+   seed data, or tests.
+8. The only retained drawing behavior is the default full geometric-plan path;
+   the off/minimal drafting matrix is absent.
 
 ## Migration Checklist
 
@@ -778,8 +948,12 @@ The safe order is:
 - [ ] Remove `scripts/experiments/` from the default publication bundle.
 - [ ] Remove `worker_light/agent_files/` from the default publication bundle.
 - [ ] Remove mock-provider, steerability, and legacy-wrapper surfaces.
+- [ ] Remove Temporal orchestration shells, non-local devops helpers, and any
+  bespoke local-agent-SDK clone surface from the default bundle.
 - [ ] Remove technical-drawing plumbing, electronics planner/reviewer
   surfaces, and late-epic simulation helpers from the default bundle.
+- [ ] Collapse the drawing-mode matrix to the retained full geometric-plan
+  path and delete the off/minimal technical-drawing variants.
 
 ### Training, observability, and data
 
@@ -789,6 +963,8 @@ The safe order is:
 - [ ] Remove `dataset/data/generated/` from the source release path.
 - [ ] Curate the seed rows to the paper-critical role families only and remove
   any `technical_drawing_mode` or late-epic seed variants.
+- [ ] Remove prompt and skill prose that teaches removed ReAct-only tools or
+  removed local-SDK clone behavior.
 
 ### Verification and docs
 
@@ -796,6 +972,9 @@ The safe order is:
   critical subset.
 - [ ] Remove the technical-drawing fixture families and late-epic branch
   tests from the release candidate.
+- [ ] Prune the architecture and integration docs that only explain removed
+  Temporal, drafting, electronics, fluids, steerability, or local-SDK
+  surfaces.
 - [ ] Update the repository overview docs to distinguish the publication
   bundle from the development tree, or exclude them entirely if the release
   manifest no longer ships docs.
@@ -804,10 +983,10 @@ The safe order is:
 
 ## File-Level Change Set
 
-The implementation phase should expect to touch these paths:
+The implementation phase should expect to touch these paths. The retained roots
+listed above stay in the publication bundle and are not part of the prune list:
 
 - `docs/academic-submission/final-project-report.tex`
-- `docs/academic-submission/publication-manifest.md`
 - `docs/academic-submission/Problemologist_AI_Research_Matrix.md`
 - `docs/academic-submission/Foundations of AI - Final Project Report.md`
 - `docs/academic-submission/final_project_report.md`
@@ -833,6 +1012,16 @@ The implementation phase should expect to touch these paths:
 - `docs/qwen-performance.log.md`
 - `docs/nightly-work-plans/`
 - `docs/agent-workflow/`
+- `specs/architecture/distributed-execution.md`
+- `specs/architecture/agents/agent-harness.md`
+- `specs/architecture/agents/tools.md`
+- `specs/architecture/agents/prompt-management.md`
+- `specs/architecture/agents/engineering-planner-technical-drawings.md`
+- `specs/architecture/electronics-and-electromechanics.md`
+- `specs/architecture/fluids-and-deformables.md`
+- `specs/integration-test-list.md`
+- `specs/integration-test-rules.md`
+- `specs/devtools.md`
 - `frontend/`
 - `website/`
 - `scripts/experiments/`
@@ -842,6 +1031,20 @@ The implementation phase should expect to touch these paths:
 - `controller/agent/mock_llm.py`
 - `controller/agent/mock_scenarios.py`
 - `controller/agent/provider_tool_call_adapters/minimax_adapter.py`
+- `controller/temporal_worker.py`
+- `worker_heavy/temporal_worker.py`
+- `controller/workflows/execution.py`
+- `controller/workflows/heavy.py`
+- `controller/workflows/simulation.py`
+- `controller/workflows/preview.py`
+- `controller/activities/execution.py`
+- `controller/activities/simulation.py`
+- `controller/activities/preview.py`
+- `controller/api/ops.py`
+- `controller/middleware/remote_fs.py`
+- `controller/config/settings.py`
+- `worker_light/app.py`
+- `evals/logic/stack_profiles.py`
 - `controller/agent/nodes/summarizer.py`
 - `controller/agent/nodes/skills.py`
 - `controller/agent/reward.py`
@@ -943,4 +1146,4 @@ The implementation phase should expect to touch these paths:
 
 This list is intentionally conservative. If a path is only there for developer
 comfort, compatibility, or experiment throughput, it should not survive the
-publication manifest.
+publication bundle.
